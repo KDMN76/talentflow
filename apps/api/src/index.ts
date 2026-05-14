@@ -173,9 +173,14 @@ app.use('/api', apiRateLimit);
 app.use('/api', enforceIpAllowlist);
 
 // ── Health check ─────────────────────────────────────────────────────────────
-app.get('/health', (_req, res) => {
+// Beide paden registreren — `/health` voor de Docker HEALTHCHECK (geen `/api`
+// prefix nodig binnen de container) en `/api/health` voor publieke uptime-
+// monitors die door de host-Nginx vhost komen (alleen `/api/*` is ge-routet).
+const healthHandler = (_req: express.Request, res: express.Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+};
+app.get('/health', healthHandler);
+app.get('/api/health', healthHandler);
 
 // ── OpenAPI / Swagger UI ─────────────────────────────────────────────────────
 // Pillar 3 (Sprint Q4.1): API standaard open op alle plannen — geen auth.
