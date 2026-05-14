@@ -49,6 +49,12 @@ COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/package.json ./package.json
 COPY --from=builder --chown=node:node /app/migrations ./migrations
 
+# Local-disk fallback voor uploads. In productie staat STORAGE_DRIVER=s3 en
+# wordt MinIO gebruikt, maar `candidates.router.ts` doet alsnog een
+# `mkdirSync(uploadsDir)` op module load — die moet kunnen slagen onder de
+# non-root `node` user.
+RUN mkdir -p /app/uploads/resumes && chown -R node:node /app/uploads
+
 USER node
 
 EXPOSE 4000
