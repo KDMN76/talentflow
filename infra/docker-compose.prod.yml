@@ -40,10 +40,12 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - talentflow_net
-    # Bind to localhost only — allows host-side `psql`/migration scripts.
-    # NOT exposed publicly thanks to the 127.0.0.1: prefix.
+    # Bind to localhost on port 54320 (host) → 5432 (container).
+    # Port 5432 on the host is already taken by `kdmn-db` (the legacy
+    # KDMN-stack Postgres). 54320 avoids that conflict and is only
+    # reachable via 127.0.0.1, so it's not on the public internet.
     ports:
-      - '127.0.0.1:5432:5432'
+      - '127.0.0.1:54320:5432'
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
       interval: 10s
@@ -166,9 +168,10 @@ services:
         condition: service_healthy
     networks:
       - talentflow_net
-    # Bind to localhost — Nginx on host reverse-proxies into this.
+    # Bind to localhost on 40000 (host) → 4000 (container).
+    # Avoids any future conflict and stays off the public internet.
     ports:
-      - '127.0.0.1:4000:4000'
+      - '127.0.0.1:40000:4000'
     healthcheck:
       test:
         - CMD-SHELL
@@ -236,9 +239,11 @@ services:
         condition: service_healthy
     networks:
       - talentflow_net
-    # Bind to localhost — Nginx on host reverse-proxies into this.
+    # Bind to localhost on 31000 (host) → 3000 (container).
+    # Port 3000 on the host is already taken by `kdmn-api` (the legacy
+    # KDMN-stack API). 31000 avoids that conflict.
     ports:
-      - '127.0.0.1:3000:3000'
+      - '127.0.0.1:31000:3000'
     healthcheck:
       test:
         - CMD-SHELL

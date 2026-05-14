@@ -4,10 +4,11 @@ Concrete deploy-runbook voor `talentflow.kdmn.nl` op de bestaande Hetzner-VPS
 (`91.98.232.104`) die al `app.kdmnprojecten.com`, `planning.kdmnprojecten.com`
 en `financieel.kdmnprojecten.com` draait.
 
-**Aanname:** Docker + Docker Compose + Nginx + certbot draaien al
-(geverifieerd door de `kdmn-architect`). De bestaande Postgres-instantie
-(`:5433`) is van platform/planning — wij gebruiken eigen geïsoleerde
-containers, dus geen risico op data-vermenging.
+**Aanname:** Docker + Docker Compose v2 (plugin) + Nginx + certbot draaien al.
+De VPS host al een KDMN-stack (`kdmn-api` op `:3000`, `kdmn-db` op `:5432`,
+`kdmn-frontend` op `:8080`, `n8n` op `:5679`) + 3 PM2-managed apps. TalentFlow
+gebruikt eigen geïsoleerde containers op alternatieve host-poorten
+(54320 / 40000 / 31000) om elk port-conflict te vermijden.
 
 ---
 
