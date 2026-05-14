@@ -18,6 +18,7 @@
  */
 
 import * as Sentry from '@sentry/node';
+import type { Integration } from '@sentry/core';
 
 let initialized = false;
 
@@ -35,11 +36,12 @@ export function initSentry(): void {
     return;
   }
   // Lazy-load the native profiler so Node.js versions without a prebuilt
-  // binary (e.g. Node 24 in local dev) don't crash on `import`.
-  const integrations: Sentry.Integration[] = [];
+  // binary (e.g. Node 24 in local dev) don't crash on `import`. Type comes
+  // from `@sentry/core` because `@sentry/node` v8+ no longer re-exports it.
+  const integrations: Integration[] = [];
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const profiling = require('@sentry/profiling-node') as { nodeProfilingIntegration: () => Sentry.Integration };
+    const profiling = require('@sentry/profiling-node') as { nodeProfilingIntegration: () => Integration };
     integrations.push(profiling.nodeProfilingIntegration());
   } catch (err) {
     // eslint-disable-next-line no-console
