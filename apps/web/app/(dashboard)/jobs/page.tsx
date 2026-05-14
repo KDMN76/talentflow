@@ -1,0 +1,288 @@
+"use client";
+
+import { useMemo } from "react";
+import Link from "next/link";
+import { Plus, Briefcase, Wand2 } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { JobCard } from "@/components/jobs/JobCard";
+import {
+  JobsFilterBar,
+  type QuickFilter,
+  type RecruiterOption,
+} from "@/components/jobs/JobsFilterBar";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useJobs } from "@/hooks/useJobs";
+import {
+  useJobsFilters,
+  type JobsFilters,
+} from "@/hooks/useJobsFilters";
+import type { Job } from "@/lib/mockData";
+
+// `tags` is not yet a first-class field on `Job`, but the filter UI exposes
+// it for forward-compat with backend full-text search. TODO(Agent S): zodra
+// backend `tags`, full-text-search en datum-filtering ondersteunt, kunnen de
+// onderstaande client-side filters server-side worden afgehandeld.
+type JobWithOptionalTags = Job & { tags?: string[] | null };
+
+// MVP-keuze: in mock-mode hardcode `recruiter-1` zoals gespecificeerd; in
+// productie zou dit uit de auth-context komen. Behoudens een echte
+// `useAuth`/`useCurrentUser` hook nemen we hier de eerste recruiter uit de
+// bekende lijst.
+const MOCK_CURRENT_USER_ID = "user-1";
+
+export default function JobsPage() {
+  const {
+    filters,
+    searchInput,
+    setSearchInput,
+    setFilter,
+    setFilters,
+    resetFilters,
+    activeCount,
+  } = useJobsFilters();
+
+  // Server-side filtering: status + recruiter_id (backend supports these
+  // today). All overige filters worden client-side toegepast op `jobs`.
+  const { data: jobs, isLoading } = useJobs({
+    status: filters.status,
+    recruiterId: filters.recruiter_id,
+  });
+
+  // Build recruiter options from the loaded jobs (covers both mock and prod
+  // until a dedicated `useUsers` hook bestaat).
+  const recruiterOptions = useMemo<RecruiterOption[]>(() => {
+    if (!jobs) return [];
+    const seen = new Map<string, string>();
+    for (const job of jobs) {
+      if (!seen.has(job.recruiter_id)) {
+        seen.set(job.recruiter_id, job.recruiter_name);
+      }
+    }
+    return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
+  }, [jobs]);
+
+  // Quick-filter chips. `current_user` valt terug op `MOCK_CURRENT_USER_ID`.
+  const quickFilters = useMemo<QuickFilter[]>(() => {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const startOfYear = new Date(new Date().getFullYear(), 0, 1);
+
+    const fmt = (d: Date) => d.toISOString().slice(0, 10);
+
+    return [
+      {
+        id: "my-open",
+        label: "Mijn open jobs",
+        patch: { status: "open", recruiter_id: MOCK_CURRENT_USER_ID },
+        isActive: (f) =>
+          f.status === "open" && f.recruiter_id === MOCK_CURRENT_USER_ID,
+      },
+      {
+        id: "recent-7d",
+        label: "Recent geplaatst (laatste 7 dagen)",
+        patch: { date_from: fmt(sevenDaysAgo), date_to: null },
+        isActive: (f) => f.date_from === fmt(sevenDaysAgo) && f.date_to === null,
+      },
+      {
+        id: "filled-this-year",
+        label: "Vervulde dit jaar",
+        patch: { status: "filled", date_from: fmt(startOfYear), date_to: null },
+        isActive: (f) =>
+          f.status === "filled" &&
+          f.date_from === fmt(startOfYear) &&
+          f.date_to === null,
+      },
+    ];
+  }, []);
+
+  const totalCount = jobs?.length ?? 0;
+
+  const filteredJobs = useMemo<Job[]>(() => {
+    if (!jobs) return [];
+    return applyClientSideFilters(jobs, filters);
+  }, [jobs, filters]);
+
+  const visibleCount = filteredJobs.length;
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <PageHeader
+        title="Vacatures"
+        description="Beheer al je vacatures op een plek"
+        actions={
+          <div className="flex items-center gap-2">
+            <Button
+              asChild
+              variant="outline"
+              className="border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 hover:text-purple-800 dark:border-purple-900 dark:bg-purple-950/40 dark:text-purple-300 dark:hover:bg-purple-950/60"
+            >
+              <Link href="/jobs/new/ai-generator">
+                <Wand2 className="mr-2 h-4 w-4" />
+                AI Generator
+              </Link>
+            </Button>
+            <Button
+              asChild
+              className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-sm border-0"
+            >
+              <Link href="/jobs/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Nieuwe vacature
+              </Link>
+            </Button>
+          </div>
+        }
+      />
+
+      <JobsFilterBar
+        filters={filters}
+        searchInput={searchInput}
+        setSearchInput={setSearchInput}
+        setFilter={setFilter}
+        setFilters={setFilters}
+        resetFilters={resetFilters}
+        activeCount={activeCount}
+        recruiterOptions={recruiterOptions}
+        quickFilters={quickFilters}
+      />
+
+      {/* Result counter */}
+      <div className="flex items-center justify-between text-sm text-muted-foreground">
+        <span>
+          {isLoading ? (
+            <span className="opacity-60">Laden...</span>
+          ) : (
+            <>
+              <span className="font-medium text-foreground">{visibleCount}</span>{" "}
+              {visibleCount === 1 ? "resultaat" : "resultaten"}
+              {totalCount !== visibleCount && (
+                <> van {totalCount} totaal</>
+              )}
+            </>
+          )}
+        </span>
+      </div>
+
+      {/* Jobs list */}
+      {isLoading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-28 rounded-xl" />
+          ))}
+        </div>
+      ) : visibleCount === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <Briefcase className="h-12 w-12 text-muted-foreground/30 mb-4" />
+          <p className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+            {totalCount === 0
+              ? "Geen vacatures gevonden"
+              : "Geen jobs gevonden — pas filters aan"}
+          </p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {totalCount === 0
+              ? "Maak je eerste vacature aan om te beginnen."
+              : "Probeer minder strikte filters of reset om alles te zien."}
+          </p>
+          <div className="mt-4 flex gap-2">
+            {totalCount === 0 ? (
+              <Button asChild>
+                <Link href="/jobs/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nieuwe vacature
+                </Link>
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={resetFilters}
+                disabled={activeCount === 0}
+              >
+                Reset filters
+              </Button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filteredJobs.map((job) => (
+            <JobCard key={job.id} job={job} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Client-side filtering & sorting ─────────────────────────────────────────
+// TODO(Agent S): vervangen door server-side query-params (`q`, `location`,
+// `created_from`, `created_to`, `tags`) zodra de backend dit ondersteunt.
+
+function applyClientSideFilters(jobs: Job[], filters: JobsFilters): Job[] {
+  const search = filters.search.trim().toLowerCase();
+  const location = filters.location.trim().toLowerCase();
+  const fromMs = filters.date_from
+    ? new Date(filters.date_from + "T00:00:00").getTime()
+    : null;
+  const toMs = filters.date_to
+    ? new Date(filters.date_to + "T23:59:59").getTime()
+    : null;
+  const tagsLower = filters.tags.map((t) => t.toLowerCase());
+
+  const matches = jobs.filter((rawJob) => {
+    const job = rawJob as JobWithOptionalTags;
+
+    // Search across title + reference (id) + location.
+    if (search) {
+      const haystack = [
+        job.title,
+        job.id, // job_reference fallback (mock data heeft geen aparte ref)
+        job.location,
+      ]
+        .join(" ")
+        .toLowerCase();
+      if (!haystack.includes(search)) return false;
+    }
+
+    // Location contains.
+    if (location) {
+      if (!job.location.toLowerCase().includes(location)) return false;
+    }
+
+    // Date range against `created_at`.
+    if (fromMs !== null || toMs !== null) {
+      const createdMs = new Date(job.created_at).getTime();
+      if (fromMs !== null && createdMs < fromMs) return false;
+      if (toMs !== null && createdMs > toMs) return false;
+    }
+
+    // Tag intersection (job must contain at least one selected tag).
+    if (tagsLower.length > 0) {
+      const jobTags = (job.tags ?? []).map((t) => t.toLowerCase());
+      const intersects = tagsLower.some((t) => jobTags.includes(t));
+      if (!intersects) return false;
+    }
+
+    return true;
+  });
+
+  return [...matches].sort(getComparator(filters.sort));
+}
+
+function getComparator(sort: JobsFilters["sort"]): (a: Job, b: Job) => number {
+  switch (sort) {
+    case "oldest":
+      return (a, b) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    case "most_applicants":
+      return (a, b) => (b.application_count ?? 0) - (a.application_count ?? 0);
+    case "fewest_applicants":
+      return (a, b) => (a.application_count ?? 0) - (b.application_count ?? 0);
+    case "title_az":
+      return (a, b) => a.title.localeCompare(b.title, "nl");
+    case "newest":
+    default:
+      return (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  }
+}

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Background: indigo gradient (TalentFlow brand) -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+
+  <!-- Stylised "TF" / flow lines representing pipeline -->
+  <g fill="none" stroke="#ffffff" stroke-width="32" stroke-linecap="round" stroke-linejoin="round">
+    <!-- T -->
+    <path d="M 128 144 L 240 144"/>
+    <path d="M 184 144 L 184 368"/>
+    <!-- F + flow indicator -->
+    <path d="M 280 368 L 280 144 L 384 144"/>
+    <path d="M 280 256 L 360 256"/>
+  </g>
+
+  <!-- Small dot indicating "active candidate" -->
+  <circle cx="408" cy="368" r="20" fill="#34d399"/>
+</svg>

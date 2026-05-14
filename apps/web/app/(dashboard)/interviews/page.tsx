@@ -1,0 +1,421 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import {
+  Calendar,
+  CheckCircle2,
+  Clock,
+  Filter,
+  MapPin,
+  Mic,
+  Phone,
+  Plus,
+  Search,
+  Users,
+  Video,
+  X,
+  XCircle,
+} from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { SchedulerDialog } from "@/components/interviews/SchedulerDialog";
+import { useInterviews } from "@/hooks/useInterviews";
+import { mockTeamMembers } from "@/lib/mockData";
+import { cn, getInitials } from "@/lib/utils";
+import type {
+  Interview,
+  InterviewLocationType,
+  InterviewStatus,
+} from "@/lib/types/interviews";
+
+type TabKey = "upcoming" | "completed" | "cancelled";
+
+const TAB_LABELS: Record<TabKey, string> = {
+  upcoming: "Komende",
+  completed: "Afgerond",
+  cancelled: "Geannuleerd",
+};
+
+const TAB_STATUSES: Record<TabKey, InterviewStatus[]> = {
+  upcoming: ["scheduled", "rescheduled"],
+  completed: ["completed", "no_show"],
+  cancelled: ["cancelled"],
+};
+
+const STATUS_BADGE: Record<InterviewStatus, { label: string; cls: string }> = {
+  scheduled: {
+    label: "Gepland",
+    cls: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
+  },
+  rescheduled: {
+    label: "Verplaatst",
+    cls: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
+  },
+  completed: {
+    label: "Afgerond",
+    cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
+  },
+  no_show: {
+    label: "No-show",
+    cls: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+  },
+  cancelled: {
+    label: "Geannuleerd",
+    cls: "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300",
+  },
+};
+
+const LOCATION_ICON: Record<InterviewLocationType, typeof Video> = {
+  google_meet: Video,
+  teams: Video,
+  zoom: Video,
+  in_person: MapPin,
+  phone: Phone,
+};
+
+export default function InterviewsPage() {
+  const [tab, setTab] = useState<TabKey>("upcoming");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [interviewerId, setInterviewerId] = useState<string>("all");
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const filters = useMemo(
+    () => ({
+      from: from ? new Date(from).toISOString() : undefined,
+      to: to ? new Date(`${to}T23:59:59`).toISOString() : undefined,
+      interviewer_id: interviewerId !== "all" ? interviewerId : undefined,
+    }),
+    [from, to, interviewerId]
+  );
+
+  const { data, isLoading } = useInterviews(filters);
+
+  const tabbed = useMemo(() => {
+    if (!data) return [];
+    const allowed = new Set(TAB_STATUSES[tab]);
+    return data
+      .filter((iv) => allowed.has(iv.status))
+      .filter((iv) => {
+        if (!search.trim()) return true;
+        const needle = search.toLowerCase();
+        return (
+          iv.candidate_name.toLowerCase().includes(needle) ||
+          iv.job_title.toLowerCase().includes(needle)
+        );
+      })
+      .sort((a, b) => {
+        const aT = new Date(a.scheduled_start).getTime();
+        const bT = new Date(b.scheduled_start).getTime();
+        return tab === "upcoming" ? aT - bT : bT - aT;
+      });
+  }, [data, tab, search]);
+
+  const counts = useMemo(() => {
+    const c: Record<TabKey, number> = { upcoming: 0, completed: 0, cancelled: 0 };
+    (data ?? []).forEach((iv) => {
+      (Object.keys(TAB_STATUSES) as TabKey[]).forEach((k) => {
+        if (TAB_STATUSES[k].includes(iv.status)) c[k]++;
+      });
+    });
+    return c;
+  }, [data]);
+
+  const resetFilters = () => {
+    setFrom("");
+    setTo("");
+    setInterviewerId("all");
+    setSearch("");
+  };
+
+  const hasActiveFilters =
+    from !== "" || to !== "" || interviewerId !== "all" || search !== "";
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Interviews"
+        description="Plan, beheer en review interviews — inclusief opnames, transcripts en agreement matrix."
+        actions={
+          <Button onClick={() => setOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nieuw interview
+          </Button>
+        }
+      />
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="pt-6 space-y-4">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="from">Van</Label>
+              <Input
+                id="from"
+                type="date"
+                value={from}
+                onChange={(e) => setFrom(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="to">Tot</Label>
+              <Input
+                id="to"
+                type="date"
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Interviewer</Label>
+              <Select value={interviewerId} onValueChange={setInterviewerId}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Alle interviewers</SelectItem>
+                  {mockTeamMembers.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="search">Zoek</Label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  id="search"
+                  type="search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Kandidaat of vacature…"
+                  className="pl-8"
+                />
+              </div>
+            </div>
+          </div>
+          {hasActiveFilters && (
+            <div className="flex items-center gap-2 text-xs">
+              <Filter className="h-3 w-3 text-muted-foreground" />
+              <span className="text-muted-foreground">
+                Filters actief — {tabbed.length} resultaat
+                {tabbed.length === 1 ? "" : "en"}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 ml-auto"
+                onClick={resetFilters}
+              >
+                <X className="h-3 w-3 mr-1" /> Reset
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Tabs */}
+      <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
+        <TabsList>
+          <TabsTrigger value="upcoming">
+            Komende
+            <CountChip n={counts.upcoming} />
+          </TabsTrigger>
+          <TabsTrigger value="completed">
+            Afgerond
+            <CountChip n={counts.completed} />
+          </TabsTrigger>
+          <TabsTrigger value="cancelled">
+            Geannuleerd
+            <CountChip n={counts.cancelled} />
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {/* List */}
+      {isLoading ? (
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-20 w-full" />
+          ))}
+        </div>
+      ) : tabbed.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Calendar className="h-10 w-10 text-muted-foreground/50 mx-auto" />
+            <p className="text-sm font-medium text-muted-foreground mt-3">
+              Geen interviews in {TAB_LABELS[tab].toLowerCase()}.
+            </p>
+            {tab === "upcoming" && (
+              <Button
+                onClick={() => setOpen(true)}
+                size="sm"
+                className="mt-4"
+              >
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                Plan een interview in
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-2">
+          {tabbed.map((iv) => (
+            <InterviewRow key={iv.id} iv={iv} />
+          ))}
+        </div>
+      )}
+
+      <SchedulerDialog open={open} onOpenChange={setOpen} />
+    </div>
+  );
+}
+
+function CountChip({ n }: { n: number }) {
+  if (n === 0) return null;
+  return (
+    <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-zinc-200 dark:bg-zinc-700 px-1 text-[10px] font-semibold">
+      {n}
+    </span>
+  );
+}
+
+function InterviewRow({ iv }: { iv: Interview }) {
+  const status = STATUS_BADGE[iv.status];
+  const LocIcon = LOCATION_ICON[iv.location_type];
+  const interviewers = iv.participants.filter(
+    (p) => p.role === "interviewer" || p.role === "hiring_manager"
+  );
+  return (
+    <Link
+      href={`/interviews/${iv.id}`}
+      className="block rounded-lg border border-border bg-background p-4 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors"
+    >
+      <div className="flex items-center gap-4">
+        <div className="rounded-lg bg-indigo-50 dark:bg-indigo-950/40 h-12 w-12 flex flex-col items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+          <span className="text-[10px] font-semibold uppercase">
+            {new Date(iv.scheduled_start).toLocaleDateString("nl-NL", {
+              month: "short",
+            })}
+          </span>
+          <span className="text-base font-bold leading-none">
+            {new Date(iv.scheduled_start).getDate()}
+          </span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+              {iv.candidate_name}
+            </p>
+            <Badge
+              className={cn(
+                "border-transparent rounded-md text-[10px] uppercase tracking-wide",
+                status.cls
+              )}
+            >
+              {status.label}
+            </Badge>
+            {iv.has_recording && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-rose-600 dark:text-rose-400">
+                <Mic className="h-3 w-3" />
+                Opname
+              </span>
+            )}
+            {iv.scorecard_count > 0 && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="h-3 w-3" />
+                {iv.scorecard_count} scorecard
+                {iv.scorecard_count === 1 ? "" : "s"}
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5 truncate">
+            {iv.job_title}
+          </p>
+          <div className="flex items-center gap-4 mt-1.5 text-[11px] text-muted-foreground flex-wrap">
+            <span className="inline-flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {formatDateTime(iv.scheduled_start)} · {iv.duration_minutes} min
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <LocIcon className="h-3 w-3" />
+              {locationLabel(iv.location_type)}
+            </span>
+          </div>
+        </div>
+        <div className="flex -space-x-2 shrink-0">
+          {interviewers.slice(0, 3).map((p) => (
+            <Avatar
+              key={p.id}
+              className="h-7 w-7 ring-2 ring-background"
+              title={p.user_name}
+            >
+              <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-500 text-white text-[10px] font-semibold">
+                {getInitials(p.user_name)}
+              </AvatarFallback>
+            </Avatar>
+          ))}
+          {interviewers.length > 3 && (
+            <span className="h-7 w-7 ring-2 ring-background rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
+              +{interviewers.length - 3}
+            </span>
+          )}
+        </div>
+        <Button variant="outline" size="sm" className="shrink-0">
+          Bekijk
+        </Button>
+      </div>
+    </Link>
+  );
+}
+
+function locationLabel(t: InterviewLocationType): string {
+  switch (t) {
+    case "google_meet":
+      return "Google Meet";
+    case "teams":
+      return "Teams";
+    case "zoom":
+      return "Zoom";
+    case "in_person":
+      return "In persoon";
+    case "phone":
+      return "Telefonisch";
+  }
+}
+
+function formatDateTime(iso: string): string {
+  const d = new Date(iso);
+  return `${d.toLocaleDateString("nl-NL", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  })} · ${d.toLocaleTimeString("nl-NL", {
+    hour: "2-digit",
+    minute: "2-digit",
+  })}`;
+}

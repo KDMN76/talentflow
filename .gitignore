@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+.next/
+out/
+build/
+*.tsbuildinfo
+
+# Test/coverage
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# Env files — NEVER commit secrets
+.env
+.env.local
+.env.*.local
+.env.prod
+.env.production
+infra/.env.prod
+infra/.env.production
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Uploads (local dev)
+apps/api/uploads/
+
+# Misc
+.cache/
+.parcel-cache/

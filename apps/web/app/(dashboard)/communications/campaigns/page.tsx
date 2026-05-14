@@ -1,0 +1,466 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import {
+  AlertCircle,
+  CheckCircle2,
+  ChevronRight,
+  Mail,
+  Pause,
+  Plus,
+  Send,
+  XCircle,
+  Loader2,
+  Inbox,
+} from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useBulkCampaigns, type BulkCampaign } from "@/hooks/useBulkCampaigns";
+import { CampaignBuilder } from "@/components/communications/CampaignBuilder";
+
+// ─── Status helpers ─────────────────────────────────────────────────────────
+
+const STATUS_LABELS: Record<BulkCampaign["status"], string> = {
+  draft: "Concept",
+  queued: "In wachtrij",
+  running: "Bezig",
+  completed: "Voltooid",
+  failed: "Mislukt",
+  paused: "Gepauzeerd",
+};
+
+const STATUS_STYLES: Record<BulkCampaign["status"], string> = {
+  draft: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
+  queued: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400",
+  running: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400",
+  completed:
+    "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400",
+  failed: "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400",
+  paused: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
+};
+
+const PROVIDER_LABELS: Record<BulkCampaign["provider"], string> = {
+  resend: "Resend",
+  gmail: "Gmail",
+  outlook: "Outlook",
+};
+
+function StatusIcon({ status }: { status: BulkCampaign["status"] }) {
+  if (status === "running" || status === "queued")
+    return <Loader2 className="h-3 w-3 animate-spin" />;
+  if (status === "completed") return <CheckCircle2 className="h-3 w-3" />;
+  if (status === "failed") return <XCircle className="h-3 w-3" />;
+  if (status === "paused") return <Pause className="h-3 w-3" />;
+  return <Mail className="h-3 w-3" />;
+}
+
+// ─── Page ───────────────────────────────────────────────────────────────────
+
+export default function CampaignsPage() {
+  const { data: campaigns, isLoading, isError } = useBulkCampaigns();
+  const [builderOpen, setBuilderOpen] = useState(false);
+  const [detail, setDetail] = useState<BulkCampaign | null>(null);
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <PageHeader
+        title="Bulk-mail campagnes"
+        description="Verstuur in één keer een gepersonaliseerde mail naar een doelgroep kandidaten."
+        actions={
+          <Button
+            onClick={() => setBuilderOpen(true)}
+            className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 border-0"
+          >
+            <Plus className="h-4 w-4 mr-1.5" />
+            Nieuwe campagne
+          </Button>
+        }
+      />
+
+      {/* Error */}
+      {isError && (
+        <Card className="border-destructive/40 bg-destructive/5 shadow-none">
+          <CardContent className="p-5 flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
+            <p className="text-sm text-destructive">
+              Campagnes konden niet geladen worden. Probeer het opnieuw.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Loading */}
+      {isLoading && (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-8 text-center text-sm text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+            Campagnes laden…
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Empty */}
+      {!isLoading && (campaigns?.length ?? 0) === 0 && !isError && (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-10 text-center space-y-3">
+            <Inbox className="h-10 w-10 text-muted-foreground/40 mx-auto" />
+            <div>
+              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                Nog geen campagnes
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Start je eerste campagne om in één keer een doelgroep te bereiken.
+              </p>
+            </div>
+            <Button
+              onClick={() => setBuilderOpen(true)}
+              size="sm"
+              className="bg-indigo-600 hover:bg-indigo-700 border-0"
+            >
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              Nieuwe campagne
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* List */}
+      {!isLoading && (campaigns?.length ?? 0) > 0 && (
+        <div className="space-y-3">
+          {campaigns!.map((c) => (
+            <CampaignRow
+              key={c.id}
+              campaign={c}
+              onClick={() => setDetail(c)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Builder dialog */}
+      <Dialog open={builderOpen} onOpenChange={setBuilderOpen}>
+        <DialogContent className="sm:max-w-[860px] max-h-[92vh] overflow-y-auto p-0">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Nieuwe bulk-mailcampagne</DialogTitle>
+          </DialogHeader>
+          <CampaignBuilder
+            onClose={() => setBuilderOpen(false)}
+            onCreated={(campaign) => {
+              setBuilderOpen(false);
+              setDetail(campaign);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail dialog */}
+      <CampaignDetailDialog
+        campaign={detail}
+        onClose={() => setDetail(null)}
+      />
+    </div>
+  );
+}
+
+// ─── Row ────────────────────────────────────────────────────────────────────
+
+function CampaignRow({
+  campaign,
+  onClick,
+}: {
+  campaign: BulkCampaign;
+  onClick: () => void;
+}) {
+  const total = campaign.eligible_count;
+  const sent = campaign.sent_count;
+  const failed = campaign.failed_count;
+  const skipped = campaign.skipped_count;
+  const pct = total > 0 ? Math.min(100, Math.round((sent / total) * 100)) : 0;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full text-left rounded-xl border border-border bg-white dark:bg-zinc-900 hover:border-indigo-300 hover:shadow-sm transition-all p-4 group"
+    >
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2 mb-1">
+            <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+              {campaign.name}
+            </p>
+            <Badge
+              className={`text-[10px] px-1.5 py-0 border-0 inline-flex items-center gap-1 ${STATUS_STYLES[campaign.status]}`}
+            >
+              <StatusIcon status={campaign.status} />
+              {STATUS_LABELS[campaign.status]}
+            </Badge>
+            <Badge
+              variant="outline"
+              className="text-[10px] px-1.5 py-0 font-mono"
+            >
+              via {PROVIDER_LABELS[campaign.provider]}
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground truncate">
+            {campaign.subject}
+          </p>
+        </div>
+        <ChevronRight className="h-4 w-4 text-zinc-300 group-hover:text-indigo-500 transition-colors shrink-0 mt-1" />
+      </div>
+
+      {/* Progress */}
+      <div className="space-y-1.5">
+        <div className="h-2 w-full rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all ${
+              campaign.status === "failed"
+                ? "bg-red-500"
+                : campaign.status === "completed"
+                ? "bg-emerald-500"
+                : "bg-gradient-to-r from-indigo-500 to-purple-600"
+            }`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-muted-foreground">
+          <span>
+            {sent} / {total} verstuurd ({pct}%)
+          </span>
+          {skipped > 0 && <span>{skipped} overgeslagen</span>}
+          {failed > 0 && (
+            <span className="text-red-600 dark:text-red-400">
+              {failed} mislukt
+            </span>
+          )}
+          <span className="ml-auto">
+            {new Date(campaign.created_at).toLocaleDateString("nl-NL", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })}
+          </span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+// ─── Detail dialog ──────────────────────────────────────────────────────────
+
+function CampaignDetailDialog({
+  campaign,
+  onClose,
+}: {
+  campaign: BulkCampaign | null;
+  onClose: () => void;
+}) {
+  const [showFailures, setShowFailures] = useState(false);
+  if (!campaign) return null;
+
+  const total = campaign.eligible_count;
+  const sent = campaign.sent_count;
+  const pct = total > 0 ? Math.min(100, Math.round((sent / total) * 100)) : 0;
+
+  return (
+    <Dialog open={!!campaign} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 pr-8">
+            <Send className="h-4 w-4 text-indigo-600" />
+            {campaign.name}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-5 mt-2">
+          {/* Status row */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge
+              className={`text-xs px-2 py-0.5 border-0 inline-flex items-center gap-1 ${STATUS_STYLES[campaign.status]}`}
+            >
+              <StatusIcon status={campaign.status} />
+              {STATUS_LABELS[campaign.status]}
+            </Badge>
+            <Badge variant="outline" className="text-xs">
+              via {PROVIDER_LABELS[campaign.provider]}
+            </Badge>
+            {campaign.mailbox_integration_id && (
+              <Link
+                href="/settings/integrations"
+                className="text-xs text-indigo-600 hover:underline"
+              >
+                Mailbox-integratie bekijken
+              </Link>
+            )}
+          </div>
+
+          {/* Subject */}
+          <div className="rounded-lg border border-border bg-zinc-50 dark:bg-zinc-900/40 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+              Onderwerp
+            </p>
+            <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+              {campaign.subject}
+            </p>
+          </div>
+
+          {/* Body preview */}
+          <div className="rounded-lg border border-border overflow-hidden">
+            <div className="bg-zinc-50 dark:bg-zinc-900/40 px-4 py-2 border-b border-border">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Bericht
+              </p>
+            </div>
+            <div
+              className="prose prose-sm dark:prose-invert max-w-none px-4 py-3 bg-white dark:bg-zinc-900 text-sm text-zinc-800 dark:text-zinc-200"
+              /* eslint-disable-next-line react/no-danger -- preview only */
+              dangerouslySetInnerHTML={{ __html: campaign.body_html }}
+            />
+          </div>
+
+          {/* Counts */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <CountTile label="In doelgroep" value={total} />
+            <CountTile
+              label="Overgeslagen (geen consent)"
+              value={campaign.skipped_count}
+            />
+            <CountTile
+              label="Verstuurd"
+              value={campaign.sent_count}
+              accent="emerald"
+            />
+            <CountTile
+              label="Mislukt"
+              value={campaign.failed_count}
+              accent={campaign.failed_count > 0 ? "red" : undefined}
+            />
+          </div>
+
+          {/* Progress bar */}
+          <div className="space-y-1.5">
+            <div className="h-2.5 w-full rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${
+                  campaign.status === "failed"
+                    ? "bg-red-500"
+                    : campaign.status === "completed"
+                    ? "bg-emerald-500"
+                    : "bg-gradient-to-r from-indigo-500 to-purple-600"
+                }`}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {pct}% voltooid — {sent} van {total} verstuurd
+            </p>
+          </div>
+
+          {/* Failures */}
+          {campaign.failures.length > 0 && (
+            <div className="rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-950/10 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowFailures((s) => !s)}
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+              >
+                <span className="flex items-center gap-2 text-sm font-semibold text-red-800 dark:text-red-300">
+                  <AlertCircle className="h-4 w-4" />
+                  {campaign.failures.length} mislukte verzending
+                  {campaign.failures.length === 1 ? "" : "en"}
+                </span>
+                <ChevronRight
+                  className={`h-4 w-4 text-red-600 transition-transform ${showFailures ? "rotate-90" : ""}`}
+                />
+              </button>
+              {showFailures && (
+                <div className="border-t border-red-200 dark:border-red-900/50 divide-y divide-red-200/60 dark:divide-red-900/40">
+                  {campaign.failures.map((f, i) => (
+                    <div key={i} className="px-4 py-2.5 text-xs">
+                      <div className="flex items-baseline justify-between gap-2 mb-0.5">
+                        <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                          {f.candidate_name}
+                        </span>
+                        <span className="text-muted-foreground text-[10px]">
+                          {new Date(f.failed_at).toLocaleString("nl-NL")}
+                        </span>
+                      </div>
+                      {f.email && (
+                        <p className="text-muted-foreground font-mono text-[11px]">
+                          {f.email}
+                        </p>
+                      )}
+                      <p className="text-red-700 dark:text-red-400 mt-0.5">
+                        {f.reason}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Timestamps */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <TimeBox label="Aangemaakt" iso={campaign.created_at} />
+            <TimeBox label="Gestart" iso={campaign.started_at} />
+            <TimeBox label="Voltooid" iso={campaign.completed_at} />
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CountTile({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: number;
+  accent?: "emerald" | "red";
+}) {
+  const color =
+    accent === "emerald"
+      ? "text-emerald-600 dark:text-emerald-400"
+      : accent === "red"
+      ? "text-red-600 dark:text-red-400"
+      : "text-zinc-900 dark:text-zinc-100";
+  return (
+    <div className="rounded-lg border border-border bg-white dark:bg-zinc-900 px-3 py-2.5">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </p>
+      <p className={`text-xl font-bold ${color}`}>{value}</p>
+    </div>
+  );
+}
+
+function TimeBox({ label, iso }: { label: string; iso: string | null }) {
+  return (
+    <div className="rounded-lg border border-border bg-zinc-50/50 dark:bg-zinc-900/40 px-3 py-2">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </p>
+      <p className="text-xs text-zinc-700 dark:text-zinc-300 mt-0.5">
+        {iso ? new Date(iso).toLocaleString("nl-NL") : "—"}
+      </p>
+    </div>
+  );
+}

@@ -1,0 +1,562 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import {
+  ArrowLeft,
+  Save,
+  ExternalLink,
+  Globe,
+  Eye,
+  FileText,
+  AlertCircle,
+  LayoutTemplate,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
+import {
+  useCareerPage,
+  useUpdateCareerPage,
+  TEMPLATE_LABELS,
+  LANGUAGE_LABELS,
+  LANGUAGE_FLAGS,
+  type CareerPageConfig,
+  type CareerPageTemplate,
+  type CareerPageLanguage,
+} from "@/hooks/useCareerPages";
+
+const TEMPLATES: CareerPageTemplate[] = [
+  "modern",
+  "classic",
+  "minimal",
+  "tech",
+  "creative",
+];
+const LANGUAGES: CareerPageLanguage[] = ["nl", "en", "de", "fr", "es"];
+
+const FONT_OPTIONS = [
+  { value: "Inter", label: "Inter (modern sans)" },
+  { value: "Roboto", label: "Roboto" },
+  { value: "Poppins", label: "Poppins" },
+  { value: "Merriweather", label: "Merriweather (serif)" },
+  { value: "Playfair Display", label: "Playfair Display (serif)" },
+  { value: "JetBrains Mono", label: "JetBrains Mono (mono)" },
+];
+
+// ─── Live Preview ────────────────────────────────────────────────────────────
+
+function LivePreview({
+  config,
+  template,
+}: {
+  config: CareerPageConfig;
+  template: CareerPageTemplate;
+}) {
+  const primary = config.primary_color ?? "#6366f1";
+  const fontFamily = config.font_family ?? "Inter";
+  const header = config.header_text || "Werk bij ons";
+  const intro =
+    config.intro_text ||
+    "Ontdek vacatures die bij je passen en solliciteer in één klik.";
+
+  const heroStyles: Record<CareerPageTemplate, React.CSSProperties> = {
+    modern: {
+      background: `linear-gradient(135deg, ${primary}, ${primary}cc)`,
+      color: "#fff",
+    },
+    classic: {
+      background: "#f8fafc",
+      color: "#0f172a",
+      borderTop: `6px solid ${primary}`,
+    },
+    minimal: {
+      background: "#ffffff",
+      color: "#0f172a",
+    },
+    tech: {
+      background: `linear-gradient(135deg, #0f172a, ${primary}33 60%, #0f172a)`,
+      color: "#fff",
+    },
+    creative: {
+      background: `radial-gradient(circle at 20% 20%, ${primary}, transparent 50%), radial-gradient(circle at 80% 80%, ${primary}cc, white 70%)`,
+      color: "#0f172a",
+    },
+    agency: {
+      background: `linear-gradient(180deg, #ffffff, ${primary}14)`,
+      color: "#0f172a",
+      borderLeft: `4px solid ${primary}`,
+    },
+  };
+
+  return (
+    <div className="overflow-hidden rounded-xl border bg-white dark:bg-zinc-950 shadow-sm">
+      {/* Browser chrome */}
+      <div className="flex items-center gap-1.5 border-b bg-zinc-50 dark:bg-zinc-900 px-3 py-2">
+        <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
+        <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+        <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+        <span className="ml-3 text-xs text-muted-foreground font-mono truncate">
+          /careers/preview
+        </span>
+      </div>
+
+      {/* Hero */}
+      <div
+        className="relative px-6 py-10"
+        style={{ ...heroStyles[template], fontFamily }}
+      >
+        {template === "modern" && (
+          <>
+            <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/15" />
+            <div className="absolute -bottom-6 -left-6 h-20 w-20 rounded-full bg-white/10" />
+          </>
+        )}
+        {template === "tech" && (
+          <div
+            className="absolute inset-0 opacity-20"
+            style={{
+              backgroundImage:
+                "linear-gradient(rgba(255,255,255,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px)",
+              backgroundSize: "16px 16px",
+            }}
+          />
+        )}
+        <div className="relative">
+          {config.logo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={config.logo_url}
+              alt="Logo"
+              className="mb-4 h-10 w-auto rounded"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+              }}
+            />
+          ) : null}
+          {template === "tech" && (
+            <p className="font-mono text-xs text-emerald-400 mb-2">
+              $ careers --hire
+            </p>
+          )}
+          <h1
+            className={`font-bold leading-tight ${
+              template === "classic" ? "font-serif text-2xl" : "text-2xl"
+            }`}
+            style={template === "classic" ? { color: primary } : undefined}
+          >
+            {header}
+          </h1>
+          <p
+            className={`mt-2 text-sm leading-relaxed ${
+              template === "modern" || template === "tech"
+                ? "text-white/90"
+                : "text-zinc-600"
+            }`}
+          >
+            {intro}
+          </p>
+          {template === "minimal" && (
+            <div
+              className="mt-4 h-1 w-12 rounded-full"
+              style={{ backgroundColor: primary }}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Sample jobs */}
+      <div className="space-y-2 p-4 bg-zinc-50/50 dark:bg-zinc-900/50">
+        {[
+          { title: "Senior Developer", loc: "Amsterdam", type: "Fulltime" },
+          { title: "Sales Consultant", loc: "Den Haag", type: "Fulltime" },
+        ].map((job) => (
+          <div
+            key={job.title}
+            className="flex items-center justify-between rounded-lg border bg-white dark:bg-zinc-950 p-3"
+            style={{ fontFamily }}
+          >
+            <div>
+              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                {job.title}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {job.loc} · {job.type}
+              </p>
+            </div>
+            <button
+              className="rounded-md px-3 py-1.5 text-xs font-semibold text-white shadow-sm"
+              style={{ backgroundColor: primary }}
+            >
+              Solliciteer
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Page ────────────────────────────────────────────────────────────────────
+
+export default function CareerPageEditorPage() {
+  const params = useParams<{ id: string }>();
+  const id = params?.id ?? "";
+  const router = useRouter();
+  const { toast } = useToast();
+  const { data: page, isLoading, isError } = useCareerPage(id);
+  const updatePage = useUpdateCareerPage();
+
+  // Local editable state
+  const [headerText, setHeaderText] = useState("");
+  const [introText, setIntroText] = useState("");
+  const [primaryColor, setPrimaryColor] = useState("#6366f1");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [fontFamily, setFontFamily] = useState("Inter");
+  const [template, setTemplate] = useState<CareerPageTemplate>("modern");
+  const [language, setLanguage] = useState<CareerPageLanguage>("nl");
+  const [customDomain, setCustomDomain] = useState("");
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    if (page && !hydrated) {
+      setHeaderText(page.config.header_text ?? "");
+      setIntroText(page.config.intro_text ?? "");
+      setPrimaryColor(page.config.primary_color ?? "#6366f1");
+      setLogoUrl(page.config.logo_url ?? "");
+      setFontFamily(page.config.font_family ?? "Inter");
+      setTemplate(page.template);
+      setLanguage(page.language);
+      setCustomDomain(page.custom_domain ?? "");
+      setHydrated(true);
+    }
+  }, [page, hydrated]);
+
+  const handleSave = async () => {
+    if (!page) return;
+    try {
+      await updatePage.mutateAsync({
+        id: page.id,
+        template,
+        language,
+        custom_domain: customDomain.trim() || null,
+        config: {
+          header_text: headerText,
+          intro_text: introText,
+          primary_color: primaryColor,
+          logo_url: logoUrl,
+          font_family: fontFamily,
+        },
+      });
+      toast({
+        title: "Wijzigingen opgeslagen",
+        description: `/${page.slug} is bijgewerkt.`,
+      });
+    } catch {
+      toast({
+        title: "Fout bij opslaan",
+        description: "Kon de wijzigingen niet opslaan. Probeer het opnieuw.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <Skeleton className="h-10 w-64" />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Skeleton className="h-[600px] rounded-xl" />
+          <Skeleton className="h-[600px] rounded-xl" />
+        </div>
+      </div>
+    );
+  }
+
+  if (isError || !page) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card py-20 text-center">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-950/40 mb-3">
+          <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
+        </div>
+        <p className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+          Career page niet gevonden
+        </p>
+        <Button variant="outline" className="mt-4" onClick={() => router.push("/career-pages")}>
+          Terug naar overzicht
+        </Button>
+      </div>
+    );
+  }
+
+  const liveConfig: CareerPageConfig = {
+    header_text: headerText,
+    intro_text: introText,
+    primary_color: primaryColor,
+    logo_url: logoUrl,
+    font_family: fontFamily,
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="mb-2 -ml-2 gap-1.5 text-muted-foreground hover:text-foreground"
+          >
+            <Link href="/career-pages">
+              <ArrowLeft className="h-4 w-4" />
+              Career pages
+            </Link>
+          </Button>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+              /{page.slug}
+            </h1>
+            <span className="text-[18px] leading-none">
+              {LANGUAGE_FLAGS[page.language]}
+            </span>
+            {page.active ? (
+              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
+                Live
+              </span>
+            ) : (
+              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                Offline
+              </span>
+            )}
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <Eye className="h-3.5 w-3.5" />
+              <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                {page.visit_count.toLocaleString("nl-NL")}
+              </span>{" "}
+              bezoeken
+            </div>
+            <span className="text-zinc-300 dark:text-zinc-700">·</span>
+            <div className="flex items-center gap-1.5">
+              <FileText className="h-3.5 w-3.5" />
+              <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                {page.application_count}
+              </span>{" "}
+              sollicitaties
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <Button asChild variant="outline" className="gap-1.5">
+            <a
+              href={`/careers/${page.slug}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Open publiek
+            </a>
+          </Button>
+          <Button asChild variant="outline" className="gap-1.5">
+            <Link href={`/career-pages/${page.id}/builder`}>
+              <LayoutTemplate className="h-4 w-4" />
+              Pagina bouwen
+            </Link>
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={updatePage.isPending}
+            className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 border-0 gap-2"
+          >
+            <Save className="h-4 w-4" />
+            {updatePage.isPending ? "Opslaan…" : "Opslaan"}
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* ── Left: Form ── */}
+        <div className="space-y-4">
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-5 space-y-4">
+              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                Inhoud
+              </h2>
+
+              <div className="space-y-2">
+                <Label htmlFor="hdr">Koptekst</Label>
+                <Input
+                  id="hdr"
+                  value={headerText}
+                  onChange={(e) => setHeaderText(e.target.value)}
+                  placeholder="Werk bij ons"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="intro">Introductietekst</Label>
+                <textarea
+                  id="intro"
+                  value={introText}
+                  onChange={(e) => setIntroText(e.target.value)}
+                  placeholder="Korte introductie over je bedrijf en cultuur…"
+                  className="w-full min-h-[100px] rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 resize-none"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="logo">Logo URL</Label>
+                <Input
+                  id="logo"
+                  value={logoUrl}
+                  onChange={(e) => setLogoUrl(e.target.value)}
+                  placeholder="https://…/logo.png"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-5 space-y-4">
+              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                Stijl
+              </h2>
+
+              <div className="space-y-2">
+                <Label htmlFor="color">Hoofdkleur</Label>
+                <div className="flex items-center gap-3">
+                  <input
+                    id="color"
+                    type="color"
+                    value={primaryColor}
+                    onChange={(e) => setPrimaryColor(e.target.value)}
+                    className="h-10 w-14 cursor-pointer rounded-lg border border-input bg-background p-1"
+                  />
+                  <Input
+                    value={primaryColor}
+                    onChange={(e) => setPrimaryColor(e.target.value)}
+                    className="font-mono flex-1"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="font">Lettertype</Label>
+                <Select value={fontFamily} onValueChange={setFontFamily}>
+                  <SelectTrigger id="font">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {FONT_OPTIONS.map((f) => (
+                      <SelectItem key={f.value} value={f.value}>
+                        {f.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="tpl">Template</Label>
+                  <Select
+                    value={template}
+                    onValueChange={(v) =>
+                      setTemplate(v as CareerPageTemplate)
+                    }
+                  >
+                    <SelectTrigger id="tpl">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TEMPLATES.map((t) => (
+                        <SelectItem key={t} value={t}>
+                          {TEMPLATE_LABELS[t]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="lang">Taal</Label>
+                  <Select
+                    value={language}
+                    onValueChange={(v) =>
+                      setLanguage(v as CareerPageLanguage)
+                    }
+                  >
+                    <SelectTrigger id="lang">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LANGUAGES.map((l) => (
+                        <SelectItem key={l} value={l}>
+                          {LANGUAGE_FLAGS[l]} {LANGUAGE_LABELS[l]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-5 space-y-4">
+              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                Custom domein
+              </h2>
+              <div className="space-y-2">
+                <Label htmlFor="domain">Domeinnaam</Label>
+                <div className="relative">
+                  <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <Input
+                    id="domain"
+                    value={customDomain}
+                    onChange={(e) => setCustomDomain(e.target.value)}
+                    placeholder="werken.bedrijf.nl"
+                    className="pl-9"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Wijs een CNAME naar <code className="font-mono">careers.talentflow.app</code>{" "}
+                  om dit domein te activeren.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* ── Right: Live preview ── */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+              Live preview
+            </h2>
+            <span className="text-xs text-muted-foreground">
+              Update terwijl je typt
+            </span>
+          </div>
+          <div className="lg:sticky lg:top-4">
+            <LivePreview config={liveConfig} template={template} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,217 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ── Typecheck + build: API ────────────────────────────────────────────────
+  lint-typecheck-api:
+    name: API · typecheck + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build API (tsc emit = typecheck)
+        run: npm run --workspace=apps/api build
+
+  # ── Lint + typecheck + build: Web ─────────────────────────────────────────
+  lint-typecheck-web:
+    name: Web · lint + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (next lint)
+        run: npm run --workspace=apps/web lint
+
+      - name: Build Next.js
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4000/api
+          NEXT_PUBLIC_USE_MOCK_DATA: 'true'
+        run: npm run --workspace=apps/web build
+
+  # ── Typecheck: shared package ─────────────────────────────────────────────
+  lint-typecheck-shared:
+    name: Shared · typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck shared
+        run: |
+          if npm run --workspace=packages/shared --if-present build; then
+            echo "Built via package script"
+          else
+            npx tsc --noEmit -p packages/shared
+          fi
+
+  # ── API unit + integration tests ──────────────────────────────────────────
+  test-api:
+    name: API · tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: talentflow
+          POSTGRES_PASSWORD: talentflow
+          POSTGRES_DB: talentflow_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U talentflow"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://talentflow:talentflow@localhost:5432/talentflow_test
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: test-jwt-secret-min-64-chars-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      JWT_REFRESH_SECRET: test-refresh-secret-min-64-chars-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+      NODE_ENV: test
+      STORAGE_DRIVER: local
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run migrations
+        run: npm run --workspace=apps/api migrate
+
+      - name: Run tests with coverage
+        run: npm run --workspace=apps/api test:coverage
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-coverage
+          path: apps/api/coverage
+          retention-days: 14
+
+  # ── Playwright E2E (web in mock mode) ─────────────────────────────────────
+  test-e2e:
+    name: Web · Playwright E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_API_URL: http://localhost:4000/api
+      NEXT_PUBLIC_USE_MOCK_DATA: 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx --workspace=apps/web playwright install --with-deps chromium
+
+      - name: Build web
+        run: npm run --workspace=apps/web build
+
+      - name: Start web (background)
+        run: |
+          npm run --workspace=apps/web start &
+          echo $! > web.pid
+
+      - name: Wait for web
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sSf http://localhost:3000 >/dev/null; then
+              echo "Web is up after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Web did not start within 60s"
+          exit 1
+
+      - name: Run Playwright tests
+        run: npm run --workspace=apps/web test:e2e
+
+      - name: Stop web
+        if: always()
+        run: |
+          if [ -f web.pid ]; then kill "$(cat web.pid)" || true; fi
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
+          retention-days: 14
+
+  # ── Aggregate gate ────────────────────────────────────────────────────────
+  ci-success:
+    name: CI · all green
+    if: always()
+    needs:
+      - lint-typecheck-api
+      - lint-typecheck-web
+      - lint-typecheck-shared
+      - test-api
+      - test-e2e
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify all jobs succeeded
+        run: |
+          if [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" = "true" ]; then
+            echo "One or more required jobs failed."
+            exit 1
+          fi
+          echo "All required jobs passed."

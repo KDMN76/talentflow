@@ -1,0 +1,120 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ['CI']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      skip_smoke:
+        description: 'Skip post-deploy smoke check'
+        required: false
+        default: 'false'
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Hetzner
+    runs-on: ubuntu-latest
+    # Only run when CI succeeded (or for manual dispatch).
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
+    environment:
+      name: production
+      url: https://talentflow.app
+
+    env:
+      VPS_HOST: 91.98.232.104
+      VPS_USER: talentflow-deploy
+      DEPLOY_PATH: /opt/talentflow
+
+    steps:
+      - name: Checkout (informational only — deploy uses git on the VPS)
+        uses: actions/checkout@v4
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.HETZNER_SSH_KEY }}
+
+      - name: Add VPS to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts
+
+      - name: Pull, build, migrate, restart
+        run: |
+          ssh -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" bash -se <<'REMOTE'
+            set -euo pipefail
+            cd /opt/talentflow
+
+            echo "── Fetching latest main ────────────────────────────────────"
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "── Building images ─────────────────────────────────────────"
+            docker compose --env-file infra/.env.prod -f infra/docker-compose.prod.yml build api web
+
+            echo "── Running migrations ──────────────────────────────────────"
+            docker compose --env-file infra/.env.prod -f infra/docker-compose.prod.yml \
+              run --rm api npm run migrate
+
+            echo "── Restarting api / api-worker / web ───────────────────────"
+            docker compose --env-file infra/.env.prod -f infra/docker-compose.prod.yml \
+              up -d --no-deps api api-worker web
+
+            echo "── Pruning dangling images ─────────────────────────────────"
+            docker image prune -f
+
+            echo "── Done ────────────────────────────────────────────────────"
+          REMOTE
+
+      - name: Wait for warm-up
+        if: github.event.inputs.skip_smoke != 'true'
+        run: sleep 15
+
+      - name: Smoke check (api /health)
+        if: github.event.inputs.skip_smoke != 'true'
+        run: |
+          for i in $(seq 1 12); do
+            if curl -fsS https://api.talentflow.app/health >/dev/null; then
+              echo "API healthy on attempt $i"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying..."
+            sleep 5
+          done
+          echo "API did not become healthy within 60s"
+          exit 1
+
+      - name: Smoke check (web)
+        if: github.event.inputs.skip_smoke != 'true'
+        run: |
+          curl -fsS -o /dev/null -w "%{http_code}\n" https://talentflow.app | grep -E '^(200|301|302)$' || {
+            echo "Web smoke failed"
+            exit 1
+          }
+
+      - name: Notify on success
+        if: success() && env.DEPLOY_NOTIFY_WEBHOOK != ''
+        env:
+          DEPLOY_NOTIFY_WEBHOOK: ${{ secrets.DEPLOY_NOTIFY_WEBHOOK }}
+        run: |
+          curl -fsS -X POST -H 'Content-Type: application/json' \
+            -d "{\"text\":\":rocket: TalentFlow deployed: ${GITHUB_SHA::7}\"}" \
+            "$DEPLOY_NOTIFY_WEBHOOK" || true
+
+      - name: Notify on failure
+        if: failure() && env.DEPLOY_NOTIFY_WEBHOOK != ''
+        env:
+          DEPLOY_NOTIFY_WEBHOOK: ${{ secrets.DEPLOY_NOTIFY_WEBHOOK }}
+        run: |
+          curl -fsS -X POST -H 'Content-Type: application/json' \
+            -d "{\"text\":\":x: TalentFlow deploy FAILED at ${GITHUB_SHA::7} — see ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\"}" \
+            "$DEPLOY_NOTIFY_WEBHOOK" || true

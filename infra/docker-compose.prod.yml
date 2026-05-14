@@ -1,0 +1,257 @@
+# TalentFlow — Production Docker Compose
+#
+# Run from the project root:
+#   docker compose --env-file infra/.env.prod -f infra/docker-compose.prod.yml up -d
+#
+# Build contexts use `..` because this file lives in `infra/` but the API and
+# Web Dockerfiles need access to their own `apps/<svc>` directories. We pass
+# the subdir as the build-context for each service so the Dockerfile's
+# COPY paths (which assume the app dir as root) keep working.
+#
+# Networking: all internal traffic stays on `talentflow_net`. Only Caddy
+# binds the public ports 80/443. Postgres/Redis/MinIO/API/Web are not
+# port-forwarded to the host.
+
+services:
+  # ── Database ────────────────────────────────────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: talentflow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      # Tune for a small/medium VPS. Override via .env.prod if needed.
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - talentflow_net
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ── Redis ───────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: talentflow-redis
+    restart: unless-stopped
+    command:
+      - 'redis-server'
+      - '--requirepass'
+      - '${REDIS_PASSWORD}'
+      - '--appendonly'
+      - 'yes'
+      - '--maxmemory'
+      - '256mb'
+      - '--maxmemory-policy'
+      - 'allkeys-lru'
+    volumes:
+      - redis_data:/data
+    networks:
+      - talentflow_net
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD}', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ── Object storage (S3-compatible) ──────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: talentflow-minio
+    restart: unless-stopped
+    command: server /data --console-address ':9001'
+    environment:
+      MINIO_ROOT_USER: ${STORAGE_S3_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${STORAGE_S3_SECRET_KEY}
+    volumes:
+      - minio_data:/data
+    networks:
+      - talentflow_net
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # One-shot sidecar that creates the bucket + sets policy on first boot.
+  # Idempotent — re-running is safe.
+  minio-init:
+    image: minio/mc:latest
+    container_name: talentflow-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      - talentflow_net
+    entrypoint:
+      - sh
+      - -c
+      - |
+        set -eu
+        mc alias set local http://minio:9000 "$$STORAGE_S3_ACCESS_KEY" "$$STORAGE_S3_SECRET_KEY"
+        mc mb --ignore-existing "local/$$STORAGE_S3_BUCKET"
+        # Lock down — bucket is private; presigned URLs handle access.
+        mc anonymous set none "local/$$STORAGE_S3_BUCKET" || true
+        echo "MinIO bucket $$STORAGE_S3_BUCKET ready."
+    environment:
+      STORAGE_S3_ACCESS_KEY: ${STORAGE_S3_ACCESS_KEY}
+      STORAGE_S3_SECRET_KEY: ${STORAGE_S3_SECRET_KEY}
+      STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET}
+    restart: 'no'
+
+  # ── API (Express) ───────────────────────────────────────────────────────
+  api:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile
+      target: runtime
+    image: talentflow/api:latest
+    container_name: talentflow-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: '4000'
+      # Workers draaien in `api-worker` (zie hieronder). De API skipt
+      # inline worker-startup zodat we geen dubbele consumers per queue
+      # krijgen. Lokaal dev: deze flag is leeg → workers starten inline.
+      DISABLE_INLINE_WORKERS: 'true'
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      RESEND_FROM: ${RESEND_FROM}
+      RESEND_REPLY_DOMAIN: ${RESEND_REPLY_DOMAIN}
+      RESEND_WEBHOOK_SECRET: ${RESEND_WEBHOOK_SECRET}
+      STORAGE_DRIVER: ${STORAGE_DRIVER}
+      STORAGE_S3_ENDPOINT: ${STORAGE_S3_ENDPOINT}
+      STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET}
+      STORAGE_S3_ACCESS_KEY: ${STORAGE_S3_ACCESS_KEY}
+      STORAGE_S3_SECRET_KEY: ${STORAGE_S3_SECRET_KEY}
+      STORAGE_S3_REGION: ${STORAGE_S3_REGION}
+      SENTRY_DSN: ${SENTRY_DSN_API}
+      SENTRY_ENV: ${SENTRY_ENV}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - talentflow_net
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'wget -qO- http://localhost:4000/health || exit 1'
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ── BullMQ worker (separate process; same image as API) ─────────────────
+  api-worker:
+    image: talentflow/api:latest
+    container_name: talentflow-api-worker
+    restart: unless-stopped
+    command: ['node', 'dist/queue/workers/index.js']
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      RESEND_FROM: ${RESEND_FROM}
+      RESEND_REPLY_DOMAIN: ${RESEND_REPLY_DOMAIN}
+      STORAGE_DRIVER: ${STORAGE_DRIVER}
+      STORAGE_S3_ENDPOINT: ${STORAGE_S3_ENDPOINT}
+      STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET}
+      STORAGE_S3_ACCESS_KEY: ${STORAGE_S3_ACCESS_KEY}
+      STORAGE_S3_SECRET_KEY: ${STORAGE_S3_SECRET_KEY}
+      STORAGE_S3_REGION: ${STORAGE_S3_REGION}
+      SENTRY_DSN: ${SENTRY_DSN_API}
+      SENTRY_ENV: ${SENTRY_ENV}
+    depends_on:
+      api:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - talentflow_net
+
+  # ── Web (Next.js) ────────────────────────────────────────────────────────
+  web:
+    build:
+      context: ../apps/web
+      dockerfile: Dockerfile
+      target: runtime
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_USE_MOCK_DATA: ${NEXT_PUBLIC_USE_MOCK_DATA}
+        NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN}
+    image: talentflow/web:latest
+    container_name: talentflow-web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      NEXT_PUBLIC_USE_MOCK_DATA: ${NEXT_PUBLIC_USE_MOCK_DATA}
+      NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN}
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - talentflow_net
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'wget -qO- http://localhost:3000/ || exit 1'
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ── Reverse proxy + automatic TLS ───────────────────────────────────────
+  caddy:
+    image: caddy:2-alpine
+    container_name: talentflow-caddy
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp' # HTTP/3
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+      - web
+    networks:
+      - talentflow_net
+
+networks:
+  talentflow_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  caddy_data:
+  caddy_config:
