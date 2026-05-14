@@ -187,6 +187,11 @@ services:
     container_name: talentflow-api-worker
     restart: unless-stopped
     command: ['node', 'dist/queue/workers/index.js']
+    # Worker draait geen HTTP-server, dus de Dockerfile-HEALTHCHECK
+    # (`wget /health`) kan nooit slagen. Disable expliciet — worker-state
+    # monitoren we via BullMQ-queues + Sentry, niet via HTTP.
+    healthcheck:
+      disable: true
     environment:
       NODE_ENV: production
       DATABASE_URL: ${DATABASE_URL}
@@ -245,9 +250,10 @@ services:
     ports:
       - '127.0.0.1:31000:3000'
     healthcheck:
+      # `/` redirect (307) en `wget -qO-` faalt op 3xx; `/login` is altijd 200.
       test:
         - CMD-SHELL
-        - 'wget -qO- http://localhost:3000/ || exit 1'
+        - 'wget -qO- http://localhost:3000/login >/dev/null 2>&1 || exit 1'
       interval: 30s
       timeout: 5s
       retries: 5
