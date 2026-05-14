@@ -12,13 +12,13 @@
 
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import passportSaml from 'passport-saml';
+import { SAML } from 'passport-saml';
 import * as samlService from './saml.service';
 import { requireAuth, requireRole } from '../../middleware/auth';
 import { AppError } from '../../middleware/errorHandler';
 import { auditCtxFromReq } from '../../lib/audit';
 
-const { SAML } = passportSaml;
+// Named import — passport-saml@3.x is puur CJS met named exports en geen default.
 
 const REFRESH_COOKIE = 'refreshToken';
 const COOKIE_OPTIONS = {

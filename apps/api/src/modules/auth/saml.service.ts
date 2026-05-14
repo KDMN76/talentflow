@@ -15,7 +15,7 @@
  *   - Google Workspace: gebruikt ECP/SAML 2.0 met email als nameid.
  */
 
-import passportSaml from 'passport-saml';
+import { Strategy as SamlStrategy } from 'passport-saml';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { PoolClient } from 'pg';
@@ -25,7 +25,9 @@ import { logAudit, type AuditContext } from '../../lib/audit';
 import { AuditActions } from '../../lib/auditActions';
 import type { JwtPayload } from '../../middleware/auth';
 
-const { Strategy: SamlStrategy } = passportSaml;
+// passport-saml@3.x is een puur-CJS module met named exports en __esModule=true,
+// dus `import passportSaml from 'passport-saml'` resolveert naar undefined op
+// runtime. Named imports omzeilen die interop-quirk volledig.
 type SamlStrategyType = InstanceType<typeof SamlStrategy>;
 
 const REFRESH_TOKEN_TTL_DAYS = 7;
