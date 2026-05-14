@@ -19,7 +19,7 @@ import { PortalFooter } from "@/components/portal/PortalFooter";
 import {
   fetchPortalBrandingServer,
   PORTAL_BRANDING_DEFAULTS,
-} from "@/hooks/usePortal";
+} from "@/lib/portalBrandingServer";
 
 interface LayoutProps {
   children: React.ReactNode;

@@ -1,3 +1,5 @@
+"use client";
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { mockStages, mockApplications, type PipelineStage, type Application } from "@/lib/mockData";

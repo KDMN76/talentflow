@@ -1,3 +1,5 @@
+"use client";
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Candidate } from "@talentflow/shared";
 import { api } from "@/lib/api";

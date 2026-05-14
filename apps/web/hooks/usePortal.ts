@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * usePortal — client hooks voor de white-label klantportaal flow.
  *

@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * useCareerPageBuilder — thin facade for the builder UI.
  *

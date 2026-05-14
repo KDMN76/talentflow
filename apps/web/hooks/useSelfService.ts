@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * useSelfService — kandidaat-zelfservice hooks (AVG art. 15-17).
  *

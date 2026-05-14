@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * useAuditTrail — fetcht de WORM audit-trail voor een specifieke entity.
  *

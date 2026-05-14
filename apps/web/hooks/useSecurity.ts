@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * useSecurity — central hooks voor Sprint Q4.2 (Enterprise security).
  *
