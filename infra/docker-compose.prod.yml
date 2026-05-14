@@ -8,9 +8,21 @@
 # the subdir as the build-context for each service so the Dockerfile's
 # COPY paths (which assume the app dir as root) keep working.
 #
-# Networking: all internal traffic stays on `talentflow_net`. Only Caddy
-# binds the public ports 80/443. Postgres/Redis/MinIO/API/Web are not
-# port-forwarded to the host.
+# Networking: all internal traffic stays on `talentflow_net`.
+#
+# Two reverse-proxy modes (mutually exclusive):
+#
+#   1. Caddy mode (default for fresh / single-tenant VPS):
+#         docker compose --profile caddy --env-file infra/.env.prod \
+#           -f infra/docker-compose.prod.yml up -d
+#      Caddy publishes 80/443 + handles automatic Let's Encrypt SSL.
+#
+#   2. Host-Nginx mode (KDMN VPS — Nginx already serves other apps):
+#         docker compose --env-file infra/.env.prod \
+#           -f infra/docker-compose.prod.yml up -d
+#      No Caddy started. The api + web + postgres bind to 127.0.0.1
+#      so the host-side Nginx vhost (see infra/nginx-talentflow.conf)
+#      can reverse-proxy them while keeping them off the public internet.
 
 services:
   # ── Database ────────────────────────────────────────────────────────────
@@ -28,6 +40,10 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - talentflow_net
+    # Bind to localhost only — allows host-side `psql`/migration scripts.
+    # NOT exposed publicly thanks to the 127.0.0.1: prefix.
+    ports:
+      - '127.0.0.1:5432:5432'
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
       interval: 10s
@@ -150,6 +166,9 @@ services:
         condition: service_healthy
     networks:
       - talentflow_net
+    # Bind to localhost — Nginx on host reverse-proxies into this.
+    ports:
+      - '127.0.0.1:4000:4000'
     healthcheck:
       test:
         - CMD-SHELL
@@ -217,6 +236,9 @@ services:
         condition: service_healthy
     networks:
       - talentflow_net
+    # Bind to localhost — Nginx on host reverse-proxies into this.
+    ports:
+      - '127.0.0.1:3000:3000'
     healthcheck:
       test:
         - CMD-SHELL
@@ -226,11 +248,16 @@ services:
       retries: 5
       start_period: 30s
 
-  # ── Reverse proxy + automatic TLS ───────────────────────────────────────
+  # ── Reverse proxy + automatic TLS (optional — `--profile caddy`) ────────
+  # On the KDMN VPS we do NOT start Caddy because the host already runs
+  # Nginx for app.kdmnprojecten.com / planning.kdmnprojecten.com etc.
+  # The host Nginx vhost in infra/nginx-talentflow.conf reverse-proxies to
+  # the api/web containers via 127.0.0.1:4000 / 127.0.0.1:3000.
   caddy:
     image: caddy:2-alpine
     container_name: talentflow-caddy
     restart: unless-stopped
+    profiles: ['caddy']
     ports:
       - '80:80'
       - '443:443'
