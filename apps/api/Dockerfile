@@ -17,8 +17,13 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 RUN apk add --no-cache libc6-compat python3 make g++
-COPY package*.json ./
-RUN npm ci --include=dev
+# NB: only copy package.json (not package-lock.json). The monorepo uses
+# npm workspaces — the lock file lives in the repo root and the legacy
+# workspace-level lock files are stale relics from before the workspaces
+# migration. Using `npm install` (not `npm ci`) here regenerates a
+# valid dependency tree from package.json alone.
+COPY package.json ./
+RUN npm install --no-audit --no-fund --include=dev --legacy-peer-deps
 
 # ── builder ─────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS builder

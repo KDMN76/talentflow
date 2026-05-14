@@ -13,8 +13,11 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
-COPY package*.json ./
-RUN npm ci --include=dev
+# NB: only copy package.json (not package-lock.json). See apps/api/Dockerfile
+# for the rationale — npm workspaces monorepo, workspace-level lock files
+# are stale and unused.
+COPY package.json ./
+RUN npm install --no-audit --no-fund --include=dev --legacy-peer-deps
 
 # ── builder ─────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
