@@ -12,18 +12,14 @@
  * - useUpdateSelfConsent(token)   : POST /consent — gdpr | email toggle
  * - useRequestDeletion(token)     : POST /deletion — start DSAR-flow
  * - useWithdrawApplication(token) : POST /application/:id/withdraw
- *
- * Alle hooks vallen netjes terug op mock-data wanneer de backend onbereikbaar is.
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import {
-  MOCK_SELF_SERVICE_DATA,
-  MOCK_SELF_SERVICE_TOKEN,
-  type SelfServiceData,
-  type SelfServiceConsent,
-  type SelfServiceApplication,
+import type {
+  SelfServiceData,
+  SelfServiceConsent,
+  SelfServiceApplication,
 } from "@/lib/mockData";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -77,28 +73,10 @@ export function useSelfServiceData(token: string) {
     enabled: !!token,
     retry: false,
     queryFn: async () => {
-      try {
-        const { data } = await api.get<unknown>(`/self-service/${token}`, {
-          headers: { Authorization: "" },
-        });
-        return shapeSelfServiceResponse(data);
-      } catch (err) {
-        // Mock-fallback: alleen gebruiken voor de mock-token of in dev wanneer
-        // backend onbereikbaar is. Bij token-fout (404/410/401/403) NIET mocken,
-        // dan willen we de "invalid"-state tonen.
-        if (token === MOCK_SELF_SERVICE_TOKEN) {
-          return cloneMockData();
-        }
-        const variant = classifySelfServiceError(err);
-        if (variant === "invalid") {
-          throw err;
-        }
-        // Netwerk-fout in dev → mock zodat de UI bruikbaar blijft.
-        if (process.env.NODE_ENV !== "production") {
-          return cloneMockData();
-        }
-        throw err;
-      }
+      const { data } = await api.get<unknown>(`/self-service/${token}`, {
+        headers: { Authorization: "" },
+      });
+      return shapeSelfServiceResponse(data);
     },
   });
 }
@@ -107,17 +85,12 @@ export function useUpdateSelfProfile(token: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (fields: SelfServiceCandidatePartial) => {
-      try {
-        const { data } = await api.post(
-          `/self-service/${token}/correction`,
-          { fields },
-          { headers: { Authorization: "" } }
-        );
-        return data as { success: true; updated_at: string };
-      } catch {
-        // Mock: doe alsof het lukt, geef nieuwe timestamp.
-        return { success: true as const, updated_at: new Date().toISOString() };
-      }
+      const { data } = await api.post(
+        `/self-service/${token}/correction`,
+        { fields },
+        { headers: { Authorization: "" } }
+      );
+      return data as { success: true; updated_at: string };
     },
     onSuccess: (res, fields) => {
       qc.setQueryData<SelfServiceData | undefined>(
@@ -143,16 +116,12 @@ export function useUpdateSelfConsent(token: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: { type: ConsentType; granted: boolean }) => {
-      try {
-        const { data } = await api.post(
-          `/self-service/${token}/consent`,
-          payload,
-          { headers: { Authorization: "" } }
-        );
-        return data as { success: true };
-      } catch {
-        return { success: true as const };
-      }
+      const { data } = await api.post(
+        `/self-service/${token}/consent`,
+        payload,
+        { headers: { Authorization: "" } }
+      );
+      return data as { success: true };
     },
     onSuccess: (_res, vars) => {
       qc.setQueryData<SelfServiceData | undefined>(
@@ -191,23 +160,12 @@ export function useRequestDeletion(token: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: DeletionRequestPayload) => {
-      try {
-        const { data } = await api.post(
-          `/self-service/${token}/deletion`,
-          payload,
-          { headers: { Authorization: "" } }
-        );
-        return shapeDeletionResponse(data);
-      } catch {
-        // Mock: simuleer DSAR-creatie met 30-dagen deadline.
-        const now = new Date();
-        const deadline = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-        return {
-          dsar_id: `mock-dsar-${Date.now()}`,
-          deadline: deadline.toISOString(),
-          status: "pending" as const,
-        };
-      }
+      const { data } = await api.post(
+        `/self-service/${token}/deletion`,
+        payload,
+        { headers: { Authorization: "" } }
+      );
+      return shapeDeletionResponse(data);
     },
     onSuccess: (res) => {
       qc.setQueryData<SelfServiceData | undefined>(
@@ -233,16 +191,12 @@ export function useWithdrawApplication(token: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (applicationId: string) => {
-      try {
-        const { data } = await api.post(
-          `/self-service/${token}/application/${applicationId}/withdraw`,
-          {},
-          { headers: { Authorization: "" } }
-        );
-        return data as { success: true };
-      } catch {
-        return { success: true as const };
-      }
+      const { data } = await api.post(
+        `/self-service/${token}/application/${applicationId}/withdraw`,
+        {},
+        { headers: { Authorization: "" } }
+      );
+      return data as { success: true };
     },
     onSuccess: (_res, applicationId) => {
       qc.setQueryData<SelfServiceData | undefined>(
@@ -268,8 +222,7 @@ export function useWithdrawApplication(token: string) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function shapeSelfServiceResponse(raw: unknown): SelfServiceData {
-  if (!raw || typeof raw !== "object") return cloneMockData();
-  const r = raw as Record<string, unknown>;
+  const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const root =
     r.data && typeof r.data === "object"
       ? (r.data as Record<string, unknown>)
@@ -411,8 +364,4 @@ function shapeDeletionResponse(data: unknown): DeletionRequestResponse {
         : new Date(Date.now() + 30 * 86_400_000).toISOString(),
     status: "pending",
   };
-}
-
-function cloneMockData(): SelfServiceData {
-  return JSON.parse(JSON.stringify(MOCK_SELF_SERVICE_DATA)) as SelfServiceData;
 }

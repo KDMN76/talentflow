@@ -2,17 +2,11 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import {
-  mockAgentBriefs,
-  mockAgentRuns,
-  mockAgentFindings,
-  mockAgentActions,
-} from "@/lib/mockData";
 import type {
-  AgentBrief,
-  AgentRun,
-  AgentFinding,
   AgentAction,
+  AgentBrief,
+  AgentFinding,
+  AgentRun,
   AgentRunStatus,
   FindingStatus,
 } from "@/lib/types/sourcing";
@@ -36,12 +30,6 @@ import type {
  *   POST   /api/sourcing/findings/bulk-approve
  *   POST   /api/sourcing/findings/bulk-reject
  *   GET    /api/sourcing/actions/:runId
- *
- * Every endpoint falls back to in-memory mock state so the UI is fully
- * demoable without the API. Mock progressor:
- *   - queued runs flip to running after ~4s (with reasoning_log entry)
- *   - running runs append a new reasoning_log entry every ~6s and flip to
- *     review_required after ~24s with 8 fresh findings
  */
 
 export type {
@@ -54,140 +42,6 @@ export type {
   FindingStatus,
 } from "@/lib/types/sourcing";
 
-// ─── Mock state ──────────────────────────────────────────────────────────────
-
-let mockBriefs: AgentBrief[] = [...mockAgentBriefs];
-let mockRuns: AgentRun[] = [...mockAgentRuns];
-let mockFindings: AgentFinding[] = [...mockAgentFindings];
-let mockActions: AgentAction[] = [...mockAgentActions];
-
-function syncBriefs() {
-  mockAgentBriefs.length = 0;
-  mockAgentBriefs.push(...mockBriefs);
-}
-function syncRuns() {
-  mockAgentRuns.length = 0;
-  mockAgentRuns.push(...mockRuns);
-}
-function syncFindings() {
-  mockAgentFindings.length = 0;
-  mockAgentFindings.push(...mockFindings);
-}
-function syncActions() {
-  mockAgentActions.length = 0;
-  mockAgentActions.push(...mockActions);
-}
-
-const REASONING_PROGRESSION: Array<{ step: string; reason: string }> = [
-  { step: "search:linkedin", reason: "Initiële zoekopdracht uitgevoerd — 47 hits, 12 in scope." },
-  { step: "score", reason: "Top 12 kandidaten gescoord op match-criteria." },
-  { step: "expand", reason: "Synoniemen toegevoegd — query verbreed." },
-  { step: "review_required", reason: "8 kandidaten klaar voor menselijke review." },
-];
-
-const SAMPLE_FINDING_NAMES = [
-  "Lars Janssen",
-  "Femke de Boer",
-  "Mert Yıldız",
-  "Sophia Andersson",
-  "Lucas Martin",
-  "Eva Nielsen",
-  "Daan Visser",
-  "Karim Hassan",
-];
-
-function progressMockRuns(): void {
-  const now = Date.now();
-  mockRuns = mockRuns.map((run) => {
-    if (run.status === "queued") {
-      const ageMs = now - new Date(run.created_at).getTime();
-      if (ageMs > 4_000) {
-        return {
-          ...run,
-          status: "running" as const,
-          started_at: new Date(now).toISOString(),
-          expansion_iteration: 1,
-          current_query: { keywords: "draft", iteration: 1 },
-          reasoning_log: [
-            {
-              ts: new Date(now).toISOString(),
-              step: "plan",
-              reason: "Run gestart — strategie opgesteld.",
-            },
-          ],
-        };
-      }
-      return run;
-    }
-    if (run.status === "running") {
-      const startedMs = run.started_at ? new Date(run.started_at).getTime() : now;
-      const ageMs = now - startedMs;
-      // Append a new reasoning_log entry every 6s based on iteration.
-      const expectedEntries = Math.min(
-        REASONING_PROGRESSION.length + 1, // +1 for the initial "plan" entry
-        Math.floor(ageMs / 6_000) + 1
-      );
-      let nextLog = run.reasoning_log;
-      while (nextLog.length < expectedEntries) {
-        const idx = nextLog.length - 1; // 0-based into REASONING_PROGRESSION
-        const entry = REASONING_PROGRESSION[idx];
-        if (!entry) break;
-        nextLog = [
-          ...nextLog,
-          {
-            ts: new Date(startedMs + (idx + 1) * 6_000).toISOString(),
-            step: entry.step,
-            reason: entry.reason,
-          },
-        ];
-      }
-      // After 24s flip to review_required and append 8 new findings.
-      if (ageMs > 24_000) {
-        if (!mockFindings.some((f) => f.run_id === run.id && f.id.startsWith("find-auto-"))) {
-          const created = SAMPLE_FINDING_NAMES.map((name, idx): AgentFinding => ({
-            id: `find-auto-${run.id}-${idx}`,
-            run_id: run.id,
-            brief_id: run.brief_id,
-            candidate_id: null,
-            external_source: "linkedin",
-            external_url: `https://linkedin.com/in/${name.toLowerCase().replace(/\s+/g, "-")}`,
-            external_id: `auto-${run.id}-${idx}`,
-            full_name: name,
-            current_title: ["Senior Engineer", "Lead Engineer", "Staff Engineer"][idx % 3],
-            current_company: ["Adyen", "Mollie", "Bunq", "ING"][idx % 4],
-            location: ["Amsterdam", "Utrecht", "Rotterdam"][idx % 3],
-            headline: `${name} — interessante match`,
-            summary: "AI-gegenereerde samenvatting (mock).",
-            skills: ["TypeScript", "React", "Node.js"].slice(0, 2 + (idx % 2)),
-            languages: ["nl", "en"],
-            match_score: 88 - idx * 3,
-            match_reasoning:
-              "Sterke match op kerncompetenties + relevante recente ervaring.",
-            status: "pending_review",
-            reviewed_at: null,
-            reviewed_by: null,
-            review_note: null,
-            created_at: new Date(now).toISOString(),
-          }));
-          mockFindings = [...created, ...mockFindings];
-          syncFindings();
-        }
-        return {
-          ...run,
-          status: "review_required" as const,
-          finished_at: new Date(now).toISOString(),
-          candidates_found: run.candidates_found + 8,
-          expansion_iteration: REASONING_PROGRESSION.length,
-          reasoning_log: nextLog,
-        };
-      }
-      return { ...run, reasoning_log: nextLog };
-    }
-    return run;
-  });
-  syncRuns();
-}
-
 // ─── Briefs ──────────────────────────────────────────────────────────────────
 
 export interface BriefFilters {
@@ -199,20 +53,11 @@ export function useAgentBriefs(filters: BriefFilters = {}) {
   return useQuery({
     queryKey: ["sourcing", "briefs", filters],
     queryFn: async (): Promise<AgentBrief[]> => {
-      try {
-        const { data } = await api.get<{ items: AgentBrief[] }>(
-          "/sourcing/briefs",
-          { params: filters }
-        );
-        return data.items;
-      } catch {
-        return mockBriefs.filter((b) => {
-          if (filters.job_id && b.job_id !== filters.job_id) return false;
-          if (filters.active !== undefined && b.active !== filters.active)
-            return false;
-          return true;
-        });
-      }
+      const { data } = await api.get<{ items: AgentBrief[] }>(
+        "/sourcing/briefs",
+        { params: filters }
+      );
+      return data.items;
     },
   });
 }
@@ -223,14 +68,8 @@ export function useAgentBrief(id: string | undefined) {
     enabled: !!id,
     queryFn: async (): Promise<AgentBrief> => {
       if (!id) throw new Error("Geen brief-ID");
-      try {
-        const { data } = await api.get<AgentBrief>(`/sourcing/briefs/${id}`);
-        return data;
-      } catch {
-        const found = mockBriefs.find((b) => b.id === id);
-        if (!found) throw new Error("Brief niet gevonden");
-        return found;
-      }
+      const { data } = await api.get<AgentBrief>(`/sourcing/briefs/${id}`);
+      return data;
     },
   });
 }
@@ -250,20 +89,8 @@ export function useCreateBrief() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: CreateBriefInput): Promise<AgentBrief> => {
-      try {
-        const { data } = await api.post<AgentBrief>("/sourcing/briefs", input);
-        return data;
-      } catch {
-        const created: AgentBrief = {
-          id: `brief-${Date.now()}`,
-          ...input,
-          active: true,
-          created_at: new Date().toISOString(),
-        };
-        mockBriefs = [created, ...mockBriefs];
-        syncBriefs();
-        return created;
-      }
+      const { data } = await api.post<AgentBrief>("/sourcing/briefs", input);
+      return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sourcing", "briefs"] });
@@ -281,19 +108,11 @@ export function useUpdateBrief() {
       id: string;
       patch: Partial<CreateBriefInput>;
     }): Promise<AgentBrief> => {
-      try {
-        const { data } = await api.patch<AgentBrief>(
-          `/sourcing/briefs/${id}`,
-          patch
-        );
-        return data;
-      } catch {
-        const idx = mockBriefs.findIndex((b) => b.id === id);
-        if (idx === -1) throw new Error("Brief niet gevonden");
-        mockBriefs[idx] = { ...mockBriefs[idx], ...patch };
-        syncBriefs();
-        return mockBriefs[idx];
-      }
+      const { data } = await api.patch<AgentBrief>(
+        `/sourcing/briefs/${id}`,
+        patch
+      );
+      return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sourcing", "briefs"] });
@@ -305,15 +124,7 @@ export function useArchiveBrief() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string): Promise<void> => {
-      try {
-        await api.post(`/sourcing/briefs/${id}/archive`);
-      } catch {
-        const idx = mockBriefs.findIndex((b) => b.id === id);
-        if (idx !== -1) {
-          mockBriefs[idx] = { ...mockBriefs[idx], active: false };
-          syncBriefs();
-        }
-      }
+      await api.post(`/sourcing/briefs/${id}/archive`);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sourcing", "briefs"] });
@@ -332,22 +143,11 @@ export function useAgentRuns(filters: RunFilters = {}) {
   return useQuery({
     queryKey: ["sourcing", "runs", filters],
     queryFn: async (): Promise<AgentRun[]> => {
-      try {
-        const { data } = await api.get<{ items: AgentRun[] }>(
-          "/sourcing/runs",
-          { params: filters }
-        );
-        return data.items;
-      } catch {
-        progressMockRuns();
-        return mockRuns
-          .filter((r) => {
-            if (filters.status && r.status !== filters.status) return false;
-            if (filters.brief_id && r.brief_id !== filters.brief_id) return false;
-            return true;
-          })
-          .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
-      }
+      const { data } = await api.get<{ items: AgentRun[] }>(
+        "/sourcing/runs",
+        { params: filters }
+      );
+      return data.items;
     },
     refetchInterval: (query) => {
       const data = query.state.data;
@@ -368,15 +168,8 @@ export function useAgentRun(id: string | undefined) {
     enabled: !!id,
     queryFn: async (): Promise<AgentRun> => {
       if (!id) throw new Error("Geen run-ID");
-      try {
-        const { data } = await api.get<AgentRun>(`/sourcing/runs/${id}`);
-        return data;
-      } catch {
-        progressMockRuns();
-        const found = mockRuns.find((r) => r.id === id);
-        if (!found) throw new Error("Run niet gevonden");
-        return found;
-      }
+      const { data } = await api.get<AgentRun>(`/sourcing/runs/${id}`);
+      return data;
     },
     refetchInterval: (query) => {
       const data = query.state.data;
@@ -397,33 +190,11 @@ export function useStartRun() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: StartRunInput): Promise<AgentRun> => {
-      try {
-        const { data } = await api.post<AgentRun>(
-          `/sourcing/briefs/${input.briefId}/runs`,
-          { trigger: input.trigger ?? "manual" }
-        );
-        return data;
-      } catch {
-        const created: AgentRun = {
-          id: `run-${Date.now()}`,
-          brief_id: input.briefId,
-          status: "queued",
-          trigger: input.trigger ?? "manual",
-          started_at: null,
-          finished_at: null,
-          candidates_found: 0,
-          candidates_approved: 0,
-          candidates_rejected: 0,
-          expansion_iteration: 0,
-          current_query: null,
-          reasoning_log: [],
-          error_message: null,
-          created_at: new Date().toISOString(),
-        };
-        mockRuns = [created, ...mockRuns];
-        syncRuns();
-        return created;
-      }
+      const { data } = await api.post<AgentRun>(
+        `/sourcing/briefs/${input.briefId}/runs`,
+        { trigger: input.trigger ?? "manual" }
+      );
+      return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sourcing"] });
@@ -435,19 +206,7 @@ export function useCancelRun() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string): Promise<void> => {
-      try {
-        await api.post(`/sourcing/runs/${id}/cancel`);
-      } catch {
-        const idx = mockRuns.findIndex((r) => r.id === id);
-        if (idx !== -1) {
-          mockRuns[idx] = {
-            ...mockRuns[idx],
-            status: "cancelled",
-            finished_at: new Date().toISOString(),
-          };
-          syncRuns();
-        }
-      }
+      await api.post(`/sourcing/runs/${id}/cancel`);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sourcing"] });
@@ -469,31 +228,19 @@ export function useAgentFindings(
   return useQuery({
     queryKey: ["sourcing", "findings", runId ?? "all", filters],
     queryFn: async (): Promise<AgentFinding[]> => {
-      try {
-        if (runId) {
-          const { data } = await api.get<{ items: AgentFinding[] }>(
-            `/sourcing/runs/${runId}/findings`,
-            { params: filters }
-          );
-          return data.items;
-        }
-        // Cross-run inbox.
+      if (runId) {
         const { data } = await api.get<{ items: AgentFinding[] }>(
-          `/sourcing/findings`,
+          `/sourcing/runs/${runId}/findings`,
           { params: filters }
         );
         return data.items;
-      } catch {
-        progressMockRuns();
-        return mockFindings
-          .filter((f) => {
-            if (runId && f.run_id !== runId) return false;
-            if (filters.status && f.status !== filters.status) return false;
-            if (filters.brief_id && f.brief_id !== filters.brief_id) return false;
-            return true;
-          })
-          .sort((a, b) => b.match_score - a.match_score);
       }
+      // Cross-run inbox.
+      const { data } = await api.get<{ items: AgentFinding[] }>(
+        `/sourcing/findings`,
+        { params: filters }
+      );
+      return data.items;
     },
     refetchInterval: (query) => {
       const data = query.state.data;
@@ -514,36 +261,11 @@ export function useApproveFinding() {
       id: string;
       note?: string;
     }): Promise<AgentFinding> => {
-      try {
-        const { data } = await api.post<AgentFinding>(
-          `/sourcing/findings/${id}/approve`,
-          { note }
-        );
-        return data;
-      } catch {
-        const idx = mockFindings.findIndex((f) => f.id === id);
-        if (idx === -1) throw new Error("Finding niet gevonden");
-        mockFindings[idx] = {
-          ...mockFindings[idx],
-          status: "approved",
-          reviewed_at: new Date().toISOString(),
-          reviewed_by: "user-1",
-          review_note: note ?? null,
-        };
-        syncFindings();
-        // Also bump run counters.
-        const runIdx = mockRuns.findIndex(
-          (r) => r.id === mockFindings[idx].run_id
-        );
-        if (runIdx !== -1) {
-          mockRuns[runIdx] = {
-            ...mockRuns[runIdx],
-            candidates_approved: mockRuns[runIdx].candidates_approved + 1,
-          };
-          syncRuns();
-        }
-        return mockFindings[idx];
-      }
+      const { data } = await api.post<AgentFinding>(
+        `/sourcing/findings/${id}/approve`,
+        { note }
+      );
+      return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sourcing"] });
@@ -561,35 +283,11 @@ export function useRejectFinding() {
       id: string;
       reason: string;
     }): Promise<AgentFinding> => {
-      try {
-        const { data } = await api.post<AgentFinding>(
-          `/sourcing/findings/${id}/reject`,
-          { reason }
-        );
-        return data;
-      } catch {
-        const idx = mockFindings.findIndex((f) => f.id === id);
-        if (idx === -1) throw new Error("Finding niet gevonden");
-        mockFindings[idx] = {
-          ...mockFindings[idx],
-          status: "rejected",
-          reviewed_at: new Date().toISOString(),
-          reviewed_by: "user-1",
-          review_note: reason,
-        };
-        syncFindings();
-        const runIdx = mockRuns.findIndex(
-          (r) => r.id === mockFindings[idx].run_id
-        );
-        if (runIdx !== -1) {
-          mockRuns[runIdx] = {
-            ...mockRuns[runIdx],
-            candidates_rejected: mockRuns[runIdx].candidates_rejected + 1,
-          };
-          syncRuns();
-        }
-        return mockFindings[idx];
-      }
+      const { data } = await api.post<AgentFinding>(
+        `/sourcing/findings/${id}/reject`,
+        { reason }
+      );
+      return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sourcing"] });
@@ -607,31 +305,11 @@ export function useBulkApproveFindings() {
       ids: string[];
       note?: string;
     }): Promise<{ approved: number }> => {
-      try {
-        const { data } = await api.post<{ approved: number }>(
-          "/sourcing/findings/bulk-approve",
-          { ids, note }
-        );
-        return data;
-      } catch {
-        let count = 0;
-        const now = new Date().toISOString();
-        mockFindings = mockFindings.map((f) => {
-          if (ids.includes(f.id)) {
-            count++;
-            return {
-              ...f,
-              status: "approved",
-              reviewed_at: now,
-              reviewed_by: "user-1",
-              review_note: note ?? null,
-            };
-          }
-          return f;
-        });
-        syncFindings();
-        return { approved: count };
-      }
+      const { data } = await api.post<{ approved: number }>(
+        "/sourcing/findings/bulk-approve",
+        { ids, note }
+      );
+      return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sourcing"] });
@@ -649,31 +327,11 @@ export function useBulkRejectFindings() {
       ids: string[];
       reason: string;
     }): Promise<{ rejected: number }> => {
-      try {
-        const { data } = await api.post<{ rejected: number }>(
-          "/sourcing/findings/bulk-reject",
-          { ids, reason }
-        );
-        return data;
-      } catch {
-        let count = 0;
-        const now = new Date().toISOString();
-        mockFindings = mockFindings.map((f) => {
-          if (ids.includes(f.id)) {
-            count++;
-            return {
-              ...f,
-              status: "rejected",
-              reviewed_at: now,
-              reviewed_by: "user-1",
-              review_note: reason,
-            };
-          }
-          return f;
-        });
-        syncFindings();
-        return { rejected: count };
-      }
+      const { data } = await api.post<{ rejected: number }>(
+        "/sourcing/findings/bulk-reject",
+        { ids, reason }
+      );
+      return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sourcing"] });
@@ -687,22 +345,16 @@ export function useAgentActions(runId: string | undefined) {
   return useQuery({
     queryKey: ["sourcing", "actions", runId ?? "all"],
     queryFn: async (): Promise<AgentAction[]> => {
-      try {
-        if (runId) {
-          const { data } = await api.get<{ items: AgentAction[] }>(
-            `/sourcing/actions/${runId}`
-          );
-          return data.items;
-        }
+      if (runId) {
         const { data } = await api.get<{ items: AgentAction[] }>(
-          "/sourcing/actions"
+          `/sourcing/actions/${runId}`
         );
         return data.items;
-      } catch {
-        return mockActions
-          .filter((a) => !runId || a.run_id === runId)
-          .sort((a, b) => b.created_at.localeCompare(a.created_at));
       }
+      const { data } = await api.get<{ items: AgentAction[] }>(
+        "/sourcing/actions"
+      );
+      return data.items;
     },
   });
 }

@@ -2,12 +2,6 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import {
-  mockCandidateMatches,
-  mockJobMatches,
-  mockMatchExplanations,
-  MOCK_AI_DISCLOSURE,
-} from "@/lib/mockData";
 import type {
   CandidateMatch,
   JobMatch,
@@ -21,9 +15,6 @@ import type {
  *   GET    /api/matching/jobs/:jobId
  *   GET    /api/matching/candidates/:candidateId
  *   POST   /api/matching/jobs/:jobId/candidates/:candidateId/explanation
- *
- * Each hook follows the same try/catch + mock-fallback pattern used by
- * `useCandidates`, so the recruiter UI degrades gracefully in dev mode.
  */
 
 // ─── Top-N kandidaten voor een vacature ─────────────────────────────────────
@@ -32,14 +23,10 @@ export function useJobMatches(jobId: string) {
   return useQuery({
     queryKey: ["matching", "job", jobId],
     queryFn: async (): Promise<JobMatch[]> => {
-      try {
-        const { data } = await api.get<{ data: JobMatch[] }>(
-          `/matching/jobs/${jobId}`
-        );
-        return data.data;
-      } catch {
-        return mockJobMatches[jobId] ?? [];
-      }
+      const { data } = await api.get<{ data: JobMatch[] }>(
+        `/matching/jobs/${jobId}`
+      );
+      return data.data;
     },
     enabled: !!jobId,
     // Match scores are recomputed server-side on candidate/job mutation, so a
@@ -54,14 +41,10 @@ export function useCandidateMatches(candidateId: string) {
   return useQuery({
     queryKey: ["matching", "candidate", candidateId],
     queryFn: async (): Promise<CandidateMatch[]> => {
-      try {
-        const { data } = await api.get<{ data: CandidateMatch[] }>(
-          `/matching/candidates/${candidateId}`
-        );
-        return data.data;
-      } catch {
-        return mockCandidateMatches[candidateId] ?? [];
-      }
+      const { data } = await api.get<{ data: CandidateMatch[] }>(
+        `/matching/candidates/${candidateId}`
+      );
+      return data.data;
     },
     enabled: !!candidateId,
     staleTime: 60_000,
@@ -87,40 +70,10 @@ export function useGenerateMatchExplanation() {
   const queryClient = useQueryClient();
   return useMutation<MatchExplanationResponse, Error, ExplanationVars>({
     mutationFn: async ({ jobId, candidateId }) => {
-      try {
-        const { data } = await api.post<{ data: MatchExplanationResponse }>(
-          `/matching/jobs/${jobId}/candidates/${candidateId}/explanation`
-        );
-        return data.data;
-      } catch {
-        const key = `${jobId}:${candidateId}`;
-        const cached = mockMatchExplanations[key];
-        if (cached) return cached;
-
-        // Last-resort synthetic fallback so the dialog never errors out in
-        // dev mode for unseen pairs. Pull a percent from the matching arrays
-        // when possible to keep numbers consistent with the list view.
-        const jobRow = (mockJobMatches[jobId] ?? []).find(
-          (m) => m.candidate_id === candidateId
-        );
-        const candRow = (mockCandidateMatches[candidateId] ?? []).find(
-          (m) => m.job_id === jobId
-        );
-        const matchPercent = jobRow?.match_percent ?? candRow?.match_percent ?? 50;
-
-        return {
-          explanation:
-            "Geen specifieke AI-analyse beschikbaar voor deze combinatie. " +
-            "De match-score is berekend op basis van overlap tussen vacature- " +
-            "en kandidaat-attributen.",
-          strengths: ["Berekende score op basis van profielkenmerken"],
-          gaps: ["Onvoldoende data voor gedetailleerde analyse"],
-          score: matchPercent / 100,
-          match_percent: matchPercent,
-          cached: false,
-          ai_disclosure: MOCK_AI_DISCLOSURE,
-        };
-      }
+      const { data } = await api.post<{ data: MatchExplanationResponse }>(
+        `/matching/jobs/${jobId}/candidates/${candidateId}/explanation`
+      );
+      return data.data;
     },
     onSuccess: (_data, vars) => {
       // No list-level invalidation needed: explanation is per-pair and the

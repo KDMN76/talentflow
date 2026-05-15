@@ -7,18 +7,11 @@
  * - usePortalBranding(token) : alleen branding (gebruikt door layout SSR-fetch)
  * - usePortalFeedback(token) : accept / reject / comment per kandidaat
  * - usePortalLogView(token)  : gedebounced logging van view-actie
- *
- * Alle hooks vallen netjes terug op mock-data wanneer de backend niet bereikbaar is.
  */
 
 import { useCallback, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import {
-  MOCK_PORTAL_ACCESS_FULL,
-  MOCK_PORTAL_BRANDING,
-  type MockPortalAccess,
-} from "@/lib/mockData";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -194,27 +187,22 @@ const SERVER_API_BASE =
   "http://localhost:4000/api";
 
 /**
- * Fetch branding op server-side (in layout). Faalt zonder errors — fallback naar
- * default branding zodat de portal-pagina altijd rendert (ook bij DB-/API-uitval).
+ * Fetch branding op server-side (in layout).
  */
 export async function fetchPortalBrandingServer(
   token: string
 ): Promise<PortalBranding> {
   if (!token) return { ...DEFAULT_BRANDING };
-  try {
-    const res = await fetch(`${SERVER_API_BASE}/portal/branding/${token}`, {
-      cache: "no-store",
-    });
-    if (!res.ok) throw new Error("branding fetch failed");
-    const json = (await res.json()) as { branding?: unknown } | unknown;
-    const branding =
-      typeof json === "object" && json !== null && "branding" in json
-        ? (json as { branding?: unknown }).branding
-        : json;
-    return normalizeBranding(branding);
-  } catch {
-    return { ...MOCK_PORTAL_BRANDING };
-  }
+  const res = await fetch(`${SERVER_API_BASE}/portal/branding/${token}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error("branding fetch failed");
+  const json = (await res.json()) as { branding?: unknown } | unknown;
+  const branding =
+    typeof json === "object" && json !== null && "branding" in json
+      ? (json as { branding?: unknown }).branding
+      : json;
+  return normalizeBranding(branding);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -234,15 +222,10 @@ export function usePortalAccess(token: string) {
         return shapePortalResponse(data);
       } catch {
         // Probeer legacy endpoint /portals/access/:token (Q1 backend).
-        try {
-          const { data } = await api.get<unknown>(`/portals/access/${token}`, {
-            headers: { Authorization: "" },
-          });
-          return shapePortalResponse(data);
-        } catch {
-          if (!token) throw new Error("Geen token");
-          return mockAccessFor(token);
-        }
+        const { data } = await api.get<unknown>(`/portals/access/${token}`, {
+          headers: { Authorization: "" },
+        });
+        return shapePortalResponse(data);
       }
     },
   });
@@ -254,18 +237,14 @@ export function usePortalBranding(token: string) {
     enabled: !!token,
     retry: false,
     queryFn: async () => {
-      try {
-        const { data } = await api.get<unknown>(`/portal/branding/${token}`, {
-          headers: { Authorization: "" },
-        });
-        const branding =
-          typeof data === "object" && data !== null && "branding" in data
-            ? (data as { branding?: unknown }).branding
-            : data;
-        return normalizeBranding(branding);
-      } catch {
-        return { ...MOCK_PORTAL_BRANDING };
-      }
+      const { data } = await api.get<unknown>(`/portal/branding/${token}`, {
+        headers: { Authorization: "" },
+      });
+      const branding =
+        typeof data === "object" && data !== null && "branding" in data
+          ? (data as { branding?: unknown }).branding
+          : data;
+      return normalizeBranding(branding);
     },
   });
 }
@@ -288,23 +267,18 @@ export function usePortalFeedback(token: string) {
         return data;
       } catch {
         // Legacy endpoint
-        try {
-          const legacyAction =
-            payload.action === "approve"
-              ? "approve"
-              : payload.action === "reject"
-              ? "reject"
-              : "comment";
-          const { data } = await api.post(
-            `/portals/access/${token}/feedback`,
-            { ...payload, action: legacyAction },
-            { headers: { Authorization: "" } }
-          );
-          return data;
-        } catch {
-          // Mock: imiteer success-response zodat UI optimistic update kan doen.
-          return { success: true, ...payload };
-        }
+        const legacyAction =
+          payload.action === "approve"
+            ? "approve"
+            : payload.action === "reject"
+            ? "reject"
+            : "comment";
+        const { data } = await api.post(
+          `/portals/access/${token}/feedback`,
+          { ...payload, action: legacyAction },
+          { headers: { Authorization: "" } }
+        );
+        return data;
       }
     },
     onSuccess: (_, vars) => {
@@ -377,7 +351,7 @@ export function usePortalLogView(token: string) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Response shaping + mock fallback
+// Response shaping
 // ─────────────────────────────────────────────────────────────────────────────
 
 function shapePortalResponse(data: unknown): PortalAccessData {
@@ -417,24 +391,6 @@ function shapePortalResponse(data: unknown): PortalAccessData {
       .filter((a) => a && typeof a === "object")
       .map((a) => normalizeApplication(a as Record<string, unknown>)),
     expires_at: (obj.expires_at ?? portal.expires_at ?? null) as string | null,
-  };
-}
-
-function mockAccessFor(_token: string): PortalAccessData {
-  return cloneMockAccess(MOCK_PORTAL_ACCESS_FULL);
-}
-
-function cloneMockAccess(src: MockPortalAccess): PortalAccessData {
-  return {
-    ...src,
-    applications: src.applications.map((a) => ({
-      ...a,
-      pipeline_history: [...a.pipeline_history],
-      skills: [...a.skills],
-      comments: a.comments.map((c) => ({ ...c })),
-    })),
-    branding: { ...src.branding },
-    permissions: { ...src.permissions },
   };
 }
 

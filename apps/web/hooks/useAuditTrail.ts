@@ -5,14 +5,11 @@
  *
  * Backend-contract:
  *   GET /api/compliance/audit/:entityType/:entityId → AuditTrailEvent[]
- *
- * Try/catch + mock-fallback voor dev wanneer backend niet beschikbaar is.
  */
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import {
-  MOCK_AUDIT_TRAIL_EVENTS,
   type AuditTrailEvent,
   type AuditActionGroup,
 } from "@/lib/mockData";
@@ -25,19 +22,10 @@ export function useAuditTrail(entityType: AuditEntityType, entityId: string) {
     enabled: !!entityType && !!entityId,
     retry: false,
     queryFn: async () => {
-      try {
-        const { data } = await api.get<unknown>(
-          `/compliance/audit/${entityType}/${entityId}`
-        );
-        return shapeEvents(data);
-      } catch {
-        // Mock fallback in dev — gefilterd op entity zodat de output realistisch lijkt.
-        return MOCK_AUDIT_TRAIL_EVENTS.filter(
-          (e) =>
-            (e.entity_type === entityType && e.entity_id === entityId) ||
-            entityId === "demo"
-        );
-      }
+      const { data } = await api.get<unknown>(
+        `/compliance/audit/${entityType}/${entityId}`
+      );
+      return shapeEvents(data);
     },
   });
 }
