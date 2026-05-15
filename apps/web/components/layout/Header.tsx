@@ -1,16 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { Menu, Bell, Search, Briefcase, Users, ArrowRight, X } from "lucide-react";
+import { Menu, Bell, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-const MOCK_NOTIFICATIONS = [
-  { id: "1", icon: Users, color: "text-indigo-600 bg-indigo-50", title: "Nieuwe sollicitatie", body: "Maya Okonkwo heeft gesolliciteerd op Senior Frontend Developer", time: "5 min geleden", unread: true },
-  { id: "2", icon: ArrowRight, color: "text-purple-600 bg-purple-50", title: "Fase gewijzigd", body: "Sophie van den Berg is doorgestuurd naar Interview", time: "1 uur geleden", unread: true },
-  { id: "3", icon: Briefcase, color: "text-emerald-600 bg-emerald-50", title: "Vacature gepubliceerd", body: "Product Manager is nu actief", time: "3 uur geleden", unread: false },
-];
+// TODO: vervangen door echte `useNotifications()` hook zodra het backend-
+// endpoint er is. Tot dan: lege lijst — een nieuwe tenant heeft 0 meldingen.
+interface Notification {
+  id: string;
+  icon: typeof Bell;
+  color: string;
+  title: string;
+  body: string;
+  time: string;
+  unread: boolean;
+}
+const INITIAL_NOTIFICATIONS: Notification[] = [];
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -18,7 +25,7 @@ interface HeaderProps {
 
 export function Header({ onMenuClick }: HeaderProps) {
   const [open, setOpen] = useState(false);
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<Notification[]>(INITIAL_NOTIFICATIONS);
   const unreadCount = notifications.filter((n) => n.unread).length;
 
   const markAllRead = () => setNotifications((n) => n.map((x) => ({ ...x, unread: false })));
@@ -80,29 +87,36 @@ export function Header({ onMenuClick }: HeaderProps) {
 
               {/* Notifications */}
               <div className="divide-y divide-border max-h-80 overflow-y-auto">
-                {notifications.map((n) => {
-                  const Icon = n.icon;
-                  return (
-                    <div
-                      key={n.id}
-                      className={cn(
-                        "flex gap-3 px-4 py-3 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer",
-                        n.unread && "bg-indigo-50/50 dark:bg-indigo-950/20"
-                      )}
-                      onClick={() => setNotifications((prev) => prev.map((x) => x.id === n.id ? { ...x, unread: false } : x))}
-                    >
-                      <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm", n.color)}>
-                        <Icon className="h-4 w-4" />
+                {notifications.length === 0 ? (
+                  <div className="px-4 py-8 text-center">
+                    <Bell className="mx-auto mb-2 h-6 w-6 text-zinc-300 dark:text-zinc-600" />
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400">Geen meldingen</p>
+                  </div>
+                ) : (
+                  notifications.map((n) => {
+                    const Icon = n.icon;
+                    return (
+                      <div
+                        key={n.id}
+                        className={cn(
+                          "flex gap-3 px-4 py-3 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer",
+                          n.unread && "bg-indigo-50/50 dark:bg-indigo-950/20"
+                        )}
+                        onClick={() => setNotifications((prev) => prev.map((x) => x.id === n.id ? { ...x, unread: false } : x))}
+                      >
+                        <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm", n.color)}>
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{n.title}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{n.body}</p>
+                          <p className="text-xs text-muted-foreground/60 mt-1">{n.time}</p>
+                        </div>
+                        {n.unread && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-indigo-500" />}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{n.title}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{n.body}</p>
-                        <p className="text-xs text-muted-foreground/60 mt-1">{n.time}</p>
-                      </div>
-                      {n.unread && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-indigo-500" />}
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
 
               <div className="px-4 py-2.5 border-t border-border text-center">
