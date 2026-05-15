@@ -34,6 +34,18 @@ const forgotPasswordSchema = z.object({
 
 export async function register(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    // Hotfix 2026-05-15: publieke open registratie tijdelijk dicht. Iedereen
+    // kon een tenant aanmaken zonder verwerkersovereenkomst → AVG-risico +
+    // onverwachte users die crashende modules raken. Invite-only flow komt
+    // morgen. Schakel uit met env-var DISABLE_PUBLIC_REGISTRATION=true.
+    if (process.env.DISABLE_PUBLIC_REGISTRATION === 'true') {
+      throw new AppError(
+        403,
+        'REGISTRATION_DISABLED',
+        'Publieke registratie is uitgeschakeld. Neem contact op voor toegang.'
+      );
+    }
+
     const input = registerSchema.parse(req.body);
     const result = await authService.register(input, auditCtxFromReq(req));
 

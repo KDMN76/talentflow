@@ -178,15 +178,20 @@ export default function LoginPage() {
             Inloggen
           </Button>
 
-          <p className="text-sm text-center text-muted-foreground">
-            Nog geen account?{" "}
-            <Link
-              href="/register"
-              className="text-primary font-medium hover:underline"
-            >
-              Registreer je bedrijf
-            </Link>
-          </p>
+          {/* Hotfix 2026-05-15: publieke registratie tijdelijk uit (zie
+              auth.controller.ts) — invite-only flow komt morgen. CTA verborgen
+              zodat we geen kapotte UX laten zien. */}
+          {process.env.NEXT_PUBLIC_DISABLE_PUBLIC_REGISTRATION !== "true" && (
+            <p className="text-sm text-center text-muted-foreground">
+              Nog geen account?{" "}
+              <Link
+                href="/register"
+                className="text-primary font-medium hover:underline"
+              >
+                Registreer je bedrijf
+              </Link>
+            </p>
+          )}
         </CardFooter>
       </form>
     </Card>

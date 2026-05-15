@@ -159,6 +159,9 @@ services:
       STORAGE_S3_REGION: ${STORAGE_S3_REGION}
       SENTRY_DSN: ${SENTRY_DSN_API}
       SENTRY_ENV: ${SENTRY_ENV}
+      # Hotfix 2026-05-15: zet op 'true' om POST /api/auth/register dicht
+      # te zetten (403 REGISTRATION_DISABLED). Invite-only flow komt morgen.
+      DISABLE_PUBLIC_REGISTRATION: ${DISABLE_PUBLIC_REGISTRATION:-false}
     depends_on:
       postgres:
         condition: service_healthy
@@ -231,6 +234,9 @@ services:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
         NEXT_PUBLIC_USE_MOCK_DATA: ${NEXT_PUBLIC_USE_MOCK_DATA}
         NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN}
+        # Hotfix 2026-05-15: verbergt "Registreer je bedrijf" CTA op /login
+        # wanneer 'true'. Moet matchen met API-zijde DISABLE_PUBLIC_REGISTRATION.
+        NEXT_PUBLIC_DISABLE_PUBLIC_REGISTRATION: ${DISABLE_PUBLIC_REGISTRATION:-false}
     image: talentflow/web:latest
     container_name: talentflow-web
     restart: unless-stopped
