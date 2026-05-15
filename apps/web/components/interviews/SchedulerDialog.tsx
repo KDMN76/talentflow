@@ -41,12 +41,7 @@ import {
   useScheduleInterview,
 } from "@/hooks/useInterviews";
 import { useInterviewKits } from "@/hooks/useInterviewKits";
-import {
-  mockApplications,
-  mockCandidates,
-  mockJobs,
-  mockTeamMembers,
-} from "@/lib/mockData";
+import { useTenantUsers, type TenantUser } from "@/hooks/useUsers";
 import { cn, getInitials } from "@/lib/utils";
 import type {
   AvailableSlot,
@@ -114,6 +109,11 @@ export interface SchedulerDialogProps {
   onOpenChange: (open: boolean) => void;
   /** When provided, step 1 is auto-completed and skipped. */
   applicationId?: string;
+  /** Required when `applicationId` is provided — used to hydrate step 1. */
+  candidateId?: string;
+  candidateName?: string;
+  jobId?: string;
+  jobTitle?: string;
 }
 
 interface SchedulerState {
@@ -154,34 +154,33 @@ export function SchedulerDialog({
   open,
   onOpenChange,
   applicationId,
+  candidateId,
+  candidateName,
+  jobId,
+  jobTitle,
 }: SchedulerDialogProps) {
   const { toast } = useToast();
   const schedule = useScheduleInterview();
   const [state, setState] = useState<SchedulerState>(INITIAL_STATE);
 
-  // Reset state when the dialog opens. When `applicationId` is supplied, hydrate
-  // from the matching application + skip directly to step 2.
+  // Reset state when the dialog opens. When `applicationId` is supplied,
+  // hydrate from the props passed by the caller and skip directly to step 2.
   useEffect(() => {
     if (!open) return;
     if (applicationId) {
-      const app = mockApplications.find((a) => a.id === applicationId);
-      const cand = app
-        ? mockCandidates.find((c) => c.id === app.candidate_id)
-        : null;
-      const job = app ? mockJobs.find((j) => j.id === app.job_id) : null;
       setState({
         ...INITIAL_STATE,
         step: 2,
-        application_id: app?.id ?? applicationId,
-        candidate_id: app?.candidate_id ?? "",
-        candidate_name: cand?.name ?? "",
-        job_id: app?.job_id ?? "",
-        job_title: job?.title ?? "",
+        application_id: applicationId,
+        candidate_id: candidateId ?? "",
+        candidate_name: candidateName ?? "",
+        job_id: jobId ?? "",
+        job_title: jobTitle ?? "",
       });
     } else {
       setState(INITIAL_STATE);
     }
-  }, [open, applicationId]);
+  }, [open, applicationId, candidateId, candidateName, jobId, jobTitle]);
 
   const update = (patch: Partial<SchedulerState>) =>
     setState((s) => ({ ...s, ...patch }));
@@ -273,25 +272,7 @@ export function SchedulerDialog({
         <Stepper steps={stepsToShow} current={state.step} />
 
         <div className="py-4">
-          {state.step === 1 && (
-            <Step1Selection
-              candidateId={state.candidate_id}
-              jobId={state.job_id}
-              onSelect={(application) => {
-                const job = mockJobs.find((j) => j.id === application.job_id);
-                const cand = mockCandidates.find(
-                  (c) => c.id === application.candidate_id
-                );
-                update({
-                  application_id: application.id,
-                  candidate_id: application.candidate_id,
-                  candidate_name: cand?.name ?? "",
-                  job_id: application.job_id,
-                  job_title: job?.title ?? "",
-                });
-              }}
-            />
-          )}
+          {state.step === 1 && <Step1Selection />}
 
           {state.step === 2 && (
             <Step2Interviewers
@@ -407,55 +388,23 @@ function Stepper({ steps, current }: { steps: Step[]; current: Step }) {
 
 // ─── Step 1: Application select ─────────────────────────────────────────────
 
-function Step1Selection({
-  candidateId,
-  jobId,
-  onSelect,
-}: {
-  candidateId: string;
-  jobId: string;
-  onSelect: (a: (typeof mockApplications)[number]) => void;
-}) {
+/**
+ * Free application picker (when no `applicationId` is provided up-front).
+ *
+ * TODO: backend must expose a "list applications across all jobs for the
+ * current tenant" endpoint before this picker can be wired up. Until then,
+ * callers should always open the dialog with `applicationId` + the related
+ * candidate/job props pre-filled. See `SchedulerDialogProps`.
+ */
+function Step1Selection() {
   return (
     <div>
       <p className="text-sm text-muted-foreground mb-3">
         Kies de sollicitatie waarvoor je een interview wilt inplannen.
       </p>
-      <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
-        {mockApplications.map((app) => {
-          const cand = mockCandidates.find((c) => c.id === app.candidate_id);
-          const job = mockJobs.find((j) => j.id === app.job_id);
-          const selected =
-            candidateId === app.candidate_id && jobId === app.job_id;
-          return (
-            <button
-              key={app.id}
-              type="button"
-              onClick={() => onSelect(app)}
-              className={cn(
-                "flex items-center gap-3 w-full rounded-lg border p-3 text-left transition-all",
-                selected
-                  ? "border-indigo-500 bg-indigo-50/40 dark:bg-indigo-950/20 ring-1 ring-indigo-300"
-                  : "border-border hover:bg-zinc-50 dark:hover:bg-zinc-900/50"
-              )}
-            >
-              <Avatar className="h-9 w-9 shrink-0">
-                <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-500 text-white text-xs font-semibold">
-                  {getInitials(cand?.name ?? "?")}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate">
-                  {cand?.name ?? "—"}
-                </p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {job?.title ?? "—"} · {cand?.email ?? "geen email"}
-                </p>
-              </div>
-              {selected && <Check className="h-4 w-4 text-indigo-600 shrink-0" />}
-            </button>
-          );
-        })}
+      <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+        Open de planner vanaf de pipeline of het sollicitatie-detail. Direct
+        zoeken over alle sollicitaties is nog niet beschikbaar.
       </div>
     </div>
   );
@@ -470,6 +419,8 @@ function Step2Interviewers({
   selectedIds: string[];
   onChange: (ids: string[]) => void;
 }) {
+  const { data: tenantUsers, isLoading } = useTenantUsers();
+  const users: TenantUser[] = tenantUsers ?? [];
   const toggle = (id: string) => {
     if (selectedIds.includes(id)) onChange(selectedIds.filter((x) => x !== id));
     else onChange([...selectedIds, id]);
@@ -481,7 +432,17 @@ function Step2Interviewers({
         waarop iedereen beschikbaar is.
       </p>
       <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
-        {mockTeamMembers.map((m) => {
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            Teamleden laden…
+          </div>
+        ) : users.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+            Geen teamleden gevonden.
+          </div>
+        ) : (
+          users.map((m) => {
           const selected = selectedIds.includes(m.id);
           return (
             <button
@@ -518,7 +479,8 @@ function Step2Interviewers({
               </div>
             </button>
           );
-        })}
+        })
+        )}
       </div>
       {selectedIds.length > 0 && (
         <div className="mt-3 text-xs text-muted-foreground">
@@ -874,7 +836,8 @@ function Step5Kit({
 // ─── Step 6: Confirm ────────────────────────────────────────────────────────
 
 function Step6Confirm({ state }: { state: SchedulerState }) {
-  const interviewers = mockTeamMembers.filter((m) =>
+  const { data: tenantUsers } = useTenantUsers();
+  const interviewers = (tenantUsers ?? []).filter((m) =>
     state.interviewer_ids.includes(m.id)
   );
   const locOpt = LOCATION_OPTIONS.find((o) => o.value === state.location_type);

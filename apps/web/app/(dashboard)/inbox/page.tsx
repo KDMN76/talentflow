@@ -64,9 +64,15 @@ import {
 } from "@/hooks/useInbox";
 import { useVoiceIntegration } from "@/hooks/useVoice";
 import { useWhatsAppIntegration } from "@/hooks/useWhatsApp";
-import { mockTeamMembers, mockUser } from "@/lib/mockData";
+import { getCurrentUserId } from "@/lib/auth";
 import { getInitials } from "@/lib/utils";
 import type { ChannelType, UnifiedThread } from "@/lib/types/inbox";
+
+// TODO: replace with a real `useTenantUsers()` hook once a backend
+// `/users` endpoint exists. Until then the assignee picker is empty and
+// the "Toewijzen" button shows a clear "geen recruiters beschikbaar"
+// state rather than seeding fake team members.
+const tenantUsers: Array<{ id: string; name: string }> = [];
 
 type FilterPreset =
   | "all"
@@ -97,18 +103,20 @@ export default function UnifiedInboxPage() {
   const [filter, setFilter] = useState<SidebarFilter>({ preset: "all" });
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const currentUserId = getCurrentUserId();
 
   // Build server-filters from preset
   const serverFilters: InboxFilters = useMemo(() => {
     const f: InboxFilters = {};
     if (filter.preset === "unread") f.unread = true;
-    else if (filter.preset === "mine") f.assignee_user_id = mockUser.id;
+    else if (filter.preset === "mine" && currentUserId)
+      f.assignee_user_id = currentUserId;
     else if (filter.preset === "pinned") f.pinned = true;
     else if (filter.preset === "archived") f.archived = true;
     else if (filter.preset === "channel" && filter.channel) f.channel = filter.channel;
     if (search) f.q = search;
     return f;
-  }, [filter, search]);
+  }, [filter, search, currentUserId]);
 
   const { data: threads, isLoading } = useInboxThreads(serverFilters);
   const { data: allThreads } = useInboxThreads({});
@@ -135,9 +143,11 @@ export default function UnifiedInboxPage() {
   const unreadTotal = (allThreads ?? []).filter(
     (t) => t.unread_count_for_assignee > 0 && !t.archived_at
   ).length;
-  const mineCount = (allThreads ?? []).filter(
-    (t) => t.assignee_user_id === mockUser.id && !t.archived_at
-  ).length;
+  const mineCount = currentUserId
+    ? (allThreads ?? []).filter(
+        (t) => t.assignee_user_id === currentUserId && !t.archived_at
+      ).length
+    : 0;
   const pinnedCount = (allThreads ?? []).filter(
     (t) => t.pinned && !t.archived_at
   ).length;
@@ -690,32 +700,39 @@ function ThreadDetail({
           <DialogHeader>
             <DialogTitle>Toewijzen aan recruiter</DialogTitle>
           </DialogHeader>
-          <Select value={assigneeId} onValueChange={setAssigneeId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Kies een recruiter…" />
-            </SelectTrigger>
-            <SelectContent>
-              {mockTeamMembers.map((m) => (
-                <SelectItem key={m.id} value={m.id}>
-                  {m.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {tenantUsers.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-2">
+              Geen recruiters beschikbaar — er is nog geen tenant-users API.
+            </p>
+          ) : (
+            <Select value={assigneeId} onValueChange={setAssigneeId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Kies een recruiter…" />
+              </SelectTrigger>
+              <SelectContent>
+                {tenantUsers.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setAssignOpen(false)}>
               Annuleren
             </Button>
             <Button
+              disabled={tenantUsers.length === 0 || !assigneeId}
               onClick={async () => {
                 if (!assigneeId) return;
-                const user = mockTeamMembers.find((m) => m.id === assigneeId);
+                const user = tenantUsers.find((m) => m.id === assigneeId);
                 await assign.mutateAsync({
                   threadId: thread.id,
                   user_id: assigneeId,
                   user_name: user?.name,
                 });
-                toast({ title: `Toegewezen aan ${user?.name}` });
+                toast({ title: `Toegewezen aan ${user?.name ?? assigneeId}` });
                 setAssignOpen(false);
               }}
             >

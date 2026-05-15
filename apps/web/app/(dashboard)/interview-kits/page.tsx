@@ -46,13 +46,16 @@ import {
   useDeleteInterviewKit,
   useInterviewKits,
 } from "@/hooks/useInterviewKits";
-import { mockJobs, mockScorecardTemplates } from "@/lib/mockData";
+import { useJobs } from "@/hooks/useJobs";
+import { useScorecardTemplates } from "@/hooks/useScorecards";
 import type { InterviewKit } from "@/lib/types/interviews";
 
 export default function InterviewKitsPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { data: kits, isLoading } = useInterviewKits();
+  const { data: kits, isLoading, isError, error } = useInterviewKits();
+  const { data: jobs } = useJobs();
+  const { data: scorecardTemplates } = useScorecardTemplates();
   const create = useCreateInterviewKit();
   const remove = useDeleteInterviewKit();
   const [createOpen, setCreateOpen] = useState(false);
@@ -105,6 +108,19 @@ export default function InterviewKitsPage() {
             <Skeleton key={i} className="h-40 w-full" />
           ))}
         </div>
+      ) : isError ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-sm font-medium text-rose-600">
+              Kon interview-kits niet laden — probeer opnieuw
+            </p>
+            {error instanceof Error && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {error.message}
+              </p>
+            )}
+          </CardContent>
+        </Card>
       ) : (kits ?? []).length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
@@ -165,7 +181,7 @@ export default function InterviewKitsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Generiek (geen vacature)</SelectItem>
-                  {mockJobs.map((j) => (
+                  {(jobs ?? []).map((j) => (
                     <SelectItem key={j.id} value={j.id}>
                       {j.title}
                     </SelectItem>
@@ -181,7 +197,7 @@ export default function InterviewKitsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Geen template</SelectItem>
-                  {mockScorecardTemplates.map((t) => (
+                  {(scorecardTemplates ?? []).map((t) => (
                     <SelectItem key={t.id} value={t.id}>
                       {t.name}
                     </SelectItem>

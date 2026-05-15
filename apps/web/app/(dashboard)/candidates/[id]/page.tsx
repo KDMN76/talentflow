@@ -27,6 +27,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useCandidate } from "@/hooks/useCandidates";
+import { useJobs } from "@/hooks/useJobs";
 import { useDuplicatesForCandidate } from "@/hooks/useDedupe";
 import { MultiCVUpload } from "@/components/candidates/MultiCVUpload";
 import { MergeCandidatesDialog } from "@/components/candidates/MergeCandidatesDialog";
@@ -46,7 +47,7 @@ import { ScorecardForm } from "@/components/scorecards/ScorecardForm";
 import { SkillProfileEditor } from "@/components/skills/SkillProfileEditor";
 import { SkillsGapViewer } from "@/components/skills/SkillsGapViewer";
 import { Merge, AlertCircle } from "lucide-react";
-import { mockApplications, mockJobs, mockStages } from "@/lib/mockData";
+import type { Application, PipelineStage } from "@/lib/mockData";
 import { cn, getInitials, getScoreColor, formatDate } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import Link from "next/link";
@@ -89,6 +90,9 @@ export default function CandidateProfilePage() {
   const { data: candidate, isLoading, isError } = useCandidate(id);
   const { data: communications } = useCommunications(id);
   const { data: duplicates } = useDuplicatesForCandidate(id);
+  // Real applications come embedded on the candidate; jobs hook supplies
+  // titles for application/stage rows so we never render mock job data.
+  const { data: jobsList } = useJobs();
   const [mergeOpen, setMergeOpen] = useState(false);
   const sendMessage = useSendMessage();
 
@@ -132,9 +136,22 @@ export default function CandidateProfilePage() {
     );
   }
 
-  const candidateApplications = mockApplications.filter(
-    (a) => a.candidate_id === id
+  // Applications come embedded on the candidate via the API contract
+  // (see useCandidate — returns `Candidate & { applications: unknown[] }`).
+  // Each row carries enough info to resolve the linked job + current stage
+  // via the embedded `stage` shape returned by the backend.
+  const candidateApplications = ((candidate as { applications?: unknown[] }).applications ??
+    []) as Array<
+    Application & {
+      stage?: PipelineStage | null;
+      job_title?: string | null;
+    }
+  >;
+  const jobLookup = new Map<string, { id: string; title: string }>(
+    (jobsList ?? []).map((j) => [j.id, { id: j.id, title: j.title }])
   );
+  const resolveJobTitle = (jobId: string, fallback?: string | null) =>
+    jobLookup.get(jobId)?.title ?? fallback ?? "Onbekende vacature";
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -471,7 +488,10 @@ export default function CandidateProfilePage() {
                 </CardTitle>
                 <p className="text-xs text-muted-foreground">
                   Beoordelingen voor sollicitatie op{" "}
-                  {mockJobs.find((j) => j.id === candidateApplications[0].job_id)?.title ?? "vacature"}
+                  {resolveJobTitle(
+                    candidateApplications[0].job_id,
+                    candidateApplications[0].job_title
+                  )}
                 </p>
               </CardHeader>
               <CardContent>
@@ -618,8 +638,8 @@ export default function CandidateProfilePage() {
                 </p>
               ) : (
                 candidateApplications.map((app) => {
-                  const job = mockJobs.find((j) => j.id === app.job_id);
-                  const stage = mockStages.find((s) => s.id === app.stage_id);
+                  const stage = app.stage ?? null;
+                  const jobTitle = resolveJobTitle(app.job_id, app.job_title);
                   return (
                     <div
                       key={app.id}
@@ -630,7 +650,7 @@ export default function CandidateProfilePage() {
                         className="block group"
                       >
                         <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 transition-colors">
-                          {job?.title ?? "Onbekende vacature"}
+                          {jobTitle}
                         </p>
                         <div className="mt-1.5 flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
@@ -695,7 +715,7 @@ export default function CandidateProfilePage() {
                   </div>
                 </div>
                 {candidateApplications.map((app, i) => {
-                  const job = mockJobs.find((j) => j.id === app.job_id);
+                  const jobTitle = resolveJobTitle(app.job_id, app.job_title);
                   return (
                     <div key={app.id} className="flex gap-3">
                       <div className="flex flex-col items-center">
@@ -706,7 +726,7 @@ export default function CandidateProfilePage() {
                       </div>
                       <div className={i < candidateApplications.length - 1 ? "pb-4" : ""}>
                         <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                          Gesolliciteerd: {job?.title}
+                          Gesolliciteerd: {jobTitle}
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {formatDate(app.applied_at)}

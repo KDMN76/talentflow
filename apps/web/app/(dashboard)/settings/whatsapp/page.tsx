@@ -79,7 +79,7 @@ import {
   type WhatsAppTemplateStatus,
   type ConsentStatus,
 } from "@/hooks/useWhatsApp";
-import { mockCandidates } from "@/lib/mockData";
+import { useCandidates } from "@/hooks/useCandidates";
 
 const TEMPLATE_STATUS_PILL: Record<
   WhatsAppTemplateStatus,
@@ -1091,8 +1091,9 @@ function InviteConsentDialog({ onClose }: { onClose: () => void }) {
   const [candidateId, setCandidateId] = useState("");
   const [phone, setPhone] = useState("");
   const [method, setMethod] = useState<"template" | "email">("template");
+  const { data: candidates, isLoading: candidatesLoading } = useCandidates();
 
-  const candidate = mockCandidates.find((c) => c.id === candidateId);
+  const candidate = (candidates ?? []).find((c) => c.id === candidateId);
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -1105,14 +1106,22 @@ function InviteConsentDialog({ onClose }: { onClose: () => void }) {
             <Label>Kandidaat</Label>
             <Select value={candidateId} onValueChange={(v) => {
               setCandidateId(v);
-              const c = mockCandidates.find((x) => x.id === v);
+              const c = (candidates ?? []).find((x) => x.id === v);
               setPhone(c?.phone ?? "");
             }}>
               <SelectTrigger>
-                <SelectValue placeholder="Kies een kandidaat…" />
+                <SelectValue
+                  placeholder={
+                    candidatesLoading
+                      ? "Kandidaten laden..."
+                      : !candidates || candidates.length === 0
+                        ? "Geen kandidaten beschikbaar"
+                        : "Kies een kandidaat…"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
-                {mockCandidates.slice(0, 20).map((c) => (
+                {(candidates ?? []).slice(0, 20).map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.name}
                   </SelectItem>

@@ -44,9 +44,11 @@ import {
   RETENTION_ACTION_LABELS,
   RETENTION_ENTITY_LABELS,
   RETENTION_TRIGGER_LABELS,
-  type RetentionAction,
-  type RetentionEntityType,
-  type RetentionTriggerField,
+} from "@/lib/complianceLabels";
+import type {
+  RetentionAction,
+  RetentionEntityType,
+  RetentionTriggerField,
 } from "@/lib/mockData";
 import { cn } from "@/lib/utils";
 

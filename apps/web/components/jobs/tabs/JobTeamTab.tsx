@@ -36,7 +36,9 @@ import {
   useRemoveJobTeamMember,
 } from "@/hooks/useJobDetail";
 import { AgreementMatrixView } from "@/components/interviews/AgreementMatrixView";
-import { mockApplications, mockScorecards, mockTeamMembers } from "@/lib/mockData";
+import { useTenantUsers } from "@/hooks/useUsers";
+import { useApplications } from "@/hooks/usePipeline";
+import { useScorecardsForApplication } from "@/hooks/useScorecards";
 import type { JobTeamMember, JobTeamRole } from "@/lib/types/jobDetail";
 
 const ROLE_LABELS: Record<string, { label: string; cls: string }> = {
@@ -86,6 +88,7 @@ export interface JobTeamTabProps {
 
 export function JobTeamTab({ jobId }: JobTeamTabProps) {
   const { data, isLoading } = useJobTeam(jobId);
+  const { data: tenantUsers } = useTenantUsers();
   const addMember = useAddJobTeamMember(jobId);
   const removeMember = useRemoveJobTeamMember(jobId);
   const { toast } = useToast();
@@ -94,11 +97,11 @@ export function JobTeamTab({ jobId }: JobTeamTabProps) {
   const [selectedRole, setSelectedRole] = useState<JobTeamRole>("recruiter");
 
   const teamUserIds = new Set((data ?? []).map((m) => m.user_id));
-  const availableUsers = mockTeamMembers.filter((u) => !teamUserIds.has(u.id));
+  const availableUsers = (tenantUsers ?? []).filter((u) => !teamUserIds.has(u.id));
 
   const handleAdd = () => {
     if (!selectedUser) return;
-    const user = mockTeamMembers.find((u) => u.id === selectedUser);
+    const user = (tenantUsers ?? []).find((u) => u.id === selectedUser);
     if (!user) return;
     addMember.mutate(
       { user_id: selectedUser, role: selectedRole },
@@ -272,13 +275,18 @@ export function JobTeamTab({ jobId }: JobTeamTabProps) {
 }
 
 function ScorecardAgreementSection({ jobId }: { jobId: string }) {
-  // Find the first application for this job that has at least 2 scorecards.
-  // The matrix only adds value once the team has independent observations.
-  const app = mockApplications.find(
-    (a) => a.job_id === jobId && (mockScorecards[a.id]?.length ?? 0) >= 2
-  );
+  // The agreement matrix only adds value once the team has independent
+  // observations. Pick the first application for this job and check whether
+  // it has ≥2 scorecards. A future backend endpoint could return the "best
+  // candidate" for agreement-comparison in one round-trip; for now we use the
+  // first application as a reasonable default.
+  const { data: applications } = useApplications(jobId);
+  const firstApp = (applications ?? [])[0] ?? null;
+  const { data: scorecards } = useScorecardsForApplication(firstApp?.id ?? null);
 
-  if (!app) {
+  const hasAgreement = !!firstApp && (scorecards?.length ?? 0) >= 2;
+
+  if (!hasAgreement) {
     return (
       <Card>
         <CardHeader>
@@ -306,10 +314,10 @@ function ScorecardAgreementSection({ jobId }: { jobId: string }) {
         <UserCog className="h-3.5 w-3.5 text-purple-500" />
         Agreement matrix voor{" "}
         <span className="font-semibold text-zinc-700 dark:text-zinc-300">
-          {app.candidate_name ?? app.candidate?.name ?? "kandidaat"}
+          {firstApp.candidate_name ?? firstApp.candidate?.name ?? "kandidaat"}
         </span>
       </div>
-      <AgreementMatrixView applicationId={app.id} />
+      <AgreementMatrixView applicationId={firstApp.id} />
     </div>
   );
 }

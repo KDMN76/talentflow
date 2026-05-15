@@ -17,6 +17,7 @@ import {
   useJobsFilters,
   type JobsFilters,
 } from "@/hooks/useJobsFilters";
+import { getCurrentUserId } from "@/lib/auth";
 import type { Job } from "@/lib/mockData";
 
 // `tags` is not yet a first-class field on `Job`, but the filter UI exposes
@@ -25,13 +26,12 @@ import type { Job } from "@/lib/mockData";
 // onderstaande client-side filters server-side worden afgehandeld.
 type JobWithOptionalTags = Job & { tags?: string[] | null };
 
-// MVP-keuze: in mock-mode hardcode `recruiter-1` zoals gespecificeerd; in
-// productie zou dit uit de auth-context komen. Behoudens een echte
-// `useAuth`/`useCurrentUser` hook nemen we hier de eerste recruiter uit de
-// bekende lijst.
-const MOCK_CURRENT_USER_ID = "user-1";
-
 export default function JobsPage() {
+  // Resolve the current user once per render from the JWT in session
+  // storage. Falls back to `null` when the user can't be identified — in
+  // that case the "Mijn open jobs" quick-filter simply has no effect
+  // rather than masquerading as another user.
+  const currentUserId = getCurrentUserId();
   const {
     filters,
     searchInput,
@@ -62,7 +62,8 @@ export default function JobsPage() {
     return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
   }, [jobs]);
 
-  // Quick-filter chips. `current_user` valt terug op `MOCK_CURRENT_USER_ID`.
+  // Quick-filter chips. `current_user` valt terug op de JWT-uitgelezen
+  // gebruiker (zie `getCurrentUserId` in `lib/auth`).
   const quickFilters = useMemo<QuickFilter[]>(() => {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -74,9 +75,11 @@ export default function JobsPage() {
       {
         id: "my-open",
         label: "Mijn open jobs",
-        patch: { status: "open", recruiter_id: MOCK_CURRENT_USER_ID },
+        patch: { status: "open", recruiter_id: currentUserId ?? undefined },
         isActive: (f) =>
-          f.status === "open" && f.recruiter_id === MOCK_CURRENT_USER_ID,
+          f.status === "open" &&
+          !!currentUserId &&
+          f.recruiter_id === currentUserId,
       },
       {
         id: "recent-7d",
@@ -94,7 +97,7 @@ export default function JobsPage() {
           f.date_to === null,
       },
     ];
-  }, []);
+  }, [currentUserId]);
 
   const totalCount = jobs?.length ?? 0;
 

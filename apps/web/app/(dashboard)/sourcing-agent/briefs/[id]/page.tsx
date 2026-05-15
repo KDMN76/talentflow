@@ -41,27 +41,49 @@ import {
   RUN_STATUS_ICON,
   formatRelativeNL,
 } from "@/components/sourcing/visualHelpers";
-import { mockJobs } from "@/lib/mockData";
+import { useJob } from "@/hooks/useJobs";
 
 export default function BriefDetailPage() {
   const params = useParams();
   const briefId = params?.id as string;
   const router = useRouter();
-  const { data: brief, isLoading } = useAgentBrief(briefId);
+  const { data: brief, isLoading, isError } = useAgentBrief(briefId);
   const { data: runs } = useAgentRuns({ brief_id: briefId });
   const startRun = useStartRun();
   const { toast } = useToast();
 
-  const job = brief ? mockJobs.find((j) => j.id === brief.job_id) : undefined;
+  const { data: job } = useJob(brief?.job_id ?? "");
   const activeRun = (runs ?? []).find(
     (r) => r.status === "queued" || r.status === "running"
   );
 
-  if (isLoading || !brief) {
+  if (isLoading) {
     return (
       <div className="space-y-4 animate-fade-in">
         <Skeleton className="h-12 w-1/3 rounded-xl" />
         <Skeleton className="h-72 rounded-xl" />
+      </div>
+    );
+  }
+
+  if (isError || !brief) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <Link
+          href="/sourcing-agent"
+          className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-3 w-3" />
+          Terug naar Sourcing Agent
+        </Link>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
+            <AlertCircle className="h-5 w-5 text-rose-500" />
+            <p className="text-sm font-medium">
+              {isError ? "Kon brief niet laden — probeer opnieuw." : "Brief niet gevonden."}
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }

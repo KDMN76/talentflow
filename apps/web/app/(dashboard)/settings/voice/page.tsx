@@ -48,7 +48,7 @@ import {
   useVoiceIntegration,
   type VoiceCall as VoiceCallType,
 } from "@/hooks/useVoice";
-import { mockCandidates } from "@/lib/mockData";
+import { useCandidates } from "@/hooks/useCandidates";
 
 export default function VoiceSettingsPage() {
   const { data: integration, isLoading } = useVoiceIntegration();
@@ -315,6 +315,7 @@ function TestCallDialog({ onClose }: { onClose: () => void }) {
   const [candidateId, setCandidateId] = useState("");
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
   const { data: liveCall } = useVoiceCall(activeCallId ?? undefined);
+  const { data: candidates, isLoading: candidatesLoading } = useCandidates();
 
   // Auto-close 4s after completion
   useEffect(() => {
@@ -326,7 +327,7 @@ function TestCallDialog({ onClose }: { onClose: () => void }) {
 
   const handleStart = async () => {
     if (!candidateId) return;
-    const c = mockCandidates.find((x) => x.id === candidateId);
+    const c = (candidates ?? []).find((x) => x.id === candidateId);
     const call = await initiate.mutateAsync({
       candidate_id: candidateId,
       candidate_name: c?.name,
@@ -346,10 +347,18 @@ function TestCallDialog({ onClose }: { onClose: () => void }) {
             <Label>Bel kandidaat</Label>
             <Select value={candidateId} onValueChange={setCandidateId}>
               <SelectTrigger>
-                <SelectValue placeholder="Kies een kandidaat…" />
+                <SelectValue
+                  placeholder={
+                    candidatesLoading
+                      ? "Kandidaten laden..."
+                      : !candidates || candidates.length === 0
+                        ? "Geen kandidaten beschikbaar"
+                        : "Kies een kandidaat…"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
-                {mockCandidates.slice(0, 20).map((c) => (
+                {(candidates ?? []).slice(0, 20).map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     {c.name} {c.phone ? `· ${c.phone}` : ""}
                   </SelectItem>

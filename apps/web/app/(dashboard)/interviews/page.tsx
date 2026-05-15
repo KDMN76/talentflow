@@ -40,8 +40,13 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { SchedulerDialog } from "@/components/interviews/SchedulerDialog";
 import { useInterviews } from "@/hooks/useInterviews";
-import { mockTeamMembers } from "@/lib/mockData";
 import { cn, getInitials } from "@/lib/utils";
+
+// TODO: replace with a real `useTenantUsers()` hook once a backend
+// `/users` endpoint exists. The interviewer filter currently only offers
+// "Alle interviewers" plus the interviewers derived from the interviews
+// payload itself, so we never invent users that don't exist.
+const tenantUsers: Array<{ id: string; name: string }> = [];
 import type {
   Interview,
   InterviewLocationType,
@@ -110,7 +115,28 @@ export default function InterviewsPage() {
     [from, to, interviewerId]
   );
 
-  const { data, isLoading } = useInterviews(filters);
+  const { data, isLoading, isError, error } = useInterviews(filters);
+
+  // Build the interviewer dropdown from the actual interviews that came
+  // back from the API (de-duplicated by user_id). Falls back to the empty
+  // `tenantUsers` constant above once a dedicated users-endpoint exists.
+  const interviewerOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const iv of data ?? []) {
+      for (const p of iv.participants) {
+        if (
+          (p.role === "interviewer" || p.role === "hiring_manager") &&
+          !seen.has(p.user_id)
+        ) {
+          seen.set(p.user_id, p.user_name);
+        }
+      }
+    }
+    for (const u of tenantUsers) {
+      if (!seen.has(u.id)) seen.set(u.id, u.name);
+    }
+    return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
+  }, [data]);
 
   const tabbed = useMemo(() => {
     if (!data) return [];
@@ -195,7 +221,7 @@ export default function InterviewsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Alle interviewers</SelectItem>
-                  {mockTeamMembers.map((m) => (
+                  {interviewerOptions.map((m) => (
                     <SelectItem key={m.id} value={m.id}>
                       {m.name}
                     </SelectItem>
@@ -263,6 +289,19 @@ export default function InterviewsPage() {
             <Skeleton key={i} className="h-20 w-full" />
           ))}
         </div>
+      ) : isError ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-sm font-medium text-rose-600">
+              Kon interviews niet laden — probeer opnieuw
+            </p>
+            {error instanceof Error && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {error.message}
+              </p>
+            )}
+          </CardContent>
+        </Card>
       ) : tabbed.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">

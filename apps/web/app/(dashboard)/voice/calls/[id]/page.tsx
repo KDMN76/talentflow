@@ -41,14 +41,15 @@ import {
   useRequestTranscription,
   useVoiceCall,
 } from "@/hooks/useVoice";
-import { mockUser } from "@/lib/mockData";
+import { useCurrentUser } from "@/hooks/useUsers";
 import { getInitials } from "@/lib/utils";
 
 export default function CallDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params?.id as string;
-  const { data: call, isLoading } = useVoiceCall(id);
+  const { data: call, isLoading, isError } = useVoiceCall(id);
+  const { data: currentUser } = useCurrentUser();
   const { toast } = useToast();
   const saveNotes = useCallNotes();
   const requestTranscription = useRequestTranscription();
@@ -87,12 +88,36 @@ export default function CallDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notes]);
 
-  if (isLoading || !call) {
+  if (isLoading) {
     return (
       <div className="space-y-4 animate-fade-in">
         <Skeleton className="h-9 w-32" />
         <Skeleton className="h-32 rounded-xl" />
         <Skeleton className="h-48 rounded-xl" />
+      </div>
+    );
+  }
+
+  if (isError || !call) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.back()}
+          className="text-muted-foreground hover:text-foreground -ml-2"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" /> Terug
+        </Button>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="py-12 text-center text-sm">
+            {isError ? (
+              <span className="text-destructive">Kon gesprek niet laden — probeer opnieuw.</span>
+            ) : (
+              <span className="text-muted-foreground">Gesprek niet gevonden.</span>
+            )}
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -153,13 +178,15 @@ export default function CallDetailPage() {
                   </span>
                 )}
               </div>
-              <div className="mt-2 flex items-center gap-2 text-xs">
-                <User className="h-3 w-3 text-muted-foreground" />
-                <span className="text-muted-foreground">Recruiter:</span>
-                <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                  {mockUser.name}
-                </span>
-              </div>
+              {currentUser?.name && (
+                <div className="mt-2 flex items-center gap-2 text-xs">
+                  <User className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-muted-foreground">Recruiter:</span>
+                  <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                    {currentUser.name}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex flex-col items-end justify-between gap-3">

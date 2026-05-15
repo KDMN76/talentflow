@@ -44,7 +44,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { useEmailTemplates } from "@/hooks/useEmailTemplates";
 import { useSendEmail } from "@/hooks/useSendEmail";
-import { mockUser } from "@/lib/mockData";
+import { useCurrentUser } from "@/hooks/useUsers";
 
 // ─── Validation schema ──────────────────────────────────────────────────────
 
@@ -84,6 +84,7 @@ export function ComposeEmailModal({
 }: ComposeEmailModalProps) {
   const { toast } = useToast();
   const { data: templates, isLoading: templatesLoading } = useEmailTemplates();
+  const { data: currentUser } = useCurrentUser();
   const sendEmail = useSendEmail();
 
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(
@@ -130,10 +131,10 @@ export function ComposeEmailModal({
         email: candidate.email ?? "",
       },
       job: { title: jobTitle ?? "" },
-      recruiter: { name: mockUser.name },
-      tenant: { name: mockUser.tenant.name },
+      recruiter: { name: currentUser?.name ?? "" },
+      tenant: { name: currentUser?.tenant?.name ?? "" },
     };
-  }, [candidate, jobTitle]);
+  }, [candidate, jobTitle, currentUser]);
 
   const subjectPreview = useMemo(
     () => applyMergeVariables(subject, mergeContext),

@@ -10,7 +10,7 @@
  *   - "Nieuwe brief"-modal (job picker + brief text + chips + locations + slider)
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AlertCircle,
@@ -62,7 +62,7 @@ import {
   useRejectFinding,
   useBulkApproveFindings,
 } from "@/hooks/useSourcing";
-import { mockJobs } from "@/lib/mockData";
+import { useJobs } from "@/hooks/useJobs";
 import {
   RUN_STATUS_PILL,
   FINDING_STATUS_PILL,
@@ -291,7 +291,8 @@ function BriefsTab({ onNewBrief }: { onNewBrief: () => void }) {
 }
 
 function BriefCard({ brief }: { brief: AgentBrief }) {
-  const job = mockJobs.find((j) => j.id === brief.job_id);
+  const { data: jobs } = useJobs("all");
+  const job = (jobs ?? []).find((j) => j.id === brief.job_id);
   return (
     <Link href={`/sourcing-agent/briefs/${brief.id}`}>
       <Card className="group h-full border-0 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
@@ -345,6 +346,7 @@ function BriefCard({ brief }: { brief: AgentBrief }) {
 function RunsTab() {
   const { data, isLoading } = useAgentRuns();
   const { data: briefs } = useAgentBriefs();
+  const { data: jobs } = useJobs("all");
   if (isLoading) return <Skeleton className="h-72 rounded-xl" />;
   if (!data || data.length === 0) {
     return (
@@ -385,7 +387,7 @@ function RunsTab() {
               {data.map((run) => {
                 const brief = (briefs ?? []).find((b) => b.id === run.brief_id);
                 const job = brief
-                  ? mockJobs.find((j) => j.id === brief.job_id)
+                  ? (jobs ?? []).find((j) => j.id === brief.job_id)
                   : undefined;
                 const StatusIcon = RUN_STATUS_ICON[run.status];
                 const pill = RUN_STATUS_PILL[run.status];
@@ -473,6 +475,7 @@ function FindingsTab() {
     status: "pending_review",
   });
   const { data: briefs } = useAgentBriefs();
+  const { data: jobs } = useJobs("all");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const bulkApprove = useBulkApproveFindings();
   const { toast } = useToast();
@@ -542,7 +545,7 @@ function FindingsTab() {
       {Array.from(grouped.entries()).map(([briefId, items]) => {
         const brief = (briefs ?? []).find((b) => b.id === briefId);
         const job = brief
-          ? mockJobs.find((j) => j.id === brief.job_id)
+          ? (jobs ?? []).find((j) => j.id === brief.job_id)
           : undefined;
         return (
           <div key={briefId} className="space-y-2">
@@ -731,7 +734,8 @@ function CreateBriefDialog({
   open: boolean;
   onClose: () => void;
 }) {
-  const [jobId, setJobId] = useState<string>(mockJobs[0]?.id ?? "");
+  const { data: jobs, isLoading: jobsLoading } = useJobs("open");
+  const [jobId, setJobId] = useState<string>("");
   const [briefText, setBriefText] = useState("");
   const [targetCount, setTargetCount] = useState(25);
   const [mustHaveInput, setMustHaveInput] = useState("");
@@ -741,6 +745,13 @@ function CreateBriefDialog({
   const [locations, setLocations] = useState<string[]>(["Amsterdam"]);
   const create = useCreateBrief();
   const { toast } = useToast();
+
+  // Default to first job when list loads
+  useEffect(() => {
+    if (!jobId && jobs && jobs.length > 0) {
+      setJobId(jobs[0].id);
+    }
+  }, [jobs, jobId]);
 
   const ALL_LOCATIONS = [
     "Amsterdam",
@@ -766,7 +777,7 @@ function CreateBriefDialog({
   };
 
   const reset = () => {
-    setJobId(mockJobs[0]?.id ?? "");
+    setJobId(jobs?.[0]?.id ?? "");
     setBriefText("");
     setTargetCount(25);
     setMustHaveInput("");
@@ -822,10 +833,18 @@ function CreateBriefDialog({
             <Label htmlFor="brief-job">Vacature</Label>
             <Select value={jobId} onValueChange={setJobId}>
               <SelectTrigger id="brief-job">
-                <SelectValue placeholder="Kies een vacature" />
+                <SelectValue
+                  placeholder={
+                    jobsLoading
+                      ? "Vacatures laden..."
+                      : !jobs || jobs.length === 0
+                        ? "Geen openstaande vacatures"
+                        : "Kies een vacature"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
-                {mockJobs.map((j) => (
+                {(jobs ?? []).map((j) => (
                   <SelectItem key={j.id} value={j.id}>
                     {j.title}
                   </SelectItem>

@@ -30,7 +30,7 @@ import {
   useUploadJobAttachment,
 } from "@/hooks/useJobDetail";
 import { cn } from "@/lib/utils";
-import { mockUser } from "@/lib/mockData";
+import { useCurrentUser } from "@/hooks/useUsers";
 import type { JobAttachment, JobNote } from "@/lib/types/jobDetail";
 
 type FilterValue = "all" | "notes" | "files";
@@ -86,6 +86,7 @@ export function JobActiviteitTab({ jobId }: JobActiviteitTabProps) {
   const deleteNote = useDeleteJobNote(jobId);
   const uploadAttachment = useUploadJobAttachment(jobId);
   const deleteAttachment = useDeleteJobAttachment(jobId);
+  const { data: currentUser } = useCurrentUser();
   const { toast } = useToast();
 
   const [filter, setFilter] = useState<FilterValue>("all");
@@ -275,7 +276,8 @@ export function JobActiviteitTab({ jobId }: JobActiviteitTabProps) {
                 {feed.map((item) => {
                   const isMine =
                     item.type === "note" &&
-                    (item.data as JobNote).author_id === mockUser.id;
+                    !!currentUser &&
+                    (item.data as JobNote).author_id === currentUser.id;
                   if (item.type === "note") {
                     const note = item.data as JobNote;
                     return (

@@ -61,12 +61,20 @@ import {
   usePayCommission,
   useUpdateCommissionScheme,
 } from "@/hooks/useBackOffice";
-import { mockTeamMembers } from "@/lib/mockData";
 import type {
   CommissionRecordStatus,
   CommissionScheme,
   CommissionSchemeType,
 } from "@/lib/types/backOffice";
+
+// TODO: replace with a real `useTenantUsers()` hook once a backend
+// `/users` endpoint exists. Until then we derive the recruiter dropdown
+// from the actual data we receive (commission records / assignments /
+// contracts) so we never invent users.
+interface TenantRecruiter {
+  id: string;
+  name: string;
+}
 
 const RECORD_STATUS_PILL: Record<
   CommissionRecordStatus,
@@ -160,6 +168,18 @@ function RecordsTab({ toast }: { toast: Toast }) {
   const approve = useApproveCommission();
   const pay = usePayCommission();
   const dispute = useDisputeCommission();
+
+  // Build recruiter options from the actual commission records so we
+  // never offer fake/test users in the filter.
+  const recruiterOptions = useMemo<TenantRecruiter[]>(() => {
+    const seen = new Map<string, string>();
+    for (const r of records ?? []) {
+      if (!seen.has(r.recruiter_id)) {
+        seen.set(r.recruiter_id, r.recruiter_name ?? r.recruiter_id);
+      }
+    }
+    return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
+  }, [records]);
 
   const [disputeOpen, setDisputeOpen] = useState(false);
   const [disputeTarget, setDisputeTarget] = useState<string | null>(null);
@@ -263,7 +283,7 @@ function RecordsTab({ toast }: { toast: Toast }) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Alle recruiters</SelectItem>
-              {mockTeamMembers.map((m) => (
+              {recruiterOptions.map((m) => (
                 <SelectItem key={m.id} value={m.id}>
                   {m.name}
                 </SelectItem>
@@ -799,6 +819,7 @@ function AssignmentsTab({ toast }: { toast: Toast }) {
   const { data: assignments, isLoading } = useCommissionAssignments();
   const { data: schemes } = useCommissionSchemes();
   const { data: contracts } = useContracts();
+  const { data: records } = useCommissionRecords({});
   const create = useCreateCommissionAssignment();
 
   const [open, setOpen] = useState(false);
@@ -807,9 +828,26 @@ function AssignmentsTab({ toast }: { toast: Toast }) {
   const [schemeId, setSchemeId] = useState<string>("");
   const [share, setShare] = useState("100");
 
+  // Derive recruiter options from the data we already have. Once a real
+  // `/users` endpoint exists this should be replaced by `useTenantUsers()`.
+  const recruiterOptions = useMemo<TenantRecruiter[]>(() => {
+    const seen = new Map<string, string>();
+    for (const a of assignments ?? []) {
+      if (!seen.has(a.recruiter_id)) {
+        seen.set(a.recruiter_id, a.recruiter_name ?? a.recruiter_id);
+      }
+    }
+    for (const r of records ?? []) {
+      if (!seen.has(r.recruiter_id)) {
+        seen.set(r.recruiter_id, r.recruiter_name ?? r.recruiter_id);
+      }
+    }
+    return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
+  }, [assignments, records]);
+
   const handleCreate = async () => {
     if (!recruiter || !contractId || !schemeId) return;
-    const recruiterMember = mockTeamMembers.find((m) => m.id === recruiter);
+    const recruiterMember = recruiterOptions.find((m) => m.id === recruiter);
     const scheme = schemes?.find((s) => s.id === schemeId);
     try {
       await create.mutateAsync({
@@ -915,18 +953,25 @@ function AssignmentsTab({ toast }: { toast: Toast }) {
           <div className="space-y-3">
             <div>
               <Label>Recruiter</Label>
-              <Select value={recruiter} onValueChange={setRecruiter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Kies een recruiter..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {mockTeamMembers.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>
-                      {m.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {recruiterOptions.length === 0 ? (
+                <p className="rounded-md border border-dashed border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                  Nog geen recruiters bekend. Maak eerst een commissierecord
+                  aan, of voeg een gebruiker toe in Instellingen.
+                </p>
+              ) : (
+                <Select value={recruiter} onValueChange={setRecruiter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Kies een recruiter..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {recruiterOptions.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div>
               <Label>Contract</Label>

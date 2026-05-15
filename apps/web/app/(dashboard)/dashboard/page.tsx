@@ -11,11 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ReactivationAlertsWidget } from "@/components/matching/ReactivationAlertsWidget";
-import { mockDashboardStats, mockActivityFeed, mockJobs } from "@/lib/mockData";
 import { formatRelativeDate, getInitials } from "@/lib/utils";
 import { api } from "@/lib/api";
-
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
 
 function getActivityIcon(type: string) {
   switch (type) {
@@ -54,46 +51,25 @@ interface ApiDashboardStats {
   }>;
 }
 
-export default function DashboardPage() {
-  const mockStats: ApiDashboardStats = {
-    openJobs: mockDashboardStats.open_jobs,
-    candidatesThisMonth: mockDashboardStats.candidates_this_month,
-    applicationsThisWeek: mockDashboardStats.applications_this_week,
-    hiredThisMonth: 0,
-    recentActivity: mockActivityFeed.map((item) => ({
-      id: item.id,
-      entity_type: item.type,
-      entity_id: "",
-      action: item.message,
-      payload: {},
-      created_at: item.timestamp,
-      user_name: item.candidate_name ?? null,
-    })),
-    topJobs: mockJobs
-      .filter((j) => j.status === "open")
-      .slice(0, 5)
-      .map((j) => ({
-        id: j.id,
-        title: j.title,
-        status: j.status,
-        application_count: j.application_count,
-      })),
-  };
+const EMPTY_STATS: ApiDashboardStats = {
+  openJobs: 0,
+  candidatesThisMonth: 0,
+  applicationsThisWeek: 0,
+  hiredThisMonth: 0,
+  recentActivity: [],
+  topJobs: [],
+};
 
-  const { data: apiStats, isLoading } = useQuery<ApiDashboardStats>({
+export default function DashboardPage() {
+  const { data: apiStats, isLoading, isError, error } = useQuery<ApiDashboardStats>({
     queryKey: ["dashboard", "stats"],
     queryFn: async () => {
-      if (USE_MOCK) return mockStats;
-      try {
-        const { data } = await api.get<ApiDashboardStats>("/dashboard/stats");
-        return data;
-      } catch {
-        return mockStats;
-      }
+      const { data } = await api.get<ApiDashboardStats>("/dashboard/stats");
+      return data;
     },
   });
 
-  if (isLoading || !apiStats) {
+  if (isLoading) {
     return (
       <div className="space-y-8 animate-fade-in">
         <Skeleton className="h-10 w-64" />
@@ -110,7 +86,30 @@ export default function DashboardPage() {
     );
   }
 
-  const stats = apiStats!;
+  if (isError) {
+    return (
+      <div className="space-y-8 animate-fade-in">
+        <PageHeader
+          title="Dashboard"
+          description="Welkom terug! Hier is een overzicht van vandaag."
+        />
+        <Card className="border-0 shadow-sm">
+          <CardContent className="py-12 text-center">
+            <p className="text-sm font-medium text-rose-600">
+              Kon dashboard niet laden — probeer opnieuw
+            </p>
+            {error instanceof Error && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {error.message}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const stats = apiStats ?? EMPTY_STATS;
 
   return (
     <div className="space-y-8 animate-fade-in">

@@ -47,7 +47,7 @@ import { useCandidates } from "@/hooks/useCandidates";
 import {
   DSAR_TYPE_LABELS,
   DSAR_STATUS_LABELS,
-} from "@/lib/mockData";
+} from "@/lib/complianceLabels";
 import { cn } from "@/lib/utils";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

@@ -38,7 +38,8 @@ import {
   useInterviewKit,
   useUpdateInterviewKit,
 } from "@/hooks/useInterviewKits";
-import { mockJobs, mockScorecardTemplates } from "@/lib/mockData";
+import { useJobs } from "@/hooks/useJobs";
+import { useScorecardTemplates } from "@/hooks/useScorecards";
 import type {
   InterviewQuestion,
   InterviewQuestionCategory,
@@ -101,6 +102,8 @@ export default function InterviewKitDetailPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { data: kit, isLoading } = useInterviewKit(params.id);
+  const { data: jobs } = useJobs();
+  const { data: scorecardTemplates } = useScorecardTemplates();
   const update = useUpdateInterviewKit(params.id);
 
   const [name, setName] = useState("");
@@ -273,7 +276,7 @@ export default function InterviewKitDetailPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Generiek</SelectItem>
-                {mockJobs.map((j) => (
+                {(jobs ?? []).map((j) => (
                   <SelectItem key={j.id} value={j.id}>
                     {j.title}
                   </SelectItem>
@@ -289,7 +292,7 @@ export default function InterviewKitDetailPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Geen template</SelectItem>
-                {mockScorecardTemplates.map((t) => (
+                {(scorecardTemplates ?? []).map((t) => (
                   <SelectItem key={t.id} value={t.id}>
                     {t.name}
                   </SelectItem>

@@ -43,11 +43,19 @@ import {
   useAuditTrail,
   type AuditEntityType,
 } from "@/hooks/useAuditTrail";
-import {
-  AUDIT_GROUP_LABELS,
-  type AuditActionGroup,
-  type AuditTrailEvent,
+import type {
+  AuditActionGroup,
+  AuditTrailEvent,
 } from "@/lib/mockData";
+
+const AUDIT_GROUP_LABELS: Record<AuditActionGroup, string> = {
+  writes: "Wijzigingen",
+  ai: "AI-acties",
+  consent: "Toestemmingen",
+  communications: "Communicatie",
+  access: "Toegang & inzage",
+  exports: "Exports",
+};
 
 const ALL_GROUPS: AuditActionGroup[] = [
   "writes",

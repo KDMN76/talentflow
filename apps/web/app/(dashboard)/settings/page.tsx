@@ -43,7 +43,6 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { mockUser, mockTeamMembers } from "@/lib/mockData";
 import { getInitials } from "@/lib/utils";
 import { useApiKeys, useCreateApiKey, useRevokeApiKey, type CreatedApiKey } from "@/hooks/useApiKeys";
 import {
@@ -53,6 +52,7 @@ import {
   useToggleWebhook,
   WEBHOOK_EVENTS,
 } from "@/hooks/useWebhooks";
+import { useCurrentUser, useTenantUsers } from "@/hooks/useUsers";
 
 const tenantSchema = z.object({
   company_name: z.string().min(2, "Bedrijfsnaam is verplicht"),
@@ -110,6 +110,14 @@ export default function SettingsPage() {
   const [isSavingTenant, setIsSavingTenant] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
 
+  // Real-data hooks
+  const { data: currentUser } = useCurrentUser();
+  const {
+    data: teamMembers,
+    isLoading: teamLoading,
+    isError: teamError,
+  } = useTenantUsers();
+
   // API Keys state
   const [isCreateKeyOpen, setIsCreateKeyOpen] = useState(false);
   const [newKeyName, setNewKeyName] = useState("");
@@ -126,9 +134,15 @@ export default function SettingsPage() {
   const tenantForm = useForm({
     resolver: zodResolver(tenantSchema),
     defaultValues: {
-      company_name: mockUser.tenant.name,
+      company_name: currentUser?.tenant?.name ?? "",
       timezone: "Europe/Amsterdam",
     },
+    values: currentUser?.tenant?.name
+      ? {
+          company_name: currentUser.tenant.name,
+          timezone: "Europe/Amsterdam",
+        }
+      : undefined,
   });
 
   const passwordForm = useForm({
@@ -368,17 +382,19 @@ export default function SettingsPage() {
                     placeholder="Europe/Amsterdam"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Plan</Label>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 px-3 py-1 text-sm font-semibold text-white shadow-sm">
-                      {mockUser.tenant.plan}
-                    </span>
-                    <Button variant="link" size="sm" className="text-xs p-0 h-auto">
-                      Upgraden
-                    </Button>
+                {currentUser?.tenant?.plan && (
+                  <div className="space-y-2">
+                    <Label>Plan</Label>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 px-3 py-1 text-sm font-semibold text-white shadow-sm">
+                        {currentUser.tenant.plan}
+                      </span>
+                      <Button variant="link" size="sm" className="text-xs p-0 h-auto">
+                        Upgraden
+                      </Button>
+                    </div>
                   </div>
-                </div>
+                )}
                 <div className="flex justify-end pt-2">
                   <Button
                     type="submit"
@@ -436,49 +452,63 @@ export default function SettingsPage() {
           <Card className="border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="text-base">
-                Teamleden ({mockTeamMembers.length})
+                Teamleden{teamMembers ? ` (${teamMembers.length})` : ""}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="divide-y divide-border">
-                {mockTeamMembers.map((member) => (
-                  <Link
-                    key={member.id}
-                    href={`/settings/users/${member.id}`}
-                    className="flex items-center justify-between px-6 py-4 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9">
-                        <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-500 text-white text-sm font-semibold">
-                          {getInitials(member.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                            {member.name}
-                          </p>
-                          {member.id === mockUser.id && (
-                            <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                              Jij
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {member.email}
-                        </p>
-                      </div>
-                    </div>
-                    <span
-                      className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold ${
-                        roleColors[member.role] ?? roleColors.viewer
-                      }`}
+              {teamLoading ? (
+                <div className="py-8 text-center text-sm text-muted-foreground">
+                  Bezig met laden...
+                </div>
+              ) : teamError ? (
+                <div className="py-8 text-center text-sm text-destructive">
+                  Kon teamleden niet laden — probeer opnieuw.
+                </div>
+              ) : !teamMembers || teamMembers.length === 0 ? (
+                <div className="py-8 text-center text-sm text-muted-foreground">
+                  Nog geen teamleden — nodig je eerste collega uit hierboven.
+                </div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {teamMembers.map((member) => (
+                    <Link
+                      key={member.id}
+                      href={`/settings/users/${member.id}`}
+                      className="flex items-center justify-between px-6 py-4 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors"
                     >
-                      {roleLabels[member.role] ?? member.role}
-                    </span>
-                  </Link>
-                ))}
-              </div>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9">
+                          <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-500 text-white text-sm font-semibold">
+                            {getInitials(member.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                              {member.name}
+                            </p>
+                            {member.id === currentUser?.id && (
+                              <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                Jij
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {member.email}
+                          </p>
+                        </div>
+                      </div>
+                      <span
+                        className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold ${
+                          roleColors[member.role] ?? roleColors.viewer
+                        }`}
+                      >
+                        {roleLabels[member.role] ?? member.role}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

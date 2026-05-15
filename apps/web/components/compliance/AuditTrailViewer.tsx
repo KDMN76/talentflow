@@ -26,10 +26,8 @@ import {
   type AuditFilters,
   type AuditEvent,
 } from "@/hooks/useCompliance";
-import {
-  AUDIT_ACTION_LABELS,
-  type AuditAction,
-} from "@/lib/mockData";
+import { AUDIT_ACTION_LABELS } from "@/lib/complianceLabels";
+import type { AuditAction } from "@/lib/mockData";
 import { cn } from "@/lib/utils";
 
 // ─── Action color (semantic) ────────────────────────────────────────────────

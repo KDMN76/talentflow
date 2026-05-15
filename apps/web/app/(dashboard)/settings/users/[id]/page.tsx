@@ -25,7 +25,7 @@ import {
   useAssignRole,
   useUnassignRole,
 } from "@/hooks/useSecurity";
-import { mockTeamMembers } from "@/lib/mockData";
+import { useTenantUsers } from "@/hooks/useUsers";
 import { getInitials } from "@/lib/utils";
 
 export default function UserDetailPage() {
@@ -34,19 +34,28 @@ export default function UserDetailPage() {
   const { toast } = useToast();
   const { data: roles } = useRoles();
   const { data: userRoles, isLoading } = useUserRoles(userId);
+  const {
+    data: teamMembers,
+    isLoading: membersLoading,
+    isError: membersError,
+  } = useTenantUsers();
   const assignMutation = useAssignRole();
   const unassignMutation = useUnassignRole();
 
   const [selectedRole, setSelectedRole] = useState<string>("");
   const [expiresAt, setExpiresAt] = useState<string>("");
 
-  const member =
-    mockTeamMembers.find((m) => m.id === userId) ?? {
-      id: userId ?? "?",
-      name: "Onbekende gebruiker",
-      email: "—",
-      role: "viewer",
-    };
+  const found = (teamMembers ?? []).find((m) => m.id === userId);
+  const member = found ?? {
+    id: userId ?? "?",
+    name: membersLoading
+      ? "Bezig met laden..."
+      : membersError
+        ? "Kon gebruiker niet laden"
+        : "Niet gevonden",
+    email: "—",
+    role: "viewer",
+  };
 
   const handleAssign = async () => {
     if (!userId || !selectedRole) return;

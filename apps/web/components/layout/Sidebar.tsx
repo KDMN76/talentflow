@@ -49,10 +49,10 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { clearToken } from "@/lib/auth";
-import { mockUser } from "@/lib/mockData";
 import { getInitials } from "@/lib/utils";
 import { useReactivationStats } from "@/hooks/useReactivation";
 import { useInboxThreads } from "@/hooks/useInbox";
+import { useCurrentUser } from "@/hooks/useUsers";
 
 interface NavSubItem {
   label: string;
@@ -331,6 +331,7 @@ export function Sidebar({ onClose }: SidebarProps) {
   const router = useRouter();
   const { data: reactivationStats } = useReactivationStats();
   const { data: unreadThreads } = useInboxThreads({ unread: true });
+  const { data: currentUser } = useCurrentUser();
   const inboxUnread = (unreadThreads ?? []).length;
   // Auto-expand a section when one of its children is active so the user
   // doesn't lose context on a hard refresh.
@@ -522,15 +523,15 @@ export function Sidebar({ onClose }: SidebarProps) {
         <div className="flex items-center gap-3 rounded-lg p-2 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors group">
           <Avatar className="h-8 w-8">
             <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-500 text-white text-xs font-semibold">
-              {getInitials(mockUser.name)}
+              {getInitials(currentUser?.name ?? "")}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">
-              {mockUser.name}
+              {currentUser?.name ?? "—"}
             </p>
             <p className="text-xs text-muted-foreground truncate">
-              {mockUser.role}
+              {currentUser?.role ?? ""}
             </p>
           </div>
           <Button

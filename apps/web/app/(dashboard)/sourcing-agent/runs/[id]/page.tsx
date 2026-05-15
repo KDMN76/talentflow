@@ -60,16 +60,17 @@ import {
   formatRelativeNL,
   getInitials,
 } from "@/components/sourcing/visualHelpers";
-import { mockJobs } from "@/lib/mockData";
+import { useJob } from "@/hooks/useJobs";
 import type { AgentFinding } from "@/lib/types/sourcing";
 
 export default function RunDetailPage() {
   const params = useParams();
   const runId = params?.id as string;
 
-  const { data: run, isLoading } = useAgentRun(runId);
+  const { data: run, isLoading, isError } = useAgentRun(runId);
   const { data: brief } = useAgentBrief(run?.brief_id);
   const { data: findings } = useAgentFindings(runId);
+  const { data: job } = useJob(brief?.job_id ?? "");
   const cancelRun = useCancelRun();
   const bulkApprove = useBulkApproveFindings();
   const bulkReject = useBulkRejectFindings();
@@ -83,13 +84,33 @@ export default function RunDetailPage() {
     .filter(([, v]) => v)
     .map(([k]) => k);
 
-  const job = brief ? mockJobs.find((j) => j.id === brief.job_id) : undefined;
-
-  if (isLoading || !run) {
+  if (isLoading) {
     return (
       <div className="space-y-4 animate-fade-in">
         <Skeleton className="h-12 w-1/3 rounded-xl" />
         <Skeleton className="h-72 rounded-xl" />
+      </div>
+    );
+  }
+
+  if (isError || !run) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <Link
+          href="/sourcing-agent"
+          className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-3 w-3" />
+          Terug naar Sourcing Agent
+        </Link>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
+            <AlertCircle className="h-5 w-5 text-rose-500" />
+            <p className="text-sm font-medium">
+              {isError ? "Kon run niet laden — probeer opnieuw." : "Run niet gevonden."}
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }

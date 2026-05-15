@@ -37,7 +37,7 @@ import {
   useAvailability,
   useSetAvailability,
 } from "@/hooks/useAvailability";
-import { mockUser } from "@/lib/mockData";
+import { useCurrentUser } from "@/hooks/useUsers";
 import type {
   AvailabilityOverride,
   RecurringHours,
@@ -65,11 +65,12 @@ const TIMEZONES = [
 ];
 
 export default function AvailabilitySettingsPage() {
-  const userId = mockUser.id;
+  const { data: currentUser, isLoading: userLoading } = useCurrentUser();
+  const userId = currentUser?.id ?? null;
   const { toast } = useToast();
-  const { data, isLoading } = useAvailability(userId);
-  const save = useSetAvailability(userId);
-  const addOverride = useAddAvailabilityOverride(userId);
+  const { data, isLoading, isError } = useAvailability(userId);
+  const save = useSetAvailability(userId ?? "");
+  const addOverride = useAddAvailabilityOverride(userId ?? "");
 
   const [timezone, setTimezone] = useState("Europe/Amsterdam");
   const [hours, setHours] = useState<RecurringHours[]>([]);
@@ -141,11 +142,30 @@ export default function AvailabilitySettingsPage() {
     setOverrideReason("");
   };
 
-  if (isLoading) {
+  if (userLoading || isLoading) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  if (isError || !userId) {
+    return (
+      <div className="space-y-4">
+        <Link
+          href="/settings"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-zinc-900"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Terug naar instellingen
+        </Link>
+        <Card>
+          <CardContent className="py-12 text-center text-sm text-destructive">
+            Kon beschikbaarheid niet laden — probeer opnieuw.
+          </CardContent>
+        </Card>
       </div>
     );
   }

@@ -51,3 +51,36 @@ export function isAuthenticated(): boolean {
   if (IS_MOCK) return true;
   return !!getToken();
 }
+
+/**
+ * Best-effort decode of the JWT in `sessionStorage` to obtain the current
+ * user id. Returns `null` if no token is present, the token is malformed,
+ * or the standard `sub` / `user_id` claims are missing.
+ *
+ * Note: this is for client-side UX (e.g. "Mijn open vacatures" quick-
+ * filter). Authorization is enforced server-side; do not rely on this for
+ * security decisions.
+ */
+export function getCurrentUserId(): string | null {
+  const token = getToken();
+  if (!token) return null;
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  try {
+    const padded =
+      parts[1].replace(/-/g, "+").replace(/_/g, "/") +
+      "=".repeat((4 - (parts[1].length % 4)) % 4);
+    const decoded =
+      typeof window === "undefined"
+        ? Buffer.from(padded, "base64").toString("utf-8")
+        : window.atob(padded);
+    const payload = JSON.parse(decoded) as {
+      sub?: string;
+      user_id?: string;
+      id?: string;
+    };
+    return payload.user_id ?? payload.sub ?? payload.id ?? null;
+  } catch {
+    return null;
+  }
+}

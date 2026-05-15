@@ -35,7 +35,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
 import { useTalentFitModel, useTrainTalentFit } from "@/hooks/useTalentFit";
-import { mockUser } from "@/lib/mockData";
+import { useCurrentUser } from "@/hooks/useUsers";
 import type { TalentFitHistoryPoint, TalentFitModelInfo } from "@/lib/types/matching";
 import { cn } from "@/lib/utils";
 
@@ -58,10 +58,12 @@ const MIN_REJECTS = 20;
 
 export default function TalentFitSettingsPage() {
   const { toast } = useToast();
-  const { data: model, isLoading } = useTalentFitModel();
+  const { data: model, isLoading, isError, error } = useTalentFitModel();
   const train = useTrainTalentFit();
+  const { data: currentUser } = useCurrentUser();
 
-  const isAdmin = mockUser.role === "admin";
+  const isAdmin =
+    currentUser?.role === "admin" || currentUser?.role === "super_admin";
 
   const handleTrain = async () => {
     try {
@@ -115,6 +117,18 @@ export default function TalentFitSettingsPage() {
 
       {isLoading ? (
         <ModelStatusSkeleton />
+      ) : isError ? (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4 text-rose-500" />
+              Kon model-info niet laden
+            </CardTitle>
+            <CardDescription>
+              {error instanceof Error ? error.message : "Probeer het opnieuw."}
+            </CardDescription>
+          </CardHeader>
+        </Card>
       ) : !model || !model.has_active_model ? (
         <NotEnoughDataCard model={model} isAdmin={isAdmin} onTrain={handleTrain} isTraining={train.isPending} />
       ) : (
