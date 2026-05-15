@@ -279,7 +279,7 @@ export default function BrandingSettingsPage() {
                     AI Match: 92%
                   </div>
                   <div className="text-sm text-zinc-700 dark:text-zinc-300">
-                    Sophie van den Berg — Senior Frontend Developer
+                    Voorbeeld kandidaat — Functietitel
                   </div>
                 </div>
               </div>
