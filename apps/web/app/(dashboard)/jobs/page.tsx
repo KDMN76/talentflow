@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Plus, Briefcase, Wand2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { JobCard } from "@/components/jobs/JobCard";
+import { JobRowBoundary } from "@/components/jobs/JobRowBoundary";
 import {
   JobsFilterBar,
   type QuickFilter,
@@ -209,7 +210,9 @@ export default function JobsPage() {
       ) : (
         <div className="space-y-3">
           {filteredJobs.map((job) => (
-            <JobCard key={job.id} job={job} />
+            <JobRowBoundary key={job.id} jobId={job.id} jobTitle={job.title}>
+              <JobCard job={job} />
+            </JobRowBoundary>
           ))}
         </div>
       )}

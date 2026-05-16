@@ -28,13 +28,18 @@ export function formatRelativeDate(date: string | Date): string {
   return `${Math.floor(diffDays / 365)} jaar geleden`;
 }
 
-export function getInitials(name: string): string {
-  return name
+export function getInitials(name: string | null | undefined): string {
+  // Null-safe: records zonder gekoppelde recruiter/user (recruiter_id NULL)
+  // crashten met `Cannot read properties of null (reading 'split')`.
+  if (!name) return "?";
+  const initials = name
     .split(" ")
     .map((n) => n[0])
+    .filter(Boolean)
     .slice(0, 2)
     .join("")
     .toUpperCase();
+  return initials || "?";
 }
 
 export function getScoreColor(score: number): string {

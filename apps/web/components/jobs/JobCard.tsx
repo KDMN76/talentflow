@@ -35,6 +35,16 @@ interface JobCardProps {
 
 export function JobCard({ job }: JobCardProps) {
   const status = statusConfig[job.status] ?? statusConfig.draft;
+  // Schema laat NULL toe op recruiter_id/recruiter_name (LEFT JOIN), department,
+  // location en application_count komt soms als string van COUNT(). Defensief
+  // renderen voorkomt witte pagina door één rij die kapot gaat.
+  const recruiterName = job.recruiter_name ?? null;
+  const department = job.department ?? null;
+  const location = job.location ?? null;
+  const applicationCount =
+    typeof job.application_count === "number"
+      ? job.application_count
+      : Number(job.application_count ?? 0);
 
   return (
     <Card className="border-0 shadow-sm hover:shadow-md transition-all duration-200 group">
@@ -59,17 +69,21 @@ export function JobCard({ job }: JobCardProps) {
             </div>
 
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <Building2 className="h-3.5 w-3.5" />
-                {job.department}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5" />
-                {job.location}
-              </span>
+              {department && (
+                <span className="flex items-center gap-1.5">
+                  <Building2 className="h-3.5 w-3.5" />
+                  {department}
+                </span>
+              )}
+              {location && (
+                <span className="flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5" />
+                  {location}
+                </span>
+              )}
               <span className="flex items-center gap-1.5">
                 <Users className="h-3.5 w-3.5" />
-                {job.application_count} sollicitanten
+                {applicationCount} sollicitanten
               </span>
             </div>
           </div>
@@ -77,7 +91,7 @@ export function JobCard({ job }: JobCardProps) {
           <div className="flex items-center gap-2 shrink-0">
             <Avatar className="h-7 w-7">
               <AvatarFallback className="bg-violet-100 text-violet-600 dark:bg-violet-950/50 dark:text-violet-400 text-xs font-semibold">
-                {getInitials(job.recruiter_name)}
+                {getInitials(recruiterName)}
               </AvatarFallback>
             </Avatar>
           </div>
@@ -85,7 +99,7 @@ export function JobCard({ job }: JobCardProps) {
 
         <div className="mt-4 flex items-center justify-between">
           <p className="text-xs text-muted-foreground">
-            Recruiter: {job.recruiter_name} · {formatRelativeDate(job.created_at)}
+            Recruiter: {recruiterName ?? "Niet toegewezen"} · {formatRelativeDate(job.created_at)}
           </p>
           <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <Button
