@@ -48,8 +48,10 @@ RUN cd packages/contracts && npx tsc
 # Dan de api zelf
 RUN cd apps/api && npm run build
 
-# Prune naar productie-only deps (drops dev-deps zoals typescript, tsx)
-RUN cd apps/api && npm prune --omit=dev --legacy-peer-deps
+# Prune naar productie-only deps (drops dev-deps zoals typescript, tsx).
+# MUST op monorepo-root draaien — vanuit een workspace-subdir kan npm de
+# workspace-protocol deps niet resolven en faalt op registry-lookup.
+RUN npm prune --omit=dev --legacy-peer-deps --workspaces --include-workspace-root
 
 # ── runtime ─────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runtime
