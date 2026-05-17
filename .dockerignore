@@ -1,0 +1,53 @@
+# Repo-root .dockerignore. Belangrijk omdat de build-context vanaf Sub-fase 2A
+# de hele monorepo-root is — zonder deze lijst zou Docker hele node_modules-
+# trees, .git, .next en dist-folders meesturen wat de build dramatisch traag
+# maakt en de image-cache invalideert.
+
+# Node
+**/node_modules
+**/.npm
+**/.pnpm-store
+
+# Build outputs
+**/dist
+**/.next
+**/build
+**/.turbo
+
+# Version control / IDE
+.git
+.gitignore
+.github
+.vscode
+.idea
+*.swp
+
+# Logs
+**/*.log
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+
+# Test / coverage
+**/coverage
+**/.nyc_output
+**/playwright-report
+**/test-results
+
+# Env (NOOIT meesturen)
+**/.env
+**/.env.local
+**/.env.*.local
+infra/.env.prod
+infra/.env
+
+# Misc
+**/.DS_Store
+**/Thumbs.db
+**/*.tar
+**/*.tar.gz
+**/.cache
+
+# Docs (niet runtime-relevant — schept maar geen image-bloat)
+*.md
+docs/

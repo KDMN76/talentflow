@@ -13,6 +13,14 @@ const nextConfig = {
     ? new URL('../../', import.meta.url).pathname
     : undefined,
 
+  // Sub-fase 2A — `@talentflow/contracts` levert TS-source rechtstreeks
+  // (geen pre-build). Next.js moet die bestanden door z'n SWC-bundler
+  // halen ipv ze als pre-built `node_modules` te behandelen. Zonder dit:
+  // `SyntaxError: Cannot use import statement outside a module` op runtime.
+  // Hot-reload op `packages/contracts/src/**` werkt out-of-the-box
+  // zodra de package in `transpilePackages` staat.
+  transpilePackages: ['@talentflow/contracts'],
+
   images: {
     remotePatterns: [
       {

@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",
+    "@talentflow/contracts": "*",
     "@asteasolutions/zod-to-openapi": "^7.3.0",
     "@aws-sdk/client-s3": "^3.1043.0",
     "@aws-sdk/s3-request-presigner": "^3.1043.0",

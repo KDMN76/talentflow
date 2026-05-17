@@ -1,5 +1,6 @@
 # =============================================================================
 # TalentFlow Web (Next.js 14) — multi-stage Dockerfile
+# (Sub-fase 2A: monorepo-root context)
 # =============================================================================
 # Uses Next.js standalone output (output: 'standalone' in next.config.mjs)
 # to produce a minimal runtime image — only files actually imported at
@@ -7,17 +8,26 @@
 #
 # Build args expose NEXT_PUBLIC_* values to the client bundle. They MUST
 # be present at build-time because Next inlines them into JS chunks.
+#
+# Build context is the MONOREPO ROOT (not apps/web), zodat we
+# `packages/contracts/` mee kunnen COPYen.
+#
+# Build (vanuit repo-root):
+#   docker build --target runtime -t talentflow/web:latest -f apps/web/Dockerfile .
 # =============================================================================
 
 # ── deps ─────────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS deps
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
-# NB: only copy package.json (not package-lock.json). See apps/api/Dockerfile
-# for the rationale — npm workspaces monorepo, workspace-level lock files
-# are stale and unused.
+
+# Workspace bootstrap — root + alle workspace package.jsons vóór install.
 COPY package.json ./
-RUN npm install --no-audit --no-fund --include=dev --legacy-peer-deps
+COPY apps/web/package.json ./apps/web/package.json
+COPY packages/shared/package.json ./packages/shared/package.json
+COPY packages/contracts/package.json ./packages/contracts/package.json
+
+RUN npm install --no-audit --no-fund --include=dev --legacy-peer-deps --workspaces --include-workspace-root
 
 # ── builder ─────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
@@ -34,11 +44,18 @@ ENV NEXT_PUBLIC_DISABLE_PUBLIC_REGISTRATION=$NEXT_PUBLIC_DISABLE_PUBLIC_REGISTRA
 ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
+COPY packages/contracts ./packages/contracts
+COPY apps/web ./apps/web
+
+# Shared package mag onbroken-builden zodat de `dist`-export bestaat — Next.js
+# bundelt via transpilePackages alsnog vanuit src, maar de fallback `main`
+# moet bestaan voor non-Next consumers (Vitest, Node runtime).
+RUN cd packages/contracts && npx tsc
 
 # Guarantee public/ exists — Next.js standalone runtime expects it even
 # when empty, and the runtime stage COPYs it unconditionally.
-RUN mkdir -p public && npm run build
+RUN cd apps/web && mkdir -p public && npm run build
 
 # ── runtime ─────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runtime
@@ -52,19 +69,21 @@ RUN apk add --no-cache wget tini && \
     addgroup -g 1001 -S nodejs && \
     adduser -S nextjs -u 1001 -G nodejs
 
-# Standalone bundle + static assets.
-# `public/` is created in the builder stage (mkdir -p) below to guarantee
-# it exists before COPY — Next.js standalone expects it even when empty.
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+# Next.js standalone bundelt @talentflow/contracts mee (transpilePackages),
+# dus de runtime image hoeft de package niet apart te dragen. We kopiëren
+# alleen de standalone-output + static + public, gerooted onder apps/web
+# vanwege de monorepo-tracer.
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
 
 USER nextjs
 
 EXPOSE 3000
 
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["node", "server.js"]
+# Standalone server.js leeft onder apps/web/ in de monorepo-output structure.
+CMD ["node", "apps/web/server.js"]
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD wget -qO- http://localhost:3000/ || exit 1
+  CMD wget -qO- http://localhost:3000/login >/dev/null 2>&1 || exit 1

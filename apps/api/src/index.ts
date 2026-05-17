@@ -176,11 +176,36 @@ app.use('/api', enforceIpAllowlist);
 // Beide paden registreren — `/health` voor de Docker HEALTHCHECK (geen `/api`
 // prefix nodig binnen de container) en `/api/health` voor publieke uptime-
 // monitors die door de host-Nginx vhost komen (alleen `/api/*` is ge-routet).
+//
+// Sub-fase 2A (shared contracts proof-of-concept): we serializen het response-
+// object EN valideren het tegen `HealthCheckSchema` uit `@talentflow/contracts`.
+// Dit bewijst end-to-end dat één Zod-schema beide kanten van de wire dekt en
+// vangt drift fail-fast in dev/test mode op (response-validatie is een opt-in
+// via NODE_ENV !== 'production' zodat productie geen onnodige CPU-cycles
+// gebruikt).
+import { HealthCheckSchema, type HealthCheck } from '@talentflow/contracts';
+
+const HEALTH_BOOT_TS = Date.now();
 const healthHandler = (_req: express.Request, res: express.Response) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  const payload: HealthCheck = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime_seconds: Math.floor((Date.now() - HEALTH_BOOT_TS) / 1000),
+  };
+  if (process.env.NODE_ENV !== 'production') {
+    HealthCheckSchema.parse(payload); // dev-mode contract guard
+  }
+  res.json(payload);
 };
 app.get('/health', healthHandler);
 app.get('/api/health', healthHandler);
+
+// One-shot startup log dat het shared schema überhaupt geladen is + werkt.
+// Logged één keer bij boot — als de import of parse breekt, faalt de app
+// meteen ipv pas bij de eerste request.
+logger.info('[contracts] @talentflow/contracts geladen — HealthCheckSchema OK', {
+  schemaKeys: Object.keys(HealthCheckSchema.shape),
+});
 
 // ── OpenAPI / Swagger UI ─────────────────────────────────────────────────────
 // Pillar 3 (Sprint Q4.1): API standaard open op alle plannen — geen auth.

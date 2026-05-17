@@ -55,6 +55,13 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src'),
+      // Sub-fase 2A — shared contracts package via paths-resolution.
+      // Wijst naar de raw TS-source zodat tests geen `npm run build`
+      // op de package nodig hebben.
+      '@talentflow/contracts': path.resolve(
+        __dirname,
+        '../../packages/contracts/src/index.ts'
+      ),
     },
   },
 });

@@ -127,8 +127,10 @@ services:
   # ── API (Express) ───────────────────────────────────────────────────────
   api:
     build:
-      context: ../apps/api
-      dockerfile: Dockerfile
+      # Sub-fase 2A — context is monorepo-root zodat we
+      # `packages/contracts/` mee kunnen COPYen in de Dockerfile.
+      context: ..
+      dockerfile: apps/api/Dockerfile
       target: runtime
     image: talentflow/api:latest
     container_name: talentflow-api
@@ -227,8 +229,10 @@ services:
   # ── Web (Next.js) ────────────────────────────────────────────────────────
   web:
     build:
-      context: ../apps/web
-      dockerfile: Dockerfile
+      # Sub-fase 2A — context is monorepo-root zodat we
+      # `packages/contracts/` mee kunnen COPYen in de Dockerfile.
+      context: ..
+      dockerfile: apps/web/Dockerfile
       target: runtime
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}

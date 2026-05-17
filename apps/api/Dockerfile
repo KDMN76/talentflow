@@ -1,39 +1,56 @@
 # =============================================================================
-# TalentFlow API — multi-stage Dockerfile
+# TalentFlow API — multi-stage Dockerfile (Sub-fase 2A: monorepo-root context)
 # =============================================================================
 # Targets:
-#   - deps     : install all deps (dev + prod) for build/test
-#   - builder  : compile TS -> dist
+#   - deps     : install all deps for build/test (api + shared workspaces)
+#   - builder  : build shared package, then compile api TS -> dist
 #   - runtime  : production image, prod-only deps + dist + migrations
 #
-# Build:
-#   docker build --target runtime -t talentflow/api:latest apps/api
+# Build context is the MONOREPO ROOT (not apps/api), zodat we
+# `packages/contracts/` mee kunnen COPYen — die wordt door
+# `@talentflow/contracts: *` als workspace dependency gelinkt.
 #
-# Local dev still works against the unnamed final stage because docker
-# defaults to the last stage when no --target is supplied.
+# Build (vanuit repo-root):
+#   docker build --target runtime -t talentflow/api:latest -f apps/api/Dockerfile .
 # =============================================================================
 
 # ── deps ─────────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS deps
 WORKDIR /app
 RUN apk add --no-cache libc6-compat python3 make g++
-# NB: only copy package.json (not package-lock.json). The monorepo uses
-# npm workspaces — the lock file lives in the repo root and the legacy
-# workspace-level lock files are stale relics from before the workspaces
-# migration. Using `npm install` (not `npm ci`) here regenerates a
-# valid dependency tree from package.json alone.
+
+# Workspace bootstrap: we hebben drie package.jsons nodig vóór npm install
+# zodat workspaces resolved kunnen worden, plus alle shared/*/package.json
+# files. Lock file lives in repo-root (zie root package.json).
 COPY package.json ./
-RUN npm install --no-audit --no-fund --include=dev --legacy-peer-deps
+COPY apps/api/package.json ./apps/api/package.json
+COPY packages/shared/package.json ./packages/shared/package.json
+COPY packages/contracts/package.json ./packages/contracts/package.json
+
+# `npm install` op monorepo-root, --workspaces zorgt dat shared mee-linked
+# wordt als symlink in apps/api/node_modules/@talentflow/contracts.
+RUN npm install --no-audit --no-fund --include=dev --legacy-peer-deps --workspaces --include-workspace-root
 
 # ── builder ─────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-RUN npm run build
+# Per-workspace node_modules (npm symlinkt soms vanuit hier ipv root)
+COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
+# Source-files
+COPY packages/contracts ./packages/contracts
+COPY apps/api ./apps/api
 
-# Reduce node_modules to production-only for the runtime stage
-RUN npm prune --omit=dev
+# Eerst shared bouwen — produceert dist/index.js + dist/index.d.ts die de
+# api runtime via require('@talentflow/contracts') gaat resolven via
+# package.json main: ./dist/index.js
+RUN cd packages/contracts && npx tsc
+
+# Dan de api zelf
+RUN cd apps/api && npm run build
+
+# Prune naar productie-only deps (drops dev-deps zoals typescript, tsx)
+RUN cd apps/api && npm prune --omit=dev --legacy-peer-deps
 
 # ── runtime ─────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runtime
@@ -41,13 +58,19 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=4000
 
-# Non-root user — best practice; matches Alpine's default `node` UID.
 RUN apk add --no-cache wget tini
 
-COPY --from=builder --chown=node:node /app/dist ./dist
+# Api eigen artifacts
+COPY --from=builder --chown=node:node /app/apps/api/dist ./dist
+COPY --from=builder --chown=node:node /app/apps/api/package.json ./package.json
+COPY --from=builder --chown=node:node /app/apps/api/migrations ./migrations
+
+# Node_modules hoisted op monorepo-root + workspace-symlink mee. We pakken
+# de api-versie omdat npm-workspaces de echte modules daar laat staan en
+# alleen de @talentflow/* symlinks deelt.
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
-COPY --from=builder --chown=node:node /app/package.json ./package.json
-COPY --from=builder --chown=node:node /app/migrations ./migrations
+COPY --from=builder --chown=node:node /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=builder --chown=node:node /app/packages/contracts ./packages/contracts
 
 # Local-disk fallback voor uploads. In productie staat STORAGE_DRIVER=s3 en
 # wordt MinIO gebruikt, maar `candidates.router.ts` doet alsnog een
