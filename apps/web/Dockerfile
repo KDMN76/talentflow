@@ -86,8 +86,10 @@ USER nextjs
 EXPOSE 3000
 
 ENTRYPOINT ["/sbin/tini", "--"]
-# Standalone server.js leeft onder apps/web/ in de monorepo-output structure.
-CMD ["node", "apps/web/server.js"]
+# Standalone-output legt server.js op de root van de bundle, ook met
+# outputFileTracingRoot — alleen `node_modules` en static-assets verhuizen
+# in de nested apps/web/ structuur.
+CMD ["node", "server.js"]
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD wget -qO- http://localhost:3000/login >/dev/null 2>&1 || exit 1
