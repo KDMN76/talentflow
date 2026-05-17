@@ -57,11 +57,13 @@ COPY apps/web ./apps/web
 # moet bestaan voor non-Next consumers (Vitest, Node runtime).
 RUN cd packages/contracts && npx tsc
 
-# Next.js standalone-output tracer kijkt voor deps in `apps/web/node_modules`
-# (relatief vanaf cwd). Met npm-workspaces is alles gehoist op
-# `/app/node_modules` — zonder symlink ziet de tracer geen `next`, `react`,
-# enz., en de resulterende standalone-bundle mist runtime-deps.
-RUN ln -s /app/node_modules /app/apps/web/node_modules
+# Next.js standalone-output tracer scant deps relatief vanaf het webapp
+# package (`apps/web/node_modules`). npm-workspaces hoist standaard alles
+# op `/app/node_modules`, dus we mirror'en daar een fysieke kopie naar
+# `apps/web/node_modules` vóór de build. Een symlink werkt niet — de
+# tracer kopieert de link zelf mee naar de standalone bundle en eindigt
+# als loop in de runtime image.
+RUN cp -r /app/node_modules /app/apps/web/node_modules
 
 # Guarantee public/ exists — Next.js standalone runtime expects it even
 # when empty, and the runtime stage COPYs it unconditionally.
