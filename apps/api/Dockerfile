@@ -36,6 +36,11 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 # Hoisted node_modules (npm workspaces verzamelt alle deps op root)
 COPY --from=deps /app/node_modules ./node_modules
+# Workspace manifests (nodig voor `npm prune` op root, anders ENOENT)
+COPY package.json ./
+COPY apps/api/package.json ./apps/api/package.json
+COPY packages/shared/package.json ./packages/shared/package.json
+COPY packages/contracts/package.json ./packages/contracts/package.json
 # Source-files
 COPY packages/contracts ./packages/contracts
 COPY apps/api ./apps/api

@@ -44,6 +44,11 @@ ENV NEXT_PUBLIC_DISABLE_PUBLIC_REGISTRATION=$NEXT_PUBLIC_DISABLE_PUBLIC_REGISTRA
 ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY --from=deps /app/node_modules ./node_modules
+# Workspace manifests (consistent met api Dockerfile + nodig voor evt. prune)
+COPY package.json ./
+COPY apps/web/package.json ./apps/web/package.json
+COPY packages/shared/package.json ./packages/shared/package.json
+COPY packages/contracts/package.json ./packages/contracts/package.json
 COPY packages/contracts ./packages/contracts
 COPY apps/web ./apps/web
 
