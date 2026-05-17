@@ -143,10 +143,14 @@ export const JobListItemSchema = JobRowSchema.pick({
   close_date: true,
   currency: true,
   salary_frequency: true,
-}).extend({
-  recruiter_name: z.string().nullable(),
-  application_count: z.coerce.number().int().nonnegative(),
-});
+})
+  .extend({
+    recruiter_name: z.string().nullable(),
+    application_count: z.coerce.number().int().nonnegative(),
+  })
+  // `.strict()` op response: in dev/test mode faalt parse als backend per
+  // ongeluk een extra veld stuurt — dat is fail-fast bij contract-drift.
+  .strict();
 
 export type JobListItem = z.infer<typeof JobListItemSchema>;
 
@@ -167,7 +171,7 @@ export type JobListItem = z.infer<typeof JobListItemSchema>;
 export const JobDetailSchema = JobRowSchema.extend({
   recruiter_name: z.string().nullable(),
   stages: z.array(PipelineStageHydratedSchema),
-});
+}).strict();
 
 export type JobDetail = z.infer<typeof JobDetailSchema>;
 

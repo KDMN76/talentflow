@@ -141,7 +141,8 @@ export async function listJobs(tenantId: string, opts: JobListOptions) {
     const total = parseInt(countRows[0].total, 10);
 
     const { rows } = await client.query(
-      `SELECT j.id, j.title, j.department, j.location, j.salary_min, j.salary_max,
+      `SELECT j.id, j.title, j.description, j.department, j.location,
+              j.salary_min, j.salary_max,
               j.employment_type, j.status, j.recruiter_id, j.created_at, j.updated_at,
               j.job_reference, j.headcount, j.experience_level, j.contract_type,
               j.industry, j.remote_type, j.open_date, j.close_date,
