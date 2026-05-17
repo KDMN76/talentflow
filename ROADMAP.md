@@ -13,6 +13,14 @@ Niets hieruit wordt opgepakt zonder expliciete promotie door Kaan.
 
 ## Sectie 1: Bugs & Gaps
 
+### Docker monorepo-setup documenteren
+- **Priority**: P3
+- **Status**: Open
+- **Source**: Claude Code
+- **Date added**: 2026-05-17
+- **Context**: De huidige `apps/api/Dockerfile`, `apps/web/Dockerfile` en `infra/docker-compose.prod.yml` hebben impliciete kennis die in Sub-fase 2A pas uit verrassingen bleek: build-context is monorepo-root (niet `apps/*`), npm-workspaces hoist `node_modules` op root waardoor per-app `node_modules` niet bestaan, Next.js standalone-tracer vindt geen deps zonder een fysieke `cp -r` kopie naar `apps/web/node_modules`, en `npm prune --workspaces` MUST op de monorepo-root draaien anders faalt-ie op registry-lookup van workspace-protocol deps. Vier verrassingen, vier iteratieve fixes voor ze allemaal werkten.
+- **Notes**: Documenteer in nieuwe `docs/docker.md` zodat toekomstige Dockerfile/compose-wijzigingen niet opnieuw door deze valkuilen heen moeten. Sectie-suggesties: (1) waarom monorepo-root context, (2) waarom hoisted node_modules en hoe daarmee om te gaan in builder/runtime stages, (3) standalone-tracer behavior + `outputFileTracingRoot`, (4) `npm prune` op root vs workspace-subdir.
+
 ### Vacature-detail pagina crasht — `TypeError: Cannot read properties of undefined (reading 'map')`
 - **Priority**: P1
 - **Status**: In Progress

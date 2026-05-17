@@ -9,9 +9,15 @@
   "scripts": {
     "dev:api": "cd apps/api && npm run dev",
     "dev:web": "cd apps/web && npm run dev",
+    "dev:contracts": "cd packages/contracts && npm run dev",
+    "dev:all": "concurrently --names contracts,api,web --prefix-colors blue,green,yellow --kill-others-on-fail \"npm:dev:contracts\" \"npm:dev:api\" \"npm:dev:web\"",
     "build:api": "cd apps/api && npm run build",
     "build:web": "cd apps/web && npm run build",
+    "build:contracts": "cd packages/contracts && npm run build",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
   }
 }

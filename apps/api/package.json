@@ -2,7 +2,7 @@
   "name": "@talentflow/api",
   "version": "0.1.0",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx watch --include=../../packages/contracts/dist/** src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "migrate": "tsx src/db/migrate.ts",
