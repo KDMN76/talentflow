@@ -34,9 +34,8 @@ RUN npm install --no-audit --no-fund --include=dev --legacy-peer-deps --workspac
 # ── builder ─────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
 WORKDIR /app
+# Hoisted node_modules (npm workspaces verzamelt alle deps op root)
 COPY --from=deps /app/node_modules ./node_modules
-# Per-workspace node_modules (npm symlinkt soms vanuit hier ipv root)
-COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
 # Source-files
 COPY packages/contracts ./packages/contracts
 COPY apps/api ./apps/api
@@ -65,11 +64,10 @@ COPY --from=builder --chown=node:node /app/apps/api/dist ./dist
 COPY --from=builder --chown=node:node /app/apps/api/package.json ./package.json
 COPY --from=builder --chown=node:node /app/apps/api/migrations ./migrations
 
-# Node_modules hoisted op monorepo-root + workspace-symlink mee. We pakken
-# de api-versie omdat npm-workspaces de echte modules daar laat staan en
-# alleen de @talentflow/* symlinks deelt.
+# Hoisted node_modules (alles op root) + de shared contracts package
+# zodat de workspace-symlink in node_modules/@talentflow/contracts ->
+# /app/packages/contracts gewoon werkt op runtime.
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
-COPY --from=builder --chown=node:node /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=builder --chown=node:node /app/packages/contracts ./packages/contracts
 
 # Local-disk fallback voor uploads. In productie staat STORAGE_DRIVER=s3 en
