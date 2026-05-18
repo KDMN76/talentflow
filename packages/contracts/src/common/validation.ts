@@ -16,6 +16,23 @@ import type { ZodTypeAny, z } from "zod";
  *
  *   const data = await jobsService.listJobs(...);
  *   res.json(assertResponse(z.array(JobListItemSchema), data));
+ *
+ * --- JSON-roundtrip is INTENTIONAL — niet verwijderen ---
+ *
+ * Schemas beschrijven wat de **client** uiteindelijk ontvangt: bv.
+ * `created_at: z.string().datetime()`. De pg-driver retourneert echter
+ * `timestamptz` / `date` kolommen als JavaScript `Date` objects, NIET als
+ * strings. Express's `res.json()` serializeert die later via
+ * `Date.prototype.toJSON()` naar ISO-strings — maar `assertResponse` draait
+ * VÓÓR die serialisatie.
+ *
+ * Door eerst `JSON.parse(JSON.stringify(data))` te doen, valideren we
+ * exact dezelfde shape die de client krijgt. Zonder roundtrip zou elke
+ * GET-endpoint met timestamps in dev/test falen op `expected: "string",
+ * received: "date"` — een vals positief.
+ *
+ * De roundtrip-kost (~ms voor een lijst van honderden rijen) is alleen in
+ * dev/test actief. Productie is no-op.
  */
 export function assertResponse<S extends ZodTypeAny>(
   schema: S,
@@ -24,5 +41,7 @@ export function assertResponse<S extends ZodTypeAny>(
   if (process.env.NODE_ENV === "production") {
     return data as z.infer<S>;
   }
-  return schema.parse(data);
+  // Roundtrip via JSON om te matchen wat de client daadwerkelijk ontvangt
+  // (Date → ISO-string via Date.prototype.toJSON). Zie comment hierboven.
+  return schema.parse(JSON.parse(JSON.stringify(data)));
 }

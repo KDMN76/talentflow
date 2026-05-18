@@ -19,7 +19,6 @@ import type {
   JobAttachment,
   JobFunnelResponse,
   JobHealthBreakdown,
-  JobManatalFields,
   JobNote,
   JobSourcingItem,
   JobTeamMember,
@@ -44,7 +43,6 @@ import type {
 } from "@/lib/types/reactivation";
 
 export type CandidateStatus = "active" | "inactive" | "hired" | "rejected";
-export type JobStatus = "draft" | "open" | "filled" | "closed";
 export type ApplicationStatus = "active" | "rejected" | "hired";
 
 /**
@@ -53,27 +51,13 @@ export type ApplicationStatus = "active" | "rejected" | "hired";
  */
 export type { Candidate, CandidateSkill, CandidateResume, PipelineTemplate };
 
-export interface Job extends JobManatalFields {
-  id: string;
-  tenant_id: string;
-  title: string;
-  department: string;
-  location: string;
-  description: string;
-  /** Frontend-only convenience field; parsed from description on the backend. */
-  requirements?: string[];
-  status: JobStatus;
-  employment_type?: string;
-  salary_min?: number | null;
-  salary_max?: number | null;
-  recruiter_id: string;
-  recruiter_name: string;
-  /** Backend returns this as `application_count` from COUNT(). */
-  application_count: number;
-  deleted_at?: string | null;
-  created_at: string;
-  updated_at: string;
-}
+// Sub-fase 2C: Job-types komen niet meer uit dit bestand. Importeer
+// rechtstreeks uit `@talentflow/contracts`:
+//
+//   import type { JobListItem, JobDetail, JobStatus } from "@talentflow/contracts";
+//
+// Mockdata onder `mockJobs` is alleen seed-data voor dev-scripts en tests;
+// niet de bron-van-waarheid voor de Job-shape.
 
 export interface PipelineStage {
   id: string;
@@ -552,129 +536,6 @@ export const mockPipelineTemplates: PipelineTemplate[] = [
   },
 ];
 
-// ─── Jobs ───────────────────────────────────────────────────────────────────
-
-export const mockJobs: Job[] = [
-  {
-    id: "job-1",
-    tenant_id: "tenant-1",
-    title: "Senior Frontend Developer",
-    department: "Engineering",
-    location: "Amsterdam",
-    description:
-      "## Over de rol\n\nWe zoeken een ervaren frontend developer om ons product team te versterken. Je werkt aan onze React-gebaseerde applicatie en helpt de architectuur naar het volgende niveau te tillen.\n\n## Wat ga je doen\n\n- Bouwen aan ons design system in samenwerking met design\n- Componenten ontwerpen die door 30+ developers gebruikt worden\n- Performance-budget bewaken (Core Web Vitals, bundle size)\n- Mentor zijn voor medior frontend collega's\n\n## Wat we zoeken\n\n- 5+ jaar React ervaring met TypeScript\n- Next.js (App Router) op productieschaal\n- Ervaring met design systems en componentbibliotheken\n- Sterke communicatieve vaardigheden in NL en EN",
-    requirements: [
-      "5+ jaar React ervaring",
-      "TypeScript expertise",
-      "Ervaring met Next.js",
-      "Goede communicatieve vaardigheden",
-    ],
-    status: "open",
-    employment_type: "fulltime",
-    salary_min: 65000,
-    salary_max: 85000,
-    recruiter_id: "user-1",
-    recruiter_name: "Emma Bakker",
-    application_count: 12,
-    created_at: "2024-01-10T08:00:00Z",
-    updated_at: "2024-01-22T09:00:00Z",
-
-    // Manatal-parity fields
-    job_reference: "JOB-9344Y",
-    client: "TCS",
-    client_logo_url: null,
-    headcount: 1,
-    experience_level: "senior",
-    contract_type: "fulltime",
-    contract_details: "Vast contract, 12 maanden proeftijd standaard",
-    open_date: "2024-01-10",
-    close_date: "2026-05-28",
-    industry: "Technologie / SaaS",
-    remote_type: "hybrid",
-    office_address: "Spaklerweg 79, 1099 BA Amsterdam",
-    package_details:
-      "Basissalaris + bonusregeling tot 10%, 27 vakantiedagen, pensioen, laptop naar keuze, reiskosten of NS Business Card.",
-    currency: "EUR",
-    salary_frequency: "yearly",
-    owner_id: "user-1",
-    owner_name: "Emma Bakker",
-  },
-  {
-    id: "job-2",
-    tenant_id: "tenant-1",
-    title: "Product Manager",
-    department: "Product",
-    location: "Rotterdam",
-    description:
-      "Als Product Manager ben je verantwoordelijk voor de roadmap van ons platform. Je werkt nauw samen met engineering, design en stakeholders.",
-    requirements: [
-      "3+ jaar PM ervaring bij SaaS",
-      "Sterke analytische vaardigheden",
-      "Ervaring met agile methodologie",
-      "Technische achtergrond is een plus",
-    ],
-    status: "open",
-    employment_type: "fulltime",
-    salary_min: 70000,
-    salary_max: 95000,
-    recruiter_id: "user-1",
-    recruiter_name: "Emma Bakker",
-    application_count: 7,
-    created_at: "2024-01-15T10:00:00Z",
-    updated_at: "2024-01-20T11:00:00Z",
-
-    job_reference: "JOB-1182P",
-    client: "InternalHire",
-    headcount: 1,
-    experience_level: "medior",
-    contract_type: "fulltime",
-    open_date: "2024-01-15",
-    close_date: null,
-    industry: "SaaS",
-    remote_type: "remote",
-    currency: "EUR",
-    salary_frequency: "yearly",
-    owner_id: "user-1",
-    owner_name: "Emma Bakker",
-  },
-  {
-    id: "job-3",
-    tenant_id: "tenant-1",
-    title: "Backend Engineer (Python)",
-    department: "Engineering",
-    location: "Utrecht",
-    description:
-      "Versterk ons backend team met Python expertise. Je bouwt en onderhoudt onze API's en data pipelines.",
-    requirements: [
-      "Python/Django of FastAPI",
-      "PostgreSQL",
-      "REST API design",
-      "Docker/Kubernetes kennis",
-    ],
-    status: "draft",
-    employment_type: "fulltime",
-    salary_min: 60000,
-    salary_max: 80000,
-    recruiter_id: "user-2",
-    recruiter_name: "Jan Peters",
-    application_count: 0,
-    created_at: "2024-01-25T08:00:00Z",
-    updated_at: "2024-01-25T08:00:00Z",
-
-    job_reference: "JOB-2204K",
-    client: "InternalHire",
-    headcount: 2,
-    experience_level: "medior",
-    contract_type: "fulltime",
-    open_date: "2024-01-25",
-    industry: "SaaS",
-    remote_type: "onsite",
-    currency: "EUR",
-    salary_frequency: "yearly",
-    owner_id: "user-2",
-    owner_name: "Jan Peters",
-  },
-];
 
 // ─── Pipeline stages ─────────────────────────────────────────────────────────
 

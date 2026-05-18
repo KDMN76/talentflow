@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { useCreateJobTemplate } from "@/hooks/useJobTemplates";
 import { useToast } from "@/components/ui/use-toast";
-import type { Job } from "@/lib/mockData";
+import type { JobDetail as Job } from "@talentflow/contracts";
 
 interface SaveAsTemplateButtonProps {
   job: Job;

@@ -30,7 +30,7 @@ import {
 import { useJobMatches } from "@/hooks/useMatching";
 import { useTalentFitModel } from "@/hooks/useTalentFit";
 import { cn, getInitials } from "@/lib/utils";
-import type { Job } from "@/lib/mockData";
+import type { JobDetail as Job } from "@talentflow/contracts";
 import type {
   JobFunnelResponse,
   JobHealthBreakdown,
@@ -198,11 +198,14 @@ export function JobDetailHeader({
     : null;
   const salary = formatSalary(job);
 
-  const clientName = job.client ?? job.department ?? "—";
+  // Sub-fase 2C: `job.client` / `job.owner_name` waren fantoom-velden zonder
+  // DB-grond. Tot er een Clients/CRM-module is (zie ROADMAP) tonen we de
+  // afdeling als "card title" en de recruiter als enige eigenaar.
+  const clientName = job.department ?? "—";
   const logoGradient = hashColor(job.job_reference ?? job.id);
   const logoInitials = getInitials(clientName);
 
-  const ownerName = job.owner_name ?? job.recruiter_name;
+  const ownerName = job.recruiter_name;
   const ownerInitials = getInitials(ownerName);
 
   const buckets = bucketsFromFunnel(funnel ?? null);

@@ -6,8 +6,8 @@
  */
 
 export * from './types/candidate';
-export * from './types/job';
-export * from './types/job-detail';
+// `./types/job` en `./types/job-detail` zijn verwijderd in Sub-fase 2C —
+// canonieke Job-types komen nu uit `@talentflow/contracts/job`.
 export * from './types/pipeline-template';
 export * from './types/email';
 export * from './types/matching';

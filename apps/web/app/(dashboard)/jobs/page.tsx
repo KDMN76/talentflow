@@ -19,7 +19,7 @@ import {
   type JobsFilters,
 } from "@/hooks/useJobsFilters";
 import { getCurrentUserId } from "@/lib/auth";
-import type { Job } from "@/lib/mockData";
+import type { JobListItem as Job } from "@talentflow/contracts";
 
 // `tags` is not yet a first-class field on `Job`, but the filter UI exposes
 // it for forward-compat with backend full-text search. TODO(Agent S): zodra
@@ -56,6 +56,9 @@ export default function JobsPage() {
     if (!jobs) return [];
     const seen = new Map<string, string>();
     for (const job of jobs) {
+      // Sub-fase 2C: recruiter_id en recruiter_name kunnen null zijn —
+      // skip jobs zonder gekoppelde recruiter.
+      if (!job.recruiter_id || !job.recruiter_name) continue;
       if (!seen.has(job.recruiter_id)) {
         seen.set(job.recruiter_id, job.recruiter_name);
       }
@@ -250,9 +253,10 @@ function applyClientSideFilters(jobs: Job[], filters: JobsFilters): Job[] {
       if (!haystack.includes(search)) return false;
     }
 
-    // Location contains.
+    // Location contains. `location` is nullable in JobListItem; jobs zonder
+    // locatie matchen geen location-filter.
     if (location) {
-      if (!job.location.toLowerCase().includes(location)) return false;
+      if (!job.location?.toLowerCase().includes(location)) return false;
     }
 
     // Date range against `created_at`.

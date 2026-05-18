@@ -84,7 +84,24 @@ export default function PipelinePage() {
   );
 }
 
-function PipelineJobRow({ job }: { job: { id: string; title: string; department: string; location: string; status: string; application_count: number; recruiter_name: string } }) {
+type PipelineJobRowJob = {
+  id: string;
+  title: string;
+  department: string | null;
+  location: string | null;
+  status: string;
+  application_count: number;
+  recruiter_name: string | null;
+};
+
+function PipelineJobRow({ job }: { job: PipelineJobRowJob }) {
+  // Sub-fase 2C: department / location / recruiter_name zijn nullable na de
+  // shared-contracts migratie. Filter null-onderdelen uit de meta-regel zodat
+  // we niet "null · null · null" tonen voor jobs zonder die hydration.
+  const metaParts = [job.department, job.location, job.recruiter_name].filter(
+    (s): s is string => Boolean(s)
+  );
+
   return (
     <Link
       href={`/jobs/${job.id}/pipeline`}
@@ -103,9 +120,11 @@ function PipelineJobRow({ job }: { job: { id: string; title: string; department:
             {STATUS_LABEL[job.status] ?? job.status}
           </span>
         </div>
-        <p className="text-xs text-muted-foreground mt-0.5 truncate">
-          {job.department} · {job.location} · {job.recruiter_name}
-        </p>
+        {metaParts.length > 0 && (
+          <p className="text-xs text-muted-foreground mt-0.5 truncate">
+            {metaParts.join(" · ")}
+          </p>
+        )}
       </div>
 
       <div className="flex items-center gap-1.5 shrink-0 text-xs text-muted-foreground">

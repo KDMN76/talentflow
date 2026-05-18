@@ -9,7 +9,11 @@ export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  // Bumped from 2_000 → 30_000 om Neon free-tier cold-start (~3-15s na
+  // scale-to-zero) op te vangen tijdens dev. Productie (Hetzner) is altijd
+  // warm, dus de hogere timeout is no-op daar. Zie ROADMAP "Neon free tier
+  // scale-to-zero + pg-pool timeout".
+  connectionTimeoutMillis: 30000,
 });
 
 pool.on('error', (err) => {

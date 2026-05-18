@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn, getInitials, formatRelativeDate } from "@/lib/utils";
-import type { Job } from "@/lib/mockData";
+import type { JobListItem as Job } from "@talentflow/contracts";
 
 const statusConfig: Record<
   string,

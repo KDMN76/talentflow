@@ -24,16 +24,36 @@ import { JobTemplatePicker } from "@/components/jobs/JobTemplatePicker";
 import { CustomFieldsRenderer } from "@/components/common/CustomFieldsRenderer";
 import { usePaySettings } from "@/hooks/useCompliance";
 import type { CustomFieldValue } from "@/lib/types/atsExtensions";
+import { JobCreateInputSchema } from "@talentflow/contracts";
 
-const jobSchema = z.object({
-  title: z.string().min(2, "Functietitel is verplicht"),
-  department: z.string().min(1, "Afdeling is verplicht"),
-  location: z.string().min(1, "Locatie is verplicht"),
-  description: z.string().min(10, "Omschrijving is te kort"),
-  requirements_raw: z.string().optional(),
-  salary_min: z.string().optional(),
-  salary_max: z.string().optional(),
-});
+/**
+ * Form-schema = shared `JobCreateInputSchema` met form-specifieke layer:
+ *   - `description` krijgt min-length voor UX-feedback voordat backend
+ *     het zou afkeuren.
+ *   - `salary_min`/`salary_max` worden in `<input type="number">` als string
+ *     uitgelezen door react-hook-form; `z.preprocess` coerce leeg→undefined
+ *     (zodat we GEEN null sturen — dat was de bug van 2026-05-16) en
+ *     anders → integer. Behoudt `optional()` voor leeg-laten.
+ *   - `requirements_raw` is een UI-only textarea-veld; wordt vóór submit
+ *     gestript en NIET naar backend gestuurd (backend kent geen
+ *     `requirements`-veld — was fantoom).
+ * `.strict()` van het oorspronkelijke schema blijft behouden via `.extend()`
+ * — onbekende velden (typo's, oude form-state) geven Zod-error.
+ */
+const salaryPreprocess = z.preprocess(
+  (val) => (val === "" || val === null || val === undefined ? undefined : Number(val)),
+  z.number().int().nonnegative().optional()
+);
+
+const jobSchema = JobCreateInputSchema.omit({ pipeline_template_id: true })
+  .extend({
+    description: z.string().min(10, "Omschrijving is te kort"),
+    department: z.string().min(1, "Afdeling is verplicht"),
+    location: z.string().min(1, "Locatie is verplicht"),
+    salary_min: salaryPreprocess,
+    salary_max: salaryPreprocess,
+    requirements_raw: z.string().optional(),
+  });
 
 type FormData = z.infer<typeof jobSchema>;
 
@@ -62,8 +82,8 @@ export function JobForm({ showTemplatePicker = false }: JobFormProps) {
 
   const watchedMin = watch("salary_min");
   const watchedMax = watch("salary_max");
-  const salaryMissing =
-    !watchedMin || !watchedMax || watchedMin === "" || watchedMax === "";
+  // Na de preprocess in jobSchema zijn deze `number | undefined`.
+  const salaryMissing = watchedMin === undefined || watchedMax === undefined;
   const showPayWarning = !!paySettings?.enforce_salary_range && salaryMissing;
 
   const handlePickTemplate = (
@@ -88,7 +108,10 @@ export function JobForm({ showTemplatePicker = false }: JobFormProps) {
   }, [pickerDone, showTemplatePicker]);
 
   const onSubmit = async (data: FormData) => {
-    if (paySettings?.enforce_salary_range && (!data.salary_min || !data.salary_max)) {
+    if (
+      paySettings?.enforce_salary_range &&
+      (data.salary_min === undefined || data.salary_max === undefined)
+    ) {
       toast({
         variant: "destructive",
         title: "Salarisbandbreedte verplicht",
@@ -98,30 +121,23 @@ export function JobForm({ showTemplatePicker = false }: JobFormProps) {
       return;
     }
     try {
-      const newJob = await createJob.mutateAsync({
-        title: data.title,
-        department: data.department,
-        location: data.location,
-        description: data.description,
-        salary_min: data.salary_min ? Number(data.salary_min) : null,
-        salary_max: data.salary_max ? Number(data.salary_max) : null,
-        requirements: data.requirements_raw
-          ? data.requirements_raw
-              .split("\n")
-              .map((s) => s.trim())
-              .filter(Boolean)
-          : [],
-      });
+      // Strip UI-only `requirements_raw` (backend kent het veld niet).
+      // `data` is al door Zod gevalideerd via resolver — salary_min/max
+      // zijn nu numbers of undefined, niet null.
+      const { requirements_raw: _requirements_raw, ...createInput } = data;
+      const newJob = await createJob.mutateAsync(createInput);
       toast({
         title: "Vacature aangemaakt",
         description: `"${data.title}" is opgeslagen als concept.`,
       });
       router.push(`/jobs/${newJob.id}`);
-    } catch {
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Vacature kon niet worden aangemaakt.";
       toast({
         variant: "destructive",
         title: "Fout",
-        description: "Vacature kon niet worden aangemaakt.",
+        description: message,
       });
     }
   };

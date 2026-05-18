@@ -13,6 +13,56 @@ Niets hieruit wordt opgepakt zonder expliciete promotie door Kaan.
 
 ## Sectie 1: Bugs & Gaps
 
+### Sub-fase 2D: JobDetail-schema-volledigheid (Bug A)
+- **Priority**: P1
+- **Status**: Open
+- **Source**: Sub-fase 2C Stap 5 smoke-test, 2026-05-18
+- **Date added**: 2026-05-18
+- **Context**: `jobs.service.ts:getJob` doet `SELECT j.*, u.name as recruiter_name` en retourneert `embedding` + `embedding_updated_at` velden. `JobDetailSchema` heeft deze bewust weggelaten met `.strict()`. Resultaat: validatie faalt in dev/test (HTTP 400 `unrecognized_keys: ['embedding','embedding_updated_at']`), ondanks dat productie het toevallig "werkend" oplijkt door no-op `assertResponse` onder `NODE_ENV=production`.
+- **Fix-richting**: óf SELECT vervangen door expliciete kolommenlijst die `embedding*` excludeert, óf `JobDetailSchema` deze velden expliciet als `.optional()` toelaten. Beslissing op design-niveau: hoort embedding bij de wire-shape of niet? Bespreken voordat we fixen.
+
+### Sub-fase 2D: JobHealthSchema migreren naar shared contracts (Bug B)
+- **Priority**: P1
+- **Status**: Open
+- **Source**: JOB_CONTRACT_AUDIT.md item #1, bevestigd in 2C Stap 5 smoke-test
+- **Date added**: 2026-05-18 (bevestigd; oorspronkelijk gevonden 2026-05-17)
+- **Context**: `GET /jobs/:id/health` backend retourneert flat object met scores (`{health_score, velocity_score, days_open, ...}`). Frontend `useJobHealth` hook verwacht `{components: []}` shape. Dit is de oorspronkelijke vacature-detail crash uit het audit-document.
+- **Fix-richting**: definieer `JobHealthSchema` in `packages/contracts`, fix backend response shape, frontend gebruikt shared schema.
+- **Notes**: Dit is de eerstvolgende contract-migratie na Job zelf. Patroon hetzelfde als 2B/2C maar voor health/funnel/team-related endpoints.
+
+### Lokale dev mist peer-dependencies die productie via `--legacy-peer-deps` resolved
+- **Priority**: P2
+- **Status**: Resolved (react-is toegevoegd als directe dep)
+- **Source**: Claude Code (Sub-fase 2C Stap 5 smoke-test, 2026-05-18)
+- **Context**: Recharts heeft `react-is` als peer-dep. Lokale `npm install` zonder `--legacy-peer-deps` installeerde hem alleen genest (16.13.1 via Sentry-chain), niet gehoist op top-level waar Next's webpack hem zoekt. Productie Docker-build resolveert het wel via `--legacy-peer-deps`. Resultaat lokaal: Next dev faalde met "Module not found: Can't resolve 'react-is'" op detail-pages die recharts laden via JobPerformanceTab.
+- **Fix toegepast**: `react-is: "^18.3.1"` als directe dep in `apps/web/package.json`. Versie alignt met React 18.x.
+- **Notes**: Audit op andere ontbrekende peer-deps tijdens deze sessie uitgevoerd via `npm ls` — alleen `react-is` was top-level afwezig in deze monorepo. Mocht in toekomst weer een soortgelijke peer-mismatch optreden bij nieuwe deps, herhaal het patroon: voeg expliciet als directe dep toe, niet vertrouwen op `--legacy-peer-deps` hoisting.
+
+### Neon free tier scale-to-zero + pg-pool timeout
+- **Priority**: P1
+- **Status**: Open
+- **Source**: Claude Code (Sub-fase 2C Stap 5 smoke-test)
+- **Date added**: 2026-05-17
+- **Context**: Neon free tier slaapt na ~5 min inactivity. Cold-start 3-15s. Huidige `pg-pool` `connectionTimeoutMillis` (~10s) is te kort. Eerste query na inactivity faalt met "Connection terminated due to connection timeout". Geverifieerd op 2026-05-17 tijdens login-flow: eerste POST 500 met die error, tweede POST direct erna 200 (Neon warm).
+- **Fix-richting**: `apps/api/src/db/pool.ts` `connectionTimeoutMillis` naar 30s. Productie-impact: nul (Hetzner-Postgres slaapt niet, timeout-verhoging is no-op voor warme pools).
+- **Notes**: Doen als eerste actie morgen voor 2C Stap 5 hervatting — anders wisselt elke smoke-test tussen "werkt" en "5xx" afhankelijk van of Neon warm of koud is, wat de testresultaten waardeloos maakt.
+
+### Dev-environment .env.local bestand opruimen
+- **Priority**: P2
+- **Status**: Open
+- **Source**: Claude Code (gevonden tijdens Sub-fase 2C smoke-test)
+- **Date added**: 2026-05-17
+- **Context**: `apps/web/.env.local` (datum 2026-05-11, uit eerdere mock-mode-sessie) bevatte `NEXT_PUBLIC_USE_MOCK_DATA=true`, wat de echte API-flow blokkeerde tijdens smoke-test. Regel is verwijderd. Maar het bestand zelf is niet gedocumenteerd in repo. Doen: documenteer in README welke .env-files horen bij welke setup, of verwijder `.env.local` volledig en gebruik `.env.development` als enige dev-config-bron.
+- **Notes**: Andere variabelen in `.env.local` kunnen vergelijkbare verrassingen bevatten — review bij gelegenheid.
+
+### React types error in apps/web/app/providers.tsx:31
+- **Priority**: P3
+- **Status**: Open
+- **Source**: Claude Code
+- **Date added**: 2026-05-17
+- **Context**: `npx tsc --noEmit` op apps/web rapporteert: `Type 'React.ReactNode' is not assignable to type 'import("…@types/react").ReactNode'. Type 'bigint' is not assignable to type 'ReactNode'`. Pre-existing TypeScript-type error door dual React-versie resolution in monorepo, niet contract-gerelateerd, niet productie-blokkerend (Next build slaagt, runtime werkt). Geen impact op consumers.
+- **Notes**: Fix-richting (later): align @types/react versie in monorepo (root + apps/web), of force-resolutie via npm `overrides`. Vermoedelijk hoist-conflict tussen `apps/web/node_modules/@types/react` en de hoisted root-versie. Scope-discipline: niet meegenomen tijdens Sub-fase 2C zoals besproken.
+
 ### Docker monorepo-setup documenteren
 - **Priority**: P3
 - **Status**: Open

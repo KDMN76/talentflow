@@ -86,3 +86,11 @@ Code, variabelen en commentaar in het **Engels**.
 ## Werkstandaard
 
 Zie CLAUDE.md in de parent directory — Boil the Ocean standaard geldt ook hier.
+
+## IDE
+
+Kaan gebruikt **Google Antigravity** (binary: `antigravity` op PATH).
+
+- **Geen** `code`/`vim`/`notepad` aanroepen (VSCode/andere launchers — verkeerde IDE).
+- **Wel** `antigravity <abs-pad>` mag, mits Kaan expliciet vraagt om iets te "openen".
+- Default-gedrag: in rapporten alleen het absolute file-path noemen — Kaan opent zelf via filetree of `Ctrl+P` quick-open.

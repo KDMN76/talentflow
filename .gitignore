@@ -20,10 +20,14 @@ test-results/
 .env
 .env.local
 .env.*.local
+.env.dev
 .env.prod
 .env.production
 infra/.env.prod
 infra/.env.production
+
+# Seed-credentials voor lokale dev — NOOIT committen, ook test-secrets niet
+.seed-credentials.dev
 
 # Logs
 *.log

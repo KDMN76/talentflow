@@ -89,7 +89,11 @@ export default function JobDetailPage() {
 
   const teamCount = team?.length ?? 0;
   const activityCount = (notes?.length ?? 0) + (attachments?.length ?? 0);
-  const pipelineCount = funnel?.total ?? job.application_count ?? 0;
+  // Sub-fase 2C: JobDetail bevat geen application_count (alleen per-stage
+  // counts via funnel / stages). Fallback: som van stage-counts, of 0.
+  const pipelineCount =
+    funnel?.total ??
+    job.stages.reduce((sum, s) => sum + s.application_count, 0);
 
   const handleDuplicate = async () => {
     try {

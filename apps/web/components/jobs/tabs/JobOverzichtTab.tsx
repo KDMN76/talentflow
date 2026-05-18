@@ -11,7 +11,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useJobFunnel, useJobHealth } from "@/hooks/useJobDetail";
 import { cn } from "@/lib/utils";
-import type { Job } from "@/lib/mockData";
+import type { JobDetail as Job } from "@talentflow/contracts";
 
 // ─── Markdown renderer ──────────────────────────────────────────────────────
 //
@@ -214,20 +214,42 @@ export function JobOverzichtTab({ job }: { job: Job }) {
           </CardContent>
         </Card>
 
-        {(job.requirements ?? []).length > 0 && (
+        {/* Sub-fase 2C: `job.requirements` (frontend-fantoom) vervangen door
+            de echte DB-velden `required_skills` + `nice_to_have_skills`. */}
+        {(job.required_skills?.length ?? 0) > 0 && (
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Vereisten</CardTitle>
+              <CardTitle className="text-base">Vereiste vaardigheden</CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2">
-                {(job.requirements ?? []).map((req, i) => (
+                {(job.required_skills ?? []).map((skill, i) => (
                   <li
                     key={i}
                     className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300"
                   >
                     <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-500" />
-                    {req}
+                    {skill}
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
+        {(job.nice_to_have_skills?.length ?? 0) > 0 && (
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Pre's</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                {(job.nice_to_have_skills ?? []).map((skill, i) => (
+                  <li
+                    key={i}
+                    className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300"
+                  >
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-400" />
+                    {skill}
                   </li>
                 ))}
               </ul>
@@ -340,7 +362,9 @@ export function JobOverzichtTab({ job }: { job: Job }) {
           <CardContent>
             <dl className="grid grid-cols-1 gap-x-3 gap-y-2 text-sm sm:grid-cols-2">
               <DetailRow label="Referentie" value={job.job_reference} mono />
-              <DetailRow label="Klant" value={job.client} />
+              {/* Sub-fase 2C: "Klant"-rij verwijderd — `job.client` was
+                  fantoom-veld zonder DB-grond. Komt terug bij Clients/CRM
+                  module (zie ROADMAP). */}
               <DetailRow
                 label="Aantal posities"
                 value={
@@ -399,7 +423,9 @@ export function JobOverzichtTab({ job }: { job: Job }) {
                 value={job.package_details}
                 colSpan
               />
-              <DetailRow label="Eigenaar" value={job.owner_name} />
+              {/* Sub-fase 2C: "Eigenaar"-rij verwijderd — `job.owner_name`
+                  was fantoom-veld; recruiter wordt al getoond in
+                  JobDetailHeader. */}
             </dl>
           </CardContent>
         </Card>
