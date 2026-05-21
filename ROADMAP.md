@@ -212,6 +212,15 @@ Niets hieruit wordt opgepakt zonder expliciete promotie door Kaan.
 - **Fix-richting**: `docker container prune -f` om alle exited containers weg te halen, gevolgd door `docker image prune -f` voor dangling images. Geen impact op draaiende services.
 - **Notes**: Inplannen als onderhoud-taak. Doe ook eens `df -h /var/lib/docker` vooraf om disk-besparing te kunnen rapporteren. Eventueel cron-job opzetten (weekly prune) — apart P3 item zodra dit eens is gedaan.
 
+### PWA service worker + manifest ontbreken
+- **Priority**: P3
+- **Status**: Open
+- **Source**: Browser-test 2026-05-21, na productie-fix
+- **Date added**: 2026-05-21
+- **Context**: Console toont 404 op `/sw.js` (service worker) en `/manifest.json`. PWA-features (offline gebruik, installeerbaar als app) werken niet. Niet kritiek voor desktop-gebruik door recruiter eind juni.
+- **Fix-richting**: bepalen of we PWA echt willen (next-pwa setup) of de meta-tags weghalen om de console clean te maken.
+- **Notes**: Gedeeltelijke overlap met bestaande P2-entry "PWA-manifest deprecated meta + missende icon" (zie hierboven in deze sectie) — die dekt `icons/icon-192.png` 404 + deprecated `apple-mobile-web-app-capable` meta. Deze nieuwe entry dekt `sw.js` + `manifest.json` 404. Samenvoegen of apart laten: aan jou.
+
 ---
 
 ## Sectie 2: Features Backlog
