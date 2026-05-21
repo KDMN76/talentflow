@@ -163,6 +163,17 @@ Niets hieruit wordt opgepakt zonder expliciete promotie door Kaan.
 - **Context**: `apps/web/hooks/useJobs.ts` typt de detail-response als `Job & { stages: unknown[] }`. Geen type-safety op de meest-getoonde nested data. Wordt opgelost door Fase 2C — `JobDetailSchema` extend met `PipelineStageSchema[]` geeft type-veilige stages.
 - **Notes**: Onderdeel van `@talentflow/contracts/job`.
 
+### Deploy-procedure documenteren met expliciet `--env-file infra/.env.prod`
+- **Priority**: P1
+- **Status**: Open
+- **Source**: Claude Code (productie-deploy-fout, 2026-05-21)
+- **Date added**: 2026-05-21
+- **Context**: Tijdens fix-deploy van 2026-05-21 werd `docker compose -f infra/docker-compose.prod.yml up -d web` gedraaid zonder `--env-file infra/.env.prod`. Compose pakte `.env.prod` niet automatisch op (compose zoekt `.env` in working dir, niet `.env.prod`), zag alle env-vars als "leeg" (warnings: `DATABASE_URL`, `JWT_SECRET`, `REDIS_PASSWORD`, etc.), interpreteerde dat als config-verandering, en **recreated alle dependency-containers** (postgres, redis, minio, api) met blanke env-vars. API faalde direct met `Error: DATABASE_URL environment variable is required` → restart-loop, web bleef in `Created` state. Recovery: hetzelfde commando met `--env-file infra/.env.prod` toegevoegd; compose detecteerde dat configs nu matchten en alles startte clean. Totale productie-downtime door deze flow: ~8 min boven op de oorspronkelijke 3 dagen.
+- **Fix-richting (twee opties, kies één)**:
+  1. **Compose YAML wijzigen**: voeg `env_file: ./.env.prod` toe aan elke service in `infra/docker-compose.prod.yml`. Geen `--env-file` flag meer nodig — compose laadt het altijd. Voordeel: deploy-stappen blijven simpel (`docker compose -f infra/docker-compose.prod.yml up -d`). Nadeel: pad relatief vanaf compose-file, één regel per service.
+  2. **Deploy-script** (`scripts/deploy.sh` of `infra/deploy.sh`) die altijd `--env-file infra/.env.prod` zet en als enige aanroeppad geldt. Geen handmatige `docker compose ...` meer.
+- **Notes**: Optie 1 is foolproof (geen menselijk geheugen nodig). Bij Optie 2: documenteer in `infra/README.md` of `DEPLOY.md` als single source of truth. **De originele 3 dagen-oude containers hadden label `com.docker.compose.project.environment_file=/opt/talentflow/infra/.env.prod`**, dus de originele deploy gebruikte óf optie 2 óf een handmatige flag — niemand documenteerde dat. P1 want dit kan elke deploy opnieuw misgaan en escaleert productie-downtime.
+
 ### Web-container healthcheck checkt geen static-assets
 - **Priority**: P2
 - **Status**: Open
