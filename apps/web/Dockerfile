@@ -86,7 +86,12 @@ RUN apk add --no-cache wget tini && \
 # alleen de standalone-output + static + public, gerooted onder apps/web
 # vanwege de monorepo-tracer.
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
+# Next.js standalone in monorepo: server.js zoekt static op /app/.next/static,
+# maar Next bouwt ze op /app/apps/web/.next/static. Beide paden behouden
+# zodat de runtime werkt zonder afhankelijk te zijn van internal Next behavior.
+# Zie ROADMAP "Next.js standalone monorepo paden documenteren".
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
 
 USER nextjs

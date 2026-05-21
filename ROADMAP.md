@@ -163,6 +163,32 @@ Niets hieruit wordt opgepakt zonder expliciete promotie door Kaan.
 - **Context**: `apps/web/hooks/useJobs.ts` typt de detail-response als `Job & { stages: unknown[] }`. Geen type-safety op de meest-getoonde nested data. Wordt opgelost door Fase 2C — `JobDetailSchema` extend met `PipelineStageSchema[]` geeft type-veilige stages.
 - **Notes**: Onderdeel van `@talentflow/contracts/job`.
 
+### Web-container healthcheck checkt geen static-assets
+- **Priority**: P2
+- **Status**: Open
+- **Source**: Claude Code (productie-down diagnose, 2026-05-21)
+- **Date added**: 2026-05-21
+- **Context**: `apps/web/Dockerfile` HEALTHCHECK doet `wget -qO- http://localhost:3000/login`. Returnt HTTP 200 zolang server.js draait en HTML serveert, óók als alle client-bundles 404'en. Tijdens productie-incident 2026-05-18 t/m 2026-05-21: container 3 dagen `(healthy)` terwijl frontend witte pagina serveerde door ontbrekende `/app/.next/static/` (zie commit `fix(docker): web container serveert static assets op verwachte pad`). Healthcheck was false positive.
+- **Fix-richting**: HEALTHCHECK uitbreiden naar twee checks: (1) `/login` HTTP 200, (2) `wget -qO- http://localhost:3000/_next/static/chunks/main-app-*.js` (of een vast manifest-bestand) ook 200. Zodat verkeerd-geserveerde bundels container `unhealthy` maken en compose `restart` of `--force-recreate` triggert.
+- **Notes**: Verkeerde bundle-hash bij elke build → manifest-bestand kiezen dat altijd dezelfde naam heeft (bijv. `/_next/static/[buildId]/_buildManifest.js`, of `BUILD_ID` content-check). Alternatief: separate `/health` endpoint in Next.js dat zelf checkt of static-dir bestaat.
+
+### Next.js standalone monorepo paden documenteren in docs/docker.md
+- **Priority**: P3
+- **Status**: Open
+- **Source**: Claude Code (productie-down diagnose, 2026-05-21)
+- **Date added**: 2026-05-21
+- **Context**: Tijdens productie-incident bleek dat `apps/web/Dockerfile` runtime-stage static assets kopieerde naar `./apps/web/.next/static`, maar Next.js standalone's `server.js` op `/app/server.js` zocht ze op `/app/.next/static`. Mismatch tussen waar Next standalone-tracer in monorepo-modus de assets plaatst en waar de gegenereerde server.js ze verwacht. Fix: extra COPY naar `./.next/static`, beide paden behouden. Toekomstige Dockerfile-aanpassingen moeten deze invariant kennen.
+- **Notes**: **Uitbreiding van bestaande P3 "Docker monorepo-setup documenteren"** (zie hierboven in deze sectie) — voeg sectie (5) toe: "static-asset paden in standalone-output, waarom `server.js` ze op een ander pad zoekt dan waar Next ze bouwt, waarom we beide paden COPYen". Samenvoegen of apart laten: aan jou.
+
+### Archief-containers opruimen op VPS
+- **Priority**: P3
+- **Status**: Open
+- **Source**: Claude Code (gevonden tijdens productie-diagnose, 2026-05-21)
+- **Date added**: 2026-05-21
+- **Context**: `docker ps -a` op `91.98.232.104` toont 7+ exited containers van oude buildpogingen die nooit zijn opgeruimd: `modest_shamir` (Exited 254, 4d), `agitated_hypatia` (Exited 1, 4d), `loving_johnson` (Exited 1, 6d), `great_pike` (Exited 1, 6d), `serene_leakey` (Exited 1, 6d), `relaxed_agnesi` (Exited 2, 6d), `gallant_mirzakhani` (Exited 1, 6d), `talentflow-minio-init` (Exited 0, 6d). Plus mogelijk dangling images (niet gemeten).
+- **Fix-richting**: `docker container prune -f` om alle exited containers weg te halen, gevolgd door `docker image prune -f` voor dangling images. Geen impact op draaiende services.
+- **Notes**: Inplannen als onderhoud-taak. Doe ook eens `df -h /var/lib/docker` vooraf om disk-besparing te kunnen rapporteren. Eventueel cron-job opzetten (weekly prune) — apart P3 item zodra dit eens is gedaan.
+
 ---
 
 ## Sectie 2: Features Backlog
