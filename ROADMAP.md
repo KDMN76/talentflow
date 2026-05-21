@@ -166,13 +166,25 @@ Niets hieruit wordt opgepakt zonder expliciete promotie door Kaan.
 ### Deploy-procedure documenteren met expliciet `--env-file infra/.env.prod`
 - **Priority**: P1
 - **Status**: Open
-- **Source**: Claude Code (productie-deploy-fout, 2026-05-21)
+- **Source**: Claude Code (productie-deploy-fouten, 2026-05-21 — **tweemaal dezelfde dag**)
 - **Date added**: 2026-05-21
-- **Context**: Tijdens fix-deploy van 2026-05-21 werd `docker compose -f infra/docker-compose.prod.yml up -d web` gedraaid zonder `--env-file infra/.env.prod`. Compose pakte `.env.prod` niet automatisch op (compose zoekt `.env` in working dir, niet `.env.prod`), zag alle env-vars als "leeg" (warnings: `DATABASE_URL`, `JWT_SECRET`, `REDIS_PASSWORD`, etc.), interpreteerde dat als config-verandering, en **recreated alle dependency-containers** (postgres, redis, minio, api) met blanke env-vars. API faalde direct met `Error: DATABASE_URL environment variable is required` → restart-loop, web bleef in `Created` state. Recovery: hetzelfde commando met `--env-file infra/.env.prod` toegevoegd; compose detecteerde dat configs nu matchten en alles startte clean. Totale productie-downtime door deze flow: ~8 min boven op de oorspronkelijke 3 dagen.
-- **Fix-richting (twee opties, kies één)**:
-  1. **Compose YAML wijzigen**: voeg `env_file: ./.env.prod` toe aan elke service in `infra/docker-compose.prod.yml`. Geen `--env-file` flag meer nodig — compose laadt het altijd. Voordeel: deploy-stappen blijven simpel (`docker compose -f infra/docker-compose.prod.yml up -d`). Nadeel: pad relatief vanaf compose-file, één regel per service.
-  2. **Deploy-script** (`scripts/deploy.sh` of `infra/deploy.sh`) die altijd `--env-file infra/.env.prod` zet en als enige aanroeppad geldt. Geen handmatige `docker compose ...` meer.
-- **Notes**: Optie 1 is foolproof (geen menselijk geheugen nodig). Bij Optie 2: documenteer in `infra/README.md` of `DEPLOY.md` als single source of truth. **De originele 3 dagen-oude containers hadden label `com.docker.compose.project.environment_file=/opt/talentflow/infra/.env.prod`**, dus de originele deploy gebruikte óf optie 2 óf een handmatige flag — niemand documenteerde dat. P1 want dit kan elke deploy opnieuw misgaan en escaleert productie-downtime.
+- **Context**: Op 2026-05-21 ging dezelfde flag-omissie tweemaal mis tijdens één deploy-cyclus, met verschillende failure-modi:
+  1. **Eerste keer** (`up -d` zonder `--env-file`): `docker compose -f infra/docker-compose.prod.yml up -d web` zag alle env-vars als "leeg" (warnings: `DATABASE_URL`, `JWT_SECRET`, `REDIS_PASSWORD`, etc.), interpreteerde dat als config-verandering, en **recreated alle dependency-containers** (postgres, redis, minio, api) met blanke env-vars. API direct in restart-loop met `Error: DATABASE_URL environment variable is required`. Web bleef in `Created` state. Recovery: zelfde commando met `--env-file infra/.env.prod` → ~8 min downtime extra.
+  2. **Tweede keer** (`build web` zonder `--env-file`): `docker compose -f infra/docker-compose.prod.yml build web` kreeg `${NEXT_PUBLIC_API_URL}` als undefined → Docker build viel terug op Dockerfile-ARG-default `http://localhost:4000/api` → **Next.js bakte localhost in alle JS-bundles** (85 occurrences in static, 13 in server-bundles). Symptoom: site werkte, login werkte, dashboard faalde met 84 `ERR_CONNECTION_REFUSED` op `localhost:4000/api/*`. Recovery: rebuild met `--env-file infra/.env.prod` → resterende localhost-hits alleen nog in `.map` sourcemaps (niet uitgevoerd) + 1 dead-code fallback (`?? "..."` waar primaire waarde non-null is) → 0 runtime impact.
+
+  Beide failure-modi root cause: **compose-substitutie van `${VAR}` met undefined wordt stilletjes lege string**, en niemand merkt het bij `build` (warnings worden onder verbose output verstopt) noch bij `up -d` (warnings staan tussen ~50 andere docker-status-lines).
+- **Fix-richting (gestapeld, doe beide)**:
+  1. **Maak `infra/deploy.sh` als enige aanroeppad** dat altijd `--env-file infra/.env.prod` includeert voor alle compose-subcommando's (`build`, `up`, `down`, `pull`, etc.). Voorkomt hele klasse van menselijke fouten — niemand hoeft de flag te onthouden. Voorbeeld-skelet:
+     ```bash
+     #!/usr/bin/env bash
+     set -euo pipefail
+     COMPOSE_FILE="$(dirname "$0")/docker-compose.prod.yml"
+     ENV_FILE="$(dirname "$0")/.env.prod"
+     exec docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" "$@"
+     ```
+     Gebruik: `./infra/deploy.sh build web`, `./infra/deploy.sh up -d`, etc.
+  2. **Compose YAML aanvullen**: voeg `env_file: ./.env.prod` toe aan elke service in `infra/docker-compose.prod.yml` als belt-and-braces. Voordeel: zelfs als iemand `deploy.sh` omzeilt en handmatig compose draait, worden runtime env-vars correct geladen. Nadeel: lost het **build-time** probleem (NEXT_PUBLIC_*) NIET op — `args:` blok in compose YAML heeft nog steeds `${VAR}` interpolation die `--env-file` nodig heeft. Dus #1 blijft de echte fix; #2 is extra vangnet voor runtime-vars.
+- **Notes**: P1 omdat dit tweemaal op één dag misging en de tweede keer een symptoom (witte API-calls) had dat eindgebruikers direct hadden gemerkt — als de recruiter eind juni met dit type fout in productie kwam, was de demo waardeloos. **De originele 3 dagen-oude containers hadden label `com.docker.compose.project.environment_file=/opt/talentflow/infra/.env.prod`**, dus de originele deploy gebruikte óf optie 1 óf een handmatige flag — niemand documenteerde dat. Tot deploy.sh er is: **elke handmatige `docker compose` op de VPS MOET `--env-file infra/.env.prod` bevatten**, ook voor `build`. Documenteer dat tijdelijk in `infra/README.md` of bovenaan `docker-compose.prod.yml` als luide warning.
 
 ### Web-container healthcheck checkt geen static-assets
 - **Priority**: P2
