@@ -35,6 +35,7 @@ export const AuditActions = {
   // ─── Auth ───────────────────────────────────────────────────────────────
   USER_LOGGED_IN: 'user.logged_in',
   USER_LOGGED_OUT: 'user.logged_out',
+  REFRESH_TOKEN_REUSE_DETECTED: 'user.refresh_token_reuse_detected',
   USER_INVITED: 'user.invited',
   USER_ROLE_CHANGED: 'user.role_changed',
   USER_PASSWORD_CHANGED: 'user.password_changed',

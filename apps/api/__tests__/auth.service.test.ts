@@ -260,9 +260,11 @@ describe('auth.service — refreshAccessToken', () => {
     teardown?.();
   });
 
-  it('issues a new access token for a valid refresh token', async () => {
+  it('issues a new access token AND rotates the refresh token', async () => {
     const raw = 'a-valid-refresh-token';
     const expectedHash = sha256(raw);
+    let rotatedOld = false;
+    let insertedNew = false;
     client = mockClient({
       __matcher: (sql, params) => {
         if (/FROM refresh_tokens rt/i.test(sql)) {
@@ -275,6 +277,7 @@ describe('auth.service — refreshAccessToken', () => {
                 user_id: USER_ID,
                 tenant_id: TENANT_ID,
                 expires_at: new Date(Date.now() + 86400 * 1000),
+                rotated_at: null,
                 email: 'admin@acme.nl',
                 role: 'admin',
                 is_active: true,
@@ -283,18 +286,68 @@ describe('auth.service — refreshAccessToken', () => {
             rowCount: 1,
           };
         }
+        // Rotatie-markering (Fase 0.5): UPDATE ... WHERE rotated_at IS NULL.
+        if (/UPDATE refresh_tokens/i.test(sql) && /rotated_at IS NULL/i.test(sql)) {
+          rotatedOld = true;
+          return { rows: [{ id: 'rt-1' }], rowCount: 1 };
+        }
+        if (/INSERT INTO refresh_tokens/i.test(sql)) {
+          insertedNew = true;
+          return { rows: [], rowCount: 1 };
+        }
         return { rows: [], rowCount: 0 };
       },
     });
     teardown = installPoolMock(client);
 
-    const { accessToken } = await refreshAccessToken(raw);
+    const { accessToken, refreshToken } = await refreshAccessToken(raw);
     expect(accessToken).toBeTruthy();
+    // Rotatie: er komt een NIEUWE refresh-token terug, anders dan de oude.
+    expect(refreshToken).toBeTruthy();
+    expect(refreshToken).not.toBe(raw);
+    expect(rotatedOld).toBe(true);
+    expect(insertedNew).toBe(true);
     const payload = jwt.verify(
       accessToken,
       process.env.JWT_SECRET!
     ) as Record<string, unknown>;
     expect(payload.userId).toBe(USER_ID);
+  });
+
+  it('detects reuse of a rotated token and revokes all sessions', async () => {
+    let revokedAll = false;
+    client = mockClient({
+      __matcher: (sql) => {
+        if (/FROM refresh_tokens rt/i.test(sql)) {
+          return {
+            rows: [
+              {
+                id: 'rt-used',
+                user_id: USER_ID,
+                tenant_id: TENANT_ID,
+                expires_at: new Date(Date.now() + 86400 * 1000),
+                rotated_at: new Date(Date.now() - 60_000), // al ingewisseld
+                email: 'admin@acme.nl',
+                role: 'admin',
+                is_active: true,
+              },
+            ],
+            rowCount: 1,
+          };
+        }
+        if (/DELETE FROM refresh_tokens WHERE user_id/i.test(sql)) {
+          revokedAll = true;
+          return { rows: [], rowCount: 3 };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    teardown = installPoolMock(client);
+
+    await expect(refreshAccessToken('stolen-and-replayed')).rejects.toMatchObject({
+      code: 'REFRESH_TOKEN_REUSED',
+    });
+    expect(revokedAll).toBe(true);
   });
 
   it('rejects unknown refresh tokens', async () => {

@@ -354,12 +354,26 @@ export async function login(
   });
 }
 
-export async function refreshAccessToken(refreshTokenRaw: string): Promise<{ accessToken: string }> {
+/**
+ * Refresh mét token-rotatie + reuse-detectie (Fase 0.5).
+ *
+ * - Elke refresh-token is single-use: bij gebruik wordt hij gemarkeerd als
+ *   geroteerd en vervangen door een nieuwe (sliding 7-dagen-window).
+ * - Wordt een al-geroteerde token nógmaals aangeboden, dan is dat een
+ *   replay-/diefstalsignaal: alle refresh-tokens van die gebruiker worden
+ *   ingetrokken (alle sessies uitgelogd) en het incident wordt ge-audit-logd.
+ * - De rotatie-markering gebeurt met `WHERE rotated_at IS NULL ... RETURNING`
+ *   zodat twee gelijktijdige refreshes met dezelfde token er hooguit één
+ *   laten slagen (race-veilig zonder expliciete lock).
+ */
+export async function refreshAccessToken(
+  refreshTokenRaw: string
+): Promise<{ accessToken: string; refreshToken: string }> {
   return withoutTenant(async (client: PoolClient) => {
     const tokenHash = crypto.createHash('sha256').update(refreshTokenRaw).digest('hex');
 
     const { rows: [tokenRecord] } = await client.query(
-      `SELECT rt.id, rt.user_id, rt.tenant_id, rt.expires_at,
+      `SELECT rt.id, rt.user_id, rt.tenant_id, rt.expires_at, rt.rotated_at,
               u.email, u.role, u.is_active
        FROM refresh_tokens rt
        JOIN users u ON u.id = rt.user_id
@@ -371,6 +385,25 @@ export async function refreshAccessToken(refreshTokenRaw: string): Promise<{ acc
       throw new AppError(401, 'INVALID_REFRESH_TOKEN', 'Ongeldig refresh token');
     }
 
+    if (tokenRecord.rotated_at) {
+      // Replay van een ingewisselde token → trek alles van deze user in.
+      await client.query('DELETE FROM refresh_tokens WHERE user_id = $1', [
+        tokenRecord.user_id,
+      ]);
+      await logAudit(client, tokenRecord.tenant_id, {
+        action: AuditActions.REFRESH_TOKEN_REUSE_DETECTED,
+        entityType: 'user',
+        entityId: tokenRecord.user_id,
+        after: { revoked_all_sessions: true },
+        userId: tokenRecord.user_id,
+      });
+      throw new AppError(
+        401,
+        'REFRESH_TOKEN_REUSED',
+        'Refresh token is al gebruikt — alle sessies zijn uit voorzorg beëindigd'
+      );
+    }
+
     if (new Date(tokenRecord.expires_at) < new Date()) {
       await client.query('DELETE FROM refresh_tokens WHERE id = $1', [tokenRecord.id]);
       throw new AppError(401, 'REFRESH_TOKEN_EXPIRED', 'Refresh token is verlopen');
@@ -380,6 +413,45 @@ export async function refreshAccessToken(refreshTokenRaw: string): Promise<{ acc
       throw new AppError(403, 'ACCOUNT_DISABLED', 'Dit account is uitgeschakeld');
     }
 
+    // Roteer: nieuwe token uitgeven en de oude race-veilig markeren.
+    const newTokenRaw = generateRefreshToken();
+    const newTokenHash = crypto.createHash('sha256').update(newTokenRaw).digest('hex');
+    const newExpiresAt = new Date(
+      Date.now() + REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000
+    );
+
+    const { rows: rotated } = await client.query(
+      `UPDATE refresh_tokens
+         SET rotated_at = now(), replaced_by_hash = $2
+       WHERE id = $1 AND rotated_at IS NULL
+       RETURNING id`,
+      [tokenRecord.id, newTokenHash]
+    );
+    if (rotated.length === 0) {
+      // Verloren race: een parallelle refresh was ons net voor → behandel als
+      // reuse (dezelfde token is twee keer aangeboden).
+      await client.query('DELETE FROM refresh_tokens WHERE user_id = $1', [
+        tokenRecord.user_id,
+      ]);
+      throw new AppError(
+        401,
+        'REFRESH_TOKEN_REUSED',
+        'Refresh token is al gebruikt — alle sessies zijn uit voorzorg beëindigd'
+      );
+    }
+
+    await client.query(
+      `INSERT INTO refresh_tokens (user_id, tenant_id, token_hash, expires_at)
+       VALUES ($1, $2, $3, $4)`,
+      [tokenRecord.user_id, tokenRecord.tenant_id, newTokenHash, newExpiresAt]
+    );
+
+    // Opportunistische opschoning van verlopen (incl. geroteerde) rijen.
+    await client.query(
+      `DELETE FROM refresh_tokens WHERE user_id = $1 AND expires_at < now()`,
+      [tokenRecord.user_id]
+    );
+
     const payload: Omit<JwtPayload, 'iat' | 'exp'> = {
       userId: tokenRecord.user_id,
       tenantId: tokenRecord.tenant_id,
@@ -387,7 +459,10 @@ export async function refreshAccessToken(refreshTokenRaw: string): Promise<{ acc
       role: tokenRecord.role,
     };
 
-    return { accessToken: generateAccessToken(payload) };
+    return {
+      accessToken: generateAccessToken(payload),
+      refreshToken: newTokenRaw,
+    };
   });
 }
 

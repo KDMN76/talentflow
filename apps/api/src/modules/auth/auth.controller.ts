@@ -93,6 +93,10 @@ export async function refresh(req: Request, res: Response, next: NextFunction): 
     }
 
     const result = await authService.refreshAccessToken(refreshToken);
+    // Rotatie (Fase 0.5): elke refresh levert een nieuwe single-use token op;
+    // de cookie moet mee-roteren, anders replayt de browser de oude token en
+    // logt de reuse-detectie de gebruiker direct overal uit.
+    res.cookie(REFRESH_COOKIE, result.refreshToken, COOKIE_OPTIONS);
     res.json({ accessToken: result.accessToken });
   } catch (err) {
     next(err);
