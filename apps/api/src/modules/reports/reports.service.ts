@@ -477,24 +477,29 @@ export async function runReport(
     const dateRange = resolveDateRange(dr);
     const globalFilters = report.config.filters_global ?? [];
 
-    // 3) Aggregate alle blocks parallel.
+    // 3) Aggregate alle blocks. Sequentieel i.p.v. Promise.all: elke
+    // aggregateBlock-call gebruikt dezelfde pg-client (`client`), en één
+    // pg-client kan maar één query tegelijk uitvoeren. Parallel draaien
+    // serialiseert dus tóch én triggert de `client.query()`-DeprecationWarning.
+    // De volgorde van `blocks` blijft gelijk aan `report.config.blocks`.
     let blocks: AggregateResult[] = [];
     let totalRows = 0;
     let runStatus: 'success' | 'failed' = 'success';
     let runError: string | null = null;
 
     try {
-      const results = await Promise.all(
-        report.config.blocks.map((be) =>
-          aggregateBlock({
+      const results: Array<Awaited<ReturnType<typeof aggregateBlock>>> = [];
+      for (const be of report.config.blocks) {
+        results.push(
+          await aggregateBlock({
             tenantId,
             blockEntry: be,
             globalFilters,
             dateRange,
             client,
           })
-        )
-      );
+        );
+      }
       blocks = results.map((r) => r.result);
       totalRows = results.reduce((sum, r) => sum + r.meta.rows_scanned, 0);
     } catch (err) {

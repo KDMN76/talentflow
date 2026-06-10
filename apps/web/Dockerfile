@@ -104,5 +104,19 @@ ENTRYPOINT ["/sbin/tini", "--"]
 # in de nested apps/web/ structuur.
 CMD ["node", "server.js"]
 
+# Healthcheck doet TWEE probes:
+#   1. /login → HTTP 200 (server.js draait + rendert HTML)
+#   2. een echte JS-chunk uit .next/static → HTTP 200 (static-assets worden
+#      ook daadwerkelijk geserveerd, niet alleen de HTML)
+# Probe 2 is toegevoegd na het incident van 2026-05-18..21: de container stond
+# 3 dagen `(healthy)` terwijl alle client-bundles 404'den (witte pagina). De
+# oude check (alleen /login) was een false positive. Chunk-naam bevat een
+# content-hash, dus we zoeken er één op schijf en verifiëren dat exact die via
+# HTTP geserveerd wordt — hash-agnostisch en bestand tegen rebuilds.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD wget -qO- http://localhost:3000/login >/dev/null 2>&1 || exit 1
+  CMD set -e; \
+      wget -qO- http://localhost:3000/login >/dev/null 2>&1; \
+      asset=$(ls .next/static/chunks/*.js 2>/dev/null | head -n1) || true; \
+      if [ -n "$asset" ]; then \
+        wget -qO- "http://localhost:3000/_next/static/chunks/$(basename "$asset")" >/dev/null 2>&1; \
+      fi

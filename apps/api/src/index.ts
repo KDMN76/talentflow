@@ -145,6 +145,13 @@ import './queue/workers/inboxProjector.worker';
 const app = express();
 const PORT = parseInt(process.env.PORT ?? '4000', 10);
 
+// Achter de Nginx reverse-proxy op de VPS staat de echte client-IP in
+// `X-Forwarded-For`. Zonder dit ziet Express elke request als loopback
+// (127.0.0.1), telt express-rate-limit al het verkeer op één IP, en spamt
+// het een `ValidationError: X-Forwarded-For ... trust proxy is false`.
+// `1` = vertrouw precies één proxy-hop (de Nginx ervoor).
+app.set('trust proxy', 1);
+
 // ── Security ────────────────────────────────────────────────────────────────
 app.use(helmet());
 app.use(cors({

@@ -239,30 +239,30 @@ export async function getCandidateSelfData(
       );
     }
 
-    const [{ rows: applications }, { rows: communications }, retention] =
-      await Promise.all([
-        client.query(
-          `SELECT a.id, a.status, a.applied_at::text, a.updated_at::text,
-                  j.title AS job_title,
-                  ps.name AS stage_name
-             FROM applications a
-             LEFT JOIN jobs j ON j.id = a.job_id
-             LEFT JOIN pipeline_stages ps ON ps.id = a.stage_id
-            WHERE a.candidate_id = $1 AND a.tenant_id = $2`,
-          [candidateId, tenantId]
-        ),
-        client
-          .query(
-            `SELECT id, channel, direction, subject, status, sent_at::text
-               FROM communications
-              WHERE candidate_id = $1 AND tenant_id = $2
-              ORDER BY sent_at DESC NULLS LAST
-              LIMIT 50`,
-            [candidateId, tenantId]
-          )
-          .catch(() => ({ rows: [] as Record<string, unknown>[] })),
-        computeRetentionInfo(client, tenantId, candidate),
-      ]);
+    // Sequentieel i.p.v. Promise.all: dezelfde pg-client kan maar één query
+    // tegelijk uitvoeren, dus parallel triggert alleen de
+    // `client.query()`-DeprecationWarning zonder echte winst. Resultaat gelijk.
+    const { rows: applications } = await client.query(
+      `SELECT a.id, a.status, a.applied_at::text, a.updated_at::text,
+              j.title AS job_title,
+              ps.name AS stage_name
+         FROM applications a
+         LEFT JOIN jobs j ON j.id = a.job_id
+         LEFT JOIN pipeline_stages ps ON ps.id = a.stage_id
+        WHERE a.candidate_id = $1 AND a.tenant_id = $2`,
+      [candidateId, tenantId]
+    );
+    const { rows: communications } = await client
+      .query(
+        `SELECT id, channel, direction, subject, status, sent_at::text
+           FROM communications
+          WHERE candidate_id = $1 AND tenant_id = $2
+          ORDER BY sent_at DESC NULLS LAST
+          LIMIT 50`,
+        [candidateId, tenantId]
+      )
+      .catch(() => ({ rows: [] as Record<string, unknown>[] }));
+    const retention = await computeRetentionInfo(client, tenantId, candidate);
 
     return {
       candidate: {

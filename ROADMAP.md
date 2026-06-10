@@ -13,6 +13,53 @@ Niets hieruit wordt opgepakt zonder expliciete promotie door Kaan.
 
 ## Sectie 1: Bugs & Gaps
 
+### ✅ Opgelost op 2026-06-03 (sessie "Sectie-1 opruiming")
+
+Additieve log — de losse items hieronder zijn niet herschreven; deze sectie is
+de waarheid over wat per 2026-06-03 dicht is. Geverifieerd met: contracts build,
+api+web `tsc --noEmit` (beide clean), `vitest` (1519 api-tests + 15 web-tests
+groen), en een volledige `next build`.
+
+- **Vacature-detail pagina crasht (`health.components.map`)** → opgelost. Nieuw
+  `JobHealthSchema` in `@talentflow/contracts`; backend levert nu `score` +
+  `components[]` (mapper in `jobHealth.service.ts`), controller valideert met
+  `assertResponse`, frontend (`useJobDetail.ts`) parset runtime → bij drift een
+  nette "geen data" i.p.v. witte pagina.
+- **Bug B: JobHealthSchema migreren naar contracts** → opgelost (zelfde fix).
+- **Bug A: JobDetail-schema embedding-leak** → opgelost. `getJob` gebruikt nu
+  een expliciete kolommenlijst (geen `j.*`); `embedding`/`embedding_updated_at`
+  zitten niet meer in de response → geen `.strict()`-400 meer in dev/test.
+  Designbeslissing: embedding (vector(1536)) hoort niet in de API-wire-shape.
+- **POST /api/jobs 400 via UI**, **listJobs SELECT mist description**,
+  **paginationSchema.status plain string**, **useJob stages `unknown[]`**,
+  **enum-mismatches**, **fantoom-velden** → opgelost door de 2B/2C-migratie;
+  geverifieerd in code. `JobManatalFields` (dode code) verwijderd; dode
+  enum-copies in `JobOverzichtTab.tsx` op DB-CHECK-waarden gezet.
+- **Express `trust proxy`** → `app.set('trust proxy', 1)` gezet. Lost logspam op
+  én laat de login-rate-limit op het echte client-IP tellen.
+- **pg `client.query()` deprecation** → opgelost. 5 plekken die parallelle
+  queries op dezelfde client deden (`permissions.ts`, `candidates.service.ts`,
+  `dsar.service.ts`, `selfService.service.ts`, `reports.service.ts`)
+  geserialiseerd. `matching.service.ts` gebruikt aparte clients → was al ok.
+- **PWA**: `icon-192.png` + `icon-512.png` gegenereerd uit `icon.svg` (manifest
+  verwees naar beide; geen 404 meer). `sw.js`/`manifest.json` bestonden al;
+  deprecated apple-meta was al weg.
+- **Web-healthcheck false positive** → twee-probe-check (HTML + echte
+  static-chunk) in `apps/web/Dockerfile` én compose.
+- **Deploy-procedure** → `infra/deploy.sh` (forceert altijd `--env-file`) +
+  luide warning in compose + env-docs in README.
+- **Docker-/standalone-docs** → `docs/docker.md` (consolideert beide P3-docs).
+- **React types-error `providers.tsx`** → opgelost. `@types/react` 18.x gepind
+  als root-devDep (Radix-peers hesen 19 op) → web `tsc` volledig clean.
+- **`.env.local` opruimen** → mock-regel was al weg; env-bestanden nu
+  gedocumenteerd in README.
+
+**Nog open na deze sessie:**
+- **Archief-containers op VPS** → script geleverd (`infra/prune-vps.sh`), moet
+  Kaan zelf op de VPS draaien (user-led, geen remote-exec door Claude).
+- **deploy.sh vangnet #2 (`env_file:` per service)** → zie nieuw item onderaan
+  deze sectie; niet lokaal te valideren (geen docker + geen `.env.prod` op dev).
+
 ### Sub-fase 2D: JobDetail-schema-volledigheid (Bug A)
 - **Priority**: P1
 - **Status**: Open
@@ -220,6 +267,24 @@ Niets hieruit wordt opgepakt zonder expliciete promotie door Kaan.
 - **Context**: Console toont 404 op `/sw.js` (service worker) en `/manifest.json`. PWA-features (offline gebruik, installeerbaar als app) werken niet. Niet kritiek voor desktop-gebruik door recruiter eind juni.
 - **Fix-richting**: bepalen of we PWA echt willen (next-pwa setup) of de meta-tags weghalen om de console clean te maken.
 - **Notes**: Gedeeltelijke overlap met bestaande P2-entry "PWA-manifest deprecated meta + missende icon" (zie hierboven in deze sectie) — die dekt `icons/icon-192.png` 404 + deprecated `apple-mobile-web-app-capable` meta. Deze nieuwe entry dekt `sw.js` + `manifest.json` 404. Samenvoegen of apart laten: aan jou.
+
+### deploy.sh vangnet #2 — `env_file:` per service in compose
+- **Priority**: P2
+- **Status**: Open
+- **Source**: Claude Code (sessie 2026-06-03)
+- **Date added**: 2026-06-03
+- **Context**: `infra/deploy.sh` (vangnet #1) is gebouwd en is de echte fix. Het tweede vangnet uit de oude P1-entry — `env_file: ./.env.prod` per service — is bewust NIET doorgevoerd omdat het niet veilig lokaal te valideren is (geen docker + geen `.env.prod` op de dev-machine, en een fout maakt op de eerstvolgende deploy alle runtime-env-vars leeg).
+- **Fix-richting (valideren op VPS met `docker compose config`)**: voeg `env_file: [./.env.prod]` toe aan `api`, `api-worker`, `web`, én verwijder tegelijk de pure pass-through `${VAR}`-entries uit hun `environment:`-blokken. **Let op:** `environment:` overschrijft `env_file:`, dus laat je de `${VAR}`-entries staan dan maakt een vergeten `--env-file` ze leeg en winnen die lege waarden. Remapped vars (`SENTRY_DSN: ${SENTRY_DSN_API}`) en literals (`NODE_ENV`, `PORT`, `DISABLE_INLINE_WORKERS`, de `:-false` defaults) moeten expliciet in `environment:` blijven. Build-time `NEXT_PUBLIC_*` (in `args:`) lost dit NIET op — daarvoor blijft `deploy.sh` nodig.
+- **Notes**: Volledige toelichting staat in `docs/docker.md` §6.
+
+### Funnel-endpoint mist hired/dropped/total + stage-veldnamen wijken af
+- **Priority**: P2
+- **Status**: Open
+- **Source**: Claude Code (browser-verificatie 2026-06-06)
+- **Date added**: 2026-06-06
+- **Context**: `GET /api/jobs/:id/funnel` (`jobDetail.service.ts:getJobFunnel`) retourneert alleen `{ stages }`, terwijl de frontend-`JobFunnelResponse` (apps/web/lib/types/jobDetail.ts) ook `job_id`, `total`, `hired`, `dropped`, `computed_at` verwacht. Bovendien levert elke stage `stage_name` + `conversion_rate_from_previous`, terwijl de frontend `name` + `conversion_to_next_pct` (andere richting!) verwacht. Gevolgen in de UI: header toonde "Aangenomen: NaN" (nu defensief op 0 gezet in `JobDetailHeader.tsx`), en de conversie-badges in de pipeline-tab blijven leeg (alle `conversion_to_next_pct` zijn undefined).
+- **Fix-richting**: trek funnel in `@talentflow/contracts` (zoals JobHealth) en laat de backend de volledige shape leveren: `hired`/`dropped` via `COUNT(*) FILTER (WHERE status=...)`, `total` = som van stage-counts, stage-veld `name` (i.p.v. `stage_name`), en `conversion_to_next_pct` voor stage i = `count[i+1]/count[i]`. Frontend dropt dan de `?? 0`-workaround.
+- **Notes**: De `?? 0` in `JobDetailHeader.tsx` is een tijdelijke pleister tegen NaN, geen echte fix — de getallen zijn pas correct als de backend ze levert.
 
 ---
 

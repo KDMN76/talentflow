@@ -166,9 +166,12 @@ function OverviewTab() {
 
   if (isLoading) return <OverviewSkeleton />;
 
+  // Guard tegen deling door nul: zonder kandidaten is funnel[0].count 0 →
+  // 0/0 = NaN → "NaN%" in de UI. Toon dan 0.0%.
+  const firstStageCount = funnel?.[0]?.count ?? 0;
   const conversionRate =
-    funnel && funnel.length >= 2
-      ? ((funnel[funnel.length - 1].count / funnel[0].count) * 100).toFixed(1)
+    funnel && funnel.length >= 2 && firstStageCount > 0
+      ? ((funnel[funnel.length - 1].count / firstStageCount) * 100).toFixed(1)
       : "0.0";
 
   return (

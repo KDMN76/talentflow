@@ -14,12 +14,18 @@ function makeRedisCommand() {
   };
 }
 
+// Limieten zijn env-tunebaar (default = productiewaarde). Handig om in dev/
+// audit/load-test tijdelijk op te hogen zonder code te wijzigen. Niet zetten →
+// identiek gedrag als voorheen. (env wordt herladen bij tsx-watch reload.)
+const API_MAX = Number(process.env.RATE_LIMIT_MAX) || 200;
+const AUTH_MAX = Number(process.env.RATE_LIMIT_AUTH_MAX) || 10;
+
 /**
- * General API rate limiter: 200 requests per 15 minutes per IP.
+ * General API rate limiter: 200 requests per 15 minutes per IP (default).
  */
 export const apiRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: API_MAX,
   standardHeaders: true,
   legacyHeaders: false,
   store: new RedisStore({
@@ -42,7 +48,7 @@ export const apiRateLimit = rateLimit({
  */
 export const authRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: AUTH_MAX,
   standardHeaders: true,
   legacyHeaders: false,
   store: new RedisStore({

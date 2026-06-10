@@ -400,20 +400,21 @@ export async function getCandidate(tenantId: string, candidateId: string) {
       throw new AppError(404, 'CANDIDATE_NOT_FOUND', 'Kandidaat niet gevonden');
     }
 
-    // Hydrate sub-resources in parallel for speed.
-    const [skillRows, resumeRows, applicationRows] = await Promise.all([
-      fetchSkillsForCandidate(client, candidateId, tenantId),
-      fetchResumesForCandidate(client, candidateId, tenantId),
-      client.query(
-        `SELECT a.id, a.job_id, a.stage_id, a.status, a.applied_at, a.updated_at,
-                j.title as job_title, ps.name as stage_name
-         FROM applications a
-         JOIN jobs j ON j.id = a.job_id
-         LEFT JOIN pipeline_stages ps ON ps.id = a.stage_id
-         WHERE a.candidate_id = $1 AND a.tenant_id = $2`,
-        [candidateId, tenantId]
-      ),
-    ]);
+    // Hydrate sub-resources. NIET via Promise.all op dezelfde client: één
+    // pg-client voert maar één query tegelijk uit, dus dat serialiseert tóch
+    // en geeft een `client.query()`-DeprecationWarning. Sequentieel awaiten =
+    // identiek resultaat, geen warning.
+    const skillRows = await fetchSkillsForCandidate(client, candidateId, tenantId);
+    const resumeRows = await fetchResumesForCandidate(client, candidateId, tenantId);
+    const applicationRows = await client.query(
+      `SELECT a.id, a.job_id, a.stage_id, a.status, a.applied_at, a.updated_at,
+              j.title as job_title, ps.name as stage_name
+       FROM applications a
+       JOIN jobs j ON j.id = a.job_id
+       LEFT JOIN pipeline_stages ps ON ps.id = a.stage_id
+       WHERE a.candidate_id = $1 AND a.tenant_id = $2`,
+      [candidateId, tenantId]
+    );
 
     return {
       ...candidate,

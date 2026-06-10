@@ -1,13 +1,18 @@
 import { withTenant } from '../../db/pool';
 import { AppError } from '../../middleware/errorHandler';
 import type { PoolClient } from 'pg';
+import type { JobHealth, JobHealthComponent } from '@talentflow/contracts';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-export interface JobHealthBreakdown {
-  /** Weighted aggregate, 0-100. */
+/**
+ * Interne, platte sub-scores zoals ze berekend en gecached worden in
+ * `job_health_snapshots`. Wordt via `buildBreakdown()` omgezet naar de
+ * UI-ready wire-shape (`JobHealth`) — zie health.ts contract voor het waarom.
+ */
+interface FlatHealthScores {
   health_score: number;
   days_open: number;
   candidates_total: number;
@@ -17,7 +22,6 @@ export interface JobHealthBreakdown {
   recency_score: number;
   predicted_close_date: string | null;
   computed_at: string;
-  weights: { velocity: number; drop_off: number; recency: number };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -40,9 +44,58 @@ const HEALTH_WEIGHTS = {
   recency: 0.3,
 } as const;
 
+/**
+ * NL-labels + uitleg per sub-score. Server-geleverd (in plaats van een
+ * lookup-tabel in de frontend) zodat de UI de breakdown dom kan renderen en
+ * één bron van waarheid de copy bepaalt.
+ */
+const COMPONENT_META: Record<
+  JobHealthComponent['key'],
+  { label: string; description: string }
+> = {
+  velocity: {
+    label: 'Instroom',
+    description: 'Recente sollicitaties ten opzichte van de week ervoor.',
+  },
+  drop_off: {
+    label: 'Doorstroom',
+    description: 'Aandeel kandidaten dat voorbij de eerste stage komt.',
+  },
+  recency: {
+    label: 'Activiteit',
+    description: 'Hoe recent er nog beweging in de pipeline was.',
+  },
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Zet de platte sub-scores om naar de UI-ready wire-shape (`JobHealth`):
+ * `score` + `components[]` met label/uitleg per sub-score. Beide codepaden
+ * (cache-hit én verse berekening) lopen hierdoorheen zodat de response-shape
+ * gegarandeerd consistent is met het `JobHealthSchema` contract.
+ */
+function buildBreakdown(jobId: string, flat: FlatHealthScores): JobHealth {
+  const components: JobHealthComponent[] = [
+    { key: 'velocity', score: flat.velocity_score, ...COMPONENT_META.velocity },
+    { key: 'drop_off', score: flat.drop_off_score, ...COMPONENT_META.drop_off },
+    { key: 'recency', score: flat.recency_score, ...COMPONENT_META.recency },
+  ];
+
+  return {
+    job_id: jobId,
+    score: flat.health_score,
+    components,
+    predicted_close_date: flat.predicted_close_date,
+    days_open: flat.days_open,
+    candidates_total: flat.candidates_total,
+    candidates_in_funnel: flat.candidates_in_funnel,
+    computed_at: flat.computed_at,
+    weights: { ...HEALTH_WEIGHTS },
+  };
+}
 
 function clamp(n: number, min = 0, max = 100): number {
   if (Number.isNaN(n) || !Number.isFinite(n)) return 0;
@@ -73,7 +126,7 @@ async function fetchFreshSnapshot(
   client: PoolClient,
   tenantId: string,
   jobId: string
-): Promise<JobHealthBreakdown | null> {
+): Promise<FlatHealthScores | null> {
   const { rows: [row] } = await client.query(
     `SELECT *
      FROM job_health_snapshots
@@ -98,7 +151,6 @@ async function fetchFreshSnapshot(
       ? new Date(row.predicted_close_date).toISOString().slice(0, 10)
       : null,
     computed_at: new Date(row.computed_at).toISOString(),
-    weights: { ...HEALTH_WEIGHTS },
   };
 }
 
@@ -109,13 +161,13 @@ async function fetchFreshSnapshot(
 export async function getJobHealth(
   tenantId: string,
   jobId: string
-): Promise<JobHealthBreakdown> {
+): Promise<JobHealth> {
   return withTenant(tenantId, async (client) => {
     const job = await ensureJobExists(client, jobId, tenantId);
 
     // Try cache first.
     const cached = await fetchFreshSnapshot(client, tenantId, jobId);
-    if (cached) return cached;
+    if (cached) return buildBreakdown(jobId, cached);
 
     // ─── Compute sub-scores ──────────────────────────────────────────────────
 
@@ -233,7 +285,7 @@ export async function getJobHealth(
       ]
     );
 
-    return {
+    const flat: FlatHealthScores = {
       health_score: healthScore,
       days_open: daysOpen,
       candidates_total: total,
@@ -243,7 +295,7 @@ export async function getJobHealth(
       recency_score: recencyScore,
       predicted_close_date: predictedCloseDate,
       computed_at: new Date(persisted.computed_at).toISOString(),
-      weights: { ...HEALTH_WEIGHTS },
     };
+    return buildBreakdown(jobId, flat);
   });
 }

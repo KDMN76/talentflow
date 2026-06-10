@@ -43,10 +43,11 @@ export function useJobBoardCatalog() {
   return useQuery({
     queryKey: ["job-boards", "catalog"],
     queryFn: async (): Promise<JobBoardCatalogEntry[]> => {
-      const { data } = await api.get<JobBoardCatalogEntry[]>(
+      // Backend wikkelt in { data: [...] }; geef de array terug.
+      const { data } = await api.get<{ data: JobBoardCatalogEntry[] }>(
         "/job-boards/catalog"
       );
-      return data;
+      return data.data ?? [];
     },
     staleTime: 60_000,
   });
@@ -56,10 +57,11 @@ export function useJobBoardIntegrations() {
   return useQuery({
     queryKey: ["job-boards", "integrations"],
     queryFn: async (): Promise<JobBoardIntegration[]> => {
-      const { data } = await api.get<JobBoardIntegration[]>(
+      // Backend wikkelt in { data: [...] }; geef de array terug.
+      const { data } = await api.get<{ data: JobBoardIntegration[] }>(
         "/job-boards/integrations"
       );
-      return data;
+      return data.data ?? [];
     },
   });
 }

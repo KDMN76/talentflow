@@ -435,7 +435,9 @@ describe('getJob / deleteJob', () => {
   it('getJob returns the job with hydrated stages', async () => {
     client = mockClient({
       __matcher: (sql) => {
-        if (/SELECT j\.\*, u\.name as recruiter_name/i.test(sql)) {
+        // Kolom-agnostisch: match op de WHERE-clause die uniek is voor getJob
+        // (i.p.v. de exacte SELECT-kolommen, die nu expliciet zijn i.p.v. j.*).
+        if (/WHERE j\.id = \$1 AND j\.tenant_id = \$2 AND j\.deleted_at IS NULL/i.test(sql)) {
           return { rows: [{ id: 'j1', title: 'Eng' }], rowCount: 1 };
         }
         if (/FROM pipeline_stages ps/i.test(sql)) {

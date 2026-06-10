@@ -80,11 +80,13 @@ export function useContracts(filters: ContractFilters = {}) {
   return useQuery({
     queryKey: ["contracts", filters],
     queryFn: async (): Promise<Contract[]> => {
-      const { data } = await api.get<{ items: Contract[] } | Contract[]>(
-        "/contracts",
-        { params: filters }
-      );
-      return Array.isArray(data) ? data : data.items;
+      // Backend levert { data: [...], next_cursor } (niet { items }). Onder-
+      // steun beide + bare array, en val terug op [] zodat `.reduce`/`.filter`
+      // in consumers nooit op een niet-array draait.
+      const { data } = await api.get<
+        { data?: Contract[]; items?: Contract[] } | Contract[]
+      >("/contracts", { params: filters });
+      return Array.isArray(data) ? data : data.data ?? data.items ?? [];
     },
   });
 }
@@ -549,11 +551,12 @@ export function useInvoices(filters: InvoiceFilters = {}) {
   return useQuery({
     queryKey: ["invoices", filters],
     queryFn: async (): Promise<Invoice[]> => {
-      const { data } = await api.get<{ items: Invoice[] } | Invoice[]>(
-        "/invoices",
-        { params: filters }
-      );
-      return Array.isArray(data) ? data : data.items;
+      // Backend levert { data: [...], next_cursor } (niet { items }). Onder-
+      // steun beide + bare array, met [] als fallback.
+      const { data } = await api.get<
+        { data?: Invoice[]; items?: Invoice[] } | Invoice[]
+      >("/invoices", { params: filters });
+      return Array.isArray(data) ? data : data.data ?? data.items ?? [];
     },
   });
 }
@@ -672,10 +675,12 @@ export function useAccountingCatalog() {
   return useQuery({
     queryKey: ["accounting", "catalog"],
     queryFn: async (): Promise<AccountingCatalogEntry[]> => {
-      const { data } = await api.get<AccountingCatalogEntry[]>(
+      // Backend wikkelt in { data: [...] }; geef de array terug (anders crasht
+      // `.forEach` op het wrapper-object → witte pagina /settings/accounting).
+      const { data } = await api.get<{ data: AccountingCatalogEntry[] }>(
         "/accounting/catalog"
       );
-      return data;
+      return data.data ?? [];
     },
     staleTime: 60_000,
   });
@@ -685,10 +690,11 @@ export function useAccountingIntegrations() {
   return useQuery({
     queryKey: ["accounting", "integrations"],
     queryFn: async (): Promise<AccountingIntegration[]> => {
-      const { data } = await api.get<AccountingIntegration[]>(
+      // Backend wikkelt in { data: [...] }; geef de array terug.
+      const { data } = await api.get<{ data: AccountingIntegration[] }>(
         "/accounting/integrations"
       );
-      return data;
+      return data.data ?? [];
     },
   });
 }
@@ -829,11 +835,12 @@ export function useCommissionRecords(filters: CommissionRecordFilters = {}) {
   return useQuery({
     queryKey: ["commissions", "records", filters],
     queryFn: async (): Promise<CommissionRecord[]> => {
-      const { data } = await api.get<CommissionRecord[]>(
+      // Backend: { data: [...], next_cursor }. Geef de array terug.
+      const { data } = await api.get<{ data: CommissionRecord[] }>(
         "/commissions/records",
         { params: filters }
       );
-      return data;
+      return data.data ?? [];
     },
   });
 }
@@ -896,11 +903,12 @@ export function useRevenueForecast(monthsAhead = 6) {
   return useQuery({
     queryKey: ["forecasting", "revenue", monthsAhead],
     queryFn: async (): Promise<RevenueForecastMonth[]> => {
-      const { data } = await api.get<RevenueForecastMonth[]>(
+      // Backend wikkelt in { data: [...] }; geef de array terug.
+      const { data } = await api.get<{ data: RevenueForecastMonth[] }>(
         "/forecasting/revenue",
         { params: { months_ahead: monthsAhead } }
       );
-      return data;
+      return data.data ?? [];
     },
   });
 }
@@ -909,10 +917,13 @@ export function useMarginReport(groupBy: MarginGroupBy = "client") {
   return useQuery({
     queryKey: ["forecasting", "margin", groupBy],
     queryFn: async (): Promise<MarginRow[]> => {
-      const { data } = await api.get<MarginRow[]>("/forecasting/margin", {
-        params: { group_by: groupBy },
-      });
-      return data;
+      // Backend wikkelt in { data: [...] }; geef de array terug (anders crasht
+      // `.reduce` op het wrapper-object → witte pagina /analytics/back-office).
+      const { data } = await api.get<{ data: MarginRow[] }>(
+        "/forecasting/margin",
+        { params: { group_by: groupBy } }
+      );
+      return data.data ?? [];
     },
   });
 }

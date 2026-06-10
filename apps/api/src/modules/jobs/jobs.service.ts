@@ -331,8 +331,21 @@ export async function createJob(
 
 export async function getJob(tenantId: string, jobId: string) {
   return withTenant(tenantId, async (client) => {
+    // Expliciete kolommenlijst i.p.v. `j.*`: de `embedding`(vector(1536)) en
+    // `embedding_updated_at` kolommen horen NIET in de API-wire-shape (intern,
+    // alleen voor matching) en zouden `JobDetailSchema.strict()` in dev/test
+    // laten falen met `unrecognized_keys`. Lijst mirrort JobRowSchema 1-op-1.
     const { rows: [job] } = await client.query(
-      `SELECT j.*, u.name as recruiter_name
+      `SELECT j.id, j.tenant_id, j.title, j.description, j.department, j.location,
+              j.salary_min, j.salary_max, j.employment_type, j.status,
+              j.recruiter_id, j.deleted_at, j.created_at, j.updated_at,
+              j.job_reference, j.headcount, j.experience_level, j.contract_type,
+              j.contract_details, j.open_date, j.close_date, j.industry,
+              j.remote_type, j.office_address, j.package_details, j.currency,
+              j.salary_frequency, j.required_skills, j.nice_to_have_skills,
+              j.pay_transparency_required, j.salary_band_disclosed,
+              j.compensation_criteria,
+              u.name as recruiter_name
        FROM jobs j
        LEFT JOIN users u ON u.id = j.recruiter_id
        WHERE j.id = $1 AND j.tenant_id = $2 AND j.deleted_at IS NULL`,

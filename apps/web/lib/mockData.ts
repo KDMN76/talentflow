@@ -1505,7 +1505,10 @@ export const mockJobHealth: Record<string, JobHealthBreakdown> = {
     ],
     predicted_close_date: "2026-05-28",
     days_open: 12,
+    candidates_total: 18,
+    candidates_in_funnel: 11,
     computed_at: "2026-05-05T08:00:00Z",
+    weights: { velocity: 0.4, drop_off: 0.3, recency: 0.3 },
   },
   "job-2": {
     job_id: "job-2",
@@ -1532,7 +1535,10 @@ export const mockJobHealth: Record<string, JobHealthBreakdown> = {
     ],
     predicted_close_date: "2026-06-20",
     days_open: 28,
+    candidates_total: 9,
+    candidates_in_funnel: 5,
     computed_at: "2026-05-05T08:00:00Z",
+    weights: { velocity: 0.4, drop_off: 0.3, recency: 0.3 },
   },
   "job-3": {
     job_id: "job-3",
@@ -1559,7 +1565,10 @@ export const mockJobHealth: Record<string, JobHealthBreakdown> = {
     ],
     predicted_close_date: null,
     days_open: 0,
+    candidates_total: 0,
+    candidates_in_funnel: 0,
     computed_at: "2026-05-05T08:00:00Z",
+    weights: { velocity: 0.4, drop_off: 0.3, recency: 0.3 },
   },
 };
 

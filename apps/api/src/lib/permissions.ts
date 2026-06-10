@@ -263,28 +263,31 @@ export async function buildPermissionMatrixForUser(
   userId: string
 ): Promise<PermissionMatrix> {
   return withTenant(tenantId, async (client) => {
-    // 1) Haal users.role + assignments in 1 round-trip
-    const [{ rows: userRows }, { rows: assignmentRows }] = await Promise.all([
-      client.query<{ role: string }>(
-        `SELECT role FROM users WHERE id = $1 AND tenant_id = $2`,
-        [userId, tenantId]
-      ),
-      client.query<{
-        role_id: string | null;
-        role_key: string;
-        permissions: PermissionMatrix | null;
-        inherits_from: string | null;
-      }>(
-        `SELECT a.role_id, a.role_key,
-                r.permissions, r.inherits_from
-           FROM user_role_assignments a
-           LEFT JOIN tenant_custom_roles r ON r.id = a.role_id
-          WHERE a.tenant_id = $1
-            AND a.user_id = $2
-            AND (a.expires_at IS NULL OR a.expires_at > now())`,
-        [tenantId, userId]
-      ),
-    ]);
+    // 1) Haal users.role + assignments op. NIET via Promise.all op dezelfde
+    // client: één pg-client kan maar één query tegelijk uitvoeren, dus
+    // parallelle queries op dezelfde client worden geserialiseerd én geven
+    // `DeprecationWarning: Calling client.query() when the client is already
+    // executing a query`. Sequentieel awaiten levert exact hetzelfde resultaat
+    // zonder de warning (dit pad draait op vrijwel elke geautoriseerde request).
+    const { rows: userRows } = await client.query<{ role: string }>(
+      `SELECT role FROM users WHERE id = $1 AND tenant_id = $2`,
+      [userId, tenantId]
+    );
+    const { rows: assignmentRows } = await client.query<{
+      role_id: string | null;
+      role_key: string;
+      permissions: PermissionMatrix | null;
+      inherits_from: string | null;
+    }>(
+      `SELECT a.role_id, a.role_key,
+              r.permissions, r.inherits_from
+         FROM user_role_assignments a
+         LEFT JOIN tenant_custom_roles r ON r.id = a.role_id
+        WHERE a.tenant_id = $1
+          AND a.user_id = $2
+          AND (a.expires_at IS NULL OR a.expires_at > now())`,
+      [tenantId, userId]
+    );
 
     let combined: PermissionMatrix = {};
 

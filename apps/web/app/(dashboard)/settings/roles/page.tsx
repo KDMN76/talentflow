@@ -303,9 +303,26 @@ export default function RolesListPage() {
                           {act.label}
                         </td>
                         {roles?.map((r) => {
-                          const has = r.permissions
-                            .find((p) => p.resource === res.key)
-                            ?.actions.includes(act.key);
+                          // De backend levert permissions als matrix
+                          // {resource:{action:bool}}, niet als PermissionGrant[]
+                          // (zoals het type suggereert). Ondersteun beide shapes
+                          // zodat de pagina niet crasht op `.find`.
+                          const perms = r.permissions as unknown;
+                          const has = Array.isArray(perms)
+                            ? perms
+                                .find(
+                                  (p: { resource: string; actions: string[] }) =>
+                                    p.resource === res.key
+                                )
+                                ?.actions.includes(act.key)
+                            : Boolean(
+                                (
+                                  perms as
+                                    | Record<string, Record<string, boolean>>
+                                    | null
+                                    | undefined
+                                )?.[res.key]?.[act.key]
+                              );
                           return (
                             <td
                               key={r.id}

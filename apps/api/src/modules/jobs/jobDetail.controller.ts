@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
+import { JobHealthSchema, assertResponse } from '@talentflow/contracts';
 import { AppError } from '../../middleware/errorHandler';
 import * as jobDetailService from './jobDetail.service';
 import * as jobHealthService from './jobHealth.service';
@@ -224,7 +225,9 @@ export async function getJobHealth(
       req.user!.tenantId,
       req.params.id
     );
-    res.json(data);
+    // dev/test: fail-fast als de response-shape afwijkt van het contract.
+    // Productie: no-op (assertResponse skipt parse bij NODE_ENV=production).
+    res.json(assertResponse(JobHealthSchema, data));
   } catch (err) {
     next(err);
   }

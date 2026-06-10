@@ -18,6 +18,13 @@
     "docker:down": "docker-compose down"
   },
   "devDependencies": {
-    "concurrently": "^9.1.0"
+    "concurrently": "^9.1.0",
+    "@types/react": "18.3.28",
+    "@types/react-dom": "18.3.7"
+  },
+  "comment:types-react": "App draait op React 18; Radix-peers (@types/react: *) hesen @types/react@19 op root waardoor de React-19 ReactNode (incl. bigint) botste met de React-18 JSX-runtime in apps/web (providers.tsx). Door @types/react 18.x als directe root-devDep te pinnen wint die de root-dedup en is er één versie in de hele monorepo.",
+  "overrides": {
+    "@types/react": "18.3.28",
+    "@types/react-dom": "18.3.7"
   }
 }

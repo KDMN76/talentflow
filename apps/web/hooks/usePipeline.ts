@@ -7,9 +7,15 @@ import type { PipelineStage, Application } from "@/lib/mockData";
 export function usePipelineStages(jobId: string) {
   return useQuery({
     queryKey: ["pipeline", "stages", jobId],
-    queryFn: async () => {
-      const { data } = await api.get<PipelineStage[]>(`/pipeline/jobs/${jobId}/stages`);
-      return data;
+    queryFn: async (): Promise<PipelineStage[]> => {
+      // De API wikkelt de lijst in `{ data: [...] }`. Eerder retourneerde deze
+      // hook het hele object, waardoor `stages` geen array was: de guard
+      // `stages.length === 0` (undefined !== 0) liet het door en `stages.map`
+      // crashte de vacature-detailpagina (JobPipelineTab) en de pipeline-pagina.
+      const { data } = await api.get<{ data: PipelineStage[] }>(
+        `/pipeline/jobs/${jobId}/stages`
+      );
+      return data.data;
     },
     enabled: !!jobId,
   });

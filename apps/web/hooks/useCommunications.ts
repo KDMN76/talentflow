@@ -40,11 +40,13 @@ export function useCommunications(candidateId?: string) {
 export function useInbox() {
   return useQuery({
     queryKey: ["communications", "inbox"],
-    queryFn: async () => {
-      const { data } = await api.get<Communication[]>(
+    queryFn: async (): Promise<Communication[]> => {
+      // Backend wikkelt in { data: [...] }; geef de array terug (anders crasht
+      // `.filter` op het wrapper-object → witte pagina /communications).
+      const { data } = await api.get<{ data: Communication[] }>(
         "/communications/inbox"
       );
-      return data;
+      return data.data ?? [];
     },
   });
 }

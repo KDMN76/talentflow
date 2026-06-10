@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { JobHealthSchema } from "@talentflow/contracts";
 import { api } from "@/lib/api";
 import type {
   BiasCheckResult,
@@ -184,10 +185,12 @@ export function useJobHealth(jobId: string) {
   return useQuery({
     queryKey: ["jobs", jobId, "health"],
     queryFn: async (): Promise<JobHealthBreakdown | null> => {
-      const { data } = await api.get<JobHealthBreakdown>(
-        `/jobs/${jobId}/health`
-      );
-      return data;
+      const { data } = await api.get(`/jobs/${jobId}/health`);
+      // Runtime-valideren tegen het gedeelde contract. Een afwijkende shape
+      // (bv. ontbrekende `components`) levert nu een query-error op die de UI
+      // netjes als "Health-data nog niet beschikbaar" toont, in plaats van een
+      // witte pagina door `health.components.map` op undefined.
+      return JobHealthSchema.parse(data);
     },
     enabled: !!jobId,
     staleTime: 60_000,

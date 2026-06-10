@@ -334,47 +334,43 @@ async function loadCandidateExportData(
       throw new AppError(404, 'CANDIDATE_NOT_FOUND', 'Kandidaat niet gevonden');
     }
 
-    const [
-      { rows: applications },
-      { rows: communications },
-      { rows: resumes },
-      { rows: auditTrail },
-    ] = await Promise.all([
-      client.query(
-        `SELECT a.*, j.title AS job_title
-           FROM applications a
-           LEFT JOIN jobs j ON j.id = a.job_id
-          WHERE a.candidate_id = $1 AND a.tenant_id = $2`,
-        [candidateId, tenantId]
-      ),
-      client
-        .query(
-          `SELECT id, channel, direction, subject, body, status, sent_at, created_at
-             FROM communications
-            WHERE candidate_id = $1 AND tenant_id = $2`,
-          [candidateId, tenantId]
-        )
-        .catch(() => ({ rows: [] as Record<string, unknown>[] })),
-      client.query(
-        `SELECT id, filename, storage_key, mime_type, size_bytes,
-                is_primary, parsed_at, created_at, ai_summary
-           FROM candidate_resumes
+    // Sequentieel i.p.v. Promise.all: alle queries delen dezelfde pg-client,
+    // die maar één query tegelijk aankan — parallel uitvoeren serialiseert tóch
+    // en triggert de `client.query()`-DeprecationWarning. Resultaat identiek.
+    const { rows: applications } = await client.query(
+      `SELECT a.*, j.title AS job_title
+         FROM applications a
+         LEFT JOIN jobs j ON j.id = a.job_id
+        WHERE a.candidate_id = $1 AND a.tenant_id = $2`,
+      [candidateId, tenantId]
+    );
+    const { rows: communications } = await client
+      .query(
+        `SELECT id, channel, direction, subject, body, status, sent_at, created_at
+           FROM communications
           WHERE candidate_id = $1 AND tenant_id = $2`,
         [candidateId, tenantId]
-      ),
-      client.query(
-        `SELECT id, action, entity_type, entity_id, before, after, created_at
-           FROM audit_events
-          WHERE tenant_id = $1
-            AND ((entity_type = 'candidate' AND entity_id = $2)
-                 OR (entity_type = 'candidate_resume' AND entity_id IN
-                     (SELECT id FROM candidate_resumes
-                       WHERE candidate_id = $2 AND tenant_id = $1))
-                )
-          ORDER BY created_at ASC`,
-        [tenantId, candidateId]
-      ),
-    ]);
+      )
+      .catch(() => ({ rows: [] as Record<string, unknown>[] }));
+    const { rows: resumes } = await client.query(
+      `SELECT id, filename, storage_key, mime_type, size_bytes,
+              is_primary, parsed_at, created_at, ai_summary
+         FROM candidate_resumes
+        WHERE candidate_id = $1 AND tenant_id = $2`,
+      [candidateId, tenantId]
+    );
+    const { rows: auditTrail } = await client.query(
+      `SELECT id, action, entity_type, entity_id, before, after, created_at
+         FROM audit_events
+        WHERE tenant_id = $1
+          AND ((entity_type = 'candidate' AND entity_id = $2)
+               OR (entity_type = 'candidate_resume' AND entity_id IN
+                   (SELECT id FROM candidate_resumes
+                     WHERE candidate_id = $2 AND tenant_id = $1))
+              )
+        ORDER BY created_at ASC`,
+      [tenantId, candidateId]
+    );
 
     return {
       profile: candidate as Record<string, unknown>,

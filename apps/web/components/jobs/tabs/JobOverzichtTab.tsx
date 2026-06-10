@@ -139,27 +139,27 @@ const REMOTE_COPY: Record<string, string> = {
   remote: "Remote",
 };
 
+// Sleutels = DB CHECK-constraint waarden (JOB_*_VALUES in @talentflow/contracts).
+// Eerdere fantoom-waarden (intern/director/freelance/internship/yearly) hadden
+// geen DB-grond en zijn verwijderd — zie ROADMAP "Enum-mismatches".
 const CONTRACT_COPY: Record<string, string> = {
   fulltime: "Fulltime",
   parttime: "Parttime",
   contract: "Contract",
-  freelance: "Freelance",
-  internship: "Stage",
+  temp: "Tijdelijk",
 };
 
 const EXPERIENCE_COPY: Record<string, string> = {
-  intern: "Stagiair",
   junior: "Junior",
   medior: "Medior",
   senior: "Senior",
   lead: "Lead",
-  director: "Director",
 };
 
 const FREQUENCY_COPY: Record<string, string> = {
   hourly: "per uur",
   monthly: "per maand",
-  yearly: "per jaar",
+  annual: "per jaar",
 };
 
 function formatDateNL(iso: string | null | undefined): string | null {

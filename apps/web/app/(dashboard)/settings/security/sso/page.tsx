@@ -92,19 +92,23 @@ export default function SsoPage() {
   const [generatedScimToken, setGeneratedScimToken] = useState<string | null>(null);
 
   useEffect(() => {
-    if (config) {
+    // Alleen hydrateren wanneer er écht een config is. Een niet-geconfigureerde
+    // tenant levert { configured: false } zonder velden → anders werd o.a.
+    // idp_cert undefined en crashte `.trim()` de pagina (witte pagina).
+    // We gaten op `provider` (alleen aanwezig bij een echte config).
+    if (config && config.provider) {
       setProvider(config.provider);
       setEnabled(config.enabled);
       setEntryPoint(config.entry_point);
       setIssuer(config.issuer);
-      setIdpCert(config.idp_cert);
+      setIdpCert(config.idp_cert ?? "");
       setAutoCreate(config.auto_create_users);
       setDefaultRoleId(config.default_role_id);
       setMapping(config.attribute_mapping);
     }
   }, [config]);
 
-  const certValid = useMemo(() => isValidPemCert(idpCert), [idpCert]);
+  const certValid = useMemo(() => isValidPemCert(idpCert ?? ""), [idpCert]);
 
   const handleSave = async () => {
     if (!entryPoint || !issuer || !idpCert) {

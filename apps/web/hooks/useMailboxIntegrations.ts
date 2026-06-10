@@ -24,10 +24,12 @@ export function useMailboxIntegrations() {
   return useQuery({
     queryKey: ["mailbox-integrations"],
     queryFn: async (): Promise<MailboxIntegration[]> => {
-      const { data } = await api.get<MailboxIntegration[]>(
+      // Backend wikkelt in { data: [...] }; geef de array terug (anders crasht
+      // `.reduce` op het wrapper-object → witte pagina /settings/integrations).
+      const { data } = await api.get<{ data: MailboxIntegration[] }>(
         "/integrations/mailbox"
       );
-      return data;
+      return data.data ?? [];
     },
   });
 }

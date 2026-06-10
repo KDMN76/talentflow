@@ -156,7 +156,10 @@ function bucketsFromFunnel(funnel: JobFunnelResponse | null | undefined) {
   const hiredStage = stages.find((s) =>
     /(aangenomen|hired)/i.test(s.name)
   );
-  const hiredTotal = (hiredStage?.count ?? 0) + hired;
+  // `?? 0`: de funnel-endpoint levert (nog) geen top-level `hired`/`dropped`
+  // (zie ROADMAP "Funnel-endpoint mist hired/dropped/total"), dus zonder coerce
+  // werd dit `count + undefined = NaN` → "Aangenomen: NaN" in de UI.
+  const hiredTotal = (hiredStage?.count ?? 0) + (hired ?? 0);
 
   const middleStages = stages.filter(
     (s) => s !== stages[0] && s !== offeredStage && s !== hiredStage
@@ -168,7 +171,7 @@ function bucketsFromFunnel(funnel: JobFunnelResponse | null | undefined) {
     inFunnel,
     offered,
     hired: hiredTotal,
-    dropped,
+    dropped: dropped ?? 0,
   };
 }
 

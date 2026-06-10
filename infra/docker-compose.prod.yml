@@ -1,6 +1,18 @@
 # TalentFlow — Production Docker Compose
 #
-# Run from the project root:
+# ┌───────────────────────────────────────────────────────────────────────────┐
+# │ ⚠️  GEBRUIK ALTIJD ./infra/deploy.sh — NOOIT `docker compose` RECHTSTREEKS. │
+# │                                                                             │
+# │   ./infra/deploy.sh build web        ./infra/deploy.sh up -d                │
+# │                                                                             │
+# │ deploy.sh injecteert ALTIJD `--env-file infra/.env.prod`. Vergeet je die    │
+# │ flag (bij `build` óf `up`), dan worden alle ${VAR} lege strings: API komt   │
+# │ in een restart-loop (DATABASE_URL required) én Next bakt localhost in de    │
+# │ bundles. Dit ging op 2026-05-21 tweemaal mis — vandaar deze waarschuwing.   │
+# └───────────────────────────────────────────────────────────────────────────┘
+#
+# Als je tóch handmatig compose draait (afgeraden), MOET elk commando
+# `--env-file infra/.env.prod` bevatten, ook `build`:
 #   docker compose --env-file infra/.env.prod -f infra/docker-compose.prod.yml up -d
 #
 # Build contexts use `..` because this file lives in `infra/` but the API and
@@ -260,10 +272,14 @@ services:
     ports:
       - '127.0.0.1:31000:3000'
     healthcheck:
-      # `/` redirect (307) en `wget -qO-` faalt op 3xx; `/login` is altijd 200.
+      # Twee probes (zie apps/web/Dockerfile voor het waarom): (1) /login → 200,
+      # (2) een echte JS-chunk uit .next/static → 200, zodat een container die
+      # wél HTML maar géén static-assets serveert `unhealthy` wordt i.p.v. een
+      # false-positive `healthy`. `$$` = ge-escapete `$` (compose-interpolatie).
+      # `/` geeft 307 en faalt op `wget`; daarom /login.
       test:
         - CMD-SHELL
-        - 'wget -qO- http://localhost:3000/login >/dev/null 2>&1 || exit 1'
+        - 'set -e; wget -qO- http://localhost:3000/login >/dev/null 2>&1; asset=$$(ls .next/static/chunks/*.js 2>/dev/null | head -n1) || true; if [ -n "$$asset" ]; then wget -qO- "http://localhost:3000/_next/static/chunks/$$(basename "$$asset")" >/dev/null 2>&1; fi'
       interval: 30s
       timeout: 5s
       retries: 5

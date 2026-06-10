@@ -79,12 +79,15 @@ export default function AvailabilitySettingsPage() {
 
   useEffect(() => {
     if (!data) return;
-    setTimezone(data.timezone);
-    setHours(data.recurring_hours);
+    // Guards: een tenant zonder beschikbaarheid kan een lege/afwijkende shape
+    // teruggeven; zonder deze guards werd `hours` undefined en crashte
+    // `hours.filter` de pagina (witte pagina /settings/availability).
+    if (data.timezone) setTimezone(data.timezone);
+    setHours(Array.isArray(data.recurring_hours) ? data.recurring_hours : []);
   }, [data]);
 
   const blocksForDay = (day: Weekday): RecurringHours[] =>
-    hours.filter((h) => h.weekday === day);
+    (hours ?? []).filter((h) => h.weekday === day);
 
   const addBlock = (day: Weekday) =>
     setHours((cur) => [

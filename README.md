@@ -52,6 +52,20 @@ npm run dev       # start op http://localhost:3000
 
 ## Environment variabelen
 
+### Welk bestand hoort bij welke setup
+
+| Bestand | Setup | In git? | Doel |
+|---|---|---|---|
+| `apps/api/.env.example` | — | ✅ committed | Template voor de API-config (kopieer naar `.env`). |
+| `apps/api/.env` | lokale dev | ❌ gitignored | Echte API-secrets lokaal. |
+| `apps/web/.env.local.example` | — | ✅ committed | Template voor de web-config. |
+| `apps/web/.env.local` | lokale dev | ❌ gitignored | Lokale web-config. **Let op:** zet hier géén `NEXT_PUBLIC_USE_MOCK_DATA=true` — dat blokkeert de echte API-flow tijdens een smoke-test (een eerdere stale regel hier kostte een halve debug-sessie). Default = mock uit. |
+| `.env.dev` (root) | lokale dev (docker) | ❌ gitignored | Compose-vars voor de dev-stack (`docker-compose.yml`). |
+| `infra/.env.prod.example` | — | ✅ committed | Template voor productie (alle 20+ secrets). |
+| `infra/.env.prod` | productie (VPS) | ❌ gitignored, `chmod 600` | Echte productie-secrets. Geladen via `./infra/deploy.sh` (zie [docs/docker.md](docs/docker.md)). |
+
+> Productie deploy je **uitsluitend** via `./infra/deploy.sh` — die injecteert altijd `--env-file infra/.env.prod`. Rechtstreeks `docker compose` draaien zonder die flag bakt lege env-vars in en haalt productie onderuit. Zie [docs/docker.md](docs/docker.md).
+
 ### `apps/api/.env`
 
 | Variabele            | Beschrijving                              | Voorbeeld                          |

@@ -17,6 +17,8 @@
  * values.
  */
 
+import type { JobHealth, JobHealthComponent } from "@talentflow/contracts";
+
 // ─── Team ───────────────────────────────────────────────────────────────────
 
 export type JobTeamRole =
@@ -65,26 +67,12 @@ export interface JobAttachment {
 
 // ─── Health breakdown ───────────────────────────────────────────────────────
 
-export interface JobHealthSubScore {
-  /** Internal key — used to look up the right Dutch label client-side. */
-  key: "velocity" | "drop_off" | "recency" | string;
-  label: string;
-  /** 0..100 — already normalised so the bar can render directly. */
-  score: number;
-  description: string;
-}
-
-export interface JobHealthBreakdown {
-  job_id: string;
-  /** 0..100 overall. */
-  score: number;
-  components: JobHealthSubScore[];
-  /** ISO date — server-predicted close date for this job. */
-  predicted_close_date: string | null;
-  /** Number of days the job has been in `open` status. */
-  days_open: number;
-  computed_at: string;
-}
+// Health-shape komt nu uit `@talentflow/contracts` (JobHealthSchema). De lokale
+// aliassen blijven bestaan zodat bestaande imports niet hoeven te wijzigen.
+// Eén bron van waarheid voorkomt de eerdere API/frontend-mismatch die de
+// witte-pagina-crash op `/jobs/[id]` veroorzaakte.
+export type JobHealthSubScore = JobHealthComponent;
+export type JobHealthBreakdown = JobHealth;
 
 // ─── Funnel ─────────────────────────────────────────────────────────────────
 
@@ -172,44 +160,9 @@ export interface BiasCheckResult {
   computed_at: string;
 }
 
-// ─── Manatal-parity job extras (optional fields on Job) ─────────────────────
-
-export interface JobManatalFields {
-  job_reference?: string | null;
-  client?: string | null;
-  client_logo_url?: string | null;
-  headcount?: number | null;
-  experience_level?:
-    | "intern"
-    | "junior"
-    | "medior"
-    | "senior"
-    | "lead"
-    | "director"
-    | string
-    | null;
-  contract_type?:
-    | "fulltime"
-    | "parttime"
-    | "contract"
-    | "freelance"
-    | "internship"
-    | string
-    | null;
-  contract_details?: string | null;
-  open_date?: string | null;
-  close_date?: string | null;
-  industry?: string | null;
-  remote_type?: "onsite" | "hybrid" | "remote" | string | null;
-  office_address?: string | null;
-  package_details?: string | null;
-  currency?: string | null;
-  salary_frequency?:
-    | "hourly"
-    | "monthly"
-    | "yearly"
-    | string
-    | null;
-  owner_id?: string | null;
-  owner_name?: string | null;
-}
+// `JobManatalFields` is verwijderd: het was ongebruikte dode code met fantoom-
+// velden (client/client_logo_url/owner_id/owner_name — geen DB-grond) en
+// enum-waarden die de DB CHECK weigert (intern/director/freelance/internship/
+// yearly). De canonieke job-shape komt nu uit `@talentflow/contracts` (JobRow/
+// JobDetail). Klant-/owner-velden komen pas terug met de Clients/CRM-module
+// (ROADMAP Sectie 2).

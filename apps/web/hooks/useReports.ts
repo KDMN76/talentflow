@@ -34,8 +34,12 @@ export function useReports(filters?: ReportsFilters) {
   return useQuery({
     queryKey: ["reports", filters],
     queryFn: async (): Promise<Report[]> => {
-      const { data } = await api.get<Report[]>("/reports", { params: filters });
-      return data;
+      // Backend wikkelt in { reports: [...] } (niet { data }); geef de array
+      // terug, anders crasht `.filter` op het object → witte pagina /reports.
+      const { data } = await api.get<{ reports: Report[] }>("/reports", {
+        params: filters,
+      });
+      return data.reports ?? [];
     },
   });
 }
