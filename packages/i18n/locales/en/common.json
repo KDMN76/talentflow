@@ -22,7 +22,15 @@
     "emailTemplates": "Email Templates",
     "compliance": "GDPR / Compliance",
     "apiIntegrations": "API & Integrations",
-    "settings": "Settings"
+    "settings": "Settings",
+    "sections": {
+      "recruiting": "Recruiting",
+      "sourcing": "Sourcing & Outreach",
+      "clients": "Clients & Agency",
+      "communication": "Communication",
+      "insights": "Insights",
+      "system": "System"
+    }
   },
   "actions": {
     "save": "Save",

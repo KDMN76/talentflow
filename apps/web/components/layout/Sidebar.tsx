@@ -43,6 +43,11 @@ import {
   Send,
   Inbox,
   Workflow,
+  Palette,
+  ListChecks,
+  AtSign,
+  Bell,
+  Target,
 } from "lucide-react";
 import { useState, type ComponentType } from "react";
 import { useTranslation } from "react-i18next";
@@ -72,7 +77,9 @@ interface NavItem {
   badge?: "reactivation" | "inbox_unread";
 }
 
-const navItems: NavItem[] = [
+// V6: navigatie gegroepeerd in secties i.p.v. één platte lijst van 24 items.
+// Sectietitels komen uit common.json (nav.sections.*).
+const NAV_RECRUITING: NavItem[] = [
   {
     label: "Dashboard",
     href: "/dashboard",
@@ -118,33 +125,6 @@ const navItems: NavItem[] = [
     icon: Kanban,
   },
   {
-    label: "Bureau",
-    href: "/contracts",
-    icon: FileSignature,
-    children: [
-      {
-        label: "Contracten",
-        href: "/contracts",
-        icon: FileSignature,
-      },
-      {
-        label: "Timesheets",
-        href: "/timesheets",
-        icon: Clock,
-      },
-      {
-        label: "Facturen",
-        href: "/invoices",
-        icon: Receipt,
-      },
-      {
-        label: "Commissie",
-        href: "/commissions",
-        icon: Calculator,
-      },
-    ],
-  },
-  {
     label: "Interviews",
     href: "/interviews",
     icon: Calendar,
@@ -156,6 +136,9 @@ const navItems: NavItem[] = [
       },
     ],
   },
+];
+
+const NAV_SOURCING: NavItem[] = [
   {
     label: "Sourcing Agent",
     href: "/sourcing-agent",
@@ -184,15 +167,40 @@ const navItems: NavItem[] = [
     icon: Sparkles,
     badge: "reactivation",
   },
+];
+
+const NAV_CLIENTS: NavItem[] = [
   {
     label: "CRM",
     href: "/crm",
     icon: Building2,
   },
   {
-    label: "Berichten",
-    href: "/communications",
-    icon: MessageSquare,
+    label: "Bureau",
+    href: "/contracts",
+    icon: FileSignature,
+    children: [
+      {
+        label: "Contracten",
+        href: "/contracts",
+        icon: FileSignature,
+      },
+      {
+        label: "Timesheets",
+        href: "/timesheets",
+        icon: Clock,
+      },
+      {
+        label: "Facturen",
+        href: "/invoices",
+        icon: Receipt,
+      },
+      {
+        label: "Commissie",
+        href: "/commissions",
+        icon: Calculator,
+      },
+    ],
   },
   {
     label: "Career Pages",
@@ -209,6 +217,22 @@ const navItems: NavItem[] = [
     href: "/hm",
     icon: Smartphone,
   },
+];
+
+const NAV_COMMUNICATION: NavItem[] = [
+  {
+    label: "Berichten",
+    href: "/communications",
+    icon: MessageSquare,
+  },
+  {
+    label: "E-mail templates",
+    href: "/email-templates",
+    icon: FileText,
+  },
+];
+
+const NAV_INSIGHTS: NavItem[] = [
   {
     label: "Skills",
     href: "/skills",
@@ -236,15 +260,13 @@ const navItems: NavItem[] = [
     href: "/reports",
     icon: BarChart3,
   },
+];
+
+const NAV_SYSTEM: NavItem[] = [
   {
     label: "Workflows",
     href: "/workflows",
     icon: GitBranch,
-  },
-  {
-    label: "E-mail templates",
-    href: "/email-templates",
-    icon: FileText,
   },
   {
     label: "AVG / Compliance",
@@ -275,6 +297,32 @@ const navItems: NavItem[] = [
     href: "/settings",
     icon: Settings,
     children: [
+      // V7: voorheen "verweesde" pagina's — bestonden wel, waren nergens gelinkt.
+      {
+        label: "Branding",
+        href: "/settings/branding",
+        icon: Palette,
+      },
+      {
+        label: "Custom fields",
+        href: "/settings/custom-fields",
+        icon: ListChecks,
+      },
+      {
+        label: "E-mail-integraties",
+        href: "/settings/integrations",
+        icon: AtSign,
+      },
+      {
+        label: "Notificaties",
+        href: "/settings/notifications",
+        icon: Bell,
+      },
+      {
+        label: "Talent Fit",
+        href: "/settings/talent-fit",
+        icon: Target,
+      },
       {
         label: "WhatsApp",
         href: "/settings/whatsapp",
@@ -324,6 +372,24 @@ const navItems: NavItem[] = [
   },
 ];
 
+interface NavSection {
+  /** i18n-sleutel in common.json (nav.sections.*). */
+  titleKey: string;
+  items: NavItem[];
+}
+
+const NAV_SECTIONS: NavSection[] = [
+  { titleKey: "nav.sections.recruiting", items: NAV_RECRUITING },
+  { titleKey: "nav.sections.sourcing", items: NAV_SOURCING },
+  { titleKey: "nav.sections.clients", items: NAV_CLIENTS },
+  { titleKey: "nav.sections.communication", items: NAV_COMMUNICATION },
+  { titleKey: "nav.sections.insights", items: NAV_INSIGHTS },
+  { titleKey: "nav.sections.system", items: NAV_SYSTEM },
+];
+
+// Platte lijst voor logica die alle items nodig heeft (auto-expand e.d.).
+const allNavItems: NavItem[] = NAV_SECTIONS.flatMap((s) => s.items);
+
 // Top-level nav-labels → i18n-sleutels (common:nav.*). Op href gemapt zodat we
 // niet elk item hoeven aan te passen. Sub-items volgen in de bulk-migratie
 // (vallen tot dan terug op hun NL-label).
@@ -367,7 +433,7 @@ export function Sidebar({ onClose }: SidebarProps) {
   const inboxUnread = (unreadThreads ?? []).length;
   // Auto-expand a section when one of its children is active so the user
   // doesn't lose context on a hard refresh.
-  const initiallyExpanded = navItems
+  const initiallyExpanded = allNavItems
     .filter(
       (item) =>
         item.children &&
@@ -432,14 +498,16 @@ export function Sidebar({ onClose }: SidebarProps) {
         </span>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-        <div className="mb-3 px-2">
+      {/* Navigation — gegroepeerd in secties (V6) */}
+      <nav className="flex-1 overflow-y-auto px-3 py-4">
+        {NAV_SECTIONS.map((section) => (
+        <div key={section.titleKey} className="mb-4 space-y-1">
+        <div className="mb-1.5 px-2">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-            Menu
+            {t(section.titleKey)}
           </p>
         </div>
-        {navItems.map((item) => {
+        {section.items.map((item) => {
           const active = isActive(item.href);
           const Icon = item.icon;
           const hasChildren = !!item.children && item.children.length > 0;
@@ -552,6 +620,8 @@ export function Sidebar({ onClose }: SidebarProps) {
             </div>
           );
         })}
+        </div>
+        ))}
       </nav>
 
       {/* User section */}

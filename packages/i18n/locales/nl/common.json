@@ -22,7 +22,15 @@
     "emailTemplates": "E-mail templates",
     "compliance": "AVG / Compliance",
     "apiIntegrations": "API & Integraties",
-    "settings": "Instellingen"
+    "settings": "Instellingen",
+    "sections": {
+      "recruiting": "Recruiting",
+      "sourcing": "Sourcing & Outreach",
+      "clients": "Klanten & Bureau",
+      "communication": "Communicatie",
+      "insights": "Inzichten",
+      "system": "Systeem"
+    }
   },
   "actions": {
     "save": "Opslaan",

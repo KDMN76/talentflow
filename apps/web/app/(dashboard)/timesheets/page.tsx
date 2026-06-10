@@ -402,7 +402,7 @@ export default function TimesheetsListPage() {
 
               <div className="space-y-4">
                 {/* Entries */}
-                <div className="rounded-lg border border-border">
+                <div className="rounded-lg border border-border overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="border-b border-border bg-zinc-50/50 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground dark:bg-zinc-900/40">
                       <tr>

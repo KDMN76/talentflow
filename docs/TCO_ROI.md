@@ -34,7 +34,7 @@ Dit document zet beide kostenstructuren naast elkaar over een tijdshorizon van *
 - Anthropic Claude API pricing: [anthropic.com/pricing](https://www.anthropic.com/pricing) (Sonnet input ~€2,50/M tokens, output ~€12,50/M tokens, mei 2026)
 - Resend pricing: [resend.com/pricing](https://resend.com/pricing) (3.000 mails/maand gratis, Pro $20/maand)
 - Cloudflare R2 pricing: [cloudflare.com/products/r2](https://www.cloudflare.com/developer-platform/products/r2/) (10 GB gratis, daarna $0,015/GB/maand)
-- Boekhouding IT Proposal — actuele Manatal-factuur €1.000/maand
+- Werkelijke Manatal-factuur IT Proposal, GORR5CHG-0006 d.d. 8 juni 2026: **$674,00/maand** — 16× Enterprise-seat à $39 (maandtarief) + add-on "MyOwnContracts" $50 flat. Vervangt de eerdere aanname van €1.000/maand.
 
 ### 1.3 Wisselkoersen en prijsindexatie
 
@@ -48,27 +48,32 @@ Alle bedragen worden in **euro's** gepresenteerd. Voor USD-prijzen wordt een con
 
 Manatal hanteert vier tiers (per gebruiker per maand, jaarlijks gefactureerd):
 
-| Tier | $/user/maand | EUR/user/maand | × 9 recruiters/maand | × 12 maanden/jaar |
+| Tier | $/user/maand (jaarlijks gefactureerd) | EUR/user/maand | × 16 seats/maand | × 12 maanden/jaar |
 |---|---|---|---|---|
-| Professional | $15 | €13,80 | €124 | €1.491 |
-| Enterprise | $35 | €32,20 | €290 | €3.477 |
-| Enterprise Plus | $55 | €50,60 | €455 | €5.465 |
+| Professional | $15 | €13,80 | €221 | €2.650 |
+| Enterprise | $35 | €32,20 | €515 | €6.182 |
+| Enterprise Plus | $55 | €50,60 | €810 | €9.715 |
 | Custom | op aanvraag | — | — | — |
 
-IT Proposal betaalt feitelijk **€1.000/maand = €12.000/jaar**. Dit komt niet exact overeen met enige listprice voor 9 gebruikers — vermoedelijk is het een *Custom*-bundel of een maatwerkdeal die boven Enterprise zit (Enterprise list = ~€3.477, dus IT Proposal betaalt ~3,5× de list — waarschijnlijk inclusief Premium Career Page, AI Recommendations en mogelijk een Enterprise Plus-component voor open API of advanced reporting).
+IT Proposal betaalt feitelijk (factuur GORR5CHG-0006, juni 2026):
+**16 Enterprise-seats × $39** (het hogere máándtarief i.p.v. $35 jaarlijks)
+**+ add-on "MyOwnContracts" $50 flat = $674,00/maand ≈ €620/maand ≈ €7.440/jaar.**
 
-**Aanname die we hanteren voor de vergelijking:** IT Proposal blijft de huidige €1.000/maand betalen. Dit is het bedrag dat daadwerkelijk uit de boekhouding stroomt en is daarmee de eerlijkste basis.
+NB: door maandfacturering betaalt IT Proposal ~$64/maand meer dan de
+jaarlijks-gefactureerde lijstprijs; overstappen op jaarfacturering bij Manatal
+zou hun kosten al ~€700/jaar drukken. We vergelijken eerlijk met wat er
+daadwerkelijk uit de boekhouding stroomt.
 
 ### 2.2 3-jaars TCO Manatal
 
 | Jaar | Kosten | Toelichting |
 |---|---|---|
-| Jaar 1 | €12.000 | 12 × €1.000 |
-| Jaar 2 | €12.000 | conservatief geen indexatie |
-| Jaar 3 | €12.000 | conservatief geen indexatie |
-| **Totaal** | **€36.000** | |
+| Jaar 1 | €7.440 | 12 × €620 (factuurbedrag, koers 0,92) |
+| Jaar 2 | €7.440 | conservatief geen indexatie |
+| Jaar 3 | €7.440 | conservatief geen indexatie |
+| **Totaal** | **€22.320** | |
 
-**Realistischer scenario (5% indexatie per jaar):** €12.000 + €12.600 + €13.230 = **€37.830**. We rekenen verder met de conservatieve €36.000.
+**Realistischer scenario (5% indexatie per jaar):** €7.440 + €7.812 + €8.203 = **€23.455**. We rekenen verder met de conservatieve €22.320.
 
 ---
 
@@ -158,12 +163,12 @@ Dit is de grootste variabele. Kosten worden gedreven door tokenverbruik:
 
 | Periode | Manatal | TalentFlow | Besparing | Besparing % |
 |---|---|---|---|---|
-| Jaar 1 | €12.000 | €931 | **€11.069** | 92% |
-| Jaar 2 | €12.000 | €1.141 | **€10.859** | 90% |
-| Jaar 3 | €12.000 | €1.321 | **€10.679** | 89% |
-| **3-jaars totaal** | **€36.000** | **€3.393** | **€32.607** | **91%** |
+| Jaar 1 | €7.440 | €931 | **€6.509** | 87% |
+| Jaar 2 | €7.440 | €1.141 | **€6.299** | 85% |
+| Jaar 3 | €7.440 | €1.321 | **€6.119** | 82% |
+| **3-jaars totaal** | **€22.320** | **€3.393** | **€18.927** | **85%** |
 
-Op het ruwe operationele kostenniveau elimineert TalentFlow ~91% van de Manatal-uitgaven. De volgende sectie corrigeert dit beeld voor onderhoud en risico.
+Op het ruwe operationele kostenniveau elimineert TalentFlow ~85% van de Manatal-uitgaven. De volgende sectie corrigeert dit beeld voor onderhoud en risico.
 
 ---
 
@@ -201,7 +206,7 @@ Onverwachte issues (data-recovery, security-incident, infrastructuur-uitbreiding
 
 ### 6.1 Break-even zonder onderhoud (operationeel)
 
-- Gemiddelde besparing per maand: ~€905 (€32.607 / 36 maanden)
+- Gemiddelde besparing per maand: ~€526 (€18.927 / 36 maanden)
 - Eenmalige investering vanuit IT Proposal: €0 (stage)
 - **Break-even:** vanaf maand 1 na go-live — elke maand levert direct besparing op
 
@@ -213,17 +218,24 @@ Onverwachte issues (data-recovery, security-incident, infrastructuur-uitbreiding
 | Post-stage onderhoud (€280/maand × 30 mnd) | €8.400 |
 | Risk-buffer (€2.000 + 2 × €500) | €3.000 |
 | **Totaal TCO TalentFlow** | **€14.793** |
-| Totaal TCO Manatal | €36.000 |
-| **Netto besparing 3 jaar** | **€21.207** |
+| Totaal TCO Manatal | €22.320 |
+| **Netto besparing 3 jaar** | **€7.527** |
 
-Per maand komt dit neer op een netto-besparing van **~€589**, ofwel **~59% reductie** van de huidige TCO. Break-even blijft direct vanaf go-live, omdat de stage-investering geen cashout vraagt.
+Per maand komt dit neer op een netto-besparing van **~€209**, ofwel **~34% reductie** van de huidige TCO. Break-even blijft direct vanaf go-live, omdat de stage-investering geen cashout vraagt.
+
+**Belangrijke nuance bij de echte factuurcijfers:** de onderhoudsaanname
+(€280/maand extern) is nu de dominante kostenpost — groter dan de volledige
+operationele stack. Elke euro die het onderhoud goedkoper uitvalt (bijv. KDMN
+als design-partner-arrangement, of lagere werkelijke onderhoudsbehoefte door de
+hoge testdekking) vertaalt zich 1-op-1 in extra besparing; bij onderhoud ≤
+€130/maand stijgt de netto-besparing weer boven €12.000 over 3 jaar.
 
 ### 6.3 Visualisatie cumulatieve kasstroom
 
 ```
 Cumulatieve kosten over 36 maanden (vereenvoudigd):
 
-€36k │                                      ●  Manatal (€36.000)
+€36k │                                      ●  Manatal (€22.320)
      │                              ●
 €30k │                      ●
      │              ●
@@ -239,7 +251,7 @@ Cumulatieve kosten over 36 maanden (vereenvoudigd):
      └─────────────────────────────────────
        M1   M6    M12   M18   M24   M30   M36
 
-Verschil M36 = €21.207 in voordeel TalentFlow
+Verschil M36 = €7.527 in voordeel TalentFlow (Manatal-lijn eindigt op €22.320)
 ```
 
 ---
@@ -250,18 +262,18 @@ Verschil M36 = €21.207 in voordeel TalentFlow
 
 - AI-kosten jaar 2: €720 → €1.080 (+€360)
 - 3-jaars meerkost: ~€1.000
-- Impact op netto besparing: €21.207 → €20.207. **Conclusie: ROI blijft sterk.**
+- Impact op netto besparing: €7.527 → €6.527. **Conclusie: besparing blijft overeind, maar de marge is dunner — AI-kosten bewaken hoort bij het onderhoud.**
 
 ### 7.2 Wat als IT Proposal naar 20 recruiters groeit?
 
-- Manatal: kosten verdubbelen ruwweg (per-user-pricing) → ~€24.000/jaar = **€72.000 over 3 jaar**
+- Manatal (per-seat-pricing, $39/seat maandtarief + add-on): 20 × $39 + $50 = $830/maand ≈ €764/maand → **~€27.500 over 3 jaar**
 - TalentFlow: kosten stijgen marginaal (meer e-mail volume + iets meer AI). Conservatief +€500/jaar = €1.500 extra over 3 jaar
-- **Netto besparing zou groeien naar ~€55.000.** Dit is het bull-case.
+- **Netto besparing groeit dan naar ~€11.200 over 3 jaar** (€27.500 − €14.793 − €1.500). Per-seat-pricing bij Manatal maakt groei daar lineair duurder; bij TalentFlow nagenoeg gratis. Dit is het bull-case.
 
 ### 7.3 Wat als migratie naar nieuwe stack na 3 jaar nodig is?
 
 - Aanname herinvestering: €15.000–€25.000 voor major upgrade
-- Zelfs in worst-case (€25.000 in jaar 4): cumulatief over 4 jaar nog steeds goedkoper dan Manatal (Manatal jaar 1–4 = €48.000)
+- In worst-case (€25.000 in jaar 4) verdwijnt de cashbesparing over 4 jaar tegen het huidige seat-aantal (Manatal jaar 1–4 = ~€29.800). De rechtvaardiging zit dan in de strategische waarde (eigen product, commerciële uitrol), niet in pure kostenbesparing — eerlijk benoemen in het eindgesprek.
 
 ### 7.4 Wat als bus-factor 1 ontspoort?
 
@@ -288,10 +300,11 @@ Dit is het zwaarste niet-financiële risico. Mitigatie via:
 
 ### 8.1 De cijfers
 
-- **TalentFlow elimineert ~91% van de operationele Manatal-kosten** (€32.607 besparing over 3 jaar op rauw kostenniveau).
-- **Inclusief realistisch post-stage onderhoud bedraagt de netto besparing €21.207 over 3 jaar** — ongeveer **€589/maand**.
+- **TalentFlow elimineert ~85% van de operationele Manatal-kosten** (€18.927 besparing over 3 jaar op rauw kostenniveau; gebaseerd op de werkelijke factuur van $674/maand voor 16 seats).
+- **Inclusief realistisch post-stage onderhoud bedraagt de netto besparing €7.527 over 3 jaar** — ongeveer **€209/maand (~34% TCO-reductie)**.
 - **Break-even ligt feitelijk op dag 1** na go-live, omdat de stage-investering geen cashout vergt voor IT Proposal.
-- ROI over 3 jaar: 6,3× (€21.207 netto besparing op €3.393 + €8.400 + €3.000 = €14.793 totale TCO TalentFlow).
+- De onderhoudsaanname (€280/maand extern) is de dominante post; elke verlaging daarvan (design-partner-arrangement, lagere werkelijke behoefte) vloeit 1-op-1 naar de besparing. Bij groei naar 20 seats stijgt de besparing naar ~€11.200 (per-seat-pricing raakt Manatal, niet TalentFlow).
+- De grootste waarde zit naast de besparing in de **strategische optionaliteit**: een eigen, commercieel uitrolbaar product i.p.v. een kostenpost.
 
 ### 8.2 Wat de cijfers *niet* meten
 

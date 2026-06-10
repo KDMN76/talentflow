@@ -23,6 +23,13 @@ import {
   Brain,
   Scale,
   ShieldCheck,
+  Palette,
+  AtSign,
+  Bell,
+  Calculator,
+  CalendarClock,
+  Phone,
+  MessageSquare,
 } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -53,6 +60,98 @@ import {
   WEBHOOK_EVENTS,
 } from "@/hooks/useWebhooks";
 import { useCurrentUser, useTenantUsers } from "@/hooks/useUsers";
+
+// V7: alle settings-subpagina's op één plek vindbaar.
+const SETTINGS_SUBPAGES = [
+  {
+    href: "/settings/security",
+    icon: ShieldCheck,
+    iconBg: "bg-red-100 dark:bg-red-950/40",
+    iconColor: "text-red-600 dark:text-red-400",
+    title: "Security & toegang",
+    description: "SSO/SAML, 2FA, rollen & rechten, IP-allowlist en wachtwoord-beleid.",
+  },
+  {
+    href: "/settings/branding",
+    icon: Palette,
+    iconBg: "bg-pink-100 dark:bg-pink-950/40",
+    iconColor: "text-pink-600 dark:text-pink-400",
+    title: "Branding",
+    description: "Logo en kleuren van je werkomgeving (white-label).",
+  },
+  {
+    href: "/settings/custom-fields",
+    icon: Settings2,
+    iconBg: "bg-indigo-100 dark:bg-indigo-950/40",
+    iconColor: "text-indigo-600 dark:text-indigo-400",
+    title: "Custom velden",
+    description: "Definieer extra velden voor kandidaten, vacatures en sollicitaties.",
+  },
+  {
+    href: "/settings/integrations",
+    icon: AtSign,
+    iconBg: "bg-sky-100 dark:bg-sky-950/40",
+    iconColor: "text-sky-600 dark:text-sky-400",
+    title: "E-mail-integraties",
+    description: "Koppel Gmail of Outlook voor verzenden en synchroniseren vanuit je eigen mailbox.",
+  },
+  {
+    href: "/settings/notifications",
+    icon: Bell,
+    iconBg: "bg-amber-100 dark:bg-amber-950/40",
+    iconColor: "text-amber-600 dark:text-amber-400",
+    title: "Notificaties",
+    description: "Push-meldingen, voorkeuren per gebeurtenis en stille uren.",
+  },
+  {
+    href: "/settings/talent-fit",
+    icon: Brain,
+    iconBg: "bg-purple-100 dark:bg-purple-950/40",
+    iconColor: "text-purple-600 dark:text-purple-400",
+    title: "Talent Fit Model",
+    description: "Status, metrics en hertraining van het per-bureau matching-model.",
+  },
+  {
+    href: "/settings/pay-transparency",
+    icon: Scale,
+    iconBg: "bg-emerald-100 dark:bg-emerald-950/40",
+    iconColor: "text-emerald-600 dark:text-emerald-400",
+    title: "Pay Transparency",
+    description: "EU 2023/970 — salarisbandbreedte, gender-pay-gap rapportage en compliance.",
+  },
+  {
+    href: "/settings/accounting",
+    icon: Calculator,
+    iconBg: "bg-teal-100 dark:bg-teal-950/40",
+    iconColor: "text-teal-600 dark:text-teal-400",
+    title: "Boekhouding",
+    description: "Koppel Exact Online, Twinfield of SnelStart voor factuur-synchronisatie.",
+  },
+  {
+    href: "/settings/availability",
+    icon: CalendarClock,
+    iconBg: "bg-cyan-100 dark:bg-cyan-950/40",
+    iconColor: "text-cyan-600 dark:text-cyan-400",
+    title: "Beschikbaarheid",
+    description: "Je werkweek en uitzonderingen voor interview-planning.",
+  },
+  {
+    href: "/settings/whatsapp",
+    icon: MessageSquare,
+    iconBg: "bg-green-100 dark:bg-green-950/40",
+    iconColor: "text-green-600 dark:text-green-400",
+    title: "WhatsApp",
+    description: "WhatsApp Business-koppeling, templates en opt-in-beheer.",
+  },
+  {
+    href: "/settings/voice",
+    icon: Phone,
+    iconBg: "bg-orange-100 dark:bg-orange-950/40",
+    iconColor: "text-orange-600 dark:text-orange-400",
+    title: "Voice",
+    description: "Twilio-belintegratie: bellen, opnames en transcripties.",
+  },
+] as const;
 
 const tenantSchema = z.object({
   company_name: z.string().min(2, "Bedrijfsnaam is verplicht"),
@@ -256,77 +355,32 @@ export default function SettingsPage() {
         description="Beheer je account en teaminstellingen"
       />
 
-      {/* Sub-page links */}
+      {/* Sub-page links — V7: alle settings-subpagina's vindbaar (was 4 van 13) */}
       <Card className="border-0 shadow-sm">
         <CardContent className="p-0 divide-y divide-border">
-          <Link
-            href="/settings/security"
-            className="flex items-center gap-3 px-5 py-4 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors group"
-          >
-            <div className="h-9 w-9 rounded-lg bg-red-100 dark:bg-red-950/40 flex items-center justify-center">
-              <ShieldCheck className="h-4 w-4 text-red-600 dark:text-red-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                Security & toegang
-              </p>
-              <p className="text-xs text-muted-foreground">
-                SSO/SAML, 2FA, rollen & rechten, IP-allowlist en wachtwoord-beleid.
-              </p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-zinc-300 group-hover:text-red-500 transition-colors" />
-          </Link>
-          <Link
-            href="/settings/custom-fields"
-            className="flex items-center gap-3 px-5 py-4 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors group"
-          >
-            <div className="h-9 w-9 rounded-lg bg-indigo-100 dark:bg-indigo-950/40 flex items-center justify-center">
-              <Settings2 className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                Custom velden
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Definieer extra velden voor kandidaten, vacatures en sollicitaties.
-              </p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-zinc-300 group-hover:text-indigo-500 transition-colors" />
-          </Link>
-          <Link
-            href="/settings/talent-fit"
-            className="flex items-center gap-3 px-5 py-4 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors group"
-          >
-            <div className="h-9 w-9 rounded-lg bg-purple-100 dark:bg-purple-950/40 flex items-center justify-center">
-              <Brain className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                Talent Fit Model
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Status, metrics en hertraining van het per-bureau matching-model.
-              </p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-zinc-300 group-hover:text-purple-500 transition-colors" />
-          </Link>
-          <Link
-            href="/settings/pay-transparency"
-            className="flex items-center gap-3 px-5 py-4 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors group"
-          >
-            <div className="h-9 w-9 rounded-lg bg-emerald-100 dark:bg-emerald-950/40 flex items-center justify-center">
-              <Scale className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                Pay Transparency
-              </p>
-              <p className="text-xs text-muted-foreground">
-                EU 2023/970 — salarisbandbreedte, gender-pay-gap rapportage en compliance-instellingen.
-              </p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-zinc-300 group-hover:text-emerald-500 transition-colors" />
-          </Link>
+          {SETTINGS_SUBPAGES.map((page) => {
+            const Icon = page.icon;
+            return (
+              <Link
+                key={page.href}
+                href={page.href}
+                className="flex items-center gap-3 px-5 py-4 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors group"
+              >
+                <div
+                  className={`h-9 w-9 rounded-lg flex items-center justify-center ${page.iconBg}`}
+                >
+                  <Icon className={`h-4 w-4 ${page.iconColor}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                    {page.title}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{page.description}</p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-zinc-300 group-hover:text-indigo-500 transition-colors" />
+              </Link>
+            );
+          })}
         </CardContent>
       </Card>
 
