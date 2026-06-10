@@ -386,6 +386,21 @@ export async function getEntityAuditHistoryHandler(
   }
 }
 
+export async function listAuditActionsHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const data = await auditService.listDistinctAuditActions(
+      req.user!.tenantId
+    );
+    res.json({ data });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function exportAuditTrailHandler(
   req: Request,
   res: Response,

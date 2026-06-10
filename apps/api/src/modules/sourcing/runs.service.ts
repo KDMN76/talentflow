@@ -365,6 +365,7 @@ export async function cancelRun(
 
 export interface ListFindingsFilters {
   run_id?: string;
+  brief_id?: string;
   status?: AgentFindingStatus;
   cursor?: string | null;
   limit?: number;
@@ -381,6 +382,10 @@ export async function listFindings(
     if (filters.run_id) {
       params.push(filters.run_id);
       wheres.push(`run_id = $${params.length}`);
+    }
+    if (filters.brief_id) {
+      params.push(filters.brief_id);
+      wheres.push(`brief_id = $${params.length}`);
     }
     if (filters.status) {
       params.push(filters.status);
@@ -625,6 +630,27 @@ export async function listActionsForRun(
         ORDER BY created_at ASC
         LIMIT $3`,
       [tenantId, runId, cap]
+    );
+    return rows.map(toActionRow);
+  });
+}
+
+/**
+ * Tenant-brede audit-trail (alle runs). Meest recente acties eerst —
+ * dit voedt de cross-run "Audit trail"-tab in de UI.
+ */
+export async function listActions(
+  tenantId: string,
+  limit = 500
+): Promise<AgentAction[]> {
+  const cap = Math.max(1, Math.min(1000, limit));
+  return withTenant(tenantId, async (client) => {
+    const { rows } = await client.query(
+      `SELECT * FROM agent_actions
+        WHERE tenant_id = $1
+        ORDER BY created_at DESC, id DESC
+        LIMIT $2`,
+      [tenantId, cap]
     );
     return rows.map(toActionRow);
   });

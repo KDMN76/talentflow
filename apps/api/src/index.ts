@@ -142,6 +142,21 @@ import './queue/workers/whatsappHealthCheck.worker';
 import './queue/workers/voiceCallTranscribe.worker';
 import './queue/workers/inboxProjector.worker';
 
+// Dev-vangrail: de 35 queue-workers maken eigen ioredis-connecties zonder
+// error-handlers. Eén Redis-storing (bv. Upstash dev-quota vol) werd dan een
+// fataal uncaught 'error'-event of unhandled rejection en haalde de hele API
+// neer. In dev loggen we en blijven we draaien (queues degraderen); productie
+// behoudt fail-fast zodat echte bugs daar niet stilletjes doorsudderen.
+if (process.env.NODE_ENV !== 'production') {
+  process.on('uncaughtException', (err) => {
+    console.error('[dev-guard] uncaughtException (proces blijft draaien):', err.message);
+  });
+  process.on('unhandledRejection', (reason) => {
+    const msg = reason instanceof Error ? reason.message : String(reason);
+    console.error('[dev-guard] unhandledRejection (proces blijft draaien):', msg);
+  });
+}
+
 const app = express();
 const PORT = parseInt(process.env.PORT ?? '4000', 10);
 

@@ -17,6 +17,7 @@ router.post('/forgot-password', authRateLimit, authController.forgotPassword);
 router.post('/2fa/verify', authRateLimit, twoFa.verify);
 
 // Authenticated 2FA-management
+router.get('/2fa/status', requireAuth, twoFa.status);
 router.post('/2fa/setup', requireAuth, twoFa.setup);
 router.post('/2fa/verify-setup', requireAuth, twoFa.verifySetup);
 router.post('/2fa/disable', requireAuth, twoFa.disable);

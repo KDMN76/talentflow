@@ -468,7 +468,10 @@ describe('Audit timeline', () => {
       .get(`/api/sourcing/actions/${RUN_ID}`)
       .set('Authorization', `Bearer ${token(TENANT_A)}`);
     expect(res.status).toBe(200);
-    expect(Array.isArray(res.body.data)).toBe(true);
+    // Frontend-contract (useAgentActions): { items: [...] } — de oude
+    // `data`-assertion codificeerde precies de shape-bug die de
+    // run-detailpagina een lege lijst gaf.
+    expect(Array.isArray(res.body.items)).toBe(true);
   });
 });
 

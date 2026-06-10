@@ -13,7 +13,7 @@
  */
 
 import { Router } from 'express';
-import { requireAuth } from '../../middleware/auth';
+import { requireAuth, requireRole } from '../../middleware/auth';
 import { tenantMiddleware } from '../../middleware/tenant';
 import { requirePermission } from '../../middleware/permissions';
 import * as ctrl from './roles.controller';
@@ -64,15 +64,28 @@ adminRolesRouter.delete(
   ctrl.unassignRoleHandler
 );
 
-// Security settings (IP-allowlist, password policy, ...)
+// Security settings (IP-allowlist, password policy, ...) — admin/owner-only.
+// Bewust requireRole ipv requirePermission('users','admin'): de system-rol
+// 'admin' heeft géén users:admin (zie adminMatrix in lib/permissions.ts),
+// waardoor tenant-admins anders 403 kregen op hun eigen security-settings.
+adminRolesRouter.get(
+  '/security/current-ip',
+  requireRole('admin', 'owner'),
+  ctrl.currentIpHandler
+);
+adminRolesRouter.post(
+  '/security/ip-verify',
+  requireRole('admin', 'owner'),
+  ctrl.verifyIpHandler
+);
 adminRolesRouter.get(
   '/security',
-  requirePermission('users', 'admin'),
+  requireRole('admin', 'owner'),
   ctrl.getSecuritySettingsHandler
 );
 adminRolesRouter.patch(
   '/security',
-  requirePermission('users', 'admin'),
+  requireRole('admin', 'owner'),
   ctrl.updateSecuritySettingsHandler
 );
 

@@ -8,6 +8,8 @@
  *   - POST /subscribe                           registreer push-sub
  *   - GET  /subscriptions                       lijst eigen subs
  *   - DELETE /subscriptions/:id                 deactiveer sub
+ *   - GET  /devices                             alias: subs als { devices: [...] }
+ *   - DELETE /devices/:id                       alias van /subscriptions/:id
  *
  *   - GET   /preferences                        lijst eigen preferences
  *   - PATCH /preferences                        upsert per (channel, event_type)
@@ -31,6 +33,11 @@ router.get('/vapid-public-key', ctrl.getVapidKey);
 router.post('/subscribe', ctrl.subscribe);
 router.get('/subscriptions', ctrl.listSubscriptions);
 router.delete('/subscriptions/:id', ctrl.deleteSubscription);
+
+// Device-aliases — zelfde service-laag, maar het shape dat de
+// settings/notifications-pagina verwacht ({ devices: [...] }).
+router.get('/devices', ctrl.listDevices);
+router.delete('/devices/:id', ctrl.deleteSubscription);
 
 router.get('/preferences', ctrl.getPreferences);
 router.patch('/preferences', ctrl.patchPreferences);

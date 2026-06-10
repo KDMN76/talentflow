@@ -328,6 +328,26 @@ export async function getEntityAuditHistory(
   });
 }
 
+/**
+ * Distinct action-waarden voor de filter-dropdown in de audit-trail UI.
+ * Gebruikt de tenant_action_created-index; alfabetisch zodat de dropdown
+ * stabiel sorteert.
+ */
+export async function listDistinctAuditActions(
+  tenantId: string
+): Promise<string[]> {
+  return withTenant(tenantId, async (client) => {
+    const { rows } = await client.query<{ action: string }>(
+      `SELECT DISTINCT action
+         FROM audit_events
+        WHERE tenant_id = $1
+        ORDER BY action ASC`,
+      [tenantId]
+    );
+    return rows.map((r) => r.action);
+  });
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Export
 // ─────────────────────────────────────────────────────────────────────────────

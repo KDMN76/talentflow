@@ -581,6 +581,60 @@ export async function rotateScimToken(
 }
 
 /**
+ * Read-only status van de SCIM-koppeling voor de admin-UI
+ * (GET /api/admin/sso/scim). We slaan alleen een bcrypt-hash op, dus de
+ * token-prefix is hier niet reproduceerbaar — de controller geeft daarom
+ * `token_prefix: null` terug op de GET (alleen bij genereren zichtbaar).
+ *
+ * `last_used_at` heeft geen eigen kolom; de meest recente entry in
+ * scim_provisioning_log is de beste beschikbare proxy (elke geslaagde of
+ * gefaalde SCIM-operatie schrijft daar een rij).
+ */
+export interface ScimTokenInfo {
+  tenant_id: string;
+  scim_enabled: boolean;
+  has_token: boolean;
+  created_at: Date | null;
+  last_used_at: Date | null;
+}
+
+export async function getScimTokenInfo(
+  tenantId: string
+): Promise<ScimTokenInfo> {
+  return withTenant(tenantId, async (client: PoolClient) => {
+    const { rows } = await client.query<{
+      tenant_id: string;
+      scim_enabled: boolean;
+      has_token: boolean;
+      created_at: Date;
+    }>(
+      `SELECT tenant_id, scim_enabled,
+              (scim_token_hash IS NOT NULL) AS has_token,
+              created_at
+         FROM tenant_sso_config
+        WHERE tenant_id = $1`,
+      [tenantId]
+    );
+    const cfg = rows[0] ?? null;
+
+    const { rows: logRows } = await client.query<{ last_used_at: Date | null }>(
+      `SELECT max(created_at) AS last_used_at
+         FROM scim_provisioning_log
+        WHERE tenant_id = $1`,
+      [tenantId]
+    );
+
+    return {
+      tenant_id: tenantId,
+      scim_enabled: cfg?.scim_enabled ?? false,
+      has_token: cfg?.has_token ?? false,
+      created_at: cfg?.created_at ?? null,
+      last_used_at: logRows[0]?.last_used_at ?? null,
+    };
+  });
+}
+
+/**
  * Valideer een binnenkomend SCIM-bearer-token tegen de hash. Sequential
  * scan over alle tenants is acceptabel: SCIM-traffic is laag-volume en
  * de bcrypt-compare is constant-time per row.

@@ -31,6 +31,7 @@ import {
   rejectFinding,
   bulkApprove,
   bulkReject,
+  listActions,
   listActionsForRun,
   listMemory,
   upsertMemory,
@@ -72,6 +73,14 @@ const listFindingsQuery = z.object({
   status: z.enum(['pending_review', 'approved', 'rejected', 'contacted', 'dismissed']).optional(),
   cursor: z.string().uuid().optional(),
   limit: z.coerce.number().int().min(1).max(200).optional(),
+});
+
+const listAllFindingsQuery = listFindingsQuery.extend({
+  brief_id: z.string().uuid().optional(),
+});
+
+const listAllActionsQuery = z.object({
+  limit: z.coerce.number().int().min(1).max(1000).optional(),
 });
 
 const approveBody = z.object({
@@ -233,13 +242,30 @@ router.get('/runs/:runId/findings', async (req, res, next) => {
       cursor: q.cursor ?? null,
       limit: q.limit,
     });
-    res.json(result);
+    // Frontend-contract (useAgentFindings): { items: [...] } — zelfde shape
+    // als de cross-run variant hieronder; de service spreekt intern van `data`.
+    res.json({ items: result.data, nextCursor: result.nextCursor });
   } catch (err) { next(err); }
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Findings (cross-run)
 // ─────────────────────────────────────────────────────────────────────────────
+
+// Cross-run inbox: alle findings van de tenant, optioneel gefilterd.
+// Frontend-contract (useAgentFindings zonder runId): { items: [...] }.
+router.get('/findings', async (req, res, next) => {
+  try {
+    const q = listAllFindingsQuery.parse(req.query);
+    const result = await listFindings(req.user!.tenantId, {
+      status: q.status,
+      brief_id: q.brief_id,
+      cursor: q.cursor ?? null,
+      limit: q.limit,
+    });
+    res.json({ items: result.data, nextCursor: result.nextCursor });
+  } catch (err) { next(err); }
+});
 
 router.post('/findings/:id/approve', async (req, res, next) => {
   try {
@@ -336,11 +362,22 @@ router.delete('/memory/:id', async (req, res, next) => {
 // Audit timeline (read-only)
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Tenant-brede audit-trail (alle runs). MOET vóór '/actions/:runId' staan.
+// Frontend-contract (useAgentActions zonder runId): { items: [...] }.
+router.get('/actions', async (req, res, next) => {
+  try {
+    const q = listAllActionsQuery.parse(req.query);
+    const items = await listActions(req.user!.tenantId, q.limit ?? 500);
+    res.json({ items });
+  } catch (err) { next(err); }
+});
+
 router.get('/actions/:runId', async (req, res, next) => {
   try {
     const { runId } = runIdParam.parse(req.params);
     const data = await listActionsForRun(req.user!.tenantId, runId, 500);
-    res.json({ data });
+    // Frontend-contract (useAgentActions): { items: [...] }.
+    res.json({ items: data });
   } catch (err) { next(err); }
 });
 

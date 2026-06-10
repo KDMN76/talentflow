@@ -63,6 +63,13 @@ router.get(
   requirePermission('audit', 'read'),
   complianceController.listAuditEventsHandler
 );
+// Distinct action-waarden voor de filter-dropdown. Statisch pad — bewust
+// vóór '/audit-events/entity/:type/:id' geregistreerd.
+router.get(
+  '/audit-events/actions',
+  requirePermission('audit', 'read'),
+  complianceController.listAuditActionsHandler
+);
 router.get(
   '/audit-events/entity/:type/:id',
   requirePermission('audit', 'read'),

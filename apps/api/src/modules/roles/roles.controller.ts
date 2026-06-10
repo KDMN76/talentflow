@@ -9,6 +9,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { auditCtxFromReq } from '../../lib/audit';
+import { getClientIp } from '../../middleware/ipAllowlist';
 import { getCurrentPermissionMatrix } from '../../middleware/permissions';
 import * as service from './customRoles.service';
 import {
@@ -59,15 +60,41 @@ const assignBodySchema = z.object({
     .optional(),
 });
 
+// Frontend-contract (apps/web/lib/types/security.ts → SecuritySettings).
+// ip_allowlist is FULL REPLACEMENT en accepteert zowel plain CIDR-strings
+// (zoals useSecurity.ts ze PATCHt) als IpAllowlistEntry-objecten.
+const cidrStringSchema = z
+  .string()
+  .min(3)
+  .max(64)
+  .regex(/^[0-9a-fA-F:./]+$/, 'Ongeldig IP/CIDR-formaat');
+
+const ipAllowlistEntrySchema = z.union([
+  cidrStringSchema,
+  z.object({
+    cidr: cidrStringSchema,
+    label: z.string().max(120).optional(),
+  }),
+]);
+
+const passwordPolicyPatchSchema = z.object({
+  min_length: z.number().int().min(8).max(128).optional(),
+  require_uppercase: z.boolean().optional(),
+  require_lowercase: z.boolean().optional(),
+  require_number: z.boolean().optional(),
+  require_symbol: z.boolean().optional(),
+  rotation_days: z.number().int().min(1).max(3650).nullable().optional(),
+});
+
 const securitySettingsPatchSchema = z.object({
-  ip_allowlist: z.array(z.string().min(3).max(64)).max(200).optional(),
-  ip_allowlist_enforced: z.boolean().optional(),
-  session_timeout_minutes: z.number().int().min(5).max(60 * 24 * 30).optional(),
-  password_min_length: z.number().int().min(8).max(128).optional(),
-  password_require_special: z.boolean().optional(),
-  password_max_age_days: z.number().int().min(1).max(3650).nullable().optional(),
-  failed_login_lockout_threshold: z.number().int().min(1).max(50).optional(),
-  failed_login_lockout_minutes: z.number().int().min(1).max(60 * 24).optional(),
+  ip_allowlist: z.array(ipAllowlistEntrySchema).max(200).optional(),
+  ip_allowlist_enabled: z.boolean().optional(),
+  session_idle_timeout_minutes: z.number().int().min(5).max(60 * 24 * 30).optional(),
+  password_policy: passwordPolicyPatchSchema.optional(),
+});
+
+const ipVerifyBodySchema = z.object({
+  ip: cidrStringSchema,
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -217,8 +244,9 @@ export async function getSecuritySettingsHandler(
   next: NextFunction
 ): Promise<void> {
   try {
-    const data = await service.getSecuritySettings(req.user!.tenantId);
-    res.json({ data });
+    // Frontend verwacht het SecuritySettings-object direct (geen {data}-wrap).
+    const data = await service.getSecuritySettingsView(req.user!.tenantId);
+    res.json(data);
   } catch (err) {
     next(err);
   }
@@ -231,13 +259,65 @@ export async function updateSecuritySettingsHandler(
 ): Promise<void> {
   try {
     const input = securitySettingsPatchSchema.parse(req.body);
-    const data = await service.updateSecuritySettings(
+    const patch: service.UpdateSecuritySettingsViewInput = {};
+    if (input.ip_allowlist !== undefined) {
+      patch.ip_allowlist = input.ip_allowlist.map((e) =>
+        typeof e === 'string'
+          ? { cidr: e }
+          : { cidr: e.cidr, ...(e.label !== undefined ? { label: e.label } : {}) }
+      );
+    }
+    if (input.ip_allowlist_enabled !== undefined) {
+      patch.ip_allowlist_enabled = input.ip_allowlist_enabled;
+    }
+    if (input.session_idle_timeout_minutes !== undefined) {
+      patch.session_idle_timeout_minutes = input.session_idle_timeout_minutes;
+    }
+    if (input.password_policy !== undefined) {
+      patch.password_policy = input.password_policy;
+    }
+    const data = await service.updateSecuritySettingsView(
       req.user!.tenantId,
       req.user!.userId,
-      input,
+      patch,
       auditCtxFromReq(req)
     );
-    res.json({ data });
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/admin/security/ip-verify — check een opgegeven IP tegen de
+ * opgeslagen allowlist. Hergebruikt de CIDR-matchlogica van de
+ * enforceIpAllowlist-middleware.
+ */
+export async function verifyIpHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { ip } = ipVerifyBodySchema.parse(req.body);
+    const data = await service.verifyIpAgainstAllowlist(req.user!.tenantId, ip);
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * GET /api/admin/security/current-ip — het IP waarmee de admin nu verbonden
+ * is (trust proxy staat aan, dus req.ip is X-Forwarded-For-aware).
+ */
+export async function currentIpHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    res.json({ ip: getClientIp(req) ?? '' });
   } catch (err) {
     next(err);
   }

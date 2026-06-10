@@ -23,6 +23,7 @@
 import type { PoolClient } from 'pg';
 import { withTenant } from '../../db/pool';
 import { AppError } from '../../middleware/errorHandler';
+import { ipInCidr, normaliseIp } from '../../middleware/ipAllowlist';
 import { logAudit, type AuditContext } from '../../lib/audit';
 import {
   SYSTEM_ROLES,
@@ -699,6 +700,54 @@ export interface UpdateSecuritySettingsInput {
   failed_login_lockout_minutes?: number;
 }
 
+/**
+ * Pure kolom-update op tenant_security_settings (geen audit, geen lazy-init).
+ * Returnt NULL als de patch geen velden bevat — caller beslist wat dan.
+ */
+async function applySecuritySettingsPatch(
+  client: PoolClient,
+  tenantId: string,
+  patch: UpdateSecuritySettingsInput
+): Promise<SecuritySettings | null> {
+  const fields: string[] = [];
+  const values: unknown[] = [];
+  let idx = 1;
+  const set = <K extends keyof UpdateSecuritySettingsInput>(
+    column: string,
+    val: UpdateSecuritySettingsInput[K]
+  ): void => {
+    fields.push(`${column} = $${idx++}`);
+    values.push(val);
+  };
+  if (patch.ip_allowlist !== undefined) set('ip_allowlist', patch.ip_allowlist);
+  if (patch.ip_allowlist_enforced !== undefined)
+    set('ip_allowlist_enforced', patch.ip_allowlist_enforced);
+  if (patch.session_timeout_minutes !== undefined)
+    set('session_timeout_minutes', patch.session_timeout_minutes);
+  if (patch.password_min_length !== undefined)
+    set('password_min_length', patch.password_min_length);
+  if (patch.password_require_special !== undefined)
+    set('password_require_special', patch.password_require_special);
+  if (patch.password_max_age_days !== undefined)
+    set('password_max_age_days', patch.password_max_age_days);
+  if (patch.failed_login_lockout_threshold !== undefined)
+    set('failed_login_lockout_threshold', patch.failed_login_lockout_threshold);
+  if (patch.failed_login_lockout_minutes !== undefined)
+    set('failed_login_lockout_minutes', patch.failed_login_lockout_minutes);
+
+  if (fields.length === 0) return null;
+  values.push(tenantId);
+
+  const { rows } = await client.query<SecuritySettings>(
+    `UPDATE tenant_security_settings
+        SET ${fields.join(', ')}
+      WHERE tenant_id = $${idx}
+      RETURNING *`,
+    values
+  );
+  return rows[0];
+}
+
 export async function updateSecuritySettings(
   tenantId: string,
   userId: string | null,
@@ -709,43 +758,8 @@ export async function updateSecuritySettings(
     // Lazy-init de rij eerst
     const before = await getSecuritySettings(tenantId, client);
 
-    const fields: string[] = [];
-    const values: unknown[] = [];
-    let idx = 1;
-    const set = <K extends keyof UpdateSecuritySettingsInput>(
-      column: string,
-      val: UpdateSecuritySettingsInput[K]
-    ): void => {
-      fields.push(`${column} = $${idx++}`);
-      values.push(val);
-    };
-    if (patch.ip_allowlist !== undefined) set('ip_allowlist', patch.ip_allowlist);
-    if (patch.ip_allowlist_enforced !== undefined)
-      set('ip_allowlist_enforced', patch.ip_allowlist_enforced);
-    if (patch.session_timeout_minutes !== undefined)
-      set('session_timeout_minutes', patch.session_timeout_minutes);
-    if (patch.password_min_length !== undefined)
-      set('password_min_length', patch.password_min_length);
-    if (patch.password_require_special !== undefined)
-      set('password_require_special', patch.password_require_special);
-    if (patch.password_max_age_days !== undefined)
-      set('password_max_age_days', patch.password_max_age_days);
-    if (patch.failed_login_lockout_threshold !== undefined)
-      set('failed_login_lockout_threshold', patch.failed_login_lockout_threshold);
-    if (patch.failed_login_lockout_minutes !== undefined)
-      set('failed_login_lockout_minutes', patch.failed_login_lockout_minutes);
-
-    if (fields.length === 0) return before;
-    values.push(tenantId);
-
-    const { rows } = await client.query<SecuritySettings>(
-      `UPDATE tenant_security_settings
-          SET ${fields.join(', ')}
-        WHERE tenant_id = $${idx}
-        RETURNING *`,
-      values
-    );
-    const updated = rows[0];
+    const updated = await applySecuritySettingsPatch(client, tenantId, patch);
+    if (updated === null) return before;
 
     await logAudit(
       client,
@@ -763,4 +777,300 @@ export async function updateSecuritySettings(
 
     return updated;
   });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Security settings — frontend-contract view (apps/web/lib/types/security.ts)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// De frontend (useSecurity.ts) verwacht een ander shape dan de raw
+// tenant_security_settings-rij. Mapping:
+//
+//   ip_allowlist_enabled          ↔ ip_allowlist_enforced (kolom)
+//   ip_allowlist[].cidr           ↔ ip_allowlist TEXT[] (kolom — bron voor
+//                                   de enforceIpAllowlist-middleware)
+//   ip_allowlist[].label/added_at ↔ tenants.settings->security->ip_allowlist_meta
+//   password_policy.min_length    ↔ password_min_length (kolom)
+//   password_policy.require_symbol↔ password_require_special (kolom)
+//   password_policy.rotation_days ↔ password_max_age_days (kolom)
+//   password_policy.require_upper/lower/number
+//                                 ↔ tenants.settings->security->password_policy
+//   session_idle_timeout_minutes  ↔ session_timeout_minutes (kolom)
+//   two_factor_*                  ↔ tenant_2fa_policy (read-only hier — beheer
+//                                   loopt via /api/auth/2fa/policy)
+//
+// Géén nieuwe migratie: kolommen waar ze bestaan, tenants.settings JSONB voor
+// de extra's.
+
+export interface IpAllowlistEntryView {
+  cidr: string;
+  label?: string;
+  added_at: string;
+}
+
+export interface PasswordPolicyView {
+  min_length: number;
+  require_uppercase: boolean;
+  require_lowercase: boolean;
+  require_number: boolean;
+  require_symbol: boolean;
+  rotation_days: number | null;
+}
+
+export interface SecuritySettingsView {
+  tenant_id: string;
+  ip_allowlist_enabled: boolean;
+  ip_allowlist: IpAllowlistEntryView[];
+  two_factor_policy: 'all' | 'admins' | 'none';
+  two_factor_required_role_ids: string[];
+  two_factor_grace_period_days: number;
+  password_policy: PasswordPolicyView;
+  session_idle_timeout_minutes: number;
+  updated_at: string;
+}
+
+interface SecurityExtras {
+  ip_allowlist_meta?: Record<string, { label?: string; added_at?: string }>;
+  password_policy?: {
+    require_uppercase?: boolean;
+    require_lowercase?: boolean;
+    require_number?: boolean;
+  };
+  [key: string]: unknown; // onbekende subkeys van andere features bewaren
+}
+
+interface TwoFaPolicyRow {
+  required_for_roles: string[];
+  required_for_all: boolean;
+  grace_period_days: number;
+}
+
+async function readSecurityExtras(
+  client: PoolClient,
+  tenantId: string
+): Promise<SecurityExtras> {
+  const { rows } = await client.query<{ settings: Record<string, unknown> | null }>(
+    `SELECT settings FROM tenants WHERE id = $1 LIMIT 1`,
+    [tenantId]
+  );
+  const settings = rows[0]?.settings ?? {};
+  const security = settings['security'];
+  return (security && typeof security === 'object' ? security : {}) as SecurityExtras;
+}
+
+async function writeSecurityExtras(
+  client: PoolClient,
+  tenantId: string,
+  extras: SecurityExtras
+): Promise<void> {
+  await client.query(
+    `UPDATE tenants
+        SET settings = jsonb_set(COALESCE(settings, '{}'::jsonb), '{security}', $2::jsonb, true)
+      WHERE id = $1`,
+    [tenantId, JSON.stringify(extras)]
+  );
+}
+
+async function readTwoFaPolicy(
+  client: PoolClient,
+  tenantId: string
+): Promise<TwoFaPolicyRow | null> {
+  const { rows } = await client.query<TwoFaPolicyRow>(
+    `SELECT required_for_roles, required_for_all, grace_period_days
+       FROM tenant_2fa_policy
+      WHERE tenant_id = $1 LIMIT 1`,
+    [tenantId]
+  );
+  return rows[0] ?? null;
+}
+
+function buildSecuritySettingsView(
+  row: SecuritySettings,
+  extras: SecurityExtras,
+  twoFa: TwoFaPolicyRow | null
+): SecuritySettingsView {
+  const meta = extras.ip_allowlist_meta ?? {};
+  const pp = extras.password_policy ?? {};
+  return {
+    tenant_id: row.tenant_id,
+    ip_allowlist_enabled: row.ip_allowlist_enforced,
+    ip_allowlist: (row.ip_allowlist ?? []).map((cidr) => {
+      const m = meta[cidr];
+      return {
+        cidr,
+        ...(m?.label ? { label: m.label } : {}),
+        added_at: m?.added_at ?? row.updated_at,
+      };
+    }),
+    two_factor_policy: twoFa?.required_for_all
+      ? 'all'
+      : (twoFa?.required_for_roles?.length ?? 0) > 0
+        ? 'admins'
+        : 'none',
+    two_factor_required_role_ids: twoFa?.required_for_roles ?? [],
+    two_factor_grace_period_days: twoFa?.grace_period_days ?? 7,
+    password_policy: {
+      min_length: row.password_min_length,
+      require_uppercase: pp.require_uppercase ?? true,
+      require_lowercase: pp.require_lowercase ?? true,
+      require_number: pp.require_number ?? true,
+      require_symbol: row.password_require_special,
+      rotation_days: row.password_max_age_days,
+    },
+    session_idle_timeout_minutes: row.session_timeout_minutes,
+    updated_at: row.updated_at,
+  };
+}
+
+export async function getSecuritySettingsView(
+  tenantId: string
+): Promise<SecuritySettingsView> {
+  return withTenant(tenantId, async (client) => {
+    const row = await getSecuritySettings(tenantId, client); // lazy-init
+    const extras = await readSecurityExtras(client, tenantId);
+    const twoFa = await readTwoFaPolicy(client, tenantId);
+    return buildSecuritySettingsView(row, extras, twoFa);
+  });
+}
+
+export interface UpdateSecuritySettingsViewInput {
+  /** FULL REPLACEMENT van de allowlist (zie useSecurity.ts). */
+  ip_allowlist?: Array<{ cidr: string; label?: string }>;
+  ip_allowlist_enabled?: boolean;
+  session_idle_timeout_minutes?: number;
+  password_policy?: Partial<PasswordPolicyView>;
+}
+
+export async function updateSecuritySettingsView(
+  tenantId: string,
+  userId: string | null,
+  patch: UpdateSecuritySettingsViewInput,
+  ctx: AuditContext = {}
+): Promise<SecuritySettingsView> {
+  return withTenant(tenantId, async (client) => {
+    const beforeRow = await getSecuritySettings(tenantId, client); // lazy-init
+    const extrasBefore = await readSecurityExtras(client, tenantId);
+    const twoFa = await readTwoFaPolicy(client, tenantId);
+    const beforeView = buildSecuritySettingsView(beforeRow, extrasBefore, twoFa);
+
+    // 1) Kolom-patch vertalen naar het raw schema
+    const colPatch: UpdateSecuritySettingsInput = {};
+    if (patch.ip_allowlist !== undefined) {
+      colPatch.ip_allowlist = patch.ip_allowlist.map((e) => e.cidr);
+    }
+    if (patch.ip_allowlist_enabled !== undefined) {
+      colPatch.ip_allowlist_enforced = patch.ip_allowlist_enabled;
+    }
+    if (patch.session_idle_timeout_minutes !== undefined) {
+      colPatch.session_timeout_minutes = patch.session_idle_timeout_minutes;
+    }
+    const pp = patch.password_policy;
+    if (pp?.min_length !== undefined) colPatch.password_min_length = pp.min_length;
+    if (pp?.require_symbol !== undefined) {
+      colPatch.password_require_special = pp.require_symbol;
+    }
+    if (pp?.rotation_days !== undefined) {
+      colPatch.password_max_age_days = pp.rotation_days;
+    }
+
+    const updatedRow =
+      (await applySecuritySettingsPatch(client, tenantId, colPatch)) ?? beforeRow;
+
+    // 2) Extra's in tenants.settings->security bijwerken
+    let extras: SecurityExtras = { ...extrasBefore };
+    let extrasChanged = false;
+
+    if (patch.ip_allowlist !== undefined) {
+      const now = new Date().toISOString();
+      const oldMeta = extrasBefore.ip_allowlist_meta ?? {};
+      const newMeta: Record<string, { label?: string; added_at: string }> = {};
+      for (const entry of patch.ip_allowlist) {
+        const prev = oldMeta[entry.cidr];
+        const label = entry.label ?? prev?.label;
+        newMeta[entry.cidr] = {
+          ...(label ? { label } : {}),
+          added_at: prev?.added_at ?? now,
+        };
+      }
+      extras = { ...extras, ip_allowlist_meta: newMeta };
+      extrasChanged = true;
+    }
+
+    if (
+      pp &&
+      (pp.require_uppercase !== undefined ||
+        pp.require_lowercase !== undefined ||
+        pp.require_number !== undefined)
+    ) {
+      extras = {
+        ...extras,
+        password_policy: {
+          ...extrasBefore.password_policy,
+          ...(pp.require_uppercase !== undefined
+            ? { require_uppercase: pp.require_uppercase }
+            : {}),
+          ...(pp.require_lowercase !== undefined
+            ? { require_lowercase: pp.require_lowercase }
+            : {}),
+          ...(pp.require_number !== undefined
+            ? { require_number: pp.require_number }
+            : {}),
+        },
+      };
+      extrasChanged = true;
+    }
+
+    if (extrasChanged) {
+      await writeSecurityExtras(client, tenantId, extras);
+    }
+
+    const afterView = buildSecuritySettingsView(updatedRow, extras, twoFa);
+
+    if (Object.keys(colPatch).length > 0 || extrasChanged) {
+      await logAudit(
+        client,
+        tenantId,
+        {
+          action: 'security_settings.updated',
+          entityType: 'security_settings',
+          entityId: tenantId,
+          before: beforeView,
+          after: afterView,
+          userId,
+        },
+        ctx
+      );
+    }
+
+    return afterView;
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// IP-verificatie — hergebruikt de CIDR-matchlogica van enforceIpAllowlist
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface IpVerificationResult {
+  ip: string;
+  matches: boolean;
+  matched_entry: IpAllowlistEntryView | null;
+}
+
+/**
+ * Check een opgegeven IP tegen de opgeslagen tenant-allowlist. Returnt het
+ * eerste matchende allowlist-entry (incl. metadata) of null.
+ */
+export async function verifyIpAgainstAllowlist(
+  tenantId: string,
+  ip: string
+): Promise<IpVerificationResult> {
+  const view = await getSecuritySettingsView(tenantId);
+  const normalised = normaliseIp(ip.trim());
+  const matched =
+    view.ip_allowlist.find((entry) => ipInCidr(normalised, entry.cidr)) ?? null;
+  return {
+    ip: normalised,
+    matches: matched !== null,
+    matched_entry: matched,
+  };
 }

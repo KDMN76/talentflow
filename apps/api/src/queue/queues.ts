@@ -19,6 +19,13 @@ const queueConnection = new IORedis(redisUrl, {
   enableReadyCheck: false,
 });
 
+queueConnection.on('error', (err) => {
+  // Zelfde principe als hierboven: een Redis-storing (bv. Upstash-quota vol)
+  // mag queues degraderen, maar NIET het hele API-proces neerhalen. Zonder
+  // deze handler is een 'error'-event op een EventEmitter fataal in Node.
+  console.error('[Redis:queues] Connection error:', err.message);
+});
+
 export const resumeParserQueue = new Queue('resume-parser', {
   connection: queueConnection,
   defaultJobOptions: {

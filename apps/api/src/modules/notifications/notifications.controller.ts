@@ -113,6 +113,35 @@ export async function listSubscriptions(
   }
 }
 
+/**
+ * Zelfde data als `listSubscriptions`, maar in het shape dat de
+ * settings/notifications-pagina verwacht: `{ devices: [...] }` incl.
+ * `user_agent` (tooltip "Mijn devices").
+ */
+export async function listDevices(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const subs = await listPushSubscriptions(
+      req.user!.tenantId,
+      req.user!.userId
+    );
+    res.json({
+      devices: subs.map((s) => ({
+        id: s.id,
+        device_label: s.device_label,
+        user_agent: s.user_agent,
+        last_seen_at: s.last_seen_at,
+        created_at: s.created_at,
+      })),
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function deleteSubscription(
   req: Request,
   res: Response,

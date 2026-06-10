@@ -25,6 +25,31 @@ const COOKIE_OPTIONS = {
   path: '/',
 };
 
+// ── /api/auth/2fa/status ────────────────────────────────────────────────────
+// Frontend-contract: TwoFactorStatus (apps/web/lib/types/security.ts).
+
+export async function status(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    if (!req.user) throw new AppError(401, 'UNAUTHORIZED', 'Authenticatie vereist');
+    const result = await twoFa.get2faStatus(
+      req.user.userId,
+      req.user.tenantId,
+      req.user.role
+    );
+    res.json({
+      enabled: result.enabled,
+      enrolled_at: result.enrolled_at ? result.enrolled_at.toISOString() : null,
+      backup_codes_remaining: result.backup_codes_remaining,
+      required_by_policy: result.required_by_policy,
+      policy_grace_period_ends_at: result.policy_grace_period_ends_at
+        ? result.policy_grace_period_ends_at.toISOString()
+        : null,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 // ── /api/auth/2fa/setup ─────────────────────────────────────────────────────
 
 export async function setup(req: Request, res: Response, next: NextFunction): Promise<void> {

@@ -361,6 +361,55 @@ export async function regenerateBackupCodes(
 }
 
 /**
+ * Volledige 2FA-status voor de ingelogde user — gebruikt door de
+ * settings-UI (GET /api/auth/2fa/status). Combineert de user-row met de
+ * tenant-policy zodat de frontend een "2FA verplicht"-banner kan tonen
+ * inclusief grace-period-deadline.
+ */
+export interface TwoFactorStatusResult {
+  enabled: boolean;
+  enrolled_at: Date | null;
+  backup_codes_remaining: number;
+  required_by_policy: boolean;
+  policy_grace_period_ends_at: Date | null;
+}
+
+export async function get2faStatus(
+  userId: string,
+  tenantId: string,
+  role: string
+): Promise<TwoFactorStatusResult> {
+  const row = await withTenant(tenantId, (client) =>
+    fetch2faRow(client, userId)
+  );
+  const enabled = !!row?.enabled;
+
+  const policy = await getTenant2faPolicy(tenantId);
+  const requiredByPolicy =
+    !!policy &&
+    (policy.required_for_all || policy.required_for_roles.includes(role));
+
+  // Grace-deadline alleen relevant zolang de user nog niet enrolled is.
+  let graceEndsAt: Date | null = null;
+  if (policy && requiredByPolicy && !enabled) {
+    graceEndsAt = new Date(
+      new Date(policy.created_at).getTime() +
+        policy.grace_period_days * 24 * 60 * 60 * 1000
+    );
+  }
+
+  return {
+    enabled,
+    enrolled_at: enabled ? row?.enabled_at ?? null : null,
+    // Alleen tellen als 2FA echt aanstaat — codes van een half-afgemaakte
+    // setup zijn nog niet bruikbaar.
+    backup_codes_remaining: enabled ? row?.backup_codes.length ?? 0 : 0,
+    required_by_policy: requiredByPolicy,
+    policy_grace_period_ends_at: graceEndsAt,
+  };
+}
+
+/**
  * Read of 2FA aanstaat voor een user (gebruikt door login-flow).
  */
 export async function is2faEnabled(userId: string): Promise<boolean> {

@@ -285,6 +285,83 @@ ssoAdminRouter.post(
   }
 );
 
+// ── SCIM-token management ───────────────────────────────────────────────────
+// Frontend-contract: ScimToken / ScimTokenGenerated
+// (apps/web/lib/types/security.ts + apps/web/hooks/useSecurity.ts).
+
+function buildScimEndpointUrl(): string {
+  const base = process.env.PUBLIC_API_URL ?? 'http://localhost:4000';
+  return `${base}/scim/v2`;
+}
+
+/**
+ * GET /api/admin/sso/scim
+ * Status van de SCIM-koppeling. De token-prefix wordt niet gepersisteerd
+ * (DB bewaart alleen een bcrypt-hash) — die is enkel zichtbaar in de
+ * response van POST /scim/token.
+ */
+ssoAdminRouter.get(
+  '/scim',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const tenantId = req.user!.tenantId;
+      const info = await samlService.getScimTokenInfo(tenantId);
+      res.json({
+        // tenant_sso_config heeft tenant_id als PK — geen eigen surrogate-id.
+        id: tenantId,
+        tenant_id: tenantId,
+        enabled: info.scim_enabled && info.has_token,
+        endpoint_url: buildScimEndpointUrl(),
+        token_prefix: null,
+        last_used_at: info.last_used_at
+          ? new Date(info.last_used_at).toISOString()
+          : null,
+        created_at: info.created_at
+          ? new Date(info.created_at).toISOString()
+          : null,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * POST /api/admin/sso/scim/token
+ * Genereer (of roteer) het SCIM-bearer-token. `full_token` wordt EENMALIG
+ * getoond; daarna is alleen nog de hash in de DB aanwezig.
+ */
+ssoAdminRouter.post(
+  '/scim/token',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const tenantId = req.user!.tenantId;
+      const userId = req.user!.userId;
+      const { token } = await samlService.rotateScimToken(
+        tenantId,
+        userId,
+        auditCtxFromReq(req)
+      );
+      const info = await samlService.getScimTokenInfo(tenantId);
+      res.json({
+        id: tenantId,
+        tenant_id: tenantId,
+        enabled: true,
+        endpoint_url: buildScimEndpointUrl(),
+        // "tflw_scim_" + eerste 6 hex-chars — genoeg om 'm te herkennen.
+        token_prefix: token.slice(0, 16),
+        last_used_at: null,
+        created_at: info.created_at
+          ? new Date(info.created_at).toISOString()
+          : new Date().toISOString(),
+        full_token: token,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 /**
  * POST /api/admin/sso/scim/rotate-token
  * Roteer SCIM-bearer-token. Plain-text wordt EENMALIG getoond.
