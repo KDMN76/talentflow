@@ -50,6 +50,10 @@ export async function getMyDashboard(
         [tenantId, userId]
       );
 
+      // HM-beslissingen leven in `activities` (hm_approved/hm_rejected/
+      // hm_deferred) — NIET in `scorecards`: die tabel heeft interviewer_id +
+      // recommendation (interview-evaluaties), geen reviewer_id/decision.
+      // De oude scorecards-queries gaven daardoor 42703 undefined_column → 500.
       const { rows: [pendingRow] } = await client.query(
         `SELECT COUNT(DISTINCT a.id) as count
          FROM applications a
@@ -60,47 +64,29 @@ export async function getMyDashboard(
            AND a.status = 'active'
            AND ps.name = ANY($3::text[])
            AND NOT EXISTS (
-             SELECT 1 FROM scorecards sc
-             WHERE sc.application_id = a.id
-               AND sc.reviewer_id = $2
-               AND sc.tenant_id = $1
+             SELECT 1 FROM activities act
+             WHERE act.entity_type = 'application'
+               AND act.entity_id = a.id
+               AND act.user_id = $2
+               AND act.tenant_id = $1
+               AND act.action IN ('hm_approved', 'hm_rejected')
            )`,
         [tenantId, userId, HM_REVIEW_STAGES]
       );
 
-      // Counts of today's HM decisions (logged in scorecards or activities)
-      let approvedToday = 0;
-      let rejectedToday = 0;
-      try {
-        const { rows: [todayRow] } = await client.query(
-          `SELECT
-             COUNT(*) FILTER (WHERE decision = 'approve') as approved,
-             COUNT(*) FILTER (WHERE decision = 'reject')  as rejected
-           FROM scorecards
-           WHERE tenant_id = $1
-             AND reviewer_id = $2
-             AND created_at >= date_trunc('day', now())`,
-          [tenantId, userId]
-        );
-        approvedToday = parseInt(todayRow.approved ?? '0', 10);
-        rejectedToday = parseInt(todayRow.rejected ?? '0', 10);
-      } catch (innerErr) {
-        if (!isMissingTableError(innerErr)) throw innerErr;
-        // scorecards table missing — fall back to activity log
-        const { rows: [actRow] } = await client.query(
-          `SELECT
-             COUNT(*) FILTER (WHERE action = 'hm_approved') as approved,
-             COUNT(*) FILTER (WHERE action = 'hm_rejected') as rejected
-           FROM activities
-           WHERE tenant_id = $1
-             AND user_id = $2
-             AND entity_type = 'application'
-             AND created_at >= date_trunc('day', now())`,
-          [tenantId, userId]
-        );
-        approvedToday = parseInt(actRow.approved ?? '0', 10);
-        rejectedToday = parseInt(actRow.rejected ?? '0', 10);
-      }
+      const { rows: [actRow] } = await client.query(
+        `SELECT
+           COUNT(*) FILTER (WHERE action = 'hm_approved') as approved,
+           COUNT(*) FILTER (WHERE action = 'hm_rejected') as rejected
+         FROM activities
+         WHERE tenant_id = $1
+           AND user_id = $2
+           AND entity_type = 'application'
+           AND created_at >= date_trunc('day', now())`,
+        [tenantId, userId]
+      );
+      const approvedToday = parseInt(actRow.approved ?? '0', 10);
+      const rejectedToday = parseInt(actRow.rejected ?? '0', 10);
 
       return {
         open_jobs: parseInt(openJobsRow.count, 10),
@@ -228,10 +214,12 @@ export async function getPendingReviews(
            AND j.deleted_at IS NULL
            AND c.deleted_at IS NULL
            AND NOT EXISTS (
-             SELECT 1 FROM scorecards sc
-             WHERE sc.application_id = a.id
-               AND sc.reviewer_id = $2
-               AND sc.tenant_id = $1
+             SELECT 1 FROM activities act
+             WHERE act.entity_type = 'application'
+               AND act.entity_id = a.id
+               AND act.user_id = $2
+               AND act.tenant_id = $1
+               AND act.action IN ('hm_approved', 'hm_rejected')
            )
          ORDER BY a.applied_at DESC
          LIMIT 20`,
@@ -339,17 +327,10 @@ export async function reviewApplication(
         );
       }
 
-      // 2. Log the review (scorecards if available, otherwise activities)
-      try {
-        await client.query(
-          `INSERT INTO scorecards (tenant_id, application_id, reviewer_id, decision, notes)
-           VALUES ($1, $2, $3, $4, $5)`,
-          [tenantId, applicationId, userId, decision, notes ?? null]
-        );
-      } catch (innerErr) {
-        if (!isMissingTableError(innerErr)) throw innerErr;
-        // scorecards table doesn't exist — skip; we still log the activity below
-      }
+      // 2. De beslissing wordt vastgelegd in de activities-log (stap 4).
+      // NIET in `scorecards` schrijven: die tabel is voor interview-evaluaties
+      // (interviewer_id/recommendation) en heeft geen decision-kolom — de
+      // eerdere INSERT gaf 42703 undefined_column → 500 bij elke review.
 
       // 3. Apply the decision
       let updated = app;
@@ -487,11 +468,15 @@ export async function getApplicationDetails(
         created_at: string;
       }> = [];
       try {
+        // Echte scorecards-kolommen: interviewer_id + recommendation
+        // (geen reviewer_id/decision — dat gaf 42703 → 500).
         const { rows: scRows } = await client.query(
-          `SELECT sc.reviewer_id, sc.decision, sc.notes, sc.created_at,
+          `SELECT sc.interviewer_id as reviewer_id,
+                  sc.recommendation as decision,
+                  sc.notes, sc.created_at,
                   u.name as reviewer_name
            FROM scorecards sc
-           LEFT JOIN users u ON u.id = sc.reviewer_id
+           LEFT JOIN users u ON u.id = sc.interviewer_id
            WHERE sc.application_id = $1 AND sc.tenant_id = $2
            ORDER BY sc.created_at DESC`,
           [applicationId, tenantId]

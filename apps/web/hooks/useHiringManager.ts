@@ -267,6 +267,12 @@ const mockHMStats: HMStats = {
 // Hooks
 // ----------------------------------------------------------------------------
 
+// Mock-fallbacks ALLEEN in expliciete mock-modus. Voorheen vielen alle hooks
+// bij élke fout stil terug op verzonnen cijfers — een demo toonde dan nepdata
+// alsof het echt was. Buiten mock-modus propageert de fout nu netjes naar de
+// error/empty-states van de UI.
+const MOCK_MODE = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
+
 export function useHMDashboard() {
   return useQuery({
     queryKey: ["hm", "dashboard"],
@@ -274,8 +280,9 @@ export function useHMDashboard() {
       try {
         const { data } = await api.get<HMDashboard>("/hm/dashboard");
         return data;
-      } catch {
-        return mockHMDashboard;
+      } catch (err) {
+        if (MOCK_MODE) return mockHMDashboard;
+        throw err;
       }
     },
   });
@@ -288,8 +295,9 @@ export function useHMJobs() {
       try {
         const { data } = await api.get<{ data: HMJob[] }>("/hm/jobs");
         return data.data;
-      } catch {
-        return [...mockHMJobs];
+      } catch (err) {
+        if (MOCK_MODE) return [...mockHMJobs];
+        throw err;
       }
     },
   });
@@ -302,8 +310,9 @@ export function usePendingReviews() {
       try {
         const { data } = await api.get<{ data: HMReview[] }>("/hm/reviews/pending");
         return data.data;
-      } catch {
-        return [...mockHMReviews];
+      } catch (err) {
+        if (MOCK_MODE) return [...mockHMReviews];
+        throw err;
       }
     },
   });
@@ -319,10 +328,22 @@ export function useHmStats() {
     queryKey: ["hm", "stats"],
     queryFn: async (): Promise<HMStats> => {
       try {
-        const { data } = await api.get<HMStats>("/hm/stats");
-        return data;
-      } catch {
-        return { ...mockHMStats };
+        // Backend heeft geen /hm/stats — de cijfers komen uit /hm/dashboard.
+        // scorecard-tellers hebben (nog) geen backend-bron → eerlijke 0 i.p.v.
+        // verzonnen aantallen.
+        const { data } = await api.get<{
+          pending_reviews: number;
+          approved_today: number;
+        }>("/hm/dashboard");
+        return {
+          to_review: data.pending_reviews ?? 0,
+          scorecards_due_today: 0,
+          scorecards_overdue: 0,
+          approved_today: data.approved_today ?? 0,
+        };
+      } catch (err) {
+        if (MOCK_MODE) return { ...mockHMStats };
+        throw err;
       }
     },
   });
@@ -337,8 +358,10 @@ export function useHmScorecardDeadlines() {
           "/hm/scorecards/deadlines"
         );
         return data.data;
-      } catch {
-        return [...mockHMScorecardDeadlines];
+      } catch (err) {
+        if (MOCK_MODE) return [...mockHMScorecardDeadlines];
+        // Endpoint bestaat nog niet op de backend → eerlijke lege lijst.
+        return [];
       }
     },
   });

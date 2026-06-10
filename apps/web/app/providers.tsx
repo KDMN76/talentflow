@@ -26,7 +26,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+    // enableSystem bewust UIT: er is (nog) geen theme-toggle en de dark-
+    // styling is niet ge-QA'd. Met system-detectie aan kreeg een bezoeker met
+    // donker OS een half-geteste dark mode te zien — voor demo's moet de app
+    // deterministisch licht zijn. Toggle + dark-QA: zie roadmap.
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
       <QueryClientProvider client={queryClient}>
         {children}
         <Toaster />
