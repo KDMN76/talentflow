@@ -1,6 +1,7 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
+import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ interface KanbanColumnProps {
 }
 
 export function KanbanColumn({ stage, applications, isOver }: KanbanColumnProps) {
+  const { t } = useTranslation("pipeline");
   const { setNodeRef, isOver: droppableIsOver } = useDroppable({ id: stage.id });
   const active = isOver || droppableIsOver;
 
@@ -47,7 +49,7 @@ export function KanbanColumn({ stage, applications, isOver }: KanbanColumnProps)
 
         {applications.length === 0 && (
           <div className="flex flex-1 items-center justify-center py-6 text-center">
-            <p className="text-xs text-muted-foreground/60">Sleep kandidaten hierheen</p>
+            <p className="text-xs text-muted-foreground/60">{t("board.dropHere")}</p>
           </div>
         )}
       </div>

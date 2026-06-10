@@ -12,8 +12,7 @@
 
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import rateLimit from 'express-rate-limit';
-import { RedisStore } from 'rate-limit-redis';
-import { redis } from '../../queue/queues';
+import { rateLimitStore } from '../../middleware/rateLimitStore';
 import { AppError } from '../../middleware/errorHandler';
 import {
   lookupTokenForPublic,
@@ -21,40 +20,18 @@ import {
 } from './consent.service';
 
 // ───────────────────────────────────────────────────────────────────────────
-// Rate-limit — 5 req/min/IP via Redis (cluster-wide)
+// Rate-limit — 5 req/min/IP (Redis cluster-wide in productie, in-memory in
+// dev/test — zie rateLimitStore)
 // ───────────────────────────────────────────────────────────────────────────
 
-type RLData = boolean | number | string;
-type RLRedisReply = RLData | RLData[];
-
-function makeRedisCommand() {
-  return async (...args: string[]): Promise<RLRedisReply> => {
-    const [cmd, ...rest] = args;
-    const result = await redis.call(cmd, ...rest);
-    return result as RLRedisReply;
-  };
-}
-
-const optInRateLimit =
-  process.env.NODE_ENV === 'test'
-    ? rateLimit({
-        windowMs: 60 * 1000,
-        max: 5,
-        standardHeaders: true,
-        legacyHeaders: false,
-        keyGenerator: (req: Request) => req.ip ?? 'unknown',
-      })
-    : rateLimit({
-        windowMs: 60 * 1000,
-        max: 5,
-        standardHeaders: true,
-        legacyHeaders: false,
-        keyGenerator: (req: Request) => req.ip ?? 'unknown',
-        store: new RedisStore({
-          sendCommand: makeRedisCommand(),
-          prefix: 'rl:wa:optin:',
-        }),
-      });
+const optInRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: Request) => req.ip ?? 'unknown',
+  store: rateLimitStore('rl:wa:optin:'),
+});
 
 const router = Router();
 router.use(optInRateLimit);

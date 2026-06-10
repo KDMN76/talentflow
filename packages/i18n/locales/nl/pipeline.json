@@ -1,0 +1,27 @@
+{
+  "title": "Pipeline",
+  "selectJob": "Kies een vacature om de kandidatenpipeline te bekijken",
+  "empty": {
+    "title": "Geen vacatures beschikbaar",
+    "description": "Maak eerst een vacature aan om de pipeline te gebruiken."
+  },
+  "sections": {
+    "openJobs": "Open vacatures",
+    "otherJobs": "Overige vacatures"
+  },
+  "status": {
+    "open": "Open",
+    "draft": "Concept",
+    "filled": "Gevuld",
+    "closed": "Gesloten"
+  },
+  "toast": {
+    "moveFailed": {
+      "title": "Verplaatsen mislukt",
+      "description": "Probeer het opnieuw."
+    }
+  },
+  "board": {
+    "dropHere": "Sleep kandidaten hierheen"
+  }
+}

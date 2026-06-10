@@ -1,9 +1,10 @@
+// dotenv MOET vóór de pool-import: pool.ts valideert DATABASE_URL op
+// module-niveau, en imports worden gehoist boven een latere dotenv.config().
+// (In Docker werkte dit toevallig omdat de env uit de container komt.)
+import 'dotenv/config';
 import fs from 'fs';
 import path from 'path';
 import { pool } from './pool';
-import dotenv from 'dotenv';
-
-dotenv.config();
 
 async function migrate() {
   const client = await pool.connect();

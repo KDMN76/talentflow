@@ -1,0 +1,204 @@
+{
+  "list": {
+    "title": "Jobs",
+    "description": "Manage all your jobs in one place",
+    "aiGenerator": "AI Generator",
+    "newJob": "New job",
+    "loading": "Loading...",
+    "results_one": "result",
+    "results_other": "results",
+    "ofTotal": "of {{total}} total",
+    "quickFilters": {
+      "myOpen": "My open jobs",
+      "recent7d": "Recently posted (last 7 days)",
+      "filledThisYear": "Filled this year"
+    },
+    "empty": {
+      "noJobsTitle": "No jobs found",
+      "noJobsDescription": "Create your first job to get started.",
+      "noResultsTitle": "No jobs found — adjust your filters",
+      "noResultsDescription": "Try less strict filters or reset to see everything.",
+      "resetFilters": "Reset filters"
+    }
+  },
+  "form": {
+    "templatePicker": {
+      "title": "Start from a template?"
+    },
+    "payWarning": {
+      "title": "The EU Pay Transparency Directive requires a salary range",
+      "description": "Without a minimum and maximum salary, this job cannot be published. Enter the range below.",
+      "settingsLink": "Go to Pay Transparency settings"
+    },
+    "sections": {
+      "basicInfo": "Basic information",
+      "descriptionRequirements": "Description & requirements",
+      "salary": "Salary"
+    },
+    "titleLabel": "Job title",
+    "titlePlaceholder": "Senior Frontend Developer",
+    "departmentLabel": "Department",
+    "departmentPlaceholder": "Engineering",
+    "locationLabel": "Location",
+    "locationPlaceholder": "Amsterdam (hybrid)",
+    "descriptionLabel": "Job description",
+    "descriptionPlaceholder": "Describe the role, the team and the responsibilities...",
+    "requirementsLabel": "Requirements (one per line, optional)",
+    "requirementsPlaceholder": "5+ years of React experience\nTypeScript expertise\nExperience with Next.js",
+    "euRequiredBadge": "EU required",
+    "salaryMinLabel": "Minimum (EUR/year)",
+    "salaryMaxLabel": "Maximum (EUR/year)",
+    "submit": "Create job",
+    "validation": {
+      "descriptionTooShort": "Description is too short",
+      "departmentRequired": "Department is required",
+      "locationRequired": "Location is required"
+    },
+    "toasts": {
+      "salaryRequired": {
+        "title": "Salary range required",
+        "description": "Your tenant enforces pay transparency under EU 2023/970. Enter a minimum and maximum."
+      },
+      "created": {
+        "title": "Job created",
+        "description": "\"{{title}}\" has been saved as a draft."
+      },
+      "createError": {
+        "title": "Error",
+        "fallback": "The job could not be created."
+      }
+    }
+  },
+  "detail": {
+    "backToJobs": "Back to jobs",
+    "duplicate": "Duplicate",
+    "owner": "Owner",
+    "pipelineLabel": "Pipeline",
+    "tabs": {
+      "pipeline": "Pipeline",
+      "overview": "Overview",
+      "aiSuite": "AI Suite",
+      "team": "Team",
+      "activity": "Activity",
+      "performance": "Performance",
+      "distribution": "Distribution"
+    },
+    "status": {
+      "draft": "Draft",
+      "open": "Open",
+      "filled": "Filled",
+      "closed": "Closed",
+      "archived": "Archived"
+    },
+    "remote": {
+      "onsite": "On-site",
+      "hybrid": "Hybrid",
+      "remote": "Remote"
+    },
+    "contract": {
+      "fulltime": "Full-time",
+      "parttime": "Part-time",
+      "contract": "Contract",
+      "freelance": "Freelance",
+      "internship": "Internship"
+    },
+    "salary": {
+      "perMonth": "{{range}} per month",
+      "perHour": "{{range}} per hour"
+    },
+    "pipeline": {
+      "noData": "No pipeline data yet",
+      "stageTooltip_one": "{{name}} — {{count}} candidate",
+      "stageTooltip_other": "{{name}} — {{count}} candidates"
+    },
+    "activeCandidates_one": "{{count}} active candidate",
+    "activeCandidates_other": "{{count}} active candidates",
+    "counters": {
+      "new": "New",
+      "inFunnel": "In funnel",
+      "offered": "Offered",
+      "hired": "Hired",
+      "dropped": "Rejected"
+    },
+    "health": {
+      "label": "Health:",
+      "openBreakdownAria": "Open health breakdown",
+      "dialogTitle": "Health breakdown",
+      "dialogDescription": "Aggregated score based on time to fill, drop-off and recruiter activity. Higher is healthier.",
+      "total": "Total",
+      "noData": "Health data not available yet."
+    },
+    "openSince": "Open for:",
+    "daysOpen_one": "{{count}} day",
+    "daysOpen_other": "{{count}} days",
+    "predictedClose": "Predicted close:",
+    "talentFit": {
+      "badge": "Talent Fit active",
+      "tooltip": "The Talent Fit Model ranks these matches based on your historical hires. Precision @ 1: {{precision}}%. Click for details."
+    },
+    "toasts": {
+      "duplicated": {
+        "title": "Job duplicated",
+        "description": "\"{{title}}\" created as a draft."
+      },
+      "duplicateError": {
+        "title": "Error",
+        "description": "Could not duplicate the job."
+      }
+    }
+  },
+  "card": {
+    "applicants_one": "{{count}} applicant",
+    "applicants_other": "{{count}} applicants",
+    "recruiter": "Recruiter:",
+    "unassigned": "Unassigned",
+    "details": "Details",
+    "pipeline": "Pipeline"
+  },
+  "new": {
+    "title": "New job",
+    "description": "Create a new job for your team."
+  },
+  "filters": {
+    "quickFilterLabel": "Quick filter:",
+    "reset": "Reset ({{count}})",
+    "openFiltersAria": "Open filters",
+    "dialogTitle": "Filters",
+    "searchPlaceholder": "Search by title, reference or location...",
+    "searchAria": "Search jobs",
+    "statusAria": "Filter by status",
+    "recruiterAria": "Filter by recruiter",
+    "locationAria": "Filter by location",
+    "sortAria": "Sort",
+    "allRecruiters": "All recruiters",
+    "fields": {
+      "status": "Status",
+      "recruiter": "Recruiter",
+      "location": "Location",
+      "openedBetween": "Opened between",
+      "sorting": "Sort order"
+    },
+    "status": {
+      "all": "All statuses",
+      "draft": "Draft",
+      "open": "Open",
+      "filled": "Filled",
+      "closed": "Closed"
+    },
+    "sort": {
+      "newest": "Newest first",
+      "oldest": "Oldest first",
+      "mostApplicants": "Most applicants",
+      "fewestApplicants": "Fewest applicants",
+      "titleAz": "Title A-Z"
+    },
+    "dateRange": {
+      "from": "From {{date}}",
+      "until": "Until {{date}}",
+      "fromLabel": "From",
+      "untilLabel": "Up to and including",
+      "clear": "Clear",
+      "apply": "Apply"
+    }
+  }
+}

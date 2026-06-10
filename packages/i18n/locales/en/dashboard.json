@@ -1,0 +1,47 @@
+{
+  "title": "Dashboard",
+  "subtitle": "Welcome back! Here's an overview of today.",
+  "error": {
+    "loadFailed": "Couldn't load the dashboard — please try again"
+  },
+  "kpi": {
+    "openJobs": {
+      "title": "Open jobs",
+      "description": "currently active"
+    },
+    "candidatesThisMonth": {
+      "title": "Candidates this month",
+      "description": "newly added"
+    },
+    "applicationsThisWeek": {
+      "title": "Applications this week",
+      "description": "active applications"
+    },
+    "hiredThisMonth": {
+      "title": "Hired this month",
+      "description": "successful placements"
+    }
+  },
+  "recentActivity": {
+    "title": "Recent activity",
+    "live": "Live",
+    "empty": "No activity yet"
+  },
+  "topJobs": {
+    "title": "Top jobs",
+    "viewAll": "All",
+    "empty": "No jobs",
+    "applicants_one": "{{count}} applicant",
+    "applicants_other": "{{count}} applicants",
+    "statusOpen": "Open"
+  },
+  "header": {
+    "searchPlaceholder": "Search...",
+    "notifications": {
+      "title": "Notifications",
+      "markAllRead": "Mark all as read",
+      "empty": "No notifications",
+      "viewAll": "View all notifications"
+    }
+  }
+}

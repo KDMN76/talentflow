@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Calendar as CalendarIcon,
   Search,
@@ -33,21 +34,23 @@ import type {
 } from "@/hooks/useJobsFilters";
 
 // ─── Static option lists ─────────────────────────────────────────────────────
+// Labels via i18n-sleutels (filters.* in jobs.json); de VALUES zijn
+// filter-/API-waarden en blijven onaangetast.
 
-const STATUS_OPTIONS: Array<{ value: JobsFilterStatus; label: string }> = [
-  { value: "all", label: "Alle statussen" },
-  { value: "draft", label: "Concept" },
-  { value: "open", label: "Open" },
-  { value: "filled", label: "Vervuld" },
-  { value: "closed", label: "Gesloten" },
+const STATUS_OPTIONS: Array<{ value: JobsFilterStatus; labelKey: string }> = [
+  { value: "all", labelKey: "filters.status.all" },
+  { value: "draft", labelKey: "filters.status.draft" },
+  { value: "open", labelKey: "filters.status.open" },
+  { value: "filled", labelKey: "filters.status.filled" },
+  { value: "closed", labelKey: "filters.status.closed" },
 ];
 
-const SORT_OPTIONS: Array<{ value: JobsFilterSort; label: string }> = [
-  { value: "newest", label: "Nieuwste eerst" },
-  { value: "oldest", label: "Oudste eerst" },
-  { value: "most_applicants", label: "Meeste sollicitanten" },
-  { value: "fewest_applicants", label: "Minste sollicitanten" },
-  { value: "title_az", label: "Titel A-Z" },
+const SORT_OPTIONS: Array<{ value: JobsFilterSort; labelKey: string }> = [
+  { value: "newest", labelKey: "filters.sort.newest" },
+  { value: "oldest", labelKey: "filters.sort.oldest" },
+  { value: "most_applicants", labelKey: "filters.sort.mostApplicants" },
+  { value: "fewest_applicants", labelKey: "filters.sort.fewestApplicants" },
+  { value: "title_az", labelKey: "filters.sort.titleAz" },
 ];
 
 // Mock-mode fallback recruiter list. In productie zou dit via een `useUsers`
@@ -104,6 +107,7 @@ export function JobsFilterBar({
   recruiterOptions,
   quickFilters,
 }: JobsFilterBarProps) {
+  const { t } = useTranslation(["jobs", "common"]);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const recruiters = useMemo<RecruiterOption[]>(
@@ -120,7 +124,7 @@ export function JobsFilterBar({
       {quickFilters && quickFilters.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-muted-foreground mr-1">
-            Snel filter:
+            {t("filters.quickFilterLabel")}
           </span>
           {quickFilters.map((qf) => {
             const active = qf.isActive(filters);
@@ -180,7 +184,7 @@ export function JobsFilterBar({
             className="ml-auto h-10 gap-1.5 text-muted-foreground hover:text-foreground"
           >
             <X className="h-3.5 w-3.5" />
-            Reset ({activeCount})
+            {t("filters.reset", { count: activeCount })}
           </Button>
         )}
       </div>
@@ -199,7 +203,7 @@ export function JobsFilterBar({
               variant="outline"
               size="icon"
               className="relative shrink-0"
-              aria-label="Filters openen"
+              aria-label={t("filters.openFiltersAria")}
             >
               <SlidersHorizontal className="h-4 w-4" />
               {activeCount > 0 && (
@@ -211,17 +215,17 @@ export function JobsFilterBar({
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Filters</DialogTitle>
+              <DialogTitle>{t("filters.dialogTitle")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-3">
-              <LabelledField label="Status">
+              <LabelledField label={t("filters.fields.status")}>
                 <StatusControl
                   value={filters.status}
                   onChange={(v) => setFilter("status", v)}
                   fullWidth
                 />
               </LabelledField>
-              <LabelledField label="Recruiter">
+              <LabelledField label={t("filters.fields.recruiter")}>
                 <RecruiterControl
                   value={filters.recruiter_id}
                   onChange={(v) => setFilter("recruiter_id", v)}
@@ -229,14 +233,14 @@ export function JobsFilterBar({
                   fullWidth
                 />
               </LabelledField>
-              <LabelledField label="Locatie">
+              <LabelledField label={t("filters.fields.location")}>
                 <LocationControl
                   value={filters.location}
                   onChange={(v) => setFilter("location", v)}
                   fullWidth
                 />
               </LabelledField>
-              <LabelledField label="Geopend tussen">
+              <LabelledField label={t("filters.fields.openedBetween")}>
                 <DateRangeControl
                   from={filters.date_from}
                   to={filters.date_to}
@@ -246,7 +250,7 @@ export function JobsFilterBar({
                   fullWidth
                 />
               </LabelledField>
-              <LabelledField label="Sortering">
+              <LabelledField label={t("filters.fields.sorting")}>
                 <SortControl
                   value={filters.sort}
                   onChange={(v) => setFilter("sort", v)}
@@ -265,7 +269,7 @@ export function JobsFilterBar({
                     className="gap-1.5 text-muted-foreground"
                   >
                     <X className="h-3.5 w-3.5" />
-                    Reset ({activeCount})
+                    {t("filters.reset", { count: activeCount })}
                   </Button>
                 ) : (
                   <span />
@@ -276,7 +280,7 @@ export function JobsFilterBar({
                   onClick={() => setMobileOpen(false)}
                   className="bg-indigo-600 hover:bg-indigo-700 border-0"
                 >
-                  Sluiten
+                  {t("common:actions.close")}
                 </Button>
               </div>
             </div>
@@ -313,6 +317,7 @@ function SearchControl({
   onChange: (next: string) => void;
   className?: string;
 }) {
+  const { t } = useTranslation("jobs");
   return (
     <div className={cn("relative w-72", className)}>
       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -320,9 +325,9 @@ function SearchControl({
         type="search"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Zoek op titel, referentie of locatie..."
+        placeholder={t("filters.searchPlaceholder")}
         className="pl-9"
-        aria-label="Zoek vacatures"
+        aria-label={t("filters.searchAria")}
       />
     </div>
   );
@@ -337,17 +342,18 @@ function StatusControl({
   onChange: (next: JobsFilterStatus) => void;
   fullWidth?: boolean;
 }) {
+  const { t } = useTranslation("jobs");
   return (
     <Select value={value} onValueChange={(v) => onChange(v as JobsFilterStatus)}>
       <SelectTrigger className={cn(fullWidth ? "w-full" : "w-[160px]")}
-        aria-label="Filter op status"
+        aria-label={t("filters.statusAria")}
       >
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
         {STATUS_OPTIONS.map((opt) => (
           <SelectItem key={opt.value} value={opt.value}>
-            {opt.label}
+            {t(opt.labelKey)}
           </SelectItem>
         ))}
       </SelectContent>
@@ -366,16 +372,17 @@ function RecruiterControl({
   recruiters: RecruiterOption[];
   fullWidth?: boolean;
 }) {
+  const { t } = useTranslation("jobs");
   return (
     <Select value={value} onValueChange={(v) => onChange(v)}>
       <SelectTrigger
         className={cn(fullWidth ? "w-full" : "w-[180px]")}
-        aria-label="Filter op recruiter"
+        aria-label={t("filters.recruiterAria")}
       >
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="all">Alle recruiters</SelectItem>
+        <SelectItem value="all">{t("filters.allRecruiters")}</SelectItem>
         {recruiters.map((r) => (
           <SelectItem key={r.id} value={r.id}>
             {r.name}
@@ -395,14 +402,15 @@ function LocationControl({
   onChange: (next: string) => void;
   fullWidth?: boolean;
 }) {
+  const { t } = useTranslation("jobs");
   return (
     <Input
       type="text"
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      placeholder="Locatie"
+      placeholder={t("filters.fields.location")}
       className={cn(fullWidth ? "w-full" : "w-[160px]")}
-      aria-label="Filter op locatie"
+      aria-label={t("filters.locationAria")}
     />
   );
 }
@@ -418,17 +426,18 @@ function DateRangeControl({
   onChange: (from: string | null, to: string | null) => void;
   fullWidth?: boolean;
 }) {
+  const { t } = useTranslation(["jobs", "common"]);
   const [open, setOpen] = useState(false);
   const [draftFrom, setDraftFrom] = useState<string>(from ?? "");
   const [draftTo, setDraftTo] = useState<string>(to ?? "");
 
   const label = useMemo(() => {
-    if (!from && !to) return "Geopend tussen";
+    if (!from && !to) return t("filters.fields.openedBetween");
     if (from && to) return `${formatDate(from)} – ${formatDate(to)}`;
-    if (from) return `Vanaf ${formatDate(from)}`;
-    if (to) return `Tot ${formatDate(to)}`;
-    return "Geopend tussen";
-  }, [from, to]);
+    if (from) return t("filters.dateRange.from", { date: formatDate(from) });
+    if (to) return t("filters.dateRange.until", { date: formatDate(to) });
+    return t("filters.fields.openedBetween");
+  }, [from, to, t]);
 
   return (
     <Dialog
@@ -457,10 +466,10 @@ function DateRangeControl({
       </DialogTrigger>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Geopend tussen</DialogTitle>
+          <DialogTitle>{t("filters.fields.openedBetween")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
-          <LabelledField label="Vanaf">
+          <LabelledField label={t("filters.dateRange.fromLabel")}>
             <Input
               type="date"
               value={draftFrom}
@@ -468,7 +477,7 @@ function DateRangeControl({
               max={draftTo || undefined}
             />
           </LabelledField>
-          <LabelledField label="Tot en met">
+          <LabelledField label={t("filters.dateRange.untilLabel")}>
             <Input
               type="date"
               value={draftTo}
@@ -491,7 +500,7 @@ function DateRangeControl({
             className="text-muted-foreground"
             disabled={!from && !to && !draftFrom && !draftTo}
           >
-            Wissen
+            {t("filters.dateRange.clear")}
           </Button>
           <div className="flex gap-2">
             <Button
@@ -500,7 +509,7 @@ function DateRangeControl({
               size="sm"
               onClick={() => setOpen(false)}
             >
-              Annuleren
+              {t("common:actions.cancel")}
             </Button>
             <Button
               type="button"
@@ -511,7 +520,7 @@ function DateRangeControl({
               }}
               className="bg-indigo-600 hover:bg-indigo-700 border-0"
             >
-              Toepassen
+              {t("filters.dateRange.apply")}
             </Button>
           </div>
         </div>
@@ -529,18 +538,19 @@ function SortControl({
   onChange: (next: JobsFilterSort) => void;
   fullWidth?: boolean;
 }) {
+  const { t } = useTranslation("jobs");
   return (
     <Select value={value} onValueChange={(v) => onChange(v as JobsFilterSort)}>
       <SelectTrigger
         className={cn(fullWidth ? "w-full" : "w-[200px]")}
-        aria-label="Sorteren"
+        aria-label={t("filters.sortAria")}
       >
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
         {SORT_OPTIONS.map((opt) => (
           <SelectItem key={opt.value} value={opt.value}>
-            {opt.label}
+            {t(opt.labelKey)}
           </SelectItem>
         ))}
       </SelectContent>

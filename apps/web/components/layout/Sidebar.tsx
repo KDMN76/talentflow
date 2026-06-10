@@ -45,7 +45,9 @@ import {
   Workflow,
 } from "lucide-react";
 import { useState, type ComponentType } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
+import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { clearToken } from "@/lib/auth";
@@ -322,6 +324,35 @@ const navItems: NavItem[] = [
   },
 ];
 
+// Top-level nav-labels → i18n-sleutels (common:nav.*). Op href gemapt zodat we
+// niet elk item hoeven aan te passen. Sub-items volgen in de bulk-migratie
+// (vallen tot dan terug op hun NL-label).
+const NAV_KEY_BY_HREF: Record<string, string> = {
+  "/dashboard": "nav.dashboard",
+  "/inbox": "nav.inbox",
+  "/candidates": "nav.candidates",
+  "/jobs": "nav.jobs",
+  "/pipeline": "nav.pipeline",
+  "/contracts": "nav.agency",
+  "/interviews": "nav.interviews",
+  "/sourcing-agent": "nav.sourcingAgent",
+  "/outreach": "nav.outreach",
+  "/matching/reactivation": "nav.reactivation",
+  "/crm": "nav.crm",
+  "/communications": "nav.messages",
+  "/career-pages": "nav.careerPages",
+  "/portal-links": "nav.clientPortals",
+  "/hm": "nav.hiringManager",
+  "/skills": "nav.skills",
+  "/analytics": "nav.analytics",
+  "/reports": "nav.reports",
+  "/workflows": "nav.workflows",
+  "/email-templates": "nav.emailTemplates",
+  "/gdpr": "nav.compliance",
+  "/api-keys": "nav.apiIntegrations",
+  "/settings": "nav.settings",
+};
+
 interface SidebarProps {
   onClose?: () => void;
 }
@@ -329,6 +360,7 @@ interface SidebarProps {
 export function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useTranslation();
   const { data: reactivationStats } = useReactivationStats();
   const { data: unreadThreads } = useInboxThreads({ unread: true });
   const { data: currentUser } = useCurrentUser();
@@ -446,7 +478,11 @@ export function Sidebar({ onClose }: SidebarProps) {
                     )}
                     style={{ width: "18px", height: "18px" }}
                   />
-                  <span className="flex-1">{item.label}</span>
+                  <span className="flex-1">
+                    {NAV_KEY_BY_HREF[item.href]
+                      ? t(NAV_KEY_BY_HREF[item.href])
+                      : item.label}
+                  </span>
                   {showBadge && (
                     <span
                       className={cn(
@@ -519,7 +555,8 @@ export function Sidebar({ onClose }: SidebarProps) {
       </nav>
 
       {/* User section */}
-      <div className="border-t border-border p-3">
+      <div className="border-t border-border p-3 space-y-2">
+        <LanguageSwitcher className="w-full justify-start" />
         <div className="flex items-center gap-3 rounded-lg p-2 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors group">
           <Avatar className="h-8 w-8">
             <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-500 text-white text-xs font-semibold">
@@ -539,7 +576,7 @@ export function Sidebar({ onClose }: SidebarProps) {
             size="icon"
             className="h-7 w-7 opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-destructive hover:bg-destructive/10 transition-all"
             onClick={handleLogout}
-            title="Uitloggen"
+            title={t("actions.logout")}
           >
             <LogOut className="h-3.5 w-3.5" />
           </Button>

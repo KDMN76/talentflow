@@ -1,0 +1,46 @@
+{
+  "title": "Interviews",
+  "description": "Schedule, manage and review interviews — including recordings, transcripts and the agreement matrix.",
+  "newInterview": "New interview",
+  "tabs": {
+    "upcoming": "Upcoming",
+    "completed": "Completed",
+    "cancelled": "Cancelled"
+  },
+  "filters": {
+    "from": "From",
+    "to": "To",
+    "interviewer": "Interviewer",
+    "search": "Search",
+    "allInterviewers": "All interviewers",
+    "searchPlaceholder": "Candidate or job…",
+    "activeResults_one": "Filters active — {{count}} result",
+    "activeResults_other": "Filters active — {{count}} results",
+    "reset": "Reset"
+  },
+  "status": {
+    "scheduled": "Scheduled",
+    "rescheduled": "Rescheduled",
+    "completed": "Completed",
+    "noShow": "No-show",
+    "cancelled": "Cancelled"
+  },
+  "empty": {
+    "noInterviews": "No interviews in {{tab}}.",
+    "scheduleCta": "Schedule an interview"
+  },
+  "error": {
+    "loadFailed": "Couldn't load interviews — please try again"
+  },
+  "row": {
+    "recording": "Recording",
+    "scorecards_one": "{{count}} scorecard",
+    "scorecards_other": "{{count}} scorecards",
+    "durationMin": "{{count}} min",
+    "view": "View"
+  },
+  "location": {
+    "inPerson": "In person",
+    "phone": "Phone"
+  }
+}

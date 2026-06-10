@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import { ArrowLeft, MoreHorizontal, Copy, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -48,6 +49,7 @@ function isValidTab(value: string | null): value is TabValue {
 }
 
 export default function JobDetailPage() {
+  const { t } = useTranslation("jobs");
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -99,15 +101,17 @@ export default function JobDetailPage() {
     try {
       const newJob = await duplicateJob.mutateAsync({ jobId });
       toast({
-        title: "Vacature gedupliceerd",
-        description: `"${newJob.title}" aangemaakt als concept.`,
+        title: t("detail.toasts.duplicated.title"),
+        description: t("detail.toasts.duplicated.description", {
+          title: newJob.title,
+        }),
       });
       router.push(`/jobs/${newJob.id}`);
     } catch {
       toast({
         variant: "destructive",
-        title: "Fout",
-        description: "Kon vacature niet dupliceren.",
+        title: t("detail.toasts.duplicateError.title"),
+        description: t("detail.toasts.duplicateError.description"),
       });
     }
   };
@@ -122,7 +126,7 @@ export default function JobDetailPage() {
           className="-ml-2"
         >
           <ArrowLeft className="mr-1 h-4 w-4" />
-          Terug naar vacatures
+          {t("detail.backToJobs")}
         </Button>
 
         <div className="flex items-center gap-2">
@@ -144,7 +148,7 @@ export default function JobDetailPage() {
                 ) : (
                   <Copy className="mr-2 h-4 w-4" />
                 )}
-                Dupliceren
+                {t("detail.duplicate")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -162,17 +166,17 @@ export default function JobDetailPage() {
       <Tabs value={tab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList className="w-full overflow-x-auto justify-start gap-1">
           <TabsTrigger value="pipeline">
-            Pipeline
+            {t("detail.tabs.pipeline")}
             {pipelineCount > 0 && (
               <span className="ml-1.5 rounded-full bg-zinc-100 px-1.5 text-[10px] font-semibold text-zinc-700 dark:bg-zinc-700 dark:text-zinc-300">
                 {pipelineCount}
               </span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="overzicht">Overzicht</TabsTrigger>
-          <TabsTrigger value="ai-suite">AI Suite</TabsTrigger>
+          <TabsTrigger value="overzicht">{t("detail.tabs.overview")}</TabsTrigger>
+          <TabsTrigger value="ai-suite">{t("detail.tabs.aiSuite")}</TabsTrigger>
           <TabsTrigger value="team">
-            Team
+            {t("detail.tabs.team")}
             {teamCount > 0 && (
               <span className="ml-1.5 rounded-full bg-zinc-100 px-1.5 text-[10px] font-semibold text-zinc-700 dark:bg-zinc-700 dark:text-zinc-300">
                 {teamCount}
@@ -180,15 +184,15 @@ export default function JobDetailPage() {
             )}
           </TabsTrigger>
           <TabsTrigger value="activiteit">
-            Activiteit
+            {t("detail.tabs.activity")}
             {activityCount > 0 && (
               <span className="ml-1.5 rounded-full bg-zinc-100 px-1.5 text-[10px] font-semibold text-zinc-700 dark:bg-zinc-700 dark:text-zinc-300">
                 {activityCount}
               </span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-          <TabsTrigger value="distributie">Distributie</TabsTrigger>
+          <TabsTrigger value="performance">{t("detail.tabs.performance")}</TabsTrigger>
+          <TabsTrigger value="distributie">{t("detail.tabs.distribution")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pipeline" className="space-y-4">

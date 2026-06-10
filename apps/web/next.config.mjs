@@ -19,7 +19,7 @@ const nextConfig = {
   // `SyntaxError: Cannot use import statement outside a module` op runtime.
   // Hot-reload op `packages/contracts/src/**` werkt out-of-the-box
   // zodra de package in `transpilePackages` staat.
-  transpilePackages: ['@talentflow/contracts'],
+  transpilePackages: ['@talentflow/contracts', '@talentflow/i18n'],
 
   images: {
     remotePatterns: [

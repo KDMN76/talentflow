@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { isAuthenticated } from "@/lib/auth";
+import { useLanguageSync } from "@/hooks/useLanguageSync";
 import { cn } from "@/lib/utils";
 
 export default function DashboardLayout({
@@ -15,6 +16,8 @@ export default function DashboardLayout({
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [checked, setChecked] = useState(false);
+  // Pas de opgeslagen taalvoorkeur (user → tenant) toe zodra /users/me er is.
+  useLanguageSync();
 
   useEffect(() => {
     if (!isAuthenticated()) {

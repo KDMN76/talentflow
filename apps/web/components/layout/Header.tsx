@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Menu, Bell, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,7 @@ interface HeaderProps {
 }
 
 export function Header({ onMenuClick }: HeaderProps) {
+  const { t } = useTranslation("dashboard");
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>(INITIAL_NOTIFICATIONS);
   const unreadCount = notifications.filter((n) => n.unread).length;
@@ -38,7 +40,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
       <div className="relative hidden md:flex flex-1 max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Zoeken..." className="pl-9 h-9 bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 focus-visible:ring-1" />
+        <Input placeholder={t("header.searchPlaceholder")} className="pl-9 h-9 bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 focus-visible:ring-1" />
       </div>
 
       <div className="flex-1" />
@@ -66,7 +68,7 @@ export function Header({ onMenuClick }: HeaderProps) {
               {/* Header */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Meldingen</span>
+                  <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{t("header.notifications.title")}</span>
                   {unreadCount > 0 && (
                     <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-indigo-500 text-white text-xs font-bold px-1">
                       {unreadCount}
@@ -76,7 +78,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                 <div className="flex items-center gap-1">
                   {unreadCount > 0 && (
                     <button onClick={markAllRead} className="text-xs text-indigo-600 hover:underline font-medium">
-                      Alles gelezen
+                      {t("header.notifications.markAllRead")}
                     </button>
                   )}
                   <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setOpen(false)}>
@@ -90,7 +92,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                 {notifications.length === 0 ? (
                   <div className="px-4 py-8 text-center">
                     <Bell className="mx-auto mb-2 h-6 w-6 text-zinc-300 dark:text-zinc-600" />
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400">Geen meldingen</p>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400">{t("header.notifications.empty")}</p>
                   </div>
                 ) : (
                   notifications.map((n) => {
@@ -120,7 +122,7 @@ export function Header({ onMenuClick }: HeaderProps) {
               </div>
 
               <div className="px-4 py-2.5 border-t border-border text-center">
-                <button className="text-xs text-indigo-600 hover:underline font-medium">Alle meldingen bekijken</button>
+                <button className="text-xs text-indigo-600 hover:underline font-medium">{t("header.notifications.viewAll")}</button>
               </div>
             </div>
           </>

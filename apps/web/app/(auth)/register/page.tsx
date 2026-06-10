@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, Zap } from "lucide-react";
@@ -38,6 +39,7 @@ const registerSchema = z.object({
 type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
+  const { t } = useTranslation("auth");
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -64,28 +66,23 @@ export default function RegisterPage() {
       const response = await api.post("/auth/register", data);
       setToken(response.data.accessToken);
       toast({
-        title: "Account aangemaakt",
-        description: `Welkom bij TalentFlow, ${data.name}!`,
+        title: t("register.success.title"),
+        description: t("register.success.description", { name: data.name }),
       });
       router.push("/dashboard");
     } catch (error) {
       // No silent fallback — surface the failure to the user.
-      let description =
-        "Er is iets misgegaan. Probeer het opnieuw of neem contact op met support.";
+      let description = t("errors.generic");
 
       if (error instanceof AxiosError) {
         if (!error.response) {
-          description =
-            "Kan geen verbinding maken met de server. Controleer of de API bereikbaar is.";
+          description = t("errors.network");
         } else if (error.response.status === 409) {
-          description =
-            "Deze workspace of dit e-mailadres is al in gebruik. Kies een andere.";
+          description = t("register.errors.conflict");
         } else if (error.response.status === 429) {
-          description =
-            "Te veel pogingen. Wacht een moment en probeer het opnieuw.";
+          description = t("register.errors.tooManyAttempts");
         } else if (error.response.status >= 500) {
-          description =
-            "Serverfout. Probeer het later opnieuw of neem contact op met support.";
+          description = t("errors.server");
         } else {
           const apiMessage = (error.response.data as { message?: string })
             ?.message;
@@ -95,7 +92,7 @@ export default function RegisterPage() {
 
       toast({
         variant: "destructive",
-        title: "Registratie mislukt",
+        title: t("register.errors.title"),
         description,
       });
     } finally {
@@ -116,10 +113,10 @@ export default function RegisterPage() {
         </div>
         <div>
           <CardTitle className="text-2xl font-bold">
-            Maak een account aan
+            {t("register.title")}
           </CardTitle>
           <CardDescription className="mt-1 text-base">
-            Start gratis — geen creditcard nodig
+            {t("register.subtitle")}
           </CardDescription>
         </div>
       </CardHeader>
@@ -127,10 +124,10 @@ export default function RegisterPage() {
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="tenantName">Bedrijfsnaam</Label>
+            <Label htmlFor="tenantName">{t("register.companyNameLabel")}</Label>
             <Input
               id="tenantName"
-              placeholder="Jouw Bedrijf B.V."
+              placeholder={t("register.companyNamePlaceholder")}
               {...register("tenantName")}
               className={errors.tenantName ? "border-destructive" : ""}
             />
@@ -142,14 +139,14 @@ export default function RegisterPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="tenantSlug">Workspace-naam</Label>
+            <Label htmlFor="tenantSlug">{t("register.workspaceLabel")}</Label>
             <Input
               id="tenantSlug"
-              placeholder="mijn-bedrijf"
+              placeholder={t("register.workspacePlaceholder")}
               {...register("tenantSlug")}
               className={errors.tenantSlug ? "border-destructive" : ""}
             />
-            <p className="text-xs text-muted-foreground">Alleen kleine letters, cijfers en koppeltekens. Dit is uw inlog-workspace.</p>
+            <p className="text-xs text-muted-foreground">{t("register.workspaceHint")}</p>
             {errors.tenantSlug && (
               <p className="text-sm text-destructive">
                 {errors.tenantSlug.message}
@@ -158,10 +155,10 @@ export default function RegisterPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="name">Jouw naam</Label>
+            <Label htmlFor="name">{t("register.nameLabel")}</Label>
             <Input
               id="name"
-              placeholder="Jan de Vries"
+              placeholder={t("register.namePlaceholder")}
               autoComplete="name"
               {...register("name")}
               className={errors.name ? "border-destructive" : ""}
@@ -172,11 +169,11 @@ export default function RegisterPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email">E-mailadres</Label>
+            <Label htmlFor="email">{t("register.emailLabel")}</Label>
             <Input
               id="email"
               type="email"
-              placeholder="naam@bedrijf.nl"
+              placeholder={t("register.emailPlaceholder")}
               autoComplete="email"
               {...register("email")}
               className={errors.email ? "border-destructive" : ""}
@@ -187,11 +184,11 @@ export default function RegisterPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Wachtwoord</Label>
+            <Label htmlFor="password">{t("register.passwordLabel")}</Label>
             <Input
               id="password"
               type="password"
-              placeholder="Minimaal 8 tekens"
+              placeholder={t("register.passwordPlaceholder")}
               autoComplete="new-password"
               {...register("password")}
               className={errors.password ? "border-destructive" : ""}
@@ -211,16 +208,16 @@ export default function RegisterPage() {
             disabled={isLoading}
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Account aanmaken
+            {t("register.submit")}
           </Button>
 
           <p className="text-sm text-center text-muted-foreground">
-            Al een account?{" "}
+            {t("register.haveAccount")}{" "}
             <Link
               href="/login"
               className="text-primary font-medium hover:underline"
             >
-              Inloggen
+              {t("register.loginLink")}
             </Link>
           </p>
         </CardFooter>

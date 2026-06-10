@@ -1,0 +1,44 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "inbox": "Inbox",
+    "candidates": "Candidates",
+    "jobs": "Jobs",
+    "pipeline": "Pipeline",
+    "agency": "Agency",
+    "interviews": "Interviews",
+    "sourcingAgent": "Sourcing Agent",
+    "outreach": "Outreach",
+    "reactivation": "Reactivation",
+    "crm": "CRM",
+    "messages": "Messages",
+    "careerPages": "Career Pages",
+    "clientPortals": "Client Portals",
+    "hiringManager": "Hiring Manager",
+    "skills": "Skills",
+    "analytics": "Analytics",
+    "reports": "Reports",
+    "workflows": "Workflows",
+    "emailTemplates": "Email Templates",
+    "compliance": "GDPR / Compliance",
+    "apiIntegrations": "API & Integrations",
+    "settings": "Settings"
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "back": "Back",
+    "confirm": "Confirm",
+    "close": "Close",
+    "logout": "Log out"
+  },
+  "language": {
+    "label": "Language",
+    "nl": "Nederlands",
+    "en": "English"
+  }
+}

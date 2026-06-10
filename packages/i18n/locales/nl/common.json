@@ -1,0 +1,44 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "inbox": "Inbox",
+    "candidates": "Kandidaten",
+    "jobs": "Vacatures",
+    "pipeline": "Pipeline",
+    "agency": "Bureau",
+    "interviews": "Interviews",
+    "sourcingAgent": "Sourcing Agent",
+    "outreach": "Outreach",
+    "reactivation": "Reactivatie",
+    "crm": "CRM",
+    "messages": "Berichten",
+    "careerPages": "Career Pages",
+    "clientPortals": "Klantportalen",
+    "hiringManager": "Hiring Manager",
+    "skills": "Skills",
+    "analytics": "Analytiek",
+    "reports": "Rapporten",
+    "workflows": "Workflows",
+    "emailTemplates": "E-mail templates",
+    "compliance": "AVG / Compliance",
+    "apiIntegrations": "API & Integraties",
+    "settings": "Instellingen"
+  },
+  "actions": {
+    "save": "Opslaan",
+    "cancel": "Annuleren",
+    "delete": "Verwijderen",
+    "edit": "Bewerken",
+    "create": "Aanmaken",
+    "search": "Zoeken",
+    "back": "Terug",
+    "confirm": "Bevestigen",
+    "close": "Sluiten",
+    "logout": "Uitloggen"
+  },
+  "language": {
+    "label": "Taal",
+    "nl": "Nederlands",
+    "en": "English"
+  }
+}

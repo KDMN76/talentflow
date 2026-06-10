@@ -1,0 +1,25 @@
+{
+  "list": {
+    "title": "Candidates",
+    "totalCount_one": "{{count}} candidate in total",
+    "totalCount_other": "{{count}} candidates in total",
+    "csvImport": "CSV import",
+    "newCandidate": "New candidate",
+    "emptyTitle": "No candidates found",
+    "emptyHint": "Adjust your search or add a new candidate."
+  },
+  "filters": {
+    "all": "All",
+    "manual": "Manual"
+  },
+  "table": {
+    "name": "Name",
+    "skills": "Skills",
+    "source": "Source",
+    "score": "Score",
+    "added": "Added"
+  },
+  "card": {
+    "unknownSource": "Unknown"
+  }
+}

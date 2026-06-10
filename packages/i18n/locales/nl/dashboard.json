@@ -1,0 +1,47 @@
+{
+  "title": "Dashboard",
+  "subtitle": "Welkom terug! Hier is een overzicht van vandaag.",
+  "error": {
+    "loadFailed": "Kon dashboard niet laden — probeer opnieuw"
+  },
+  "kpi": {
+    "openJobs": {
+      "title": "Openstaande vacatures",
+      "description": "actief op dit moment"
+    },
+    "candidatesThisMonth": {
+      "title": "Kandidaten deze maand",
+      "description": "nieuw binnengekomen"
+    },
+    "applicationsThisWeek": {
+      "title": "Sollicitaties deze week",
+      "description": "actieve sollicitaties"
+    },
+    "hiredThisMonth": {
+      "title": "Aangenomen deze maand",
+      "description": "succesvolle plaatsingen"
+    }
+  },
+  "recentActivity": {
+    "title": "Recente activiteit",
+    "live": "Live",
+    "empty": "Nog geen activiteit"
+  },
+  "topJobs": {
+    "title": "Top vacatures",
+    "viewAll": "Alle",
+    "empty": "Geen vacatures",
+    "applicants_one": "{{count}} sollicitant",
+    "applicants_other": "{{count}} sollicitanten",
+    "statusOpen": "Open"
+  },
+  "header": {
+    "searchPlaceholder": "Zoeken...",
+    "notifications": {
+      "title": "Meldingen",
+      "markAllRead": "Alles gelezen",
+      "empty": "Geen meldingen",
+      "viewAll": "Alle meldingen bekijken"
+    }
+  }
+}

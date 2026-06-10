@@ -1,0 +1,25 @@
+{
+  "list": {
+    "title": "Kandidaten",
+    "totalCount_one": "{{count}} kandidaat totaal",
+    "totalCount_other": "{{count}} kandidaten totaal",
+    "csvImport": "CSV-import",
+    "newCandidate": "Nieuwe kandidaat",
+    "emptyTitle": "Geen kandidaten gevonden",
+    "emptyHint": "Pas je zoekopdracht aan of voeg een nieuwe kandidaat toe."
+  },
+  "filters": {
+    "all": "Alle",
+    "manual": "Handmatig"
+  },
+  "table": {
+    "name": "Naam",
+    "skills": "Skills",
+    "source": "Bron",
+    "score": "Score",
+    "added": "Toegevoegd"
+  },
+  "card": {
+    "unknownSource": "Onbekend"
+  }
+}

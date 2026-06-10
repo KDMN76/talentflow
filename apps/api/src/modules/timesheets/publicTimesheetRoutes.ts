@@ -13,39 +13,24 @@
 
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import rateLimit from 'express-rate-limit';
-import { RedisStore } from 'rate-limit-redis';
 import { z } from 'zod';
-import { redis } from '../../queue/queues';
+import { rateLimitStore } from '../../middleware/rateLimitStore';
 import { AppError } from '../../middleware/errorHandler';
 import * as service from './timesheets.service';
 
 const router = Router();
 
 // ───────────────────────────────────────────────────────────────────────────
-// Rate-limit (Redis-backed — productie-safe; degradeert naar in-memory bij
-// Redis-uitval omdat RedisStore gracefully fallt back)
+// Rate-limit (Redis-backed in productie, in-memory in dev/test — zie
+// rateLimitStore)
 // ───────────────────────────────────────────────────────────────────────────
-
-type RLData = boolean | number | string;
-type RLRedisReply = RLData | RLData[];
-
-function makeRedisCommand() {
-  return async (...args: string[]): Promise<RLRedisReply> => {
-    const [cmd, ...rest] = args;
-    const result = await redis.call(cmd, ...rest);
-    return result as RLRedisReply;
-  };
-}
 
 const portalRateLimit = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 min
   max: 60,
   standardHeaders: true,
   legacyHeaders: false,
-  store: new RedisStore({
-    sendCommand: makeRedisCommand(),
-    prefix: 'rl:public-timesheet:',
-  }),
+  store: rateLimitStore('rl:public-timesheet:'),
   handler: (_req, res) => {
     res.status(429).json({
       error: {

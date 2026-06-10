@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import { Kanban, ArrowRight, Users } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,14 +16,8 @@ const STATUS_COLOR: Record<string, string> = {
   closed: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400",
 };
 
-const STATUS_LABEL: Record<string, string> = {
-  open: "Open",
-  draft: "Concept",
-  filled: "Gevuld",
-  closed: "Gesloten",
-};
-
 export default function PipelinePage() {
+  const { t } = useTranslation("pipeline");
   const { data: jobs, isLoading } = useJobs("all");
 
   const openJobs = jobs?.filter((j) => j.status === "open") ?? [];
@@ -30,10 +25,7 @@ export default function PipelinePage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <PageHeader
-        title="Pipeline"
-        description="Kies een vacature om de kandidatenpipeline te bekijken"
-      />
+      <PageHeader title={t("title")} description={t("selectJob")} />
 
       {isLoading ? (
         <div className="space-y-3">
@@ -45,10 +37,10 @@ export default function PipelinePage() {
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <Kanban className="h-12 w-12 text-muted-foreground/30 mb-4" />
           <p className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-            Geen vacatures beschikbaar
+            {t("empty.title")}
           </p>
           <p className="text-sm text-muted-foreground mt-1">
-            Maak eerst een vacature aan om de pipeline te gebruiken.
+            {t("empty.description")}
           </p>
         </div>
       ) : (
@@ -56,7 +48,7 @@ export default function PipelinePage() {
           {openJobs.length > 0 && (
             <section className="space-y-2">
               <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 px-1">
-                Open vacatures
+                {t("sections.openJobs")}
               </h2>
               <div className="space-y-2">
                 {openJobs.map((job) => (
@@ -69,7 +61,7 @@ export default function PipelinePage() {
           {otherJobs.length > 0 && (
             <section className="space-y-2">
               <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 px-1">
-                Overige vacatures
+                {t("sections.otherJobs")}
               </h2>
               <div className="space-y-2">
                 {otherJobs.map((job) => (
@@ -95,6 +87,8 @@ type PipelineJobRowJob = {
 };
 
 function PipelineJobRow({ job }: { job: PipelineJobRowJob }) {
+  const { t } = useTranslation("pipeline");
+
   // Sub-fase 2C: department / location / recruiter_name zijn nullable na de
   // shared-contracts migratie. Filter null-onderdelen uit de meta-regel zodat
   // we niet "null · null · null" tonen voor jobs zonder die hydration.
@@ -117,7 +111,7 @@ function PipelineJobRow({ job }: { job: PipelineJobRowJob }) {
             {job.title}
           </p>
           <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium shrink-0", STATUS_COLOR[job.status])}>
-            {STATUS_LABEL[job.status] ?? job.status}
+            {t(`status.${job.status}`, { defaultValue: job.status })}
           </span>
         </div>
         {metaParts.length > 0 && (

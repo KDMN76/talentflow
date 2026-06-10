@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import { Mail, Phone, ExternalLink } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,12 +23,15 @@ const sourceColors: Record<string, string> = {
 };
 
 export function CandidateCard({ candidate }: CandidateCardProps) {
+  const { t } = useTranslation("candidates");
   const initials = getInitials(candidate.name);
   const skills = candidate.skills ?? [];
   const tags = candidate.tags ?? [];
-  const sourceLabel = candidate.source ?? "Onbekend";
+  // Kleur-lookup op de rauwe API-waarde; alleen de wéérgave van een
+  // ontbrekende source wordt vertaald.
+  const sourceLabel = candidate.source ?? t("card.unknownSource");
   const sourceColor =
-    sourceColors[sourceLabel] ??
+    sourceColors[candidate.source ?? ""] ??
     "bg-zinc-100 text-zinc-700";
 
   return (

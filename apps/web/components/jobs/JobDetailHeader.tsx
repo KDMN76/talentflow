@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import {
   Activity,
   Building2,
@@ -38,41 +40,43 @@ import type {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-const STATUS_COPY: Record<string, { label: string; cls: string }> = {
+// Display-maps bevatten alleen nog i18n-SLEUTELS (de API-waarden als keys
+// blijven onaangetast); de labels zelf leven in `jobs.json` per taal.
+const STATUS_COPY: Record<string, { labelKey: string; cls: string }> = {
   draft: {
-    label: "Concept",
+    labelKey: "detail.status.draft",
     cls: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
   },
   open: {
-    label: "Gepubliceerd",
+    labelKey: "detail.status.open",
     cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400",
   },
   filled: {
-    label: "Gevuld",
+    labelKey: "detail.status.filled",
     cls: "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400",
   },
   closed: {
-    label: "Gesloten",
+    labelKey: "detail.status.closed",
     cls: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400",
   },
   archived: {
-    label: "Gearchiveerd",
+    labelKey: "detail.status.archived",
     cls: "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400",
   },
 };
 
-const REMOTE_COPY: Record<string, string> = {
-  onsite: "Op kantoor",
-  hybrid: "Hybride",
-  remote: "Remote",
+const REMOTE_KEYS: Record<string, string> = {
+  onsite: "detail.remote.onsite",
+  hybrid: "detail.remote.hybrid",
+  remote: "detail.remote.remote",
 };
 
-const CONTRACT_COPY: Record<string, string> = {
-  fulltime: "Fulltime",
-  parttime: "Parttime",
-  contract: "Contract",
-  freelance: "Freelance",
-  internship: "Stage",
+const CONTRACT_KEYS: Record<string, string> = {
+  fulltime: "detail.contract.fulltime",
+  parttime: "detail.contract.parttime",
+  contract: "detail.contract.contract",
+  freelance: "detail.contract.freelance",
+  internship: "detail.contract.internship",
 };
 
 /**
@@ -97,7 +101,7 @@ function hashColor(input: string): string {
   return palette[Math.abs(hash) % palette.length];
 }
 
-function formatSalary(job: Job): string | null {
+function formatSalary(job: Job, t: TFunction): string | null {
   const { salary_min, salary_max, currency, salary_frequency } = job;
   if (salary_min == null && salary_max == null) return null;
 
@@ -112,8 +116,8 @@ function formatSalary(job: Job): string | null {
     range = fmt((salary_max ?? salary_min) as number);
   }
 
-  if (salary_frequency === "monthly") return `${range} per maand`;
-  if (salary_frequency === "hourly") return `${range} per uur`;
+  if (salary_frequency === "monthly") return t("detail.salary.perMonth", { range });
+  if (salary_frequency === "hourly") return t("detail.salary.perHour", { range });
   return range; // yearly is the default — no suffix needed for compactness.
 }
 
@@ -192,14 +196,22 @@ export function JobDetailHeader({
   isHealthLoading,
   isFunnelLoading,
 }: JobDetailHeaderProps) {
+  const { t } = useTranslation("jobs");
   const [healthOpen, setHealthOpen] = useState(false);
 
   const status = STATUS_COPY[job.status] ?? STATUS_COPY.draft;
-  const remoteLabel = job.remote_type ? REMOTE_COPY[job.remote_type] ?? job.remote_type : null;
-  const contractLabel = job.contract_type
-    ? CONTRACT_COPY[job.contract_type] ?? job.contract_type
+  // Onbekende API-waarden vallen terug op de ruwe waarde i.p.v. een i18n-key.
+  const remoteLabel = job.remote_type
+    ? REMOTE_KEYS[job.remote_type]
+      ? t(REMOTE_KEYS[job.remote_type])
+      : job.remote_type
     : null;
-  const salary = formatSalary(job);
+  const contractLabel = job.contract_type
+    ? CONTRACT_KEYS[job.contract_type]
+      ? t(CONTRACT_KEYS[job.contract_type])
+      : job.contract_type
+    : null;
+  const salary = formatSalary(job, t);
 
   // Sub-fase 2C: `job.client` / `job.owner_name` waren fantoom-velden zonder
   // DB-grond. Tot er een Clients/CRM-module is (zie ROADMAP) tonen we de
@@ -235,14 +247,17 @@ export function JobDetailHeader({
   })();
 
   const dotTooltip = (i: number) => {
-    if (!funnel || funnel.stages.length === 0) return "Nog geen pipeline-data";
+    if (!funnel || funnel.stages.length === 0) return t("detail.pipeline.noData");
     const ratio = funnel.stages.length === 1 ? 1 : i / 4;
     const stageIdx = Math.min(
       funnel.stages.length - 1,
       Math.round(ratio * (funnel.stages.length - 1))
     );
     const stage = funnel.stages[stageIdx];
-    return `${stage.name} — ${stage.count} ${stage.count === 1 ? "kandidaat" : "kandidaten"}`;
+    return t("detail.pipeline.stageTooltip", {
+      name: stage.name,
+      count: stage.count,
+    });
   };
 
   return (
@@ -273,7 +288,7 @@ export function JobDetailHeader({
                     status.cls
                   )}
                 >
-                  {status.label}
+                  {t(status.labelKey)}
                 </span>
                 <TalentFitActiveBadge jobId={job.id} />
               </div>
@@ -321,7 +336,7 @@ export function JobDetailHeader({
               {ownerName && (
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">
-                    Eigenaar
+                    {t("detail.owner")}
                   </span>
                   <Avatar className="h-6 w-6">
                     <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-500 text-white text-[10px] font-semibold">
@@ -341,7 +356,7 @@ export function JobDetailHeader({
           {/* ── Pipeline dots ─────────────────────────────────────────── */}
           <div className="flex items-center gap-3">
             <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              Pipeline
+              {t("detail.pipelineLabel")}
             </span>
             <div className="flex items-center gap-1.5">
               {dotState.map((filled, i) => (
@@ -366,7 +381,7 @@ export function JobDetailHeader({
             </div>
             {funnel && (
               <span className="text-xs text-muted-foreground ml-2">
-                {funnel.total} {funnel.total === 1 ? "kandidaat" : "kandidaten"} actief
+                {t("detail.activeCandidates", { count: funnel.total })}
               </span>
             )}
           </div>
@@ -374,31 +389,31 @@ export function JobDetailHeader({
           {/* ── Counters bar ──────────────────────────────────────────── */}
           <div className="mt-4 grid grid-cols-2 sm:grid-cols-5 gap-3">
             <CounterCell
-              label="Nieuw"
+              label={t("detail.counters.new")}
               value={buckets.nieuw}
               isLoading={isFunnelLoading}
               tone="indigo"
             />
             <CounterCell
-              label="In funnel"
+              label={t("detail.counters.inFunnel")}
               value={buckets.inFunnel}
               isLoading={isFunnelLoading}
               tone="blue"
             />
             <CounterCell
-              label="Aangeboden"
+              label={t("detail.counters.offered")}
               value={buckets.offered}
               isLoading={isFunnelLoading}
               tone="amber"
             />
             <CounterCell
-              label="Aangenomen"
+              label={t("detail.counters.hired")}
               value={buckets.hired}
               isLoading={isFunnelLoading}
               tone="emerald"
             />
             <CounterCell
-              label="Afgewezen"
+              label={t("detail.counters.dropped")}
               value={buckets.dropped}
               isLoading={isFunnelLoading}
               tone="zinc"
@@ -410,7 +425,7 @@ export function JobDetailHeader({
             {/* Health */}
             <div className="flex items-center gap-2">
               <Activity className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Health:</span>
+              <span className="text-xs text-muted-foreground">{t("detail.health.label")}</span>
               {isHealthLoading ? (
                 <Skeleton className="h-6 w-14" />
               ) : health ? (
@@ -421,7 +436,7 @@ export function JobDetailHeader({
                     "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ring-inset transition-shadow hover:shadow-sm",
                     healthColor(health.score)
                   )}
-                  aria-label="Open health-breakdown"
+                  aria-label={t("detail.health.openBreakdownAria")}
                 >
                   {health.score}/100
                 </button>
@@ -433,13 +448,12 @@ export function JobDetailHeader({
             {/* Days open */}
             <div className="flex items-center gap-2">
               <CalendarClock className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Open sinds:</span>
+              <span className="text-xs text-muted-foreground">{t("detail.openSince")}</span>
               {isHealthLoading ? (
                 <Skeleton className="h-4 w-16" />
               ) : (
                 <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                  {health?.days_open ?? 0}{" "}
-                  {(health?.days_open ?? 0) === 1 ? "dag" : "dagen"}
+                  {t("detail.daysOpen", { count: health?.days_open ?? 0 })}
                 </span>
               )}
             </div>
@@ -448,7 +462,7 @@ export function JobDetailHeader({
             <div className="flex items-center gap-2">
               <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-xs text-muted-foreground">
-                Verwachte afronding:
+                {t("detail.predictedClose")}
               </span>
               {isHealthLoading ? (
                 <Skeleton className="h-4 w-24" />
@@ -466,16 +480,15 @@ export function JobDetailHeader({
       <Dialog open={healthOpen} onOpenChange={setHealthOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Health-breakdown</DialogTitle>
+            <DialogTitle>{t("detail.health.dialogTitle")}</DialogTitle>
             <DialogDescription>
-              Geaggregeerde score op basis van doorlooptijd, drop-off en
-              recruiter-activiteit. Hoger is gezonder.
+              {t("detail.health.dialogDescription")}
             </DialogDescription>
           </DialogHeader>
           {health ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Totaal</span>
+                <span className="text-sm font-medium">{t("detail.health.total")}</span>
                 <span
                   className={cn(
                     "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ring-inset",
@@ -518,7 +531,7 @@ export function JobDetailHeader({
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Health-data nog niet beschikbaar.
+              {t("detail.health.noData")}
             </p>
           )}
         </DialogContent>
@@ -573,6 +586,7 @@ function CounterCell({ label, value, isLoading, tone }: CounterCellProps) {
  * confident they should be in the fit-driven ranking.
  */
 function TalentFitActiveBadge({ jobId }: { jobId: string }) {
+  const { t } = useTranslation("jobs");
   const { data: model } = useTalentFitModel();
   const { data: matches } = useJobMatches(jobId);
 
@@ -596,12 +610,11 @@ function TalentFitActiveBadge({ jobId }: { jobId: string }) {
             )}
           >
             <Sparkles className="h-3 w-3" />
-            Talent Fit actief
+            {t("detail.talentFit.badge")}
           </Link>
         </TooltipTrigger>
         <TooltipContent side="bottom" className="max-w-xs text-xs">
-          Talent Fit Model rangschikt deze matches op basis van jouw
-          historische hires. Precision @ 1: {precision}%. Klik voor details.
+          {t("detail.talentFit.tooltip", { precision })}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

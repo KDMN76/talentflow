@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import { MapPin, Users, Building2, ArrowRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,24 +10,26 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn, getInitials, formatRelativeDate } from "@/lib/utils";
 import type { JobListItem as Job } from "@talentflow/contracts";
 
+// Display-map met i18n-sleutels; API-statuswaarden als keys onaangetast.
+// Labels delen de `detail.status.*`-sleutels met JobDetailHeader.
 const statusConfig: Record<
   string,
-  { label: string; className: string }
+  { labelKey: string; className: string }
 > = {
   draft: {
-    label: "Concept",
+    labelKey: "detail.status.draft",
     className: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
   },
   open: {
-    label: "Open",
+    labelKey: "detail.status.open",
     className: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400",
   },
   filled: {
-    label: "Gevuld",
+    labelKey: "detail.status.filled",
     className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400",
   },
   closed: {
-    label: "Gesloten",
+    labelKey: "detail.status.closed",
     className: "bg-red-100 text-red-600 dark:bg-red-950/30 dark:text-red-400",
   },
 };
@@ -34,6 +39,7 @@ interface JobCardProps {
 }
 
 export function JobCard({ job }: JobCardProps) {
+  const { t } = useTranslation("jobs");
   const status = statusConfig[job.status] ?? statusConfig.draft;
   // Schema laat NULL toe op recruiter_id/recruiter_name (LEFT JOIN), department,
   // location en application_count komt soms als string van COUNT(). Defensief
@@ -64,7 +70,7 @@ export function JobCard({ job }: JobCardProps) {
                   status.className
                 )}
               >
-                {status.label}
+                {t(status.labelKey)}
               </span>
             </div>
 
@@ -83,7 +89,7 @@ export function JobCard({ job }: JobCardProps) {
               )}
               <span className="flex items-center gap-1.5">
                 <Users className="h-3.5 w-3.5" />
-                {applicationCount} sollicitanten
+                {t("card.applicants", { count: applicationCount })}
               </span>
             </div>
           </div>
@@ -99,7 +105,8 @@ export function JobCard({ job }: JobCardProps) {
 
         <div className="mt-4 flex items-center justify-between">
           <p className="text-xs text-muted-foreground">
-            Recruiter: {recruiterName ?? "Niet toegewezen"} · {formatRelativeDate(job.created_at)}
+            {t("card.recruiter")} {recruiterName ?? t("card.unassigned")} ·{" "}
+            {formatRelativeDate(job.created_at)}
           </p>
           <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <Button
@@ -108,7 +115,7 @@ export function JobCard({ job }: JobCardProps) {
               className="h-7 text-xs"
               asChild
             >
-              <Link href={`/jobs/${job.id}`}>Details</Link>
+              <Link href={`/jobs/${job.id}`}>{t("card.details")}</Link>
             </Button>
             {job.status !== "draft" && (
               <Button
@@ -117,7 +124,7 @@ export function JobCard({ job }: JobCardProps) {
                 asChild
               >
                 <Link href={`/jobs/${job.id}/pipeline`}>
-                  Pipeline
+                  {t("card.pipeline")}
                   <ArrowRight className="ml-1 h-3 w-3" />
                 </Link>
               </Button>

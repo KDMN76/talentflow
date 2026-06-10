@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Plus, UserSquare2, LayoutGrid, List, Upload } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { CandidateCard } from "@/components/candidates/CandidateCard";
@@ -18,9 +19,12 @@ import { useCandidates } from "@/hooks/useCandidates";
 import { cn, getInitials, getScoreColor, formatRelativeDate } from "@/lib/utils";
 import Link from "next/link";
 
+// Filter keys: "Alle"/"Handmatig" are internal UI keys (translated at render
+// time), the rest are literal source values from the API (not translated).
 const SOURCE_FILTERS = ["Alle", "LinkedIn", "Indeed", "Referral", "Behance", "Handmatig"];
 
 export default function CandidatesPage() {
+  const { t } = useTranslation("candidates");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sourceFilter, setSourceFilter] = useState("Alle");
@@ -59,11 +63,17 @@ export default function CandidatesPage() {
     );
   };
 
+  // Display labels for the non-API filter keys; API source values render as-is.
+  const sourceFilterLabels: Record<string, string> = {
+    Alle: t("filters.all"),
+    Handmatig: t("filters.manual"),
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Kandidaten"
-        description={`${candidates?.length ?? 0} kandidaten totaal`}
+        title={t("list.title")}
+        description={t("list.totalCount", { count: candidates?.length ?? 0 })}
         actions={
           <div className="flex items-center gap-2">
             <Button
@@ -71,14 +81,14 @@ export default function CandidatesPage() {
               onClick={() => setImportOpen(true)}
             >
               <Upload className="mr-2 h-4 w-4" />
-              CSV-import
+              {t("list.csvImport")}
             </Button>
             <Button
               onClick={() => setDialogOpen(true)}
               className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-sm border-0"
             >
               <Plus className="mr-2 h-4 w-4" />
-              Nieuwe kandidaat
+              {t("list.newCandidate")}
             </Button>
           </div>
         }
@@ -143,7 +153,7 @@ export default function CandidatesPage() {
                 : "bg-background border-border text-muted-foreground hover:text-foreground hover:bg-zinc-50"
             )}
           >
-            {source}
+            {sourceFilterLabels[source] ?? source}
           </button>
         ))}
       </div>
@@ -165,10 +175,10 @@ export default function CandidatesPage() {
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <UserSquare2 className="h-12 w-12 text-muted-foreground/30 mb-4" />
           <p className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-            Geen kandidaten gevonden
+            {t("list.emptyTitle")}
           </p>
           <p className="text-sm text-muted-foreground mt-1">
-            Pas je zoekopdracht aan of voeg een nieuwe kandidaat toe.
+            {t("list.emptyHint")}
           </p>
         </div>
       ) : viewMode === "grid" ? (
@@ -204,11 +214,11 @@ export default function CandidatesPage() {
                     onChange={toggleAll}
                   />
                 </th>
-                <th className="text-left font-medium text-muted-foreground px-4 py-3">Naam</th>
-                <th className="text-left font-medium text-muted-foreground px-4 py-3 hidden sm:table-cell">Skills</th>
-                <th className="text-left font-medium text-muted-foreground px-4 py-3 hidden md:table-cell">Bron</th>
-                <th className="text-left font-medium text-muted-foreground px-4 py-3 hidden lg:table-cell">Score</th>
-                <th className="text-left font-medium text-muted-foreground px-4 py-3 hidden lg:table-cell">Toegevoegd</th>
+                <th className="text-left font-medium text-muted-foreground px-4 py-3">{t("table.name")}</th>
+                <th className="text-left font-medium text-muted-foreground px-4 py-3 hidden sm:table-cell">{t("table.skills")}</th>
+                <th className="text-left font-medium text-muted-foreground px-4 py-3 hidden md:table-cell">{t("table.source")}</th>
+                <th className="text-left font-medium text-muted-foreground px-4 py-3 hidden lg:table-cell">{t("table.score")}</th>
+                <th className="text-left font-medium text-muted-foreground px-4 py-3 hidden lg:table-cell">{t("table.added")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">

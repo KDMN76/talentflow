@@ -1,8 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { cookies, headers } from "next/headers";
 import "./globals.css";
 import { Providers } from "./providers";
 import PWARegister from "@/components/pwa/PWARegister";
+import { I18nProvider } from "@/components/i18n/I18nProvider";
+import { LOCALE_COOKIE, resolveInitialLocale } from "@/lib/i18n/cookie";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -41,10 +44,20 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Actieve taal: cookie (eerdere keuze) → Accept-Language → NL. Server +
+  // client lezen dezelfde waarde → `<html lang>` klopt en er is geen
+  // hydration-mismatch. De user→tenant-voorkeur wordt client-side toegepast
+  // zodra /users/me geladen is (useLanguageSync in de dashboard-layout).
+  const locale = resolveInitialLocale(
+    cookies().get(LOCALE_COOKIE)?.value,
+    headers().get("accept-language")
+  );
   return (
-    <html lang="nl" suppressHydrationWarning className={inter.variable}>
+    <html lang={locale} suppressHydrationWarning className={inter.variable}>
       <body className="font-sans antialiased">
-        <Providers>{children}</Providers>
+        <I18nProvider initialLocale={locale}>
+          <Providers>{children}</Providers>
+        </I18nProvider>
         <PWARegister />
       </body>
     </html>

@@ -164,9 +164,15 @@ export async function deactivateUser(
 
 export async function getMe(tenantId: string, userId: string) {
   return withTenant(tenantId, async (client) => {
+    // `language` (eigen voorkeur, NULL = erven) + `tenant_default_language`
+    // zodat de frontend de taal kan resolven: user → tenant → browser → nl.
     const { rows: [user] } = await client.query(
-      `SELECT id, email, name, role, avatar_url, is_active, created_at
-       FROM users WHERE id = $1 AND tenant_id = $2`,
+      `SELECT u.id, u.email, u.name, u.role, u.avatar_url, u.is_active,
+              u.created_at, u.language,
+              t.default_language AS tenant_default_language
+       FROM users u
+       JOIN tenants t ON t.id = u.tenant_id
+       WHERE u.id = $1 AND u.tenant_id = $2`,
       [userId, tenantId]
     );
 
@@ -181,7 +187,7 @@ export async function getMe(tenantId: string, userId: string) {
 export async function updateMe(
   tenantId: string,
   userId: string,
-  data: { name?: string; avatar_url?: string | null; password?: string }
+  data: { name?: string; avatar_url?: string | null; password?: string; language?: string | null }
 ): Promise<UserListItem> {
   return withTenant(tenantId, async (client) => {
     const fields: string[] = [];
@@ -190,6 +196,8 @@ export async function updateMe(
 
     if (data.name !== undefined) { fields.push(`name = $${idx++}`); values.push(data.name); }
     if (data.avatar_url !== undefined) { fields.push(`avatar_url = $${idx++}`); values.push(data.avatar_url); }
+    // NULL is een geldige waarde: "geen eigen voorkeur, erf de tenant-default".
+    if (data.language !== undefined) { fields.push(`language = $${idx++}`); values.push(data.language); }
     if (data.password !== undefined) {
       const hash = await bcrypt.hash(data.password, SALT_ROUNDS);
       fields.push(`password_hash = $${idx++}`);
@@ -205,7 +213,7 @@ export async function updateMe(
     const { rows: [user] } = await client.query(
       `UPDATE users SET ${fields.join(', ')}
        WHERE id = $${idx++} AND tenant_id = $${idx}
-       RETURNING id, email, name, role, avatar_url, is_active, created_at`,
+       RETURNING id, email, name, role, avatar_url, is_active, created_at, language`,
       values
     );
 

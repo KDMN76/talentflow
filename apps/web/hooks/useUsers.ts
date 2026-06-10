@@ -28,6 +28,10 @@ interface CurrentUser extends TenantUser {
     name: string;
     plan?: string;
   };
+  /** Eigen UI-taalvoorkeur; null = erf de tenant-default. */
+  language?: string | null;
+  /** Tenant-brede default-taal (tenants.default_language). */
+  tenant_default_language?: string | null;
 }
 
 export function useCurrentUser() {

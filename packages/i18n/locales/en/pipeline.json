@@ -1,0 +1,27 @@
+{
+  "title": "Pipeline",
+  "selectJob": "Select a job to view its candidate pipeline",
+  "empty": {
+    "title": "No jobs available",
+    "description": "Create a job first to use the pipeline."
+  },
+  "sections": {
+    "openJobs": "Open jobs",
+    "otherJobs": "Other jobs"
+  },
+  "status": {
+    "open": "Open",
+    "draft": "Draft",
+    "filled": "Filled",
+    "closed": "Closed"
+  },
+  "toast": {
+    "moveFailed": {
+      "title": "Move failed",
+      "description": "Please try again."
+    }
+  },
+  "board": {
+    "dropHere": "Drag candidates here"
+  }
+}

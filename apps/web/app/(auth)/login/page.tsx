@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
+import { useTranslation } from "react-i18next";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, Zap } from "lucide-react";
@@ -25,6 +26,7 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
+  const { t } = useTranslation("auth");
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -53,26 +55,20 @@ export default function LoginPage() {
       router.push("/dashboard");
     } catch (error) {
       // No silent fallback — surface the failure to the user.
-      let title = "Inloggen mislukt";
-      let description =
-        "Er is iets misgegaan. Probeer het opnieuw of neem contact op met support.";
+      let description = t("errors.generic");
 
       if (error instanceof AxiosError) {
         if (!error.response) {
           // Network error / API unreachable
-          description =
-            "Kan geen verbinding maken met de server. Controleer of de API bereikbaar is.";
+          description = t("errors.network");
         } else if (error.response.status === 401) {
-          description =
-            "Onjuiste inloggegevens. Controleer e-mail, wachtwoord en workspace.";
+          description = t("login.errors.invalidCredentials");
         } else if (error.response.status === 404) {
-          description = "Workspace niet gevonden. Controleer de workspace-naam.";
+          description = t("login.errors.workspaceNotFound");
         } else if (error.response.status === 429) {
-          description =
-            "Te veel inlogpogingen. Wacht een moment en probeer het opnieuw.";
+          description = t("login.errors.tooManyAttempts");
         } else if (error.response.status >= 500) {
-          description =
-            "Serverfout. Probeer het later opnieuw of neem contact op met support.";
+          description = t("errors.server");
         } else {
           const apiMessage = (error.response.data as { message?: string })
             ?.message;
@@ -82,7 +78,7 @@ export default function LoginPage() {
 
       toast({
         variant: "destructive",
-        title,
+        title: t("login.errors.title"),
         description,
       });
     } finally {
@@ -103,9 +99,9 @@ export default function LoginPage() {
           </span>
         </div>
         <div>
-          <CardTitle className="text-2xl font-bold">Welkom terug</CardTitle>
+          <CardTitle className="text-2xl font-bold">{t("login.title")}</CardTitle>
           <CardDescription className="mt-1 text-base">
-            Log in op je account om verder te gaan
+            {t("login.subtitle")}
           </CardDescription>
         </div>
       </CardHeader>
@@ -113,11 +109,11 @@ export default function LoginPage() {
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="tenantSlug">Workspace</Label>
+            <Label htmlFor="tenantSlug">{t("login.workspaceLabel")}</Label>
             <Input
               id="tenantSlug"
               type="text"
-              placeholder="mijn-bedrijf"
+              placeholder={t("login.workspacePlaceholder")}
               autoComplete="organization"
               {...register("tenantSlug")}
               className={errors.tenantSlug ? "border-destructive" : ""}
@@ -128,11 +124,11 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email">E-mailadres</Label>
+            <Label htmlFor="email">{t("login.emailLabel")}</Label>
             <Input
               id="email"
               type="email"
-              placeholder="naam@bedrijf.nl"
+              placeholder={t("login.emailPlaceholder")}
               autoComplete="email"
               {...register("email")}
               className={errors.email ? "border-destructive" : ""}
@@ -144,12 +140,12 @@ export default function LoginPage() {
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password">Wachtwoord</Label>
+              <Label htmlFor="password">{t("login.passwordLabel")}</Label>
               <Link
                 href="#"
                 className="text-sm text-primary hover:underline font-medium"
               >
-                Vergeten?
+                {t("login.forgotPassword")}
               </Link>
             </div>
             <Input
@@ -175,7 +171,7 @@ export default function LoginPage() {
             disabled={isLoading}
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Inloggen
+            {t("login.submit")}
           </Button>
 
           {/* Hotfix 2026-05-15: publieke registratie tijdelijk uit (zie
@@ -183,12 +179,12 @@ export default function LoginPage() {
               zodat we geen kapotte UX laten zien. */}
           {process.env.NEXT_PUBLIC_DISABLE_PUBLIC_REGISTRATION !== "true" && (
             <p className="text-sm text-center text-muted-foreground">
-              Nog geen account?{" "}
+              {t("login.noAccount")}{" "}
               <Link
                 href="/register"
                 className="text-primary font-medium hover:underline"
               >
-                Registreer je bedrijf
+                {t("login.registerLink")}
               </Link>
             </p>
           )}

@@ -1,18 +1,5 @@
 import rateLimit from 'express-rate-limit';
-import { RedisStore } from 'rate-limit-redis';
-import { redis } from '../queue/queues';
-
-// Matches rate-limit-redis internal: Data = boolean | number | string; RedisReply = Data | Data[]
-type RLData = boolean | number | string;
-type RLRedisReply = RLData | RLData[];
-
-function makeRedisCommand() {
-  return async (...args: string[]): Promise<RLRedisReply> => {
-    const [cmd, ...rest] = args;
-    const result = await redis.call(cmd, ...rest);
-    return result as RLRedisReply;
-  };
-}
+import { rateLimitStore } from './rateLimitStore';
 
 // Limieten zijn env-tunebaar (default = productiewaarde). Handig om in dev/
 // audit/load-test tijdelijk op te hogen zonder code te wijzigen. Niet zetten →
@@ -28,10 +15,7 @@ export const apiRateLimit = rateLimit({
   max: API_MAX,
   standardHeaders: true,
   legacyHeaders: false,
-  store: new RedisStore({
-    sendCommand: makeRedisCommand(),
-    prefix: 'rl:api:',
-  }),
+  store: rateLimitStore('rl:api:'),
   handler: (_req, res) => {
     res.status(429).json({
       error: {
@@ -51,10 +35,7 @@ export const authRateLimit = rateLimit({
   max: AUTH_MAX,
   standardHeaders: true,
   legacyHeaders: false,
-  store: new RedisStore({
-    sendCommand: makeRedisCommand(),
-    prefix: 'rl:auth:',
-  }),
+  store: rateLimitStore('rl:auth:'),
   handler: (_req, res) => {
     res.status(429).json({
       error: {

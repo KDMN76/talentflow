@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import {
   Calendar,
   CheckCircle2,
@@ -55,37 +57,32 @@ import type {
 
 type TabKey = "upcoming" | "completed" | "cancelled";
 
-const TAB_LABELS: Record<TabKey, string> = {
-  upcoming: "Komende",
-  completed: "Afgerond",
-  cancelled: "Geannuleerd",
-};
-
 const TAB_STATUSES: Record<TabKey, InterviewStatus[]> = {
   upcoming: ["scheduled", "rescheduled"],
   completed: ["completed", "no_show"],
   cancelled: ["cancelled"],
 };
 
-const STATUS_BADGE: Record<InterviewStatus, { label: string; cls: string }> = {
+// API-statuswaarden blijven de keys; de zichtbare labels komen via t(labelKey).
+const STATUS_BADGE: Record<InterviewStatus, { labelKey: string; cls: string }> = {
   scheduled: {
-    label: "Gepland",
+    labelKey: "status.scheduled",
     cls: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
   },
   rescheduled: {
-    label: "Verplaatst",
+    labelKey: "status.rescheduled",
     cls: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
   },
   completed: {
-    label: "Afgerond",
+    labelKey: "status.completed",
     cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
   },
   no_show: {
-    label: "No-show",
+    labelKey: "status.noShow",
     cls: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
   },
   cancelled: {
-    label: "Geannuleerd",
+    labelKey: "status.cancelled",
     cls: "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300",
   },
 };
@@ -99,6 +96,7 @@ const LOCATION_ICON: Record<InterviewLocationType, typeof Video> = {
 };
 
 export default function InterviewsPage() {
+  const { t } = useTranslation("interviews");
   const [tab, setTab] = useState<TabKey>("upcoming");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -181,12 +179,12 @@ export default function InterviewsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Interviews"
-        description="Plan, beheer en review interviews — inclusief opnames, transcripts en agreement matrix."
+        title={t("title")}
+        description={t("description")}
         actions={
           <Button onClick={() => setOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Nieuw interview
+            {t("newInterview")}
           </Button>
         }
       />
@@ -196,7 +194,7 @@ export default function InterviewsPage() {
         <CardContent className="pt-6 space-y-4">
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-1.5">
-              <Label htmlFor="from">Van</Label>
+              <Label htmlFor="from">{t("filters.from")}</Label>
               <Input
                 id="from"
                 type="date"
@@ -205,7 +203,7 @@ export default function InterviewsPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="to">Tot</Label>
+              <Label htmlFor="to">{t("filters.to")}</Label>
               <Input
                 id="to"
                 type="date"
@@ -214,13 +212,13 @@ export default function InterviewsPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Interviewer</Label>
+              <Label>{t("filters.interviewer")}</Label>
               <Select value={interviewerId} onValueChange={setInterviewerId}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Alle interviewers</SelectItem>
+                  <SelectItem value="all">{t("filters.allInterviewers")}</SelectItem>
                   {interviewerOptions.map((m) => (
                     <SelectItem key={m.id} value={m.id}>
                       {m.name}
@@ -230,7 +228,7 @@ export default function InterviewsPage() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="search">Zoek</Label>
+              <Label htmlFor="search">{t("filters.search")}</Label>
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
@@ -238,7 +236,7 @@ export default function InterviewsPage() {
                   type="search"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Kandidaat of vacature…"
+                  placeholder={t("filters.searchPlaceholder")}
                   className="pl-8"
                 />
               </div>
@@ -248,8 +246,7 @@ export default function InterviewsPage() {
             <div className="flex items-center gap-2 text-xs">
               <Filter className="h-3 w-3 text-muted-foreground" />
               <span className="text-muted-foreground">
-                Filters actief — {tabbed.length} resultaat
-                {tabbed.length === 1 ? "" : "en"}
+                {t("filters.activeResults", { count: tabbed.length })}
               </span>
               <Button
                 variant="ghost"
@@ -257,7 +254,7 @@ export default function InterviewsPage() {
                 className="h-6 ml-auto"
                 onClick={resetFilters}
               >
-                <X className="h-3 w-3 mr-1" /> Reset
+                <X className="h-3 w-3 mr-1" /> {t("filters.reset")}
               </Button>
             </div>
           )}
@@ -268,15 +265,15 @@ export default function InterviewsPage() {
       <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
         <TabsList>
           <TabsTrigger value="upcoming">
-            Komende
+            {t("tabs.upcoming")}
             <CountChip n={counts.upcoming} />
           </TabsTrigger>
           <TabsTrigger value="completed">
-            Afgerond
+            {t("tabs.completed")}
             <CountChip n={counts.completed} />
           </TabsTrigger>
           <TabsTrigger value="cancelled">
-            Geannuleerd
+            {t("tabs.cancelled")}
             <CountChip n={counts.cancelled} />
           </TabsTrigger>
         </TabsList>
@@ -293,7 +290,7 @@ export default function InterviewsPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-sm font-medium text-rose-600">
-              Kon interviews niet laden — probeer opnieuw
+              {t("error.loadFailed")}
             </p>
             {error instanceof Error && (
               <p className="mt-1 text-xs text-muted-foreground">
@@ -307,7 +304,9 @@ export default function InterviewsPage() {
           <CardContent className="py-12 text-center">
             <Calendar className="h-10 w-10 text-muted-foreground/50 mx-auto" />
             <p className="text-sm font-medium text-muted-foreground mt-3">
-              Geen interviews in {TAB_LABELS[tab].toLowerCase()}.
+              {t("empty.noInterviews", {
+                tab: t(`tabs.${tab}`).toLowerCase(),
+              })}
             </p>
             {tab === "upcoming" && (
               <Button
@@ -316,7 +315,7 @@ export default function InterviewsPage() {
                 className="mt-4"
               >
                 <Plus className="h-3.5 w-3.5 mr-1.5" />
-                Plan een interview in
+                {t("empty.scheduleCta")}
               </Button>
             )}
           </CardContent>
@@ -344,6 +343,7 @@ function CountChip({ n }: { n: number }) {
 }
 
 function InterviewRow({ iv }: { iv: Interview }) {
+  const { t } = useTranslation("interviews");
   const status = STATUS_BADGE[iv.status];
   const LocIcon = LOCATION_ICON[iv.location_type];
   const interviewers = iv.participants.filter(
@@ -376,19 +376,18 @@ function InterviewRow({ iv }: { iv: Interview }) {
                 status.cls
               )}
             >
-              {status.label}
+              {t(status.labelKey)}
             </Badge>
             {iv.has_recording && (
               <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-rose-600 dark:text-rose-400">
                 <Mic className="h-3 w-3" />
-                Opname
+                {t("row.recording")}
               </span>
             )}
             {iv.scorecard_count > 0 && (
               <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
                 <CheckCircle2 className="h-3 w-3" />
-                {iv.scorecard_count} scorecard
-                {iv.scorecard_count === 1 ? "" : "s"}
+                {t("row.scorecards", { count: iv.scorecard_count })}
               </span>
             )}
           </div>
@@ -398,11 +397,12 @@ function InterviewRow({ iv }: { iv: Interview }) {
           <div className="flex items-center gap-4 mt-1.5 text-[11px] text-muted-foreground flex-wrap">
             <span className="inline-flex items-center gap-1">
               <Clock className="h-3 w-3" />
-              {formatDateTime(iv.scheduled_start)} · {iv.duration_minutes} min
+              {formatDateTime(iv.scheduled_start)} ·{" "}
+              {t("row.durationMin", { count: iv.duration_minutes })}
             </span>
             <span className="inline-flex items-center gap-1">
               <LocIcon className="h-3 w-3" />
-              {locationLabel(iv.location_type)}
+              {locationLabel(t, iv.location_type)}
             </span>
           </div>
         </div>
@@ -425,15 +425,16 @@ function InterviewRow({ iv }: { iv: Interview }) {
           )}
         </div>
         <Button variant="outline" size="sm" className="shrink-0">
-          Bekijk
+          {t("row.view")}
         </Button>
       </div>
     </Link>
   );
 }
 
-function locationLabel(t: InterviewLocationType): string {
-  switch (t) {
+// Merknamen (Google Meet, Teams, Zoom) blijven onvertaald.
+function locationLabel(t: TFunction, type: InterviewLocationType): string {
+  switch (type) {
     case "google_meet":
       return "Google Meet";
     case "teams":
@@ -441,9 +442,9 @@ function locationLabel(t: InterviewLocationType): string {
     case "zoom":
       return "Zoom";
     case "in_person":
-      return "In persoon";
+      return t("location.inPerson");
     case "phone":
-      return "Telefonisch";
+      return t("location.phone");
   }
 }
 

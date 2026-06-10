@@ -1,0 +1,204 @@
+{
+  "list": {
+    "title": "Vacatures",
+    "description": "Beheer al je vacatures op een plek",
+    "aiGenerator": "AI Generator",
+    "newJob": "Nieuwe vacature",
+    "loading": "Laden...",
+    "results_one": "resultaat",
+    "results_other": "resultaten",
+    "ofTotal": "van {{total}} totaal",
+    "quickFilters": {
+      "myOpen": "Mijn open jobs",
+      "recent7d": "Recent geplaatst (laatste 7 dagen)",
+      "filledThisYear": "Vervulde dit jaar"
+    },
+    "empty": {
+      "noJobsTitle": "Geen vacatures gevonden",
+      "noJobsDescription": "Maak je eerste vacature aan om te beginnen.",
+      "noResultsTitle": "Geen jobs gevonden — pas filters aan",
+      "noResultsDescription": "Probeer minder strikte filters of reset om alles te zien.",
+      "resetFilters": "Reset filters"
+    }
+  },
+  "form": {
+    "templatePicker": {
+      "title": "Begin van een template?"
+    },
+    "payWarning": {
+      "title": "EU Pay Transparency Directive vereist een salarisbandbreedte",
+      "description": "Zonder ingevulde minimum- en maximum-salaris kan deze vacature niet worden gepubliceerd. Vul de bandbreedte hieronder in.",
+      "settingsLink": "Naar Pay Transparency-instellingen"
+    },
+    "sections": {
+      "basicInfo": "Basisinformatie",
+      "descriptionRequirements": "Omschrijving & eisen",
+      "salary": "Salaris"
+    },
+    "titleLabel": "Functietitel",
+    "titlePlaceholder": "Senior Frontend Developer",
+    "departmentLabel": "Afdeling",
+    "departmentPlaceholder": "Engineering",
+    "locationLabel": "Locatie",
+    "locationPlaceholder": "Amsterdam (hybride)",
+    "descriptionLabel": "Functieomschrijving",
+    "descriptionPlaceholder": "Beschrijf de functie, het team en de verantwoordelijkheden...",
+    "requirementsLabel": "Vereisten (één per regel, optioneel)",
+    "requirementsPlaceholder": "5+ jaar React ervaring\nTypeScript expertise\nErvaring met Next.js",
+    "euRequiredBadge": "EU verplicht",
+    "salaryMinLabel": "Minimum (EUR/jaar)",
+    "salaryMaxLabel": "Maximum (EUR/jaar)",
+    "submit": "Vacature aanmaken",
+    "validation": {
+      "descriptionTooShort": "Omschrijving is te kort",
+      "departmentRequired": "Afdeling is verplicht",
+      "locationRequired": "Locatie is verplicht"
+    },
+    "toasts": {
+      "salaryRequired": {
+        "title": "Salarisbandbreedte verplicht",
+        "description": "Je tenant verplicht salaris-transparantie volgens EU 2023/970. Vul min en max in."
+      },
+      "created": {
+        "title": "Vacature aangemaakt",
+        "description": "\"{{title}}\" is opgeslagen als concept."
+      },
+      "createError": {
+        "title": "Fout",
+        "fallback": "Vacature kon niet worden aangemaakt."
+      }
+    }
+  },
+  "detail": {
+    "backToJobs": "Terug naar vacatures",
+    "duplicate": "Dupliceren",
+    "owner": "Eigenaar",
+    "pipelineLabel": "Pipeline",
+    "tabs": {
+      "pipeline": "Pipeline",
+      "overview": "Overzicht",
+      "aiSuite": "AI Suite",
+      "team": "Team",
+      "activity": "Activiteit",
+      "performance": "Performance",
+      "distribution": "Distributie"
+    },
+    "status": {
+      "draft": "Concept",
+      "open": "Gepubliceerd",
+      "filled": "Gevuld",
+      "closed": "Gesloten",
+      "archived": "Gearchiveerd"
+    },
+    "remote": {
+      "onsite": "Op kantoor",
+      "hybrid": "Hybride",
+      "remote": "Remote"
+    },
+    "contract": {
+      "fulltime": "Fulltime",
+      "parttime": "Parttime",
+      "contract": "Contract",
+      "freelance": "Freelance",
+      "internship": "Stage"
+    },
+    "salary": {
+      "perMonth": "{{range}} per maand",
+      "perHour": "{{range}} per uur"
+    },
+    "pipeline": {
+      "noData": "Nog geen pipeline-data",
+      "stageTooltip_one": "{{name}} — {{count}} kandidaat",
+      "stageTooltip_other": "{{name}} — {{count}} kandidaten"
+    },
+    "activeCandidates_one": "{{count}} kandidaat actief",
+    "activeCandidates_other": "{{count}} kandidaten actief",
+    "counters": {
+      "new": "Nieuw",
+      "inFunnel": "In funnel",
+      "offered": "Aangeboden",
+      "hired": "Aangenomen",
+      "dropped": "Afgewezen"
+    },
+    "health": {
+      "label": "Health:",
+      "openBreakdownAria": "Open health-breakdown",
+      "dialogTitle": "Health-breakdown",
+      "dialogDescription": "Geaggregeerde score op basis van doorlooptijd, drop-off en recruiter-activiteit. Hoger is gezonder.",
+      "total": "Totaal",
+      "noData": "Health-data nog niet beschikbaar."
+    },
+    "openSince": "Open sinds:",
+    "daysOpen_one": "{{count}} dag",
+    "daysOpen_other": "{{count}} dagen",
+    "predictedClose": "Verwachte afronding:",
+    "talentFit": {
+      "badge": "Talent Fit actief",
+      "tooltip": "Talent Fit Model rangschikt deze matches op basis van jouw historische hires. Precision @ 1: {{precision}}%. Klik voor details."
+    },
+    "toasts": {
+      "duplicated": {
+        "title": "Vacature gedupliceerd",
+        "description": "\"{{title}}\" aangemaakt als concept."
+      },
+      "duplicateError": {
+        "title": "Fout",
+        "description": "Kon vacature niet dupliceren."
+      }
+    }
+  },
+  "card": {
+    "applicants_one": "{{count}} sollicitant",
+    "applicants_other": "{{count}} sollicitanten",
+    "recruiter": "Recruiter:",
+    "unassigned": "Niet toegewezen",
+    "details": "Details",
+    "pipeline": "Pipeline"
+  },
+  "new": {
+    "title": "Nieuwe vacature",
+    "description": "Maak een nieuwe vacature aan voor je team."
+  },
+  "filters": {
+    "quickFilterLabel": "Snel filter:",
+    "reset": "Reset ({{count}})",
+    "openFiltersAria": "Filters openen",
+    "dialogTitle": "Filters",
+    "searchPlaceholder": "Zoek op titel, referentie of locatie...",
+    "searchAria": "Zoek vacatures",
+    "statusAria": "Filter op status",
+    "recruiterAria": "Filter op recruiter",
+    "locationAria": "Filter op locatie",
+    "sortAria": "Sorteren",
+    "allRecruiters": "Alle recruiters",
+    "fields": {
+      "status": "Status",
+      "recruiter": "Recruiter",
+      "location": "Locatie",
+      "openedBetween": "Geopend tussen",
+      "sorting": "Sortering"
+    },
+    "status": {
+      "all": "Alle statussen",
+      "draft": "Concept",
+      "open": "Open",
+      "filled": "Vervuld",
+      "closed": "Gesloten"
+    },
+    "sort": {
+      "newest": "Nieuwste eerst",
+      "oldest": "Oudste eerst",
+      "mostApplicants": "Meeste sollicitanten",
+      "fewestApplicants": "Minste sollicitanten",
+      "titleAz": "Titel A-Z"
+    },
+    "dateRange": {
+      "from": "Vanaf {{date}}",
+      "until": "Tot {{date}}",
+      "fromLabel": "Vanaf",
+      "untilLabel": "Tot en met",
+      "clear": "Wissen",
+      "apply": "Toepassen"
+    }
+  }
+}

@@ -1,13 +1,22 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import i18next from "i18next";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// Datums volgen de actieve UI-taal (i18next-singleton). Op de server of vóór
+// i18n-init is `language` leeg → val terug op NL (zelfde gedrag als voorheen).
+// Componenten die deze helpers gebruiken re-renderen bij een taalwissel via
+// hun eigen useTranslation-hook, dus de output wisselt netjes mee.
+function activeLocale(): string {
+  return i18next.language || "nl";
+}
+
 export function formatDate(date: string | Date): string {
   const d = typeof date === "string" ? new Date(date) : date;
-  return d.toLocaleDateString("nl-NL", {
+  return d.toLocaleDateString(activeLocale(), {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -20,12 +29,15 @@ export function formatRelativeDate(date: string | Date): string {
   const diffMs = now.getTime() - d.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-  if (diffDays === 0) return "Vandaag";
-  if (diffDays === 1) return "Gisteren";
-  if (diffDays < 7) return `${diffDays} dagen geleden`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weken geleden`;
-  if (diffDays < 365) return `${Math.floor(diffDays / 30)} maanden geleden`;
-  return `${Math.floor(diffDays / 365)} jaar geleden`;
+  // `numeric: "auto"` levert "vandaag"/"gisteren" (nl) en "today"/"yesterday"
+  // (en) — identiek aan de oude hardcoded NL-copy.
+  const rtf = new Intl.RelativeTimeFormat(activeLocale(), { numeric: "auto" });
+  if (diffDays <= 0) return rtf.format(0, "day");
+  if (diffDays === 1) return rtf.format(-1, "day");
+  if (diffDays < 7) return rtf.format(-diffDays, "day");
+  if (diffDays < 30) return rtf.format(-Math.floor(diffDays / 7), "week");
+  if (diffDays < 365) return rtf.format(-Math.floor(diffDays / 30), "month");
+  return rtf.format(-Math.floor(diffDays / 365), "year");
 }
 
 export function getInitials(name: string | null | undefined): string {

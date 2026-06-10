@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   DndContext,
   DragOverlay,
@@ -56,6 +57,7 @@ interface KanbanBoardProps {
 }
 
 export function KanbanBoard({ stages, applications, jobId }: KanbanBoardProps) {
+  const { t } = useTranslation("pipeline");
   const [activeApplication, setActiveApplication] =
     useState<Application | null>(null);
   const [overStageId, setOverStageId] = useState<string | null>(null);
@@ -133,8 +135,8 @@ export function KanbanBoard({ stages, applications, jobId }: KanbanBoardProps) {
     } catch {
       toast({
         variant: "destructive",
-        title: "Verplaatsen mislukt",
-        description: "Probeer het opnieuw.",
+        title: t("toast.moveFailed.title"),
+        description: t("toast.moveFailed.description"),
       });
     }
   };

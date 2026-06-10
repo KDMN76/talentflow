@@ -1,0 +1,46 @@
+{
+  "title": "Interviews",
+  "description": "Plan, beheer en review interviews — inclusief opnames, transcripts en agreement matrix.",
+  "newInterview": "Nieuw interview",
+  "tabs": {
+    "upcoming": "Komende",
+    "completed": "Afgerond",
+    "cancelled": "Geannuleerd"
+  },
+  "filters": {
+    "from": "Van",
+    "to": "Tot",
+    "interviewer": "Interviewer",
+    "search": "Zoek",
+    "allInterviewers": "Alle interviewers",
+    "searchPlaceholder": "Kandidaat of vacature…",
+    "activeResults_one": "Filters actief — {{count}} resultaat",
+    "activeResults_other": "Filters actief — {{count}} resultaten",
+    "reset": "Reset"
+  },
+  "status": {
+    "scheduled": "Gepland",
+    "rescheduled": "Verplaatst",
+    "completed": "Afgerond",
+    "noShow": "No-show",
+    "cancelled": "Geannuleerd"
+  },
+  "empty": {
+    "noInterviews": "Geen interviews in {{tab}}.",
+    "scheduleCta": "Plan een interview in"
+  },
+  "error": {
+    "loadFailed": "Kon interviews niet laden — probeer opnieuw"
+  },
+  "row": {
+    "recording": "Opname",
+    "scorecards_one": "{{count}} scorecard",
+    "scorecards_other": "{{count}} scorecards",
+    "durationMin": "{{count}} min",
+    "view": "Bekijk"
+  },
+  "location": {
+    "inPerson": "In persoon",
+    "phone": "Telefonisch"
+  }
+}

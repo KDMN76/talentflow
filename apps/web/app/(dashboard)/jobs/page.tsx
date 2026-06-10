@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import { Plus, Briefcase, Wand2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { JobCard } from "@/components/jobs/JobCard";
@@ -28,6 +29,7 @@ import type { JobListItem as Job } from "@talentflow/contracts";
 type JobWithOptionalTags = Job & { tags?: string[] | null };
 
 export default function JobsPage() {
+  const { t } = useTranslation("jobs");
   // Resolve the current user once per render from the JWT in session
   // storage. Falls back to `null` when the user can't be identified — in
   // that case the "Mijn open jobs" quick-filter simply has no effect
@@ -78,7 +80,7 @@ export default function JobsPage() {
     return [
       {
         id: "my-open",
-        label: "Mijn open jobs",
+        label: t("list.quickFilters.myOpen"),
         patch: { status: "open", recruiter_id: currentUserId ?? undefined },
         isActive: (f) =>
           f.status === "open" &&
@@ -87,13 +89,13 @@ export default function JobsPage() {
       },
       {
         id: "recent-7d",
-        label: "Recent geplaatst (laatste 7 dagen)",
+        label: t("list.quickFilters.recent7d"),
         patch: { date_from: fmt(sevenDaysAgo), date_to: null },
         isActive: (f) => f.date_from === fmt(sevenDaysAgo) && f.date_to === null,
       },
       {
         id: "filled-this-year",
-        label: "Vervulde dit jaar",
+        label: t("list.quickFilters.filledThisYear"),
         patch: { status: "filled", date_from: fmt(startOfYear), date_to: null },
         isActive: (f) =>
           f.status === "filled" &&
@@ -101,7 +103,7 @@ export default function JobsPage() {
           f.date_to === null,
       },
     ];
-  }, [currentUserId]);
+  }, [currentUserId, t]);
 
   const totalCount = jobs?.length ?? 0;
 
@@ -115,8 +117,8 @@ export default function JobsPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Vacatures"
-        description="Beheer al je vacatures op een plek"
+        title={t("list.title")}
+        description={t("list.description")}
         actions={
           <div className="flex items-center gap-2">
             <Button
@@ -126,7 +128,7 @@ export default function JobsPage() {
             >
               <Link href="/jobs/new/ai-generator">
                 <Wand2 className="mr-2 h-4 w-4" />
-                AI Generator
+                {t("list.aiGenerator")}
               </Link>
             </Button>
             <Button
@@ -135,7 +137,7 @@ export default function JobsPage() {
             >
               <Link href="/jobs/new">
                 <Plus className="mr-2 h-4 w-4" />
-                Nieuwe vacature
+                {t("list.newJob")}
               </Link>
             </Button>
           </div>
@@ -158,13 +160,13 @@ export default function JobsPage() {
       <div className="flex items-center justify-between text-sm text-muted-foreground">
         <span>
           {isLoading ? (
-            <span className="opacity-60">Laden...</span>
+            <span className="opacity-60">{t("list.loading")}</span>
           ) : (
             <>
               <span className="font-medium text-foreground">{visibleCount}</span>{" "}
-              {visibleCount === 1 ? "resultaat" : "resultaten"}
+              {t("list.results", { count: visibleCount })}
               {totalCount !== visibleCount && (
-                <> van {totalCount} totaal</>
+                <> {t("list.ofTotal", { total: totalCount })}</>
               )}
             </>
           )}
@@ -183,20 +185,20 @@ export default function JobsPage() {
           <Briefcase className="h-12 w-12 text-muted-foreground/30 mb-4" />
           <p className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
             {totalCount === 0
-              ? "Geen vacatures gevonden"
-              : "Geen jobs gevonden — pas filters aan"}
+              ? t("list.empty.noJobsTitle")
+              : t("list.empty.noResultsTitle")}
           </p>
           <p className="text-sm text-muted-foreground mt-1">
             {totalCount === 0
-              ? "Maak je eerste vacature aan om te beginnen."
-              : "Probeer minder strikte filters of reset om alles te zien."}
+              ? t("list.empty.noJobsDescription")
+              : t("list.empty.noResultsDescription")}
           </p>
           <div className="mt-4 flex gap-2">
             {totalCount === 0 ? (
               <Button asChild>
                 <Link href="/jobs/new">
                   <Plus className="mr-2 h-4 w-4" />
-                  Nieuwe vacature
+                  {t("list.newJob")}
                 </Link>
               </Button>
             ) : (
@@ -205,7 +207,7 @@ export default function JobsPage() {
                 onClick={resetFilters}
                 disabled={activeCount === 0}
               >
-                Reset filters
+                {t("list.empty.resetFilters")}
               </Button>
             )}
           </div>

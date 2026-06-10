@@ -14,8 +14,7 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import { z } from 'zod';
 import rateLimit from 'express-rate-limit';
-import { RedisStore } from 'rate-limit-redis';
-import { redis } from '../../queue/queues';
+import { rateLimitStore } from '../../middleware/rateLimitStore';
 import { auditCtxFromReq } from '../../lib/audit';
 import {
   getCandidateSelfData,
@@ -28,17 +27,6 @@ import {
 // Rate-limit (30 req/uur per token)
 // ─────────────────────────────────────────────────────────────────────────────
 
-type RLData = boolean | number | string;
-type RLRedisReply = RLData | RLData[];
-
-function makeRedisCommand() {
-  return async (...args: string[]): Promise<RLRedisReply> => {
-    const [cmd, ...rest] = args;
-    const result = await redis.call(cmd, ...rest);
-    return result as RLRedisReply;
-  };
-}
-
 const selfServiceRateLimit = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 30,
@@ -50,10 +38,7 @@ const selfServiceRateLimit = rateLimit({
     // namespacing.
     return `selfsvc:${req.params.token ?? req.ip ?? 'unknown'}`;
   },
-  store: new RedisStore({
-    sendCommand: makeRedisCommand(),
-    prefix: 'rl:selfsvc:',
-  }),
+  store: rateLimitStore('rl:selfsvc:'),
   handler: (_req: Request, res: Response) => {
     res.status(429).json({
       error: {
