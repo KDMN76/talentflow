@@ -13,6 +13,30 @@ Niets hieruit wordt opgepakt zonder expliciete promotie door Kaan.
 
 ## Sectie 1: Bugs & Gaps
 
+### Notificatie-voorkeuren: frontend/backend-contract mismatch
+- **Priority**: P2
+- **Status**: Open
+- **Source**: Claude (gevonden tijdens Fase-0 endpoint-wiring, 2026-06-11)
+- **Context**: De pagina `settings/notifications` slaat voorkeuren niet op en
+  laadt ze niet. Twee oorzaken: (1) frontend doet `PUT /notifications/preferences`
+  maar de backend heeft alleen `PATCH /preferences` (per (channel,event_type)-rij)
+  → 404 → "Opslaan mislukt". (2) frontend verwacht één geconsolideerd object
+  (`{push_enabled, events{}, quiet_hours_start/end, timezone}`) terwijl `GET`
+  `{data:[rijen]}` teruggeeft → laden valt stil terug op defaults.
+- **Goed nieuws**: de event_type-vocabulaire matcht exact tussen frontend
+  (`NotificationPreferences.events`) en backend (`src/lib/pushEvents.ts` + de
+  reminder/push-workers): new_candidate_review, scorecard_deadline,
+  interview_reminder, application_status_change, daily_digest.
+- **Aanbevolen fix**: voeg `GET`/`PUT /notifications/preferences` toe die het
+  geconsolideerde object ↔ de per-rij-tabel (`notification_preferences`) mappen.
+  LET OP: de per-rij-tabel is de source-of-truth voor de delivery-worker
+  (`getEffectivePreference(tenant,user,channel,event_type)`). Om de twee-niveau-UI
+  (master `push_enabled` + per-event) correct te bewaren moet `push_enabled` als
+  master-rij worden opgeslagen én moet `getEffectivePreference` master AND event
+  controleren — dat raakt de delivery-pad-logica, dus met worker-tests afdekken.
+  Geen quick wiring; echte feature-reconciliatie. Push is niet het primaire kanaal
+  (e-mail wel), dus lagere urgentie.
+
 ### ✅ Opgelost op 2026-06-03 (sessie "Sectie-1 opruiming")
 
 Additieve log — de losse items hieronder zijn niet herschreven; deze sectie is
