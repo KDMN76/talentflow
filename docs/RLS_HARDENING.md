@@ -123,6 +123,76 @@ Draai een variant van `rls-isolation-proof.cjs` tegen productie ter bevestiging.
 
 ---
 
+## Productie-specifiek (Hetzner — self-hosted Postgres in Docker)
+
+Productie draait **niet** op Neon maar op een self-hosted `pgvector/pgvector:pg16`-
+container (`talentflow-postgres`). De app verbindt als rol `${POSTGRES_USER}`
+(= `talentflow`), die door het officiële postgres-image als **SUPERUSER** is
+aangemaakt. Een superuser bypasst RLS altijd (ook boven FORCE) — exact dezelfde
+situatie als de Neon-owner. De cutover-mechaniek is identiek; de paste-klare
+commando's hieronder zijn afgestemd op `infra/docker-compose.prod.yml` +
+`infra/.env.prod` + de `./infra/deploy.sh`-wrapper.
+
+> **Volgorde-eis:** migraties vereisen DDL-rechten (owner); de app-rol krijgt
+> alleen DML. Draai migraties dus **als owner** vóór je `DATABASE_URL` omwisselt.
+
+### A — Deploy de branch + migraties (als owner)
+```bash
+# Op de VPS, in de repo-root van talentflow:
+git fetch && git checkout fix/demo-vrijdag && git pull
+./infra/deploy.sh build api web && ./infra/deploy.sh up -d
+# Migraties 033 t/m 037 toepassen (idempotent), nog als owner:
+./infra/deploy.sh exec -T api node /app/dist/db/migrate.js
+```
+
+### B — Maak de non-superuser app-rol aan
+```bash
+# Laad de prod-env in je shell (voor $POSTGRES_USER/$POSTGRES_DB):
+set -a; . infra/.env.prod; set +a
+# Genereer een sterk wachtwoord en NOTEER het (komt zo in .env.prod):
+APP_PW=$(openssl rand -base64 24); echo "talentflow_app wachtwoord: $APP_PW"
+
+./infra/deploy.sh exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" <<SQL
+CREATE ROLE talentflow_app LOGIN PASSWORD '${APP_PW}'
+  NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE;
+GRANT USAGE ON SCHEMA public TO talentflow_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO talentflow_app;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO talentflow_app;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO talentflow_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO talentflow_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO talentflow_app;
+SQL
+```
+
+### C — Wissel `DATABASE_URL` om in `infra/.env.prod`
+```
+# Nieuw (runtime app-rol) — let op: poort 5432 binnen het docker-netwerk:
+DATABASE_URL=postgresql://talentflow_app:<APP_PW>@postgres:5432/talentflow
+# Bewaar de owner-URL apart voor toekomstige migraties:
+MIGRATE_DATABASE_URL=postgresql://talentflow:<POSTGRES_PASSWORD>@postgres:5432/talentflow
+```
+
+### D — Herstart enkel de api (migrate NIET opnieuw)
+```bash
+./infra/deploy.sh up -d --no-deps --force-recreate api
+```
+
+### E — Smoke-test live
+```bash
+curl -s -o /dev/null -w "health %{http_code}\n" https://talentflow.kdmn.nl/api/health
+# + login (200 + accessToken), POST /api/auth/refresh (200), GET /api/candidates (200)
+```
+
+### Toekomstige migraties ná de cutover
+De app-rol kan geen DDL. Draai migraties expliciet met de owner-URL:
+```bash
+./infra/deploy.sh exec -T \
+  -e DATABASE_URL="postgresql://talentflow:<POSTGRES_PASSWORD>@postgres:5432/talentflow" \
+  api node /app/dist/db/migrate.js
+```
+
+---
+
 ## Rollback
 
 - Zet `DATABASE_URL` terug naar de owner-rol en herstart de api-container.
