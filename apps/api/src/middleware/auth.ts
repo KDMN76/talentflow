@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { AppError } from './errorHandler';
-import { withoutTenant, withTenant } from '../db/pool';
+import { withTenant, withAuthTx } from '../db/pool';
 
 export interface JwtPayload {
   userId: string;
@@ -189,7 +189,11 @@ export async function requireApiKey(
 
     const keyHash = crypto.createHash('sha256').update(headerKey).digest('hex');
 
-    const row = await withoutTenant(async (client) => {
+    // auth_context: lookup op key_hash zonder tenant-context (de hash is de
+    // enige sleutel). De RLS-policy op api_keys staat deze READ toe als
+    // auth_context 'on' is; schrijfacties (usage-log, last_used) lopen daarna
+    // tenant-scoped via withTenant in logApiKeyUsage.
+    const row = await withAuthTx(async (client) => {
       const { rows } = await client.query(
         `SELECT id, tenant_id, name, scopes, rate_limit_per_minute,
                 allowed_ips, expires_at, revoked_at, deleted_at
@@ -199,7 +203,7 @@ export async function requireApiKey(
         [keyHash]
       );
       return rows[0] ?? null;
-    });
+    }, { authContext: true });
 
     if (!row || row.deleted_at || row.revoked_at) {
       throw new AppError(401, 'INVALID_API_KEY', 'Ongeldige API-sleutel');

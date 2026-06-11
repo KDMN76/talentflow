@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { PoolClient } from 'pg';
 import { AppError } from '../../middleware/errorHandler';
-import { withoutTenant } from '../../db/pool';
+import { withAuthTx, withTenant } from '../../db/pool';
 import { JwtPayload } from '../../middleware/auth';
 import { emailSenderQueue } from '../../queue/queues';
 import { logAudit, type AuditContext } from '../../lib/audit';
@@ -117,7 +117,7 @@ export async function issueSessionForUser(
   name: string,
   ctx: AuditContext = {}
 ): Promise<AuthResult> {
-  return withoutTenant(async (client: PoolClient) => {
+  return withAuthTx(async (client: PoolClient) => {
     await client.query(`SET LOCAL app.tenant_id = '${tenantId}'`);
     await client.query(
       `DELETE FROM refresh_tokens WHERE user_id = $1 AND expires_at < now()`,
@@ -160,7 +160,7 @@ export async function register(
   input: RegisterInput,
   ctx: AuditContext = {}
 ): Promise<AuthResult> {
-  return withoutTenant(async (client: PoolClient) => {
+  return withAuthTx(async (client: PoolClient) => {
     // Check slug uniqueness
     const { rows: existingTenants } = await client.query(
       'SELECT id FROM tenants WHERE slug = $1',
@@ -246,7 +246,7 @@ export async function login(
   input: LoginInput,
   ctx: AuditContext = {}
 ): Promise<LoginResult> {
-  return withoutTenant(async (client: PoolClient) => {
+  return withAuthTx(async (client: PoolClient) => {
     // Find tenant by slug
     const { rows: [tenant] } = await client.query(
       'SELECT id FROM tenants WHERE slug = $1',
@@ -369,10 +369,12 @@ export async function login(
 export async function refreshAccessToken(
   refreshTokenRaw: string
 ): Promise<{ accessToken: string; refreshToken: string }> {
-  return withoutTenant(async (client: PoolClient) => {
-    const tokenHash = crypto.createHash('sha256').update(refreshTokenRaw).digest('hex');
+  const tokenHash = crypto.createHash('sha256').update(refreshTokenRaw).digest('hex');
 
-    const { rows: [tokenRecord] } = await client.query(
+  // Stap 1 — opzoeken op secret hash. Dit kan per definitie geen tenant-context
+  // hebben (de hash is de enige sleutel), dus draait het in auth_context. Read-only.
+  const tokenRecord = await withAuthTx(async (client) => {
+    const { rows: [rec] } = await client.query(
       `SELECT rt.id, rt.user_id, rt.tenant_id, rt.expires_at, rt.rotated_at,
               u.email, u.role, u.is_active
        FROM refresh_tokens rt
@@ -380,46 +382,61 @@ export async function refreshAccessToken(
        WHERE rt.token_hash = $1`,
       [tokenHash]
     );
+    return rec ?? null;
+  }, { authContext: true });
 
-    if (!tokenRecord) {
-      throw new AppError(401, 'INVALID_REFRESH_TOKEN', 'Ongeldig refresh token');
-    }
+  if (!tokenRecord) {
+    throw new AppError(401, 'INVALID_REFRESH_TOKEN', 'Ongeldig refresh token');
+  }
 
-    if (tokenRecord.rotated_at) {
-      // Replay van een ingewisselde token → trek alles van deze user in.
+  // Vanaf hier kennen we de tenant; alle schrijfacties draaien tenant-scoped
+  // (withTenant zet app.tenant_id binnen een eigen transactie). Elke transactie
+  // commit zelfstandig — daarom blijft de reuse-revoke bewaard óók al gooien we
+  // daarna een 401 (geen commit-before-throw nodig).
+  const tenantId: string = tokenRecord.tenant_id;
+
+  if (tokenRecord.rotated_at) {
+    // Replay van een ingewisselde token → trek alles van deze user in.
+    await withTenant(tenantId, async (client) => {
       await client.query('DELETE FROM refresh_tokens WHERE user_id = $1', [
         tokenRecord.user_id,
       ]);
-      await logAudit(client, tokenRecord.tenant_id, {
+      await logAudit(client, tenantId, {
         action: AuditActions.REFRESH_TOKEN_REUSE_DETECTED,
         entityType: 'user',
         entityId: tokenRecord.user_id,
         after: { revoked_all_sessions: true },
         userId: tokenRecord.user_id,
       });
-      throw new AppError(
-        401,
-        'REFRESH_TOKEN_REUSED',
-        'Refresh token is al gebruikt — alle sessies zijn uit voorzorg beëindigd'
-      );
-    }
-
-    if (new Date(tokenRecord.expires_at) < new Date()) {
-      await client.query('DELETE FROM refresh_tokens WHERE id = $1', [tokenRecord.id]);
-      throw new AppError(401, 'REFRESH_TOKEN_EXPIRED', 'Refresh token is verlopen');
-    }
-
-    if (!tokenRecord.is_active) {
-      throw new AppError(403, 'ACCOUNT_DISABLED', 'Dit account is uitgeschakeld');
-    }
-
-    // Roteer: nieuwe token uitgeven en de oude race-veilig markeren.
-    const newTokenRaw = generateRefreshToken();
-    const newTokenHash = crypto.createHash('sha256').update(newTokenRaw).digest('hex');
-    const newExpiresAt = new Date(
-      Date.now() + REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000
+    });
+    throw new AppError(
+      401,
+      'REFRESH_TOKEN_REUSED',
+      'Refresh token is al gebruikt — alle sessies zijn uit voorzorg beëindigd'
     );
+  }
 
+  if (new Date(tokenRecord.expires_at) < new Date()) {
+    await withTenant(tenantId, (client) =>
+      client.query('DELETE FROM refresh_tokens WHERE id = $1', [tokenRecord.id])
+    );
+    throw new AppError(401, 'REFRESH_TOKEN_EXPIRED', 'Refresh token is verlopen');
+  }
+
+  if (!tokenRecord.is_active) {
+    throw new AppError(403, 'ACCOUNT_DISABLED', 'Dit account is uitgeschakeld');
+  }
+
+  // Stap 2 — roteer atomair binnen één tenant-transactie: markeer de oude
+  // race-veilig (WHERE rotated_at IS NULL ... RETURNING), insert de nieuwe,
+  // ruim verlopen rijen op.
+  const newTokenRaw = generateRefreshToken();
+  const newTokenHash = crypto.createHash('sha256').update(newTokenRaw).digest('hex');
+  const newExpiresAt = new Date(
+    Date.now() + REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000
+  );
+
+  const rotation = await withTenant(tenantId, async (client) => {
     const { rows: rotated } = await client.query(
       `UPDATE refresh_tokens
          SET rotated_at = now(), replaced_by_hash = $2
@@ -433,44 +450,49 @@ export async function refreshAccessToken(
       await client.query('DELETE FROM refresh_tokens WHERE user_id = $1', [
         tokenRecord.user_id,
       ]);
-      throw new AppError(
-        401,
-        'REFRESH_TOKEN_REUSED',
-        'Refresh token is al gebruikt — alle sessies zijn uit voorzorg beëindigd'
-      );
+      return { reused: true };
     }
-
     await client.query(
       `INSERT INTO refresh_tokens (user_id, tenant_id, token_hash, expires_at)
        VALUES ($1, $2, $3, $4)`,
-      [tokenRecord.user_id, tokenRecord.tenant_id, newTokenHash, newExpiresAt]
+      [tokenRecord.user_id, tenantId, newTokenHash, newExpiresAt]
     );
-
     // Opportunistische opschoning van verlopen (incl. geroteerde) rijen.
     await client.query(
       `DELETE FROM refresh_tokens WHERE user_id = $1 AND expires_at < now()`,
       [tokenRecord.user_id]
     );
-
-    const payload: Omit<JwtPayload, 'iat' | 'exp'> = {
-      userId: tokenRecord.user_id,
-      tenantId: tokenRecord.tenant_id,
-      email: tokenRecord.email,
-      role: tokenRecord.role,
-    };
-
-    return {
-      accessToken: generateAccessToken(payload),
-      refreshToken: newTokenRaw,
-    };
+    return { reused: false };
   });
+
+  if (rotation.reused) {
+    throw new AppError(
+      401,
+      'REFRESH_TOKEN_REUSED',
+      'Refresh token is al gebruikt — alle sessies zijn uit voorzorg beëindigd'
+    );
+  }
+
+  const payload: Omit<JwtPayload, 'iat' | 'exp'> = {
+    userId: tokenRecord.user_id,
+    tenantId,
+    email: tokenRecord.email,
+    role: tokenRecord.role,
+  };
+
+  return {
+    accessToken: generateAccessToken(payload),
+    refreshToken: newTokenRaw,
+  };
 }
 
 export async function logout(refreshTokenRaw: string): Promise<void> {
-  return withoutTenant(async (client: PoolClient) => {
+  // auth_context: verwijdert op token_hash zonder tenant-context (de DELETE
+  // moet de rij kunnen zien ongeacht welke tenant 'm bezit).
+  return withAuthTx(async (client: PoolClient) => {
     const tokenHash = crypto.createHash('sha256').update(refreshTokenRaw).digest('hex');
     await client.query('DELETE FROM refresh_tokens WHERE token_hash = $1', [tokenHash]);
-  });
+  }, { authContext: true });
 }
 
 export async function forgotPassword(email: string, tenantSlug: string): Promise<void> {

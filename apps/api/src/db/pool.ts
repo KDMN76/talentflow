@@ -67,3 +67,45 @@ export async function withoutTenant<T>(
     client.release();
   }
 }
+
+/**
+ * Auth-transactie voor de inlog-/registratie-/refresh-flow.
+ *
+ * Verschilt op twee punten van withoutTenant:
+ *  1. Wikkelt het werk in een echte transactie (BEGIN/COMMIT/ROLLBACK). Dat is
+ *     noodzakelijk omdat de auth-functies `SET LOCAL app.tenant_id` gebruiken
+ *     nadat ze de tenant hebben ontdekt — zonder transactie heeft SET LOCAL in
+ *     node-pg geen effect over meerdere statements (elke query autocommit).
+ *  2. Optioneel `SET LOCAL app.auth_context = 'on'`. Dit zet één RLS-uitzondering
+ *     aan voor de handvol secret-key-lookups die per definitie geen tenant-context
+ *     kunnen hebben (refresh-token op token_hash, api-key op key_hash). De
+ *     bijbehorende policies (migratie 037) staan een READ toe als auth_context
+ *     'on' is; de WITH CHECK op writes blijft altijd strikt tenant-gebonden.
+ *
+ * Onder de huidige owner-rol (BYPASSRLS) is dit functioneel een no-op qua
+ * security; het wordt pas actief zodra de app als non-owner-rol verbindt.
+ */
+export async function withAuthTx<T>(
+  fn: (client: PoolClient) => Promise<T>,
+  opts: { authContext?: boolean } = {}
+): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    if (opts.authContext) {
+      await client.query("SET LOCAL app.auth_context = 'on'");
+    }
+    const result = await fn(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (err) {
+    try {
+      await client.query('ROLLBACK');
+    } catch {
+      /* rollback-fouten onderdrukken; de oorspronkelijke fout is leidend */
+    }
+    throw err;
+  } finally {
+    client.release();
+  }
+}
