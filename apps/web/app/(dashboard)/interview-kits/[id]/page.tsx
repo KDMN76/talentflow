@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import {
   ArrowDown,
   ArrowLeft,
@@ -47,32 +48,26 @@ import type {
 
 const CATEGORIES: Array<{
   value: InterviewQuestionCategory;
-  label: string;
   cls: string;
 }> = [
   {
     value: "behavioral",
-    label: "Behavioral",
     cls: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
   },
   {
     value: "technical",
-    label: "Technisch",
     cls: "bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300",
   },
   {
     value: "culture",
-    label: "Cultuur",
     cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
   },
   {
     value: "experience",
-    label: "Ervaring",
     cls: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
   },
   {
     value: "scenario",
-    label: "Scenario",
     cls: "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300",
   },
 ];
@@ -98,6 +93,7 @@ function questionToDraft(q: InterviewQuestion): DraftQuestion {
 }
 
 export default function InterviewKitDetailPage() {
+  const { t } = useTranslation("interviewKits");
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { toast } = useToast();
@@ -165,7 +161,7 @@ export default function InterviewKitDetailPage() {
     if (!name.trim()) {
       toast({
         variant: "destructive",
-        title: "Naam is verplicht",
+        title: t("detail.toasts.nameRequired"),
       });
       return;
     }
@@ -183,7 +179,7 @@ export default function InterviewKitDetailPage() {
         expected_duration_minutes: q.expected_duration_minutes,
       })),
     });
-    toast({ title: "Kit opgeslagen", description: name });
+    toast({ title: t("detail.toasts.saved"), description: name });
   };
 
   if (isLoading) {
@@ -356,6 +352,7 @@ function QuestionEditor({
   onMoveUp: () => void;
   onMoveDown: () => void;
 }) {
+  const { t } = useTranslation("interviewKits");
   const [followupDraft, setFollowupDraft] = useState("");
   const cat = CATEGORIES.find((c) => c.value === q.category);
 
@@ -416,7 +413,7 @@ function QuestionEditor({
                 <SelectContent>
                   {CATEGORIES.map((c) => (
                     <SelectItem key={c.value} value={c.value}>
-                      {c.label}
+                      {t(`categories.${c.value}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -502,7 +499,7 @@ function QuestionEditor({
             <Badge
               className={`text-[10px] uppercase ${cat.cls} border-transparent`}
             >
-              {cat.label}
+              {t(`categories.${cat.value}`)}
             </Badge>
           )}
           <span className="inline-flex items-center text-[10px] text-muted-foreground gap-1">

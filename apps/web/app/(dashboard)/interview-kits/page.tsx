@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import {
   Briefcase,
   Edit3,
@@ -51,6 +52,7 @@ import { useScorecardTemplates } from "@/hooks/useScorecards";
 import type { InterviewKit } from "@/lib/types/interviews";
 
 export default function InterviewKitsPage() {
+  const { t } = useTranslation("interviewKits");
   const router = useRouter();
   const { toast } = useToast();
   const { data: kits, isLoading, isError, error } = useInterviewKits();
@@ -74,7 +76,7 @@ export default function InterviewKitsPage() {
       scorecard_template_id: scorecardId === "none" ? null : scorecardId,
       questions: [],
     });
-    toast({ title: "Kit aangemaakt", description: kit.name });
+    toast({ title: t("list.toasts.created"), description: kit.name });
     setCreateOpen(false);
     setName("");
     setDescription("");
@@ -84,20 +86,20 @@ export default function InterviewKitsPage() {
   };
 
   const handleDelete = async (kit: InterviewKit) => {
-    if (!confirm(`Weet je zeker dat je "${kit.name}" wilt verwijderen?`)) return;
+    if (!confirm(t("list.confirmDelete", { name: kit.name }))) return;
     await remove.mutateAsync(kit.id);
-    toast({ title: "Kit verwijderd", description: kit.name });
+    toast({ title: t("list.toasts.deleted"), description: kit.name });
   };
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Interview kits"
-        description="Beheer herbruikbare interview-kits — vragen, follow-ups en gekoppelde scorecard-templates."
+        title={t("list.header.title")}
+        description={t("list.header.description")}
         actions={
           <Button onClick={() => setCreateOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Nieuwe kit
+            {t("list.newKit")}
           </Button>
         }
       />
@@ -112,7 +114,7 @@ export default function InterviewKitsPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-sm font-medium text-rose-600">
-              Kon interview-kits niet laden — probeer opnieuw
+              {t("list.error.title")}
             </p>
             {error instanceof Error && (
               <p className="mt-1 text-xs text-muted-foreground">
@@ -126,11 +128,11 @@ export default function InterviewKitsPage() {
           <CardContent className="py-12 text-center">
             <FileText className="h-10 w-10 text-muted-foreground/50 mx-auto" />
             <p className="text-sm font-medium text-muted-foreground mt-3">
-              Nog geen interview-kits.
+              {t("list.empty.description")}
             </p>
             <Button onClick={() => setCreateOpen(true)} size="sm" className="mt-4">
               <Plus className="h-3.5 w-3.5 mr-1.5" />
-              Maak je eerste kit
+              {t("list.empty.createFirst")}
             </Button>
           </CardContent>
         </Card>
@@ -149,38 +151,42 @@ export default function InterviewKitsPage() {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nieuwe interview kit</DialogTitle>
+            <DialogTitle>{t("list.createDialog.title")}</DialogTitle>
             <DialogDescription>
-              Vul de basisinfo in. Vragen voeg je toe op de detailpagina.
+              {t("list.createDialog.description")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="space-y-1.5">
-              <Label htmlFor="kit-name">Naam *</Label>
+              <Label htmlFor="kit-name">{t("list.createDialog.nameLabel")}</Label>
               <Input
                 id="kit-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="bv. Senior FE Tech Interview"
+                placeholder={t("list.createDialog.namePlaceholder")}
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="kit-desc">Beschrijving</Label>
+              <Label htmlFor="kit-desc">
+                {t("list.createDialog.descriptionLabel")}
+              </Label>
               <Input
                 id="kit-desc"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Korte uitleg waar deze kit voor bedoeld is"
+                placeholder={t("list.createDialog.descriptionPlaceholder")}
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Vacature (optioneel)</Label>
+              <Label>{t("list.createDialog.jobLabel")}</Label>
               <Select value={jobId} onValueChange={setJobId}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Generiek (geen vacature)</SelectItem>
+                  <SelectItem value="none">
+                    {t("list.createDialog.jobGeneric")}
+                  </SelectItem>
                   {(jobs ?? []).map((j) => (
                     <SelectItem key={j.id} value={j.id}>
                       {j.title}
@@ -190,16 +196,18 @@ export default function InterviewKitsPage() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Scorecard-template (optioneel)</Label>
+              <Label>{t("list.createDialog.scorecardLabel")}</Label>
               <Select value={scorecardId} onValueChange={setScorecardId}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Geen template</SelectItem>
-                  {(scorecardTemplates ?? []).map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name}
+                  <SelectItem value="none">
+                    {t("list.createDialog.scorecardNone")}
+                  </SelectItem>
+                  {(scorecardTemplates ?? []).map((tpl) => (
+                    <SelectItem key={tpl.id} value={tpl.id}>
+                      {tpl.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -208,7 +216,7 @@ export default function InterviewKitsPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>
-              Annuleren
+              {t("list.createDialog.cancel")}
             </Button>
             <Button
               onClick={handleCreate}
@@ -218,7 +226,7 @@ export default function InterviewKitsPage() {
               {create.isPending && (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               )}
-              Aanmaken
+              {t("list.createDialog.create")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -234,6 +242,7 @@ function KitCard({
   kit: InterviewKit;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation("interviewKits");
   const totalDuration = kit.questions.reduce(
     (sum, q) => sum + q.expected_duration_minutes,
     0
@@ -277,7 +286,7 @@ function KitCard({
             </Badge>
           ) : (
             <Badge variant="outline" className="text-[10px]">
-              Generiek
+              {t("list.card.generic")}
             </Badge>
           )}
           {kit.scorecard_template_name && (
@@ -288,9 +297,10 @@ function KitCard({
           )}
         </div>
         <p className="text-xs text-muted-foreground">
-          {kit.questions.length}{" "}
-          {kit.questions.length === 1 ? "vraag" : "vragen"} ·{" "}
-          {totalDuration > 0 ? `~${totalDuration} min` : "geen duur"}
+          {t("list.card.questions", { count: kit.questions.length })} ·{" "}
+          {totalDuration > 0
+            ? t("list.card.duration", { count: totalDuration })
+            : t("list.card.noDuration")}
         </p>
       </CardContent>
     </Card>

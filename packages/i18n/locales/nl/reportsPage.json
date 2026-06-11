@@ -1,0 +1,127 @@
+{
+  "list": {
+    "title": "Rapporten",
+    "description": "Bouw aangepaste rapporten met KPI's, tabellen en grafieken.",
+    "newReport": "Nieuw rapport",
+    "tabs": {
+      "mine": "Mijn rapporten",
+      "templates": "Templates",
+      "shared": "Gedeeld"
+    },
+    "emptyHint": {
+      "mine": "Klik 'Nieuw rapport' om te starten.",
+      "shared": "Geen gedeelde rapporten."
+    },
+    "defaultName": "Nieuw rapport",
+    "toasts": {
+      "createError": "Aanmaken mislukt"
+    }
+  },
+  "createDialog": {
+    "title": "Nieuw rapport",
+    "description": "Geef een naam op of start direct vanuit een template.",
+    "nameLabel": "Naam",
+    "namePlaceholder": "Bijv. Q3 Executive Briefing",
+    "cancel": "Annuleren",
+    "openBlankBuilder": "Lege builder openen"
+  },
+  "grid": {
+    "empty": {
+      "title": "Nog geen rapporten"
+    }
+  },
+  "card": {
+    "noDescription": "Geen beschrijving",
+    "blocks_one": "{{count}} blok",
+    "blocks_other": "{{count}} blokken",
+    "lastRun": "Laatst uitgevoerd: {{date}}",
+    "neverRun": "Nog niet uitgevoerd",
+    "liveEmbed": "Live embed",
+    "view": "Bekijk",
+    "viewTitle": "Bekijk rapport",
+    "edit": "Bewerk",
+    "editTitle": "Bewerk",
+    "duplicate": "Dupliceer",
+    "duplicateTitle": "Dupliceer",
+    "embed": "Embed",
+    "embedTitle": "Embed-link",
+    "deleteTitle": "Verwijder",
+    "copySuffix": "kopie",
+    "toasts": {
+      "deleted": "Rapport verwijderd",
+      "duplicated": "Rapport gedupliceerd",
+      "embedError": "Embed-link aanmaken mislukt",
+      "revoked": "Embed-link ingetrokken",
+      "revokeError": "Intrekken mislukt"
+    }
+  },
+  "deleteDialog": {
+    "title": "Rapport verwijderen?",
+    "description": "“{{name}}” wordt permanent verwijderd. Embed-links worden ingetrokken.",
+    "cancel": "Annuleren",
+    "confirm": "Verwijder"
+  },
+  "embedDialog": {
+    "title": "Embed-link",
+    "description": "Iedereen met deze link kan dit rapport bekijken (read-only, zonder login).",
+    "copy": "Kopieer",
+    "warning": "Iedereen met deze link kan de cijfers zien. Trek hem in wanneer je deze niet meer wilt delen.",
+    "close": "Sluit",
+    "revoke": "Trek link in",
+    "toasts": {
+      "copied": "Gekopieerd"
+    }
+  },
+  "templates": {
+    "blocks": "{{count}} blokken",
+    "useTemplate": "Gebruik template →"
+  },
+  "builder": {
+    "loadError": {
+      "title": "Rapport niet gevonden",
+      "back": "Terug naar overzicht"
+    },
+    "header": {
+      "back": "Terug",
+      "namePlaceholder": "Naam van het rapport…",
+      "run": "Run",
+      "save": "Sla op",
+      "saving": "Opslaan…",
+      "embed": "Embed"
+    },
+    "saveStatus": {
+      "saving": "Bezig met opslaan…",
+      "unsaved": "Niet-opgeslagen wijzigingen",
+      "lastRun": "Laatst uitgevoerd: {{date}}",
+      "ready": "Klaar om te bouwen"
+    },
+    "embedMenu": {
+      "label": "Embed-link",
+      "showLink": "Toon link",
+      "revoke": "Trek link in",
+      "generate": "Genereer publieke link"
+    },
+    "emptyCanvas": {
+      "title": "Nog geen blokken",
+      "description": "Voeg blokken toe vanuit het palet links — of start met een template.",
+      "startWithTemplate": "Begin met template"
+    },
+    "embedDialog": {
+      "title": "Publieke embed-link",
+      "description": "Iedereen met deze link kan dit rapport read-only bekijken.",
+      "copy": "Kopieer",
+      "close": "Sluit",
+      "revoke": "Trek link in"
+    },
+    "toasts": {
+      "saved": "Rapport opgeslagen",
+      "saveError": "Opslaan mislukt",
+      "runError": "Uitvoeren mislukt",
+      "templateApplied": "Template '{{name}}' toegepast",
+      "embedError": "Embed-link aanmaken mislukt",
+      "revoked": "Embed-link ingetrokken",
+      "revokeError": "Intrekken mislukt",
+      "copied": "Gekopieerd"
+    }
+  }
+}

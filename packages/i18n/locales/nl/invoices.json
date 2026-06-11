@@ -1,0 +1,272 @@
+{
+  "list": {
+    "header": {
+      "title": "Facturen",
+      "description": "Bekijk verkoopfacturen, sync naar boekhouding en markeer betalingen."
+    },
+    "stats": {
+      "outstanding": "Openstaand",
+      "paidMtd": "Betaald MTD",
+      "overdue": "Te laat",
+      "total": "Totaal",
+      "overdueValue_one": "{{count}} factuur",
+      "overdueValue_other": "{{count}} facturen"
+    },
+    "filters": {
+      "searchPlaceholder": "Zoek op factuurnummer of klant...",
+      "allStatuses": "Alle statussen"
+    },
+    "status": {
+      "draft": "Concept",
+      "sent": "Verzonden",
+      "paid": "Betaald",
+      "overdue": "Te laat",
+      "void": "Geannuleerd"
+    },
+    "empty": {
+      "title": "Geen facturen gevonden",
+      "description": "Genereer een factuur vanaf een actief contract."
+    },
+    "columns": {
+      "number": "Nummer",
+      "client": "Klant",
+      "period": "Periode",
+      "amount": "Bedrag",
+      "status": "Status",
+      "dueDate": "Vervaldatum"
+    },
+    "syncedBadge": "synced"
+  },
+  "detail": {
+    "back": "Terug",
+    "backToInvoices": "Terug naar facturen",
+    "notFound": "Factuur niet gevonden.",
+    "description": "{{client}} · {{periodStart}} t/m {{periodEnd}}",
+    "actions": {
+      "pdf": "PDF",
+      "syncToAccounting": "Sync naar boekhouding",
+      "void": "Voiden",
+      "markPaid": "Markeer betaald",
+      "send": "Versturen"
+    },
+    "fields": {
+      "invoiceNumber": "Factuurnummer",
+      "client": "Klant",
+      "issuedDate": "Factuurdatum",
+      "dueDate": "Vervaldatum",
+      "periodStart": "Periode start",
+      "periodEnd": "Periode eind",
+      "paidOn": "Betaald op",
+      "contract": "Contract"
+    },
+    "lines": {
+      "description": "Omschrijving",
+      "quantity": "Aantal",
+      "unit": "Eenheid",
+      "price": "Prijs",
+      "total": "Totaal"
+    },
+    "totals": {
+      "subtotal": "Subtotaal",
+      "vat": "BTW ({{rate}}%)",
+      "total": "Totaal"
+    },
+    "note": "Notitie",
+    "accounting": {
+      "title": "Boekhouding",
+      "synced": "Gesynchroniseerd · {{provider}}",
+      "lastSync": "Laatste sync: {{date}}",
+      "notSynced": "Nog niet gesynchroniseerd.",
+      "syncNow": "Sync nu"
+    },
+    "paidDialog": {
+      "title": "Markeer als betaald",
+      "description": "Vul de daadwerkelijke betaaldatum in. Dit wordt vastgelegd in de audit-trail.",
+      "dateLabel": "Betaaldatum",
+      "cancel": "Annuleren",
+      "confirm": "Bevestig betaling"
+    },
+    "voidDialog": {
+      "title": "Factuur voiden",
+      "description": "Voiden is permanent. Een nieuwe factuur kan worden gegenereerd met correcte gegevens.",
+      "reasonLabel": "Reden",
+      "reasonPlaceholder": "Bv. dubbele factuur, onjuiste periode",
+      "cancel": "Annuleren",
+      "confirm": "Void factuur"
+    },
+    "toasts": {
+      "sent": {
+        "title": "Factuur verstuurd",
+        "description": "{{number}} is naar {{client}} gemaild."
+      },
+      "sendError": {
+        "title": "Versturen mislukt"
+      },
+      "markedPaid": {
+        "title": "Gemarkeerd als betaald",
+        "description": "Betaaldatum vastgelegd op {{date}}."
+      },
+      "updateError": {
+        "title": "Bijwerken mislukt"
+      },
+      "voided": {
+        "title": "Factuur geannuleerd",
+        "description": "Reden vastgelegd in audit-trail."
+      },
+      "voidError": {
+        "title": "Voiden mislukt"
+      },
+      "synced": {
+        "title": "Gesynchroniseerd",
+        "description": "Geboekt in {{provider}} als {{externalId}}."
+      },
+      "syncError": {
+        "title": "Sync mislukt",
+        "description": "Controleer de boekhoud-koppeling."
+      },
+      "pdfDownloaded": {
+        "title": "PDF gedownload"
+      },
+      "pdfError": {
+        "title": "Download mislukt"
+      }
+    }
+  },
+  "commissions": {
+    "header": {
+      "title": "Commissie",
+      "description": "Beheer commissieschema's, koppel contracten aan recruiters en boek uitbetalingen."
+    },
+    "tabs": {
+      "records": "Records",
+      "schemes": "Schema's",
+      "assignments": "Toewijzingen"
+    },
+    "schemeType": {
+      "flat": "Vast bedrag",
+      "percentOfFee": "% van fee",
+      "percentOfMargin": "% van marge",
+      "tiered": "Getrapt",
+      "recurringMonthly": "Maandelijks recurring"
+    },
+    "records": {
+      "status": {
+        "pending": "Wachtend",
+        "approved": "Goedgekeurd",
+        "paid": "Uitbetaald",
+        "disputed": "Bezwaar"
+      },
+      "kpi": {
+        "pending": "Wachtend",
+        "approved": "Goedgekeurd",
+        "paidYtd": "Uitbetaald YTD"
+      },
+      "filters": {
+        "allStatuses": "Alle statussen",
+        "allRecruiters": "Alle recruiters"
+      },
+      "empty": "Geen commissie-records.",
+      "columns": {
+        "recruiter": "Recruiter",
+        "period": "Periode",
+        "base": "Basis",
+        "commission": "Commissie",
+        "status": "Status",
+        "actions": "Acties"
+      },
+      "actions": {
+        "approve": "Goedkeuren",
+        "pay": "Uitbetalen",
+        "dispute": "Bezwaar"
+      },
+      "disputeDialog": {
+        "title": "Bezwaar maken",
+        "description": "Beschrijf waarom dit record geblokkeerd moet worden voor uitbetaling.",
+        "placeholder": "Bv. klant heeft factuur betwist",
+        "cancel": "Annuleren",
+        "submit": "Indienen"
+      },
+      "toasts": {
+        "approved": "Goedgekeurd voor uitbetaling",
+        "approveError": "Goedkeuren mislukt",
+        "paid": "Uitbetaling vastgelegd",
+        "payError": "Uitbetalen mislukt",
+        "disputed": "Bezwaar geregistreerd",
+        "disputeError": "Bezwaar mislukt"
+      }
+    },
+    "schemes": {
+      "newScheme": "Nieuw schema",
+      "empty": "Nog geen schema's.",
+      "defaultBadge": "standaard",
+      "inactiveBadge": "inactief",
+      "edit": "Bewerken",
+      "dialog": {
+        "editTitle": "Schema bewerken",
+        "createTitle": "Nieuw commissie-schema",
+        "description": "Definieer hoe commissie wordt berekend voor recruiters die aan dit schema gekoppeld worden.",
+        "nameLabel": "Naam",
+        "namePlaceholder": "Bv. Standaard 8%",
+        "typeLabel": "Type",
+        "flatLabel": "Bedrag (€)",
+        "flatPlaceholder": "2500",
+        "percentLabel": "Percentage (%)",
+        "percentPlaceholder": "8",
+        "monthlyLabel": "Bedrag per maand (€)",
+        "monthlyPlaceholder": "250",
+        "tiersLabel": "Tiers",
+        "tierUpToPlaceholder": "Tot bedrag (leeg = ∞)",
+        "tierPercentPlaceholder": "% commissie",
+        "addTier": "Tier toevoegen",
+        "activeTitle": "Actief",
+        "activeDescription": "Inactief schema is niet selecteerbaar bij toewijzingen.",
+        "defaultTitle": "Standaard schema",
+        "defaultDescription": "Wordt automatisch toegepast bij nieuwe contracten zonder expliciete toewijzing.",
+        "cancel": "Annuleren",
+        "save": "Opslaan",
+        "create": "Aanmaken"
+      },
+      "describe": {
+        "flat": "{{amount}} per plaatsing",
+        "percentOfFee": "{{percent}}% van fee",
+        "percentOfMargin": "{{percent}}% van marge",
+        "tiered": "{{count}} tiers · max {{max}}%",
+        "recurringMonthly": "{{amount}} per maand"
+      },
+      "toasts": {
+        "updated": "Schema bijgewerkt",
+        "created": "Nieuw schema aangemaakt",
+        "saveError": "Opslaan mislukt"
+      }
+    },
+    "assignments": {
+      "newAssignment": "Nieuwe toewijzing",
+      "empty": "Nog geen toewijzingen.",
+      "columns": {
+        "recruiter": "Recruiter",
+        "contract": "Contract",
+        "scheme": "Schema",
+        "share": "Aandeel"
+      },
+      "dialog": {
+        "title": "Recruiter aan contract toewijzen",
+        "description": "Koppel een recruiter aan een contract via een commissie-schema.",
+        "recruiterLabel": "Recruiter",
+        "noRecruiters": "Nog geen recruiters bekend. Maak eerst een commissierecord aan, of voeg een gebruiker toe in Instellingen.",
+        "recruiterPlaceholder": "Kies een recruiter...",
+        "contractLabel": "Contract",
+        "contractPlaceholder": "Kies een contract...",
+        "schemeLabel": "Schema",
+        "schemePlaceholder": "Kies een schema...",
+        "shareLabel": "Aandeel %",
+        "shareHint": "Gebruik <100% bij splits met andere recruiters.",
+        "cancel": "Annuleren",
+        "assign": "Toewijzen"
+      },
+      "toasts": {
+        "created": "Toewijzing aangemaakt",
+        "createError": "Toewijzen mislukt"
+      }
+    }
+  }
+}

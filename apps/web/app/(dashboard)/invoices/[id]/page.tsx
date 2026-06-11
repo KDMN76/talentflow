@@ -10,6 +10,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -50,25 +51,20 @@ import {
 } from "@/hooks/useBackOffice";
 import type { InvoiceStatus } from "@/lib/types/backOffice";
 
-const STATUS_PILL: Record<InvoiceStatus, { label: string; cls: string }> = {
+const STATUS_PILL: Record<InvoiceStatus, { cls: string }> = {
   draft: {
-    label: "Concept",
     cls: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border-0",
   },
   sent: {
-    label: "Verzonden",
     cls: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border-0",
   },
   paid: {
-    label: "Betaald",
     cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-0",
   },
   overdue: {
-    label: "Te laat",
     cls: "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300 border-0",
   },
   void: {
-    label: "Geannuleerd",
     cls: "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400 border-0",
   },
 };
@@ -90,6 +86,7 @@ function formatMoney(amount: number, currency = "EUR"): string {
 }
 
 export default function InvoiceDetailPage() {
+  const { t } = useTranslation("invoices");
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const id = params.id;
@@ -121,12 +118,12 @@ export default function InvoiceDetailPage() {
         <Link href="/invoices">
           <Button variant="ghost" size="sm" className="-ml-2">
             <ArrowLeft className="mr-1 h-4 w-4" />
-            Terug
+            {t("detail.back")}
           </Button>
         </Link>
         <Card className="border-0 shadow-sm">
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Factuur niet gevonden.
+            {t("detail.notFound")}
           </CardContent>
         </Card>
       </div>
@@ -228,7 +225,7 @@ export default function InvoiceDetailPage() {
         description={`${invoice.client_name ?? "—"} · ${formatDate(invoice.period_start)} t/m ${formatDate(invoice.period_end)}`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Badge className={pill.cls}>{pill.label}</Badge>
+            <Badge className={pill.cls}>{t(`status.${invoice.status}`)}</Badge>
             <Button variant="outline" size="sm" onClick={handlePdf}>
               <Download className="mr-1.5 h-3.5 w-3.5" />
               PDF

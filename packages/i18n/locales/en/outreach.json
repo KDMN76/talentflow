@@ -1,0 +1,217 @@
+{
+  "hub": {
+    "title": "Outreach",
+    "description": "AI-drafted messages, replies, signals, and quotas — all in one place.",
+    "tabs": {
+      "pending": "To send",
+      "sent": "Sent",
+      "replies": "Replies",
+      "signals": "Signals",
+      "quotas": "Quotas"
+    }
+  },
+  "pending": {
+    "empty": {
+      "title": "Inbox clear",
+      "description": "No drafts or messages awaiting approval."
+    },
+    "subject": "Subject: {{subject}}",
+    "hideMessage": "Hide message",
+    "showMessage": "Show message",
+    "approve": "Approve",
+    "editRegenerate": "Edit + regenerate",
+    "reject": "Reject",
+    "rejectReason": "Not relevant",
+    "toasts": {
+      "approved": "Approved — added to the queue",
+      "rejected": "Rejected",
+      "draftSaved": "Draft saved",
+      "regenerated": "Regenerated"
+    },
+    "dialog": {
+      "title": "Edit & regenerate",
+      "currentDraftLabel": "Current draft",
+      "hintLabel": "Instruction for AI (optional)",
+      "hintPlaceholder": "E.g. 'make it shorter and more personal' or 'mention their recent promotion'",
+      "cancel": "Cancel",
+      "saveWithoutRegenerate": "Save without regenerating",
+      "regenerate": "Regenerate"
+    }
+  },
+  "sent": {
+    "empty": {
+      "title": "Nothing sent yet",
+      "description": "Approved messages will show up here."
+    },
+    "messageCount_one": "{{count}} message",
+    "messageCount_other": "{{count}} messages"
+  },
+  "replies": {
+    "empty": {
+      "title": "No replies classified yet"
+    },
+    "unknownCandidate": "Unknown",
+    "received": "Reply received {{time}}",
+    "original": "Original ({{channel}})",
+    "confidence": "Confidence",
+    "nextActionAlert": "Suggested next step: {{action}}\n(real action wired to the backend in production)",
+    "suggestedAction": "Suggested action: {{action}}",
+    "reasoning": "Reasoning: {{reasoning}}",
+    "nextAction": {
+      "scheduleCall": "Schedule call",
+      "sendFollowup": "Send follow-up",
+      "pauseSequence": "Pause sequence",
+      "removeFromOutreach": "Remove from outreach",
+      "manualReview": "Recruiter decides"
+    }
+  },
+  "signals": {
+    "empty": {
+      "title": "No signals detected"
+    },
+    "columns": {
+      "candidate": "Candidate",
+      "type": "Type",
+      "change": "Change",
+      "source": "Source",
+      "detected": "Detected",
+      "actions": "Actions"
+    },
+    "processed": "Processed",
+    "dismiss": "Dismiss",
+    "draftReactivation": "Draft reactivation",
+    "toasts": {
+      "dismissed": "Dismissed",
+      "drafted": "Reactivation drafted"
+    },
+    "dialog": {
+      "title": "Choose a reactivation sequence",
+      "stepsAndDescription": "{{count}} steps · {{description}}",
+      "cancel": "Cancel",
+      "draft": "Draft"
+    }
+  },
+  "quotas": {
+    "empty": {
+      "title": "No quotas configured"
+    },
+    "columns": {
+      "recruiter": "Recruiter",
+      "channel": "Channel",
+      "today": "Today",
+      "thisWeek": "This week",
+      "adjust": "Adjust"
+    },
+    "edit": "Edit",
+    "toasts": {
+      "updated": "Quota updated"
+    },
+    "dialog": {
+      "title": "Adjust quota",
+      "context": "{{channel}} · recruiter {{recruiterId}}",
+      "dailyLabel": "Daily limit",
+      "weeklyLabel": "Weekly limit",
+      "cancel": "Cancel",
+      "save": "Save"
+    }
+  },
+  "inbox": {
+    "title": "Outreach Inbox",
+    "description": "Everything that needs your attention right now — drafts + replies in one feed.",
+    "stats": {
+      "draftsToReview": "Drafts to review",
+      "repliesIn": "Replies in",
+      "interested": "Interested"
+    },
+    "empty": {
+      "title": "Inbox clear",
+      "description": "All messages handled. Nice work!"
+    },
+    "draftBadge": "Draft",
+    "review": "Review",
+    "unknownCandidate": "Unknown",
+    "replyMeta": "reply · {{time}}",
+    "confidenceMeta": "confidence {{percent}}%",
+    "handle": "Handle"
+  },
+  "sequences": {
+    "title": "Nurture sequences",
+    "description": "Multi-step funnels for passive sourcing and reactivation.",
+    "newSequence": "New sequence",
+    "empty": {
+      "title": "No sequences yet",
+      "description": "Create your first nurture sequence to warm up candidates."
+    },
+    "noDescription": "No description",
+    "steps": "{{count}} steps",
+    "active": "Active",
+    "archived": "Archived",
+    "openBuilder": "Open builder",
+    "toasts": {
+      "activated": "Sequence active",
+      "paused": "Sequence paused",
+      "created": "Sequence created"
+    },
+    "createDialog": {
+      "title": "New sequence",
+      "nameLabel": "Name",
+      "namePlaceholder": "E.g. Senior Data Engineer outbound",
+      "descriptionLabel": "Description (optional)",
+      "cancel": "Cancel",
+      "create": "Create"
+    }
+  },
+  "builder": {
+    "backToSequences": "Back to sequences",
+    "noDescription": "No description",
+    "newStepSubject": "New step",
+    "newStepBody": "Hi {first_name},\n\nQuick question — are you open to a new role?\n\nBest,\n{recruiter_name}",
+    "steps": {
+      "empty": {
+        "title": "No steps yet",
+        "description": "Add the first step to start the funnel."
+      },
+      "addStep": "Add step"
+    },
+    "enrollments": {
+      "title": "Enrollments",
+      "total": "Total",
+      "active": "Active",
+      "paused": "Paused",
+      "replied": "Replied",
+      "completed": "Completed",
+      "stopped": "Stopped"
+    },
+    "replyRate": {
+      "title": "Reply rate per step",
+      "noData": "No data yet — add steps.",
+      "step": "Step {{number}}"
+    },
+    "stepCard": {
+      "moveAria": "Move step",
+      "waitDays": "Wait {{count}} days",
+      "aiPersonalizes": "AI-personalizes",
+      "stopOnReply": "Stop on reply",
+      "edit": "Edit"
+    },
+    "toasts": {
+      "reordered": "Order updated",
+      "stepAdded": "Step added",
+      "stepDeleted": "Step deleted",
+      "stepUpdated": "Step updated"
+    },
+    "editDialog": {
+      "title": "Edit step {{order}}",
+      "channelLabel": "Channel",
+      "delayLabel": "Delay (days)",
+      "subjectLabel": "Subject",
+      "subjectPlaceholder": "E.g. 'Quick question from TalentFlow'",
+      "bodyLabel": "Template body",
+      "variablesHint": "Variables: {{firstName}}, {{recruiterName}}, {{personalizedOpener}}",
+      "aiPersonalizes": "AI personalizes",
+      "stopOnReply": "Stop on reply",
+      "cancel": "Cancel",
+      "save": "Save"
+    }
+  }
+}

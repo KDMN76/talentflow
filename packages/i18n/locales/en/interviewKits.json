@@ -1,0 +1,167 @@
+{
+  "list": {
+    "header": {
+      "title": "Interview kits",
+      "description": "Manage reusable interview kits — questions, follow-ups and linked scorecard templates."
+    },
+    "newKit": "New kit",
+    "error": {
+      "title": "Couldn't load interview kits — please try again"
+    },
+    "empty": {
+      "description": "No interview kits yet.",
+      "createFirst": "Create your first kit"
+    },
+    "card": {
+      "generic": "Generic",
+      "questions_one": "{{count}} question",
+      "questions_other": "{{count}} questions",
+      "duration": "~{{count}} min",
+      "noDuration": "no duration"
+    },
+    "createDialog": {
+      "title": "New interview kit",
+      "description": "Fill in the basics. You'll add questions on the detail page.",
+      "nameLabel": "Name *",
+      "namePlaceholder": "e.g. Senior FE Tech Interview",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "A short note on what this kit is for",
+      "jobLabel": "Job (optional)",
+      "jobGeneric": "Generic (no job)",
+      "scorecardLabel": "Scorecard template (optional)",
+      "scorecardNone": "No template",
+      "cancel": "Cancel",
+      "create": "Create"
+    },
+    "confirmDelete": "Are you sure you want to delete \"{{name}}\"?",
+    "toasts": {
+      "created": "Kit created",
+      "deleted": "Kit deleted"
+    }
+  },
+  "detail": {
+    "notFound": {
+      "label": "Kit not found.",
+      "back": "Back to overview"
+    },
+    "back": "Back to kits",
+    "untitled": "Untitled kit",
+    "subtitle": "{{count}} questions · ~{{duration}} min total",
+    "save": "Save",
+    "basics": {
+      "title": "Basic details",
+      "nameLabel": "Name",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "A short note on when to use this kit",
+      "jobLabel": "Job",
+      "jobGeneric": "Generic",
+      "scorecardLabel": "Scorecard template",
+      "scorecardNone": "No template"
+    },
+    "questions": {
+      "title": "Questions ({{count}})",
+      "addQuestion": "Add question",
+      "empty": "No questions yet. Click \"Add question\" to get started."
+    },
+    "categories": {
+      "behavioral": "Behavioral",
+      "technical": "Technical",
+      "culture": "Culture",
+      "experience": "Experience",
+      "scenario": "Scenario"
+    },
+    "editor": {
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "questionPlaceholder": "What's your question?",
+      "categoryLabel": "Category",
+      "durationLabel": "Expected duration (min)",
+      "criteriaLabel": "Evaluation criteria",
+      "criteriaPlaceholder": "e.g. Depth, clarity of explanation, structure",
+      "followupsLabel": "Suggested follow-ups",
+      "followupPlaceholder": "Add a follow-up question and press Enter",
+      "durationBadge": "~{{count}}m"
+    },
+    "toasts": {
+      "nameRequired": "Name is required",
+      "saved": "Kit saved"
+    }
+  },
+  "interview": {
+    "notFound": {
+      "label": "Interview not found.",
+      "back": "Back to overview"
+    },
+    "back": "Back to interviews",
+    "duration": "{{count}} min",
+    "actions": {
+      "reschedule": "Reschedule",
+      "cancel": "Cancel"
+    },
+    "status": {
+      "scheduled": "Scheduled",
+      "rescheduled": "Rescheduled",
+      "completed": "Completed",
+      "no_show": "No-show",
+      "cancelled": "Cancelled"
+    },
+    "locations": {
+      "google_meet": "Google Meet",
+      "teams": "Microsoft Teams",
+      "zoom": "Zoom",
+      "in_person": "In person",
+      "phone": "Phone"
+    },
+    "tabs": {
+      "details": "Details",
+      "questions": "Questions",
+      "recording": "Recording",
+      "scorecards": "Scorecards"
+    },
+    "details": {
+      "locationTitle": "Location",
+      "interviewersTitle": "Interviewers",
+      "kitTitle": "Interview kit",
+      "kitView": "View →",
+      "noKit": "No kit linked — open conversation.",
+      "notesTitle": "Notes"
+    },
+    "recording": {
+      "uploadedBy": "Uploaded by {{name}}"
+    },
+    "questionsPanel": {
+      "noKit": "No kit is linked to this interview. Add one via \"Edit\" to show questions.",
+      "kitNotFound": "Kit not found.",
+      "evaluateOn": "Evaluate on: ",
+      "followupsTitle": "Suggested follow-ups"
+    },
+    "scorecards": {
+      "title": "Scorecards ({{count}})",
+      "description": "Per interviewer: their current rating. Click a row to view the detail on the application page.",
+      "empty": "No scorecards submitted yet.",
+      "openCandidate": "Open the candidate page to fill in a scorecard",
+      "scoreSuffix": "/5"
+    },
+    "cancelDialog": {
+      "title": "Cancel interview",
+      "description": "We'll automatically notify all participants. Add a reason for the audit log.",
+      "reasonLabel": "Reason (optional)",
+      "reasonPlaceholder": "Candidate cancelled on their own...",
+      "keep": "Keep interview",
+      "confirm": "Confirm cancellation"
+    },
+    "rescheduleDialog": {
+      "title": "Reschedule interview",
+      "description": "Pick a new time. All participants automatically receive an updated invite.",
+      "newStartLabel": "New time",
+      "cancel": "Cancel",
+      "confirm": "Reschedule"
+    },
+    "toasts": {
+      "cancelled": "Interview cancelled",
+      "cancelledReason": "Reason: {{reason}}",
+      "cancelledDefault": "The interview has been cancelled.",
+      "rescheduled": "Interview rescheduled"
+    }
+  }
+}

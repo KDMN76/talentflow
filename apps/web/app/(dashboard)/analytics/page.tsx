@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslation } from "react-i18next";
 import {
   Briefcase,
   Users,
@@ -158,6 +159,7 @@ function CustomTooltip({ active, payload, label, formatter }: CustomTooltipProps
 // ─── Tab: Overzicht ───────────────────────────────────────────────────────────
 
 function OverviewTab() {
+  const { t } = useTranslation("analytics");
   const { data: overview, isLoading: loadingOverview } = useAnalyticsOverview();
   const { data: funnel, isLoading: loadingFunnel } = useAnalyticsFunnel();
   const { data: sources, isLoading: loadingSources } = useAnalyticsSourceBreakdown();
@@ -179,42 +181,42 @@ function OverviewTab() {
       {/* KPI grid */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
         <KpiCard
-          label="Open vacatures"
+          label={t("overview.kpi.openJobs")}
           value={overview?.open_jobs ?? 0}
           icon={Briefcase}
           iconBg="bg-indigo-50 dark:bg-indigo-950/50"
           iconColor="text-indigo-600 dark:text-indigo-400"
         />
         <KpiCard
-          label="Kandidaten deze maand"
+          label={t("overview.kpi.applicationsThisMonth")}
           value={overview?.applications_this_month ?? 0}
           icon={Users}
           iconBg="bg-violet-50 dark:bg-violet-950/50"
           iconColor="text-violet-600 dark:text-violet-400"
         />
         <KpiCard
-          label="Gem. time-to-hire"
-          value={`${overview?.avg_time_to_hire_days ?? 0} dgn`}
+          label={t("overview.kpi.avgTimeToHire")}
+          value={`${overview?.avg_time_to_hire_days ?? 0} ${t("overview.days")}`}
           icon={Clock}
           iconBg="bg-blue-50 dark:bg-blue-950/50"
           iconColor="text-blue-600 dark:text-blue-400"
         />
         <KpiCard
-          label="Aangenomen"
+          label={t("overview.kpi.hired")}
           value={overview?.hired_this_month ?? 0}
           icon={UserCheck}
           iconBg="bg-emerald-50 dark:bg-emerald-950/50"
           iconColor="text-emerald-600 dark:text-emerald-400"
         />
         <KpiCard
-          label="Actieve recruiters"
+          label={t("overview.kpi.activeRecruiters")}
           value={overview?.active_recruiters ?? 0}
           icon={Users2}
           iconBg="bg-amber-50 dark:bg-amber-950/50"
           iconColor="text-amber-600 dark:text-amber-400"
         />
         <KpiCard
-          label="Conversieratio"
+          label={t("overview.kpi.conversionRate")}
           value={`${conversionRate}%`}
           icon={TrendingUp}
           iconBg="bg-rose-50 dark:bg-rose-950/50"
@@ -229,7 +231,7 @@ function OverviewTab() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-indigo-500" />
-              Pipeline Funnel
+              {t("overview.funnel.title")}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
@@ -256,7 +258,7 @@ function OverviewTab() {
                 <Tooltip
                   content={
                     <CustomTooltip
-                      formatter={(v) => [String(v), "kandidaten"]}
+                      formatter={(v) => [String(v), t("overview.funnel.tooltip")]}
                     />
                   }
                   cursor={{ fill: "#f4f4f5" }}
@@ -277,7 +279,7 @@ function OverviewTab() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <Users className="h-4 w-4 text-purple-500" />
-              Kandidaatbronnen
+              {t("overview.sources.title")}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0 flex flex-col items-center">
@@ -306,7 +308,7 @@ function OverviewTab() {
                 <Tooltip
                   formatter={(value) => [
                     `${value ?? 0}%`,
-                    "aandeel",
+                    t("overview.sources.tooltip"),
                   ]}
                   contentStyle={{
                     borderRadius: "8px",
@@ -335,6 +337,7 @@ function OverviewTab() {
 // ─── Tab: Recruiters ──────────────────────────────────────────────────────────
 
 function RecruitersTab() {
+  const { t } = useTranslation("analytics");
   const { data: recruiters, isLoading } = useAnalyticsRecruiterStats();
 
   if (isLoading) return <RecruitersSkeleton />;
@@ -344,7 +347,7 @@ function RecruitersTab() {
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
           <Users2 className="h-4 w-4 text-indigo-500" />
-          Recruiter prestaties
+          {t("recruiters.title")}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
@@ -353,19 +356,19 @@ function RecruitersTab() {
             <thead>
               <tr className="border-b border-border bg-zinc-50/60 dark:bg-zinc-800/40">
                 <th className="py-3 pl-6 pr-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Recruiter
+                  {t("recruiters.columns.recruiter")}
                 </th>
                 <th className="py-3 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Open vacatures
+                  {t("recruiters.columns.openJobs")}
                 </th>
                 <th className="py-3 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Sollicitaties
+                  {t("recruiters.columns.applications")}
                 </th>
                 <th className="py-3 px-4 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Aangenomen
+                  {t("recruiters.columns.hired")}
                 </th>
                 <th className="py-3 pl-4 pr-6 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Gem. days
+                  {t("recruiters.columns.avgDays")}
                 </th>
               </tr>
             </thead>
@@ -411,7 +414,7 @@ function RecruitersTab() {
                           : "bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-300"
                       )}
                     >
-                      {r.avg_time_to_hire_days} dgn
+                      {r.avg_time_to_hire_days} {t("recruiters.days")}
                     </span>
                   </td>
                 </tr>
@@ -427,6 +430,7 @@ function RecruitersTab() {
 // ─── Tab: Trends ──────────────────────────────────────────────────────────────
 
 function TrendsTab() {
+  const { t } = useTranslation("analytics");
   const { data: timeToHire, isLoading: loadingTTH } =
     useAnalyticsTimeToHireTrend();
   const { data: appsTrend, isLoading: loadingApps } =
@@ -443,7 +447,7 @@ function TrendsTab() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             <Clock className="h-4 w-4 text-indigo-500" />
-            Time-to-Hire Trend
+            {t("trends.timeToHire.title")}
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
@@ -467,7 +471,10 @@ function TrendsTab() {
                 tickFormatter={(v) => `${v}d`}
               />
               <Tooltip
-                formatter={(v) => [`${v ?? 0} dagen`, "Gem. time-to-hire"]}
+                formatter={(v) => [
+                  `${v ?? 0} ${t("trends.timeToHire.tooltipUnit")}`,
+                  t("trends.timeToHire.tooltipLabel"),
+                ]}
                 contentStyle={{
                   borderRadius: "8px",
                   border: "1px solid #e4e4e7",
@@ -492,7 +499,7 @@ function TrendsTab() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             <BarChart3 className="h-4 w-4 text-purple-500" />
-            Sollicitaties per Week
+            {t("trends.applications.title")}
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
@@ -514,7 +521,10 @@ function TrendsTab() {
                 tickLine={false}
               />
               <Tooltip
-                formatter={(v) => [String(v ?? 0), "sollicitaties"]}
+                formatter={(v) => [
+                  String(v ?? 0),
+                  t("trends.applications.tooltipUnit"),
+                ]}
                 contentStyle={{
                   borderRadius: "8px",
                   border: "1px solid #e4e4e7",
@@ -539,11 +549,12 @@ function TrendsTab() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AnalyticsPage() {
+  const { t } = useTranslation("analytics");
   return (
     <div className="space-y-8 animate-fade-in">
       <PageHeader
-        title="Analytiek"
-        description="Inzicht in je recruitmentprestaties"
+        title={t("header.title")}
+        description={t("header.description")}
       />
 
       <Tabs defaultValue="overzicht" className="space-y-6">
@@ -552,19 +563,19 @@ export default function AnalyticsPage() {
             value="overzicht"
             className="data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm px-5"
           >
-            Overzicht
+            {t("tabs.overview")}
           </TabsTrigger>
           <TabsTrigger
             value="recruiters"
             className="data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm px-5"
           >
-            Recruiters
+            {t("tabs.recruiters")}
           </TabsTrigger>
           <TabsTrigger
             value="trends"
             className="data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm px-5"
           >
-            Trends
+            {t("tabs.trends")}
           </TabsTrigger>
         </TabsList>
 

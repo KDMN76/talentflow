@@ -1,0 +1,272 @@
+{
+  "list": {
+    "header": {
+      "title": "Invoices",
+      "description": "Review sales invoices, sync them to accounting and record payments."
+    },
+    "stats": {
+      "outstanding": "Outstanding",
+      "paidMtd": "Paid MTD",
+      "overdue": "Overdue",
+      "total": "Total",
+      "overdueValue_one": "{{count}} invoice",
+      "overdueValue_other": "{{count}} invoices"
+    },
+    "filters": {
+      "searchPlaceholder": "Search by invoice number or client...",
+      "allStatuses": "All statuses"
+    },
+    "status": {
+      "draft": "Draft",
+      "sent": "Sent",
+      "paid": "Paid",
+      "overdue": "Overdue",
+      "void": "Voided"
+    },
+    "empty": {
+      "title": "No invoices found",
+      "description": "Generate an invoice from an active contract."
+    },
+    "columns": {
+      "number": "Number",
+      "client": "Client",
+      "period": "Period",
+      "amount": "Amount",
+      "status": "Status",
+      "dueDate": "Due date"
+    },
+    "syncedBadge": "synced"
+  },
+  "detail": {
+    "back": "Back",
+    "backToInvoices": "Back to invoices",
+    "notFound": "Invoice not found.",
+    "description": "{{client}} · {{periodStart}} to {{periodEnd}}",
+    "actions": {
+      "pdf": "PDF",
+      "syncToAccounting": "Sync to accounting",
+      "void": "Void",
+      "markPaid": "Mark as paid",
+      "send": "Send"
+    },
+    "fields": {
+      "invoiceNumber": "Invoice number",
+      "client": "Client",
+      "issuedDate": "Issue date",
+      "dueDate": "Due date",
+      "periodStart": "Period start",
+      "periodEnd": "Period end",
+      "paidOn": "Paid on",
+      "contract": "Contract"
+    },
+    "lines": {
+      "description": "Description",
+      "quantity": "Qty",
+      "unit": "Unit",
+      "price": "Price",
+      "total": "Total"
+    },
+    "totals": {
+      "subtotal": "Subtotal",
+      "vat": "VAT ({{rate}}%)",
+      "total": "Total"
+    },
+    "note": "Note",
+    "accounting": {
+      "title": "Accounting",
+      "synced": "Synced · {{provider}}",
+      "lastSync": "Last sync: {{date}}",
+      "notSynced": "Not synced yet.",
+      "syncNow": "Sync now"
+    },
+    "paidDialog": {
+      "title": "Mark as paid",
+      "description": "Enter the actual payment date. This is recorded in the audit trail.",
+      "dateLabel": "Payment date",
+      "cancel": "Cancel",
+      "confirm": "Confirm payment"
+    },
+    "voidDialog": {
+      "title": "Void invoice",
+      "description": "Voiding is permanent. A new invoice can be generated with the correct details.",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "E.g. duplicate invoice, wrong period",
+      "cancel": "Cancel",
+      "confirm": "Void invoice"
+    },
+    "toasts": {
+      "sent": {
+        "title": "Invoice sent",
+        "description": "{{number}} has been emailed to {{client}}."
+      },
+      "sendError": {
+        "title": "Sending failed"
+      },
+      "markedPaid": {
+        "title": "Marked as paid",
+        "description": "Payment date recorded on {{date}}."
+      },
+      "updateError": {
+        "title": "Update failed"
+      },
+      "voided": {
+        "title": "Invoice voided",
+        "description": "Reason recorded in the audit trail."
+      },
+      "voidError": {
+        "title": "Voiding failed"
+      },
+      "synced": {
+        "title": "Synced",
+        "description": "Posted to {{provider}} as {{externalId}}."
+      },
+      "syncError": {
+        "title": "Sync failed",
+        "description": "Check the accounting integration."
+      },
+      "pdfDownloaded": {
+        "title": "PDF downloaded"
+      },
+      "pdfError": {
+        "title": "Download failed"
+      }
+    }
+  },
+  "commissions": {
+    "header": {
+      "title": "Commissions",
+      "description": "Manage commission schemes, link contracts to recruiters and record payouts."
+    },
+    "tabs": {
+      "records": "Records",
+      "schemes": "Schemes",
+      "assignments": "Assignments"
+    },
+    "schemeType": {
+      "flat": "Flat amount",
+      "percentOfFee": "% of fee",
+      "percentOfMargin": "% of margin",
+      "tiered": "Tiered",
+      "recurringMonthly": "Monthly recurring"
+    },
+    "records": {
+      "status": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "paid": "Paid",
+        "disputed": "Disputed"
+      },
+      "kpi": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "paidYtd": "Paid YTD"
+      },
+      "filters": {
+        "allStatuses": "All statuses",
+        "allRecruiters": "All recruiters"
+      },
+      "empty": "No commission records.",
+      "columns": {
+        "recruiter": "Recruiter",
+        "period": "Period",
+        "base": "Base",
+        "commission": "Commission",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "actions": {
+        "approve": "Approve",
+        "pay": "Pay out",
+        "dispute": "Dispute"
+      },
+      "disputeDialog": {
+        "title": "Raise a dispute",
+        "description": "Describe why this record should be blocked from payout.",
+        "placeholder": "E.g. client disputed the invoice",
+        "cancel": "Cancel",
+        "submit": "Submit"
+      },
+      "toasts": {
+        "approved": "Approved for payout",
+        "approveError": "Approval failed",
+        "paid": "Payout recorded",
+        "payError": "Payout failed",
+        "disputed": "Dispute registered",
+        "disputeError": "Dispute failed"
+      }
+    },
+    "schemes": {
+      "newScheme": "New scheme",
+      "empty": "No schemes yet.",
+      "defaultBadge": "default",
+      "inactiveBadge": "inactive",
+      "edit": "Edit",
+      "dialog": {
+        "editTitle": "Edit scheme",
+        "createTitle": "New commission scheme",
+        "description": "Define how commission is calculated for recruiters linked to this scheme.",
+        "nameLabel": "Name",
+        "namePlaceholder": "E.g. Standard 8%",
+        "typeLabel": "Type",
+        "flatLabel": "Amount (€)",
+        "flatPlaceholder": "2500",
+        "percentLabel": "Percentage (%)",
+        "percentPlaceholder": "8",
+        "monthlyLabel": "Amount per month (€)",
+        "monthlyPlaceholder": "250",
+        "tiersLabel": "Tiers",
+        "tierUpToPlaceholder": "Up to amount (empty = ∞)",
+        "tierPercentPlaceholder": "% commission",
+        "addTier": "Add tier",
+        "activeTitle": "Active",
+        "activeDescription": "An inactive scheme cannot be selected for assignments.",
+        "defaultTitle": "Default scheme",
+        "defaultDescription": "Applied automatically to new contracts without an explicit assignment.",
+        "cancel": "Cancel",
+        "save": "Save",
+        "create": "Create"
+      },
+      "describe": {
+        "flat": "{{amount}} per placement",
+        "percentOfFee": "{{percent}}% of fee",
+        "percentOfMargin": "{{percent}}% of margin",
+        "tiered": "{{count}} tiers · max {{max}}%",
+        "recurringMonthly": "{{amount}} per month"
+      },
+      "toasts": {
+        "updated": "Scheme updated",
+        "created": "New scheme created",
+        "saveError": "Save failed"
+      }
+    },
+    "assignments": {
+      "newAssignment": "New assignment",
+      "empty": "No assignments yet.",
+      "columns": {
+        "recruiter": "Recruiter",
+        "contract": "Contract",
+        "scheme": "Scheme",
+        "share": "Share"
+      },
+      "dialog": {
+        "title": "Assign recruiter to contract",
+        "description": "Link a recruiter to a contract through a commission scheme.",
+        "recruiterLabel": "Recruiter",
+        "noRecruiters": "No recruiters known yet. Create a commission record first, or add a user in Settings.",
+        "recruiterPlaceholder": "Choose a recruiter...",
+        "contractLabel": "Contract",
+        "contractPlaceholder": "Choose a contract...",
+        "schemeLabel": "Scheme",
+        "schemePlaceholder": "Choose a scheme...",
+        "shareLabel": "Share %",
+        "shareHint": "Use <100% for splits with other recruiters.",
+        "cancel": "Cancel",
+        "assign": "Assign"
+      },
+      "toasts": {
+        "created": "Assignment created",
+        "createError": "Assignment failed"
+      }
+    }
+  }
+}

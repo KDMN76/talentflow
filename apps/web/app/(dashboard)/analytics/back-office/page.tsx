@@ -10,6 +10,7 @@
  */
 
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Bar,
   BarChart,
@@ -66,6 +67,7 @@ function formatMonth(value: string): string {
 }
 
 export default function BackOfficeAnalyticsPage() {
+  const { t } = useTranslation("analytics");
   const { toast } = useToast();
   const [groupBy, setGroupBy] = useState<MarginGroupBy>("client");
 
@@ -139,17 +141,20 @@ export default function BackOfficeAnalyticsPage() {
   const handleRecompute = async () => {
     try {
       await recompute.mutateAsync();
-      toast({ title: "Forecast herberekend" });
+      toast({ title: t("backOffice.toasts.recomputed") });
     } catch {
-      toast({ title: "Herberekenen mislukt", variant: "destructive" });
+      toast({
+        title: t("backOffice.toasts.recomputeFailed"),
+        variant: "destructive",
+      });
     }
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Bureau-overzicht"
-        description="Live KPI's, forecast en marge-analyse voor je temp/contract-portfolio."
+        title={t("backOffice.header.title")}
+        description={t("backOffice.header.description")}
         actions={
           <Button
             variant="outline"
@@ -164,7 +169,7 @@ export default function BackOfficeAnalyticsPage() {
                   : "mr-1.5 h-3.5 w-3.5"
               }
             />
-            Herbereken forecast
+            {t("backOffice.header.recompute")}
           </Button>
         }
       />
@@ -173,25 +178,25 @@ export default function BackOfficeAnalyticsPage() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
           icon={<Briefcase className="h-4 w-4" />}
-          label="Actieve contracten"
+          label={t("backOffice.kpi.activeContracts")}
           value={`${kpi.activeContracts}`}
           accent="indigo"
         />
         <KpiCard
           icon={<Coins className="h-4 w-4" />}
-          label="MTD omzet"
+          label={t("backOffice.kpi.mtdRevenue")}
           value={formatMoney(kpi.mtdRevenue)}
           accent="emerald"
         />
         <KpiCard
           icon={<TrendingUp className="h-4 w-4" />}
-          label="MTD marge"
+          label={t("backOffice.kpi.mtdMargin")}
           value={formatMoney(kpi.mtdMargin)}
           accent="emerald"
         />
         <KpiCard
           icon={<TrendingUp className="h-4 w-4" />}
-          label="Projectie volgende maand"
+          label={t("backOffice.kpi.projectedNext")}
           value={formatMoney(kpi.projectedNext)}
           accent="purple"
         />
@@ -202,11 +207,10 @@ export default function BackOfficeAnalyticsPage() {
         <CardContent className="space-y-4 p-6">
           <div>
             <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-              Omzet-forecast — 6 maanden vooruit
+              {t("backOffice.forecast.title")}
             </h3>
             <p className="text-xs text-muted-foreground">
-              Verwachte omzet uit lopende contracten + pipeline van openstaande
-              plaatsingen.
+              {t("backOffice.forecast.description")}
             </p>
           </div>
           {forecastLoading ? (
@@ -217,9 +221,12 @@ export default function BackOfficeAnalyticsPage() {
                 <LineChart
                   data={(forecast ?? []).map((m) => ({
                     month: formatMonth(m.forecast_month),
-                    Verwacht: m.expected_revenue,
-                    Pipeline: m.pipeline_revenue,
-                    Totaal: m.expected_revenue + m.pipeline_revenue,
+                    [t("backOffice.forecast.series.expected")]:
+                      m.expected_revenue,
+                    [t("backOffice.forecast.series.pipeline")]:
+                      m.pipeline_revenue,
+                    [t("backOffice.forecast.series.total")]:
+                      m.expected_revenue + m.pipeline_revenue,
                   }))}
                 >
                   <CartesianGrid stroke="#e4e4e7" strokeDasharray="3 3" />
@@ -245,14 +252,14 @@ export default function BackOfficeAnalyticsPage() {
                   <Legend wrapperStyle={{ fontSize: 12 }} />
                   <Line
                     type="monotone"
-                    dataKey="Verwacht"
+                    dataKey={t("backOffice.forecast.series.expected")}
                     stroke="#6366f1"
                     strokeWidth={2.5}
                     dot={{ r: 4 }}
                   />
                   <Line
                     type="monotone"
-                    dataKey="Pipeline"
+                    dataKey={t("backOffice.forecast.series.pipeline")}
                     stroke="#a855f7"
                     strokeWidth={2.5}
                     strokeDasharray="5 5"
@@ -260,7 +267,7 @@ export default function BackOfficeAnalyticsPage() {
                   />
                   <Line
                     type="monotone"
-                    dataKey="Totaal"
+                    dataKey={t("backOffice.forecast.series.total")}
                     stroke="#10b981"
                     strokeWidth={2}
                     dot={{ r: 3 }}
@@ -278,13 +285,17 @@ export default function BackOfficeAnalyticsPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                Marge per {groupBy === "client" ? "klant" : "recruiter"}
+                {groupBy === "client"
+                  ? t("backOffice.margin.titleClient")
+                  : t("backOffice.margin.titleRecruiter")}
               </h3>
               <p className="text-xs text-muted-foreground">
-                Top {Math.min(10, marginRows?.length ?? 0)} ·
+                {t("backOffice.margin.top", {
+                  count: Math.min(10, marginRows?.length ?? 0),
+                })}
                 {groupBy === "client"
-                  ? " Welke klanten leveren de hoogste bruto-marge?"
-                  : " Welke recruiters dragen het meest bij?"}
+                  ? t("backOffice.margin.descriptionClient")
+                  : t("backOffice.margin.descriptionRecruiter")}
               </p>
             </div>
             <Tabs
@@ -292,8 +303,12 @@ export default function BackOfficeAnalyticsPage() {
               onValueChange={(v) => setGroupBy(v as MarginGroupBy)}
             >
               <TabsList>
-                <TabsTrigger value="client">Per klant</TabsTrigger>
-                <TabsTrigger value="recruiter">Per recruiter</TabsTrigger>
+                <TabsTrigger value="client">
+                  {t("backOffice.margin.perClient")}
+                </TabsTrigger>
+                <TabsTrigger value="recruiter">
+                  {t("backOffice.margin.perRecruiter")}
+                </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -302,7 +317,7 @@ export default function BackOfficeAnalyticsPage() {
             <Skeleton className="h-72 w-full" />
           ) : !marginRows || marginRows.length === 0 ? (
             <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
-              Nog geen marge-data.
+              {t("backOffice.margin.empty")}
             </div>
           ) : (
             <div className="h-80 w-full">

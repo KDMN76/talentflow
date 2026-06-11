@@ -1,0 +1,243 @@
+{
+  "hub": {
+    "header": {
+      "title": "Sourcing Agent",
+      "description": "Geef een brief, krijg gekwalificeerde kandidaten op je goedkeuring."
+    },
+    "hero": {
+      "badge": "Sprint Q4.5 — Agentic AI sourcing",
+      "title": "Geef een brief, krijg 25 gekwalificeerde kandidaten op je goedkeuring.",
+      "description": "De agent doorzoekt LinkedIn, scoort matches, en levert ze ter review aan. Jij houdt het laatste woord — altijd.",
+      "newBrief": "Nieuwe brief"
+    },
+    "stats": {
+      "activeRuns": {
+        "label": "Actieve runs",
+        "hint": "{{count}} totaal"
+      },
+      "toReview": {
+        "label": "Te beoordelen",
+        "hint": "Wachten op recruiter"
+      },
+      "approvedThisMonth": {
+        "label": "Goedgekeurd deze maand",
+        "hint": "Toegevoegd aan pipeline"
+      },
+      "aiCost": {
+        "label": "AI-kosten deze maand",
+        "hint": "Tokens + LinkedIn API"
+      }
+    },
+    "tabs": {
+      "briefs": "Briefs",
+      "runs": "Runs",
+      "findings": "Findings",
+      "audit": "Audit trail"
+    },
+    "briefsTab": {
+      "empty": {
+        "title": "Nog geen briefs",
+        "description": "Maak je eerste brief om de agent een vacature te laten sourcen."
+      },
+      "card": {
+        "meta": "{{locations}} · doel {{count}} kandidaten",
+        "active": "Actief",
+        "archived": "Gearchiveerd"
+      }
+    },
+    "runsTab": {
+      "empty": {
+        "title": "Nog geen runs",
+        "description": "Open een brief en start een run om de agent op pad te sturen."
+      },
+      "columns": {
+        "status": "Status",
+        "brief": "Brief",
+        "progress": "Voortgang",
+        "found": "Gevonden",
+        "approved": "Goedgekeurd",
+        "started": "Gestart"
+      },
+      "iteration": "iter {{count}}"
+    },
+    "findingsTab": {
+      "empty": {
+        "title": "Geen kandidaten ter beoordeling",
+        "description": "Goed nieuws — alles is afgehandeld. Start een nieuwe run om door te gaan."
+      },
+      "selectedCount": "{{count}} geselecteerd",
+      "clear": "Wissen",
+      "approve": "Goedkeuren",
+      "groupHeader": "{{title}} · {{count}} kandidaten",
+      "toasts": {
+        "bulkApproved": "{{count}} kandidaten goedgekeurd"
+      }
+    },
+    "findingRow": {
+      "selectAria": "Selecteer kandidaat",
+      "subtitle": "{{title}} · {{company}} · {{location}}",
+      "approve": "Goedkeuren",
+      "reject": "Afwijzen",
+      "rejectReason": "Niet relevant",
+      "toasts": {
+        "approved": "Goedgekeurd",
+        "rejected": "Afgewezen"
+      }
+    },
+    "auditTab": {
+      "empty": {
+        "title": "Geen agent-acties geregistreerd",
+        "description": "Zodra de agent runs uitvoert verschijnt hier het volledige audit-spoor."
+      },
+      "wormNotice": "WORM — read-only audit log voor compliance.",
+      "runMeta": "run {{runId}} · {{datetime}}",
+      "awaitingApproval": "Wacht op goedkeuring",
+      "approved": "Goedgekeurd",
+      "model": "model: {{model}}",
+      "cost": "kost: ${{cost}}"
+    },
+    "createDialog": {
+      "title": "Nieuwe sourcing-brief",
+      "description": "De agent gebruikt deze brief om kandidaten te vinden, te scoren, en ter beoordeling aan te bieden.",
+      "jobLabel": "Vacature",
+      "jobPlaceholder": {
+        "loading": "Vacatures laden...",
+        "empty": "Geen openstaande vacatures",
+        "choose": "Kies een vacature"
+      },
+      "briefLabel": "Brief",
+      "briefPlaceholder": "Beschrijf het profiel zoals je tegen een collega zou doen — taal, locatie, must-haves, dealbreakers...",
+      "targetCountLabel": "Doelaantal kandidaten",
+      "targetCountValue": "{{count}} kandidaten",
+      "locationsLabel": "Locaties",
+      "mustHaveLabel": "Must-have",
+      "exclusionsLabel": "Uitsluitingen",
+      "chipPlaceholder": "Druk Enter om toe te voegen",
+      "cancel": "Annuleren",
+      "submit": "Brief aanmaken",
+      "toasts": {
+        "missingFields": "Vul alle verplichte velden in",
+        "created": "Brief aangemaakt"
+      }
+    },
+    "chip": {
+      "removeAria": "Verwijder"
+    },
+    "emptyState": {
+      "tip": "Tip: gebruik de tabs hierboven om te navigeren."
+    }
+  },
+  "briefDetail": {
+    "back": "Terug naar Sourcing Agent",
+    "error": {
+      "loadFailed": "Kon brief niet laden — probeer opnieuw.",
+      "notFound": "Brief niet gevonden."
+    },
+    "header": {
+      "description": "Brief — {{locations}} · doel {{count}} kandidaten"
+    },
+    "startRun": "Start nieuwe run",
+    "activeRunTooltip": "Er loopt al een run voor deze brief. Wacht tot deze is afgerond of annuleer hem eerst.",
+    "createdAt": "Aangemaakt {{relative}}",
+    "active": "Actief",
+    "archived": "Gearchiveerd",
+    "briefLabel": "Brief",
+    "chips": {
+      "mustHave": "Must-have",
+      "niceToHave": "Nice to have",
+      "exclusions": "Uitsluitingen"
+    },
+    "stats": {
+      "targetCount": "Doelaantal",
+      "languages": "Talen",
+      "status": "Status"
+    },
+    "statusValue": {
+      "active": "Actief",
+      "archived": "Gearchiveerd"
+    },
+    "recentRuns": "Recente runs",
+    "noRuns": {
+      "title": "Nog geen runs",
+      "description": "Klik op \"Start nieuwe run\" om de agent op pad te sturen."
+    },
+    "runRow": {
+      "meta": "iter {{iteration}} · trigger {{trigger}}",
+      "found": "gevonden",
+      "approved": "{{count}} goedgekeurd"
+    },
+    "toasts": {
+      "runStarted": {
+        "title": "Run gestart",
+        "description": "De agent gaat nu kandidaten zoeken."
+      }
+    }
+  },
+  "runDetail": {
+    "back": "Terug naar Sourcing Agent",
+    "error": {
+      "loadFailed": "Kon run niet laden — probeer opnieuw.",
+      "notFound": "Run niet gevonden."
+    },
+    "header": {
+      "title": "Run {{id}}",
+      "briefWithTitle": "Brief: {{title}}",
+      "briefFallback": "Brief {{briefId}}"
+    },
+    "cancelRun": "Cancel run",
+    "startedAt": "Gestart {{relative}}",
+    "finishedAt": "Afgerond {{relative}}",
+    "iteration": "iter {{count}}",
+    "stats": {
+      "found": "gevonden",
+      "approved": "{{count}} goedgekeurd",
+      "rejected": "{{count}} afgewezen"
+    },
+    "reasoning": {
+      "title": "Redenering",
+      "empty": "Nog geen redenering — de agent staat nog in de wachtrij.",
+      "thinking": "Agent denkt nog na..."
+    },
+    "candidates": {
+      "title": "Kandidaten ({{count}})",
+      "selectedCount": "{{count}} geselecteerd",
+      "approve": "Goedkeuren",
+      "reject": "Afwijzen"
+    },
+    "findings": {
+      "empty": {
+        "title": "Nog geen findings",
+        "description": "De agent is bezig — kandidaten verschijnen zodra ze gescoord zijn."
+      }
+    },
+    "findingCard": {
+      "selectAria": "Selecteer kandidaat",
+      "title": "{{title}} · {{company}}",
+      "locationSource": "{{location}} · bron: {{source}}",
+      "aiReasoning": "AI-redenering",
+      "source": "Bron",
+      "approve": "Goedkeuren",
+      "reject": "Afwijzen",
+      "rejectDialog": {
+        "title": "Kandidaat afwijzen",
+        "placeholder": "Geef een reden...",
+        "cancel": "Annuleren",
+        "reject": "Afwijzen"
+      }
+    },
+    "bulkReject": {
+      "title": "{{count}} kandidaten afwijzen",
+      "description": "Geef een reden — deze wordt opgeslagen in het audit-spoor.",
+      "placeholder": "Bijv. 'Te ver weg', 'Onvoldoende ervaring met Snowflake'...",
+      "cancel": "Annuleren",
+      "reject": "Afwijzen"
+    },
+    "toasts": {
+      "runCancelled": "Run geannuleerd",
+      "approved": "Goedgekeurd",
+      "rejected": "Afgewezen",
+      "bulkApproved": "{{count}} kandidaten goedgekeurd",
+      "bulkRejected": "{{count}} kandidaten afgewezen"
+    }
+  }
+}

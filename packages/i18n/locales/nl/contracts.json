@@ -1,0 +1,247 @@
+{
+  "status": {
+    "draft": "Concept",
+    "active": "Actief",
+    "ended": "Beëindigd",
+    "terminated": "Vroegtijdig beëindigd",
+    "renewed": "Verlengd"
+  },
+  "type": {
+    "temp": "Uitzend",
+    "contract": "Detachering",
+    "permanent": "Vast",
+    "freelance": "Freelance"
+  },
+  "timesheetStatus": {
+    "draft": "Concept",
+    "submitted": "Ingediend",
+    "approved": "Goedgekeurd",
+    "rejected": "Afgekeurd",
+    "disputed": "Bezwaar"
+  },
+  "invoiceStatus": {
+    "draft": "Concept",
+    "sent": "Verzonden",
+    "paid": "Betaald",
+    "overdue": "Te laat",
+    "void": "Geannuleerd"
+  },
+  "commissionStatus": {
+    "pending": "Wachtend",
+    "approved": "Goedgekeurd",
+    "paid": "Uitbetaald",
+    "disputed": "Bezwaar"
+  },
+  "list": {
+    "title": "Contracten",
+    "description": "Beheer uitzend-, detacherings- en freelance-contracten van plaatsing tot facturatie.",
+    "newContract": "Nieuw contract",
+    "stats": {
+      "active": "Actieve contracten",
+      "total": "Totaal",
+      "endingSoon": "Loopt af binnen 30d"
+    },
+    "searchPlaceholder": "Zoek op kandidaat, klant of vacature...",
+    "clearSearchAria": "Wis zoekopdracht",
+    "filterStatus": {
+      "all": "Alle statussen",
+      "draft": "Concept",
+      "active": "Actief",
+      "ended": "Beëindigd",
+      "terminated": "Vroegtijdig beëindigd",
+      "renewed": "Verlengd"
+    },
+    "columns": {
+      "candidate": "Kandidaat",
+      "client": "Klant",
+      "type": "Type",
+      "status": "Status",
+      "start": "Start",
+      "end": "Eind",
+      "weeklyHours": "Uren/wk",
+      "margin": "Marge %"
+    },
+    "empty": {
+      "title": "Geen contracten gevonden",
+      "description": "Pas je filters aan of maak een nieuw contract aan om kandidaten op plaatsing te zetten.",
+      "newContract": "Nieuw contract"
+    }
+  },
+  "new": {
+    "back": "Terug naar contracten",
+    "title": "Nieuw contract",
+    "description": "Leg een uitzend-, detacherings- of freelance-overeenkomst vast.",
+    "sections": {
+      "parties": "Partijen",
+      "period": "Periode & inzet",
+      "rates": "Tarieven",
+      "compliance": "Compliance"
+    },
+    "fields": {
+      "candidate": "Kandidaat",
+      "candidatePlaceholder": "Bv. Sophie de Vries",
+      "candidateId": "Kandidaat ID (optioneel)",
+      "candidateIdPlaceholder": "cand-...",
+      "client": "Klant",
+      "clientPlaceholder": "Bv. ING Bank N.V.",
+      "clientOrgId": "Klant org-ID (optioneel)",
+      "clientOrgIdPlaceholder": "org-...",
+      "jobTitle": "Vacaturetitel (optioneel)",
+      "jobTitlePlaceholder": "Bv. Senior Frontend Engineer",
+      "type": "Type",
+      "startDate": "Startdatum",
+      "endDate": "Einddatum (optioneel)",
+      "weeklyHours": "Uren per week",
+      "rateCandidate": "Tarief kandidaat (€/u)",
+      "rateClient": "Tarief klant (€/u)",
+      "cao": "CAO (optioneel)",
+      "caoPlaceholder": "Bv. CAO Banken"
+    },
+    "summary": {
+      "title": "Samenvatting",
+      "marginPerHour": "Marge per uur",
+      "marginPercent": "Marge %",
+      "marginPerWeek": "Marge per week",
+      "disclaimer": "Indicatief — exclusief BTW, sociale lasten, en CAO-verplichtingen."
+    },
+    "submit": "Contract aanmaken",
+    "toasts": {
+      "created": {
+        "title": "Contract aangemaakt",
+        "description": "{{candidate}} bij {{client}} staat klaar als concept."
+      },
+      "createError": {
+        "title": "Aanmaken mislukt"
+      }
+    }
+  },
+  "detail": {
+    "back": "Terug naar contracten",
+    "backShort": "Terug",
+    "notFound": "Contract niet gevonden.",
+    "fallbackTitle": "Contract",
+    "descriptionAt": "{{type}} bij {{client}}",
+    "descriptionAtJob": "{{type}} bij {{client}} — {{job}}",
+    "noClient": "—",
+    "actions": {
+      "extend": "Verlengen",
+      "terminate": "Beëindigen",
+      "generateInvoice": "Genereer factuur"
+    },
+    "kpi": {
+      "weeklyHours": "Uren/wk",
+      "rateClient": "Tarief klant",
+      "margin": "Marge",
+      "toApprove": "Te keuren"
+    },
+    "tabs": {
+      "overview": "Overzicht",
+      "timesheets": "Timesheets ({{count}})",
+      "invoices": "Facturen ({{count}})",
+      "commission": "Commissie"
+    },
+    "overview": {
+      "title": "Contractgegevens",
+      "candidate": "Kandidaat",
+      "client": "Klant",
+      "job": "Vacature",
+      "type": "Type",
+      "startDate": "Startdatum",
+      "endDate": "Einddatum",
+      "weeklyHours": "Uren per week",
+      "rateCandidate": "Tarief kandidaat",
+      "rateClient": "Tarief klant",
+      "marginPercent": "Marge %",
+      "cao": "CAO",
+      "wtzaCompliant": "Wtza compliant",
+      "wtzaYes": "Ja",
+      "wtzaNo": "Nee",
+      "wtzaNa": "n.v.t.",
+      "terminationReason": "Beëindigingsreden"
+    },
+    "extensions": {
+      "title": "Verlengingen",
+      "empty": "Geen verlengingen voor dit contract.",
+      "until": "Tot {{date}}",
+      "was": "(was {{date}})",
+      "noReason": "Geen reden vastgelegd"
+    },
+    "timesheets": {
+      "empty": "Geen timesheets voor dit contract.",
+      "columns": {
+        "week": "Week",
+        "status": "Status",
+        "hours": "Uren",
+        "overtime": "Overuren"
+      }
+    },
+    "invoices": {
+      "empty": "Nog geen facturen voor dit contract.",
+      "columns": {
+        "number": "Nummer",
+        "status": "Status",
+        "period": "Periode",
+        "amount": "Bedrag"
+      }
+    },
+    "commission": {
+      "assignedTitle": "Toegewezen aan",
+      "assignedEmpty": "Geen recruiter-toewijzingen voor dit contract.",
+      "share": "{{percent}}% aandeel",
+      "recordsTitle": "Commissie-records",
+      "recordsEmpty": "Nog geen commissie geboekt.",
+      "period": "Periode {{start}} — {{end}}",
+      "of": "van {{amount}}"
+    },
+    "extendDialog": {
+      "title": "Contract verlengen",
+      "description": "Stel een nieuwe einddatum in. De vorige einddatum wordt vastgelegd in de extension-history.",
+      "newEndDate": "Nieuwe einddatum",
+      "reason": "Reden",
+      "reasonPlaceholder": "Bv. project uitgebreid met fase 2",
+      "cancel": "Annuleren",
+      "confirm": "Verleng contract"
+    },
+    "terminateDialog": {
+      "title": "Contract beëindigen",
+      "description": "Het contract wordt op de aangegeven datum beëindigd. De reden wordt vastgelegd in de audit-trail.",
+      "effectiveDate": "Effectieve datum (optioneel)",
+      "effectiveDateHint": "Leeg = vandaag.",
+      "reason": "Reden",
+      "reasonPlaceholder": "Bv. vroege beëindiging op verzoek van klant",
+      "cancel": "Annuleren",
+      "confirm": "Beëindig"
+    },
+    "invoiceDialog": {
+      "title": "Factuur genereren",
+      "description": "Genereer een conceptfactuur op basis van goedgekeurde timesheets binnen de gekozen periode.",
+      "periodStart": "Periode start",
+      "periodEnd": "Periode eind",
+      "cancel": "Annuleren",
+      "confirm": "Genereer factuur"
+    },
+    "toasts": {
+      "extended": {
+        "title": "Contract verlengd",
+        "description": "Nieuwe einddatum: {{date}}."
+      },
+      "extendError": {
+        "title": "Verlengen mislukt"
+      },
+      "terminated": {
+        "title": "Contract beëindigd",
+        "description": "Status bijgewerkt naar beëindigd."
+      },
+      "terminateError": {
+        "title": "Beëindigen mislukt"
+      },
+      "invoiceCreated": {
+        "title": "Factuur aangemaakt",
+        "description": "{{number}} staat klaar als concept."
+      },
+      "invoiceError": {
+        "title": "Factuur maken mislukt"
+      }
+    }
+  }
+}

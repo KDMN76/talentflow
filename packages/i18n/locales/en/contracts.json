@@ -1,0 +1,247 @@
+{
+  "status": {
+    "draft": "Draft",
+    "active": "Active",
+    "ended": "Ended",
+    "terminated": "Terminated early",
+    "renewed": "Renewed"
+  },
+  "type": {
+    "temp": "Temp",
+    "contract": "Secondment",
+    "permanent": "Permanent",
+    "freelance": "Freelance"
+  },
+  "timesheetStatus": {
+    "draft": "Draft",
+    "submitted": "Submitted",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "disputed": "Disputed"
+  },
+  "invoiceStatus": {
+    "draft": "Draft",
+    "sent": "Sent",
+    "paid": "Paid",
+    "overdue": "Overdue",
+    "void": "Void"
+  },
+  "commissionStatus": {
+    "pending": "Pending",
+    "approved": "Approved",
+    "paid": "Paid out",
+    "disputed": "Disputed"
+  },
+  "list": {
+    "title": "Contracts",
+    "description": "Manage temp, secondment and freelance contracts from placement to invoicing.",
+    "newContract": "New contract",
+    "stats": {
+      "active": "Active contracts",
+      "total": "Total",
+      "endingSoon": "Ending within 30d"
+    },
+    "searchPlaceholder": "Search by candidate, client or job...",
+    "clearSearchAria": "Clear search",
+    "filterStatus": {
+      "all": "All statuses",
+      "draft": "Draft",
+      "active": "Active",
+      "ended": "Ended",
+      "terminated": "Terminated early",
+      "renewed": "Renewed"
+    },
+    "columns": {
+      "candidate": "Candidate",
+      "client": "Client",
+      "type": "Type",
+      "status": "Status",
+      "start": "Start",
+      "end": "End",
+      "weeklyHours": "Hrs/wk",
+      "margin": "Margin %"
+    },
+    "empty": {
+      "title": "No contracts found",
+      "description": "Adjust your filters or create a new contract to place candidates.",
+      "newContract": "New contract"
+    }
+  },
+  "new": {
+    "back": "Back to contracts",
+    "title": "New contract",
+    "description": "Record a temp, secondment or freelance agreement.",
+    "sections": {
+      "parties": "Parties",
+      "period": "Period & engagement",
+      "rates": "Rates",
+      "compliance": "Compliance"
+    },
+    "fields": {
+      "candidate": "Candidate",
+      "candidatePlaceholder": "e.g. Sophie de Vries",
+      "candidateId": "Candidate ID (optional)",
+      "candidateIdPlaceholder": "cand-...",
+      "client": "Client",
+      "clientPlaceholder": "e.g. ING Bank N.V.",
+      "clientOrgId": "Client org ID (optional)",
+      "clientOrgIdPlaceholder": "org-...",
+      "jobTitle": "Job title (optional)",
+      "jobTitlePlaceholder": "e.g. Senior Frontend Engineer",
+      "type": "Type",
+      "startDate": "Start date",
+      "endDate": "End date (optional)",
+      "weeklyHours": "Hours per week",
+      "rateCandidate": "Candidate rate (€/hr)",
+      "rateClient": "Client rate (€/hr)",
+      "cao": "Collective agreement (optional)",
+      "caoPlaceholder": "e.g. Banking CLA"
+    },
+    "summary": {
+      "title": "Summary",
+      "marginPerHour": "Margin per hour",
+      "marginPercent": "Margin %",
+      "marginPerWeek": "Margin per week",
+      "disclaimer": "Indicative — excluding VAT, social charges and collective agreement obligations."
+    },
+    "submit": "Create contract",
+    "toasts": {
+      "created": {
+        "title": "Contract created",
+        "description": "{{candidate}} at {{client}} is ready as a draft."
+      },
+      "createError": {
+        "title": "Could not create contract"
+      }
+    }
+  },
+  "detail": {
+    "back": "Back to contracts",
+    "backShort": "Back",
+    "notFound": "Contract not found.",
+    "fallbackTitle": "Contract",
+    "descriptionAt": "{{type}} at {{client}}",
+    "descriptionAtJob": "{{type}} at {{client}} — {{job}}",
+    "noClient": "—",
+    "actions": {
+      "extend": "Extend",
+      "terminate": "Terminate",
+      "generateInvoice": "Generate invoice"
+    },
+    "kpi": {
+      "weeklyHours": "Hrs/wk",
+      "rateClient": "Client rate",
+      "margin": "Margin",
+      "toApprove": "To approve"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "timesheets": "Timesheets ({{count}})",
+      "invoices": "Invoices ({{count}})",
+      "commission": "Commission"
+    },
+    "overview": {
+      "title": "Contract details",
+      "candidate": "Candidate",
+      "client": "Client",
+      "job": "Job",
+      "type": "Type",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "weeklyHours": "Hours per week",
+      "rateCandidate": "Candidate rate",
+      "rateClient": "Client rate",
+      "marginPercent": "Margin %",
+      "cao": "Collective agreement",
+      "wtzaCompliant": "Wtza compliant",
+      "wtzaYes": "Yes",
+      "wtzaNo": "No",
+      "wtzaNa": "n/a",
+      "terminationReason": "Termination reason"
+    },
+    "extensions": {
+      "title": "Extensions",
+      "empty": "No extensions for this contract.",
+      "until": "Until {{date}}",
+      "was": "(was {{date}})",
+      "noReason": "No reason recorded"
+    },
+    "timesheets": {
+      "empty": "No timesheets for this contract.",
+      "columns": {
+        "week": "Week",
+        "status": "Status",
+        "hours": "Hours",
+        "overtime": "Overtime"
+      }
+    },
+    "invoices": {
+      "empty": "No invoices for this contract yet.",
+      "columns": {
+        "number": "Number",
+        "status": "Status",
+        "period": "Period",
+        "amount": "Amount"
+      }
+    },
+    "commission": {
+      "assignedTitle": "Assigned to",
+      "assignedEmpty": "No recruiter assignments for this contract.",
+      "share": "{{percent}}% share",
+      "recordsTitle": "Commission records",
+      "recordsEmpty": "No commission booked yet.",
+      "period": "Period {{start}} — {{end}}",
+      "of": "of {{amount}}"
+    },
+    "extendDialog": {
+      "title": "Extend contract",
+      "description": "Set a new end date. The previous end date is recorded in the extension history.",
+      "newEndDate": "New end date",
+      "reason": "Reason",
+      "reasonPlaceholder": "e.g. project extended with phase 2",
+      "cancel": "Cancel",
+      "confirm": "Extend contract"
+    },
+    "terminateDialog": {
+      "title": "Terminate contract",
+      "description": "The contract is terminated on the specified date. The reason is recorded in the audit trail.",
+      "effectiveDate": "Effective date (optional)",
+      "effectiveDateHint": "Empty = today.",
+      "reason": "Reason",
+      "reasonPlaceholder": "e.g. early termination at client's request",
+      "cancel": "Cancel",
+      "confirm": "Terminate"
+    },
+    "invoiceDialog": {
+      "title": "Generate invoice",
+      "description": "Generate a draft invoice based on approved timesheets within the selected period.",
+      "periodStart": "Period start",
+      "periodEnd": "Period end",
+      "cancel": "Cancel",
+      "confirm": "Generate invoice"
+    },
+    "toasts": {
+      "extended": {
+        "title": "Contract extended",
+        "description": "New end date: {{date}}."
+      },
+      "extendError": {
+        "title": "Could not extend contract"
+      },
+      "terminated": {
+        "title": "Contract terminated",
+        "description": "Status updated to ended."
+      },
+      "terminateError": {
+        "title": "Could not terminate contract"
+      },
+      "invoiceCreated": {
+        "title": "Invoice created",
+        "description": "{{number}} is ready as a draft."
+      },
+      "invoiceError": {
+        "title": "Could not create invoice"
+      }
+    }
+  }
+}

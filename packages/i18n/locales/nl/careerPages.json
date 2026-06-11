@@ -1,0 +1,193 @@
+{
+  "list": {
+    "title": "Career Pages",
+    "description": "Bouw publieke vacaturepagina's met automatische ATS-koppeling",
+    "newPage": "Nieuwe career page",
+    "empty": {
+      "title": "Nog geen career pages",
+      "description": "Lanceer je eerste publieke vacaturepagina. Bezoekers solliciteren direct in jouw ATS — zonder tussenstappen.",
+      "firstPage": "Eerste career page"
+    }
+  },
+  "preview": {
+    "defaultHeader": "Werk bij ons",
+    "minimal": "Minimaal · monochroom",
+    "classic": "Klassiek · serif",
+    "creative": "Creatief · gradient",
+    "modern": "Modern · gradient"
+  },
+  "card": {
+    "live": "Live",
+    "offline": "Offline",
+    "noCustomDomain": "{{template}} · geen custom domein",
+    "visits": "bezoeken",
+    "applications": "sollicitaties",
+    "edit": "Bewerken",
+    "openPublicPage": "Open publieke pagina",
+    "activate": "Activeren",
+    "deactivate": "Deactiveren",
+    "delete": "Verwijderen",
+    "toasts": {
+      "activated": {
+        "title": "Career page geactiveerd"
+      },
+      "deactivated": {
+        "title": "Career page gedeactiveerd"
+      },
+      "statusLive": "/{{slug}} is nu live.",
+      "statusOffline": "/{{slug}} is nu offline.",
+      "deleted": {
+        "title": "Career page verwijderd",
+        "description": "/{{slug}} is verwijderd."
+      }
+    },
+    "deleteDialog": {
+      "title": "Career page verwijderen",
+      "descriptionBefore": "Weet je zeker dat je",
+      "descriptionAfter": " wilt verwijderen? Bezoekers zien de pagina niet meer en sollicitaties komen niet meer binnen.",
+      "cancel": "Annuleren",
+      "confirm": "Verwijderen",
+      "deleting": "Verwijderen…"
+    }
+  },
+  "createDialog": {
+    "title": "Nieuwe career page",
+    "description": "Maak een publieke vacaturepagina met automatische ATS-koppeling.",
+    "slugLabel": "Slug",
+    "slugPrefix": "/careers/",
+    "slugPlaceholder": "kdmn",
+    "slugHelp": "Alleen kleine letters, cijfers en streepjes.",
+    "templateLabel": "Template",
+    "languageLabel": "Taal",
+    "colorLabel": "Hoofdkleur",
+    "previewLabel": "Voorbeeld",
+    "cancel": "Annuleren",
+    "submit": "Career page aanmaken",
+    "submitting": "Aanmaken…",
+    "toasts": {
+      "slugRequired": {
+        "title": "Slug is verplicht",
+        "description": "Kies een URL-vriendelijke slug, zoals 'kdmn'."
+      },
+      "created": {
+        "title": "Career page aangemaakt",
+        "description": "/{{slug}} is live en klaar voor configuratie."
+      },
+      "error": {
+        "title": "Fout",
+        "description": "Kon de career page niet aanmaken. Probeer het opnieuw."
+      }
+    }
+  },
+  "editor": {
+    "preview": {
+      "defaultHeader": "Werk bij ons",
+      "defaultIntro": "Ontdek vacatures die bij je passen en solliciteer in één klik.",
+      "techPrompt": "$ careers --hire",
+      "sampleJob1Title": "Senior Developer",
+      "sampleJob1Location": "Amsterdam",
+      "sampleJob2Title": "Sales Consultant",
+      "sampleJob2Location": "Den Haag",
+      "sampleJobType": "Fulltime",
+      "apply": "Solliciteer"
+    },
+    "notFound": {
+      "title": "Career page niet gevonden",
+      "back": "Terug naar overzicht"
+    },
+    "header": {
+      "backLink": "Career pages",
+      "live": "Live",
+      "offline": "Offline",
+      "visits": "bezoeken",
+      "applications": "sollicitaties",
+      "openPublic": "Open publiek",
+      "buildPage": "Pagina bouwen",
+      "save": "Opslaan",
+      "saving": "Opslaan…"
+    },
+    "content": {
+      "title": "Inhoud",
+      "headerLabel": "Koptekst",
+      "headerPlaceholder": "Werk bij ons",
+      "introLabel": "Introductietekst",
+      "introPlaceholder": "Korte introductie over je bedrijf en cultuur…",
+      "logoLabel": "Logo URL",
+      "logoPlaceholder": "https://…/logo.png"
+    },
+    "style": {
+      "title": "Stijl",
+      "colorLabel": "Hoofdkleur",
+      "fontLabel": "Lettertype",
+      "templateLabel": "Template",
+      "languageLabel": "Taal"
+    },
+    "domain": {
+      "title": "Custom domein",
+      "nameLabel": "Domeinnaam",
+      "namePlaceholder": "werken.bedrijf.nl",
+      "helpBefore": "Wijs een CNAME naar",
+      "helpAfter": "om dit domein te activeren."
+    },
+    "livePreview": {
+      "title": "Live preview",
+      "subtitle": "Update terwijl je typt"
+    },
+    "toasts": {
+      "saved": {
+        "title": "Wijzigingen opgeslagen",
+        "description": "/{{slug}} is bijgewerkt."
+      },
+      "saveError": {
+        "title": "Fout bij opslaan",
+        "description": "Kon de wijzigingen niet opslaan. Probeer het opnieuw."
+      }
+    }
+  },
+  "builder": {
+    "preview": {
+      "job1Title": "Senior Developer",
+      "job1Description": "Bouw mee aan ons platform.",
+      "job2Title": "Recruitment Consultant",
+      "job2Description": "Help klanten talent vinden."
+    },
+    "notFound": {
+      "title": "Career page niet gevonden",
+      "back": "Terug naar overzicht"
+    },
+    "header": {
+      "back": "Terug",
+      "title": "Builder · /{{slug}}",
+      "templatePlaceholder": "Template kiezen",
+      "viewPublic": "Bekijk publiek",
+      "save": "Sla op",
+      "saving": "Opslaan…"
+    },
+    "status": {
+      "saving": "Bezig met opslaan…",
+      "unsaved": "Niet-opgeslagen wijzigingen",
+      "saved": "Opgeslagen",
+      "ready": "Klaar om te bouwen"
+    },
+    "empty": {
+      "title": "Nog geen blokken",
+      "description": "Voeg blokken toe vanuit het palet links — of start met een template.",
+      "startTemplate": "Begin met template"
+    },
+    "templateDialog": {
+      "title": "Template toepassen?",
+      "description": "Dit vervangt alle huidige blokken op de pagina door de inhoud van het gekozen template. Deze actie kan niet ongedaan gemaakt worden tenzij je daarna opnieuw bewerkt.",
+      "cancel": "Annuleren",
+      "confirm": "Vervang blokken"
+    },
+    "toasts": {
+      "saveError": {
+        "title": "Opslaan mislukt",
+        "description": "Kon de wijzigingen niet opslaan. Probeer het opnieuw."
+      },
+      "templateApplied": {
+        "title": "Template '{{label}}' toegepast"
+      }
+    }
+  }
+}

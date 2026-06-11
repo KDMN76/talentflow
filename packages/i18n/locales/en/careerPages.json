@@ -1,0 +1,193 @@
+{
+  "list": {
+    "title": "Career Pages",
+    "description": "Build public job pages with automatic ATS integration",
+    "newPage": "New career page",
+    "empty": {
+      "title": "No career pages yet",
+      "description": "Launch your first public job page. Visitors apply straight into your ATS — no extra steps.",
+      "firstPage": "Create first career page"
+    }
+  },
+  "preview": {
+    "defaultHeader": "Work with us",
+    "minimal": "Minimal · monochrome",
+    "classic": "Classic · serif",
+    "creative": "Creative · gradient",
+    "modern": "Modern · gradient"
+  },
+  "card": {
+    "live": "Live",
+    "offline": "Offline",
+    "noCustomDomain": "{{template}} · no custom domain",
+    "visits": "visits",
+    "applications": "applications",
+    "edit": "Edit",
+    "openPublicPage": "Open public page",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "delete": "Delete",
+    "toasts": {
+      "activated": {
+        "title": "Career page activated"
+      },
+      "deactivated": {
+        "title": "Career page deactivated"
+      },
+      "statusLive": "/{{slug}} is now live.",
+      "statusOffline": "/{{slug}} is now offline.",
+      "deleted": {
+        "title": "Career page deleted",
+        "description": "/{{slug}} has been deleted."
+      }
+    },
+    "deleteDialog": {
+      "title": "Delete career page",
+      "descriptionBefore": "Are you sure you want to delete",
+      "descriptionAfter": "? Visitors will no longer see the page and applications will stop coming in.",
+      "cancel": "Cancel",
+      "confirm": "Delete",
+      "deleting": "Deleting…"
+    }
+  },
+  "createDialog": {
+    "title": "New career page",
+    "description": "Create a public job page with automatic ATS integration.",
+    "slugLabel": "Slug",
+    "slugPrefix": "/careers/",
+    "slugPlaceholder": "kdmn",
+    "slugHelp": "Lowercase letters, numbers and hyphens only.",
+    "templateLabel": "Template",
+    "languageLabel": "Language",
+    "colorLabel": "Primary color",
+    "previewLabel": "Preview",
+    "cancel": "Cancel",
+    "submit": "Create career page",
+    "submitting": "Creating…",
+    "toasts": {
+      "slugRequired": {
+        "title": "Slug is required",
+        "description": "Choose a URL-friendly slug, such as 'kdmn'."
+      },
+      "created": {
+        "title": "Career page created",
+        "description": "/{{slug}} is live and ready to configure."
+      },
+      "error": {
+        "title": "Error",
+        "description": "Could not create the career page. Please try again."
+      }
+    }
+  },
+  "editor": {
+    "preview": {
+      "defaultHeader": "Work with us",
+      "defaultIntro": "Discover roles that fit you and apply in a single click.",
+      "techPrompt": "$ careers --hire",
+      "sampleJob1Title": "Senior Developer",
+      "sampleJob1Location": "Amsterdam",
+      "sampleJob2Title": "Sales Consultant",
+      "sampleJob2Location": "The Hague",
+      "sampleJobType": "Full-time",
+      "apply": "Apply"
+    },
+    "notFound": {
+      "title": "Career page not found",
+      "back": "Back to overview"
+    },
+    "header": {
+      "backLink": "Career pages",
+      "live": "Live",
+      "offline": "Offline",
+      "visits": "visits",
+      "applications": "applications",
+      "openPublic": "Open public",
+      "buildPage": "Build page",
+      "save": "Save",
+      "saving": "Saving…"
+    },
+    "content": {
+      "title": "Content",
+      "headerLabel": "Heading",
+      "headerPlaceholder": "Work with us",
+      "introLabel": "Intro text",
+      "introPlaceholder": "A short intro about your company and culture…",
+      "logoLabel": "Logo URL",
+      "logoPlaceholder": "https://…/logo.png"
+    },
+    "style": {
+      "title": "Style",
+      "colorLabel": "Primary color",
+      "fontLabel": "Font",
+      "templateLabel": "Template",
+      "languageLabel": "Language"
+    },
+    "domain": {
+      "title": "Custom domain",
+      "nameLabel": "Domain name",
+      "namePlaceholder": "careers.company.com",
+      "helpBefore": "Point a CNAME to",
+      "helpAfter": "to activate this domain."
+    },
+    "livePreview": {
+      "title": "Live preview",
+      "subtitle": "Updates as you type"
+    },
+    "toasts": {
+      "saved": {
+        "title": "Changes saved",
+        "description": "/{{slug}} has been updated."
+      },
+      "saveError": {
+        "title": "Error while saving",
+        "description": "Could not save your changes. Please try again."
+      }
+    }
+  },
+  "builder": {
+    "preview": {
+      "job1Title": "Senior Developer",
+      "job1Description": "Help build our platform.",
+      "job2Title": "Recruitment Consultant",
+      "job2Description": "Help clients find talent."
+    },
+    "notFound": {
+      "title": "Career page not found",
+      "back": "Back to overview"
+    },
+    "header": {
+      "back": "Back",
+      "title": "Builder · /{{slug}}",
+      "templatePlaceholder": "Choose template",
+      "viewPublic": "View public",
+      "save": "Save",
+      "saving": "Saving…"
+    },
+    "status": {
+      "saving": "Saving…",
+      "unsaved": "Unsaved changes",
+      "saved": "Saved",
+      "ready": "Ready to build"
+    },
+    "empty": {
+      "title": "No blocks yet",
+      "description": "Add blocks from the palette on the left — or start from a template.",
+      "startTemplate": "Start from template"
+    },
+    "templateDialog": {
+      "title": "Apply template?",
+      "description": "This replaces all current blocks on the page with the contents of the chosen template. This action cannot be undone unless you edit again afterwards.",
+      "cancel": "Cancel",
+      "confirm": "Replace blocks"
+    },
+    "toasts": {
+      "saveError": {
+        "title": "Save failed",
+        "description": "Could not save your changes. Please try again."
+      },
+      "templateApplied": {
+        "title": "Template '{{label}}' applied"
+      }
+    }
+  }
+}

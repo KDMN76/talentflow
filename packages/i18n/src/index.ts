@@ -32,6 +32,22 @@ import nlComms from "../locales/nl/comms.json";
 import enComms from "../locales/en/comms.json";
 import nlHm from "../locales/nl/hm.json";
 import enHm from "../locales/en/hm.json";
+import nlAnalytics from "../locales/nl/analytics.json";
+import enAnalytics from "../locales/en/analytics.json";
+import nlOutreach from "../locales/nl/outreach.json";
+import enOutreach from "../locales/en/outreach.json";
+import nlContracts from "../locales/nl/contracts.json";
+import enContracts from "../locales/en/contracts.json";
+import nlInvoices from "../locales/nl/invoices.json";
+import enInvoices from "../locales/en/invoices.json";
+import nlCareerPages from "../locales/nl/careerPages.json";
+import enCareerPages from "../locales/en/careerPages.json";
+import nlSourcing from "../locales/nl/sourcing.json";
+import enSourcing from "../locales/en/sourcing.json";
+import nlReportsPage from "../locales/nl/reportsPage.json";
+import enReportsPage from "../locales/en/reportsPage.json";
+import nlInterviewKits from "../locales/nl/interviewKits.json";
+import enInterviewKits from "../locales/en/interviewKits.json";
 
 export const SUPPORTED_LOCALES = ["nl", "en"] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
@@ -64,6 +80,14 @@ export const resources = {
     crmPage: nlCrmPage,
     comms: nlComms,
     hm: nlHm,
+    analytics: nlAnalytics,
+    outreach: nlOutreach,
+    contracts: nlContracts,
+    invoices: nlInvoices,
+    careerPages: nlCareerPages,
+    sourcing: nlSourcing,
+    reportsPage: nlReportsPage,
+    interviewKits: nlInterviewKits,
   },
   en: {
     common: enCommon,
@@ -76,6 +100,14 @@ export const resources = {
     crmPage: enCrmPage,
     comms: enComms,
     hm: enHm,
+    analytics: enAnalytics,
+    outreach: enOutreach,
+    contracts: enContracts,
+    invoices: enInvoices,
+    careerPages: enCareerPages,
+    sourcing: enSourcing,
+    reportsPage: enReportsPage,
+    interviewKits: enInterviewKits,
   },
 } as const;
 

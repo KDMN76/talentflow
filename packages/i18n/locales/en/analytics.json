@@ -1,0 +1,139 @@
+{
+  "header": {
+    "title": "Analytics",
+    "description": "Insight into your recruitment performance"
+  },
+  "tabs": {
+    "overview": "Overview",
+    "recruiters": "Recruiters",
+    "trends": "Trends"
+  },
+  "overview": {
+    "kpi": {
+      "openJobs": "Open jobs",
+      "applicationsThisMonth": "Candidates this month",
+      "avgTimeToHire": "Avg. time-to-hire",
+      "hired": "Hired",
+      "activeRecruiters": "Active recruiters",
+      "conversionRate": "Conversion rate"
+    },
+    "days": "days",
+    "funnel": {
+      "title": "Pipeline Funnel",
+      "tooltip": "candidates"
+    },
+    "sources": {
+      "title": "Candidate sources",
+      "tooltip": "share"
+    }
+  },
+  "recruiters": {
+    "title": "Recruiter performance",
+    "columns": {
+      "recruiter": "Recruiter",
+      "openJobs": "Open jobs",
+      "applications": "Applications",
+      "hired": "Hired",
+      "avgDays": "Avg. days"
+    },
+    "days": "days"
+  },
+  "trends": {
+    "timeToHire": {
+      "title": "Time-to-Hire Trend",
+      "tooltipLabel": "Avg. time-to-hire",
+      "tooltipUnit": "days"
+    },
+    "applications": {
+      "title": "Applications per Week",
+      "tooltipUnit": "applications"
+    }
+  },
+  "backOffice": {
+    "header": {
+      "title": "Agency overview",
+      "description": "Live KPIs, forecast and margin analysis for your temp/contract portfolio.",
+      "recompute": "Recompute forecast"
+    },
+    "toasts": {
+      "recomputed": "Forecast recomputed",
+      "recomputeFailed": "Recompute failed"
+    },
+    "kpi": {
+      "activeContracts": "Active contracts",
+      "mtdRevenue": "MTD revenue",
+      "mtdMargin": "MTD margin",
+      "projectedNext": "Projected next month"
+    },
+    "forecast": {
+      "title": "Revenue forecast — 6 months ahead",
+      "description": "Expected revenue from active contracts + pipeline of open placements.",
+      "series": {
+        "expected": "Expected",
+        "pipeline": "Pipeline",
+        "total": "Total"
+      }
+    },
+    "margin": {
+      "titleClient": "Margin per client",
+      "titleRecruiter": "Margin per recruiter",
+      "top": "Top {{count}} ·",
+      "descriptionClient": " Which clients deliver the highest gross margin?",
+      "descriptionRecruiter": " Which recruiters contribute the most?",
+      "perClient": "Per client",
+      "perRecruiter": "Per recruiter",
+      "empty": "No margin data yet.",
+      "series": {
+        "revenue": "Revenue",
+        "margin": "Margin",
+        "marginPct": "Margin %"
+      }
+    },
+    "commission": {
+      "title": "Commission per recruiter — MTD",
+      "description": "Commission earned this month, all statuses.",
+      "empty": "No commission booked this month yet.",
+      "series": {
+        "commission": "Commission"
+      }
+    }
+  },
+  "costPerHire": {
+    "header": {
+      "title": "Cost-per-Hire",
+      "description": "Spend and hires per job board — find your cheapest channel."
+    },
+    "filter": {
+      "jobLabel": "Job",
+      "allJobs": "All jobs",
+      "boardCount_one": "{{count}} job board with activity",
+      "boardCount_other": "{{count}} job boards with activity"
+    },
+    "kpi": {
+      "totalSpend": "Total spend",
+      "totalHires": "Total hires",
+      "blendedCph": "Blended CPH",
+      "cheapestChannel": "Cheapest channel"
+    },
+    "empty": {
+      "title": "Post jobs to see cost figures",
+      "description": "As soon as placements lead to hires, your CPH overview appears here."
+    },
+    "chart": {
+      "title": "CPH per job board",
+      "empty": "No hires per channel yet — CPH becomes visible once the first hires are recorded.",
+      "tooltip": "Cost-per-hire"
+    },
+    "table": {
+      "title": "Detail table",
+      "columns": {
+        "board": "Job board",
+        "postings": "Postings",
+        "hires": "Hires",
+        "totalCost": "Total cost",
+        "cph": "CPH"
+      },
+      "noHires": "no hires"
+    }
+  }
+}

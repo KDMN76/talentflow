@@ -12,6 +12,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import {
   AlertCircle,
   Bot,
@@ -77,6 +78,7 @@ import type { AgentBrief } from "@/lib/types/sourcing";
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function SourcingAgentHubPage() {
+  const { t } = useTranslation("sourcing");
   const { data: briefs } = useAgentBriefs();
   const { data: runs } = useAgentRuns();
   const { data: findings } = useAgentFindings(undefined);
@@ -116,8 +118,8 @@ export default function SourcingAgentHubPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Sourcing Agent"
-        description="Geef een brief, krijg gekwalificeerde kandidaten op je goedkeuring."
+        title={t("hub.header.title")}
+        description={t("hub.header.description")}
         actions={<AiDisclosureBadge />}
       />
 
@@ -132,15 +134,13 @@ export default function SourcingAgentHubPage() {
             <div className="max-w-2xl space-y-2">
               <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium backdrop-blur">
                 <Sparkles className="h-3.5 w-3.5" />
-                Sprint Q4.5 — Agentic AI sourcing
+                {t("hub.hero.badge")}
               </div>
               <h2 className="text-2xl font-bold tracking-tight">
-                Geef een brief, krijg 25 gekwalificeerde kandidaten op je
-                goedkeuring.
+                {t("hub.hero.title")}
               </h2>
               <p className="text-sm text-white/85">
-                De agent doorzoekt LinkedIn, scoort matches, en levert ze ter
-                review aan. Jij houdt het laatste woord — altijd.
+                {t("hub.hero.description")}
               </p>
             </div>
             <Button
@@ -150,7 +150,7 @@ export default function SourcingAgentHubPage() {
               onClick={() => setCreateOpen(true)}
             >
               <Plus className="mr-1.5 h-4 w-4" />
-              Nieuwe brief
+              {t("hub.hero.newBrief")}
             </Button>
           </div>
         </CardContent>
@@ -159,30 +159,30 @@ export default function SourcingAgentHubPage() {
       {/* Stat cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Actieve runs"
+          label={t("hub.stats.activeRuns.label")}
           value={String(activeRuns)}
-          hint={`${(runs ?? []).length} totaal`}
+          hint={t("hub.stats.activeRuns.hint", { count: (runs ?? []).length })}
           gradient="from-indigo-500 to-purple-600"
           icon={<Bot className="h-5 w-5" />}
         />
         <StatCard
-          label="Te beoordelen"
+          label={t("hub.stats.toReview.label")}
           value={String(findingsToReview)}
-          hint="Wachten op recruiter"
+          hint={t("hub.stats.toReview.hint")}
           gradient="from-amber-500 to-orange-600"
           icon={<Inbox className="h-5 w-5" />}
         />
         <StatCard
-          label="Goedgekeurd deze maand"
+          label={t("hub.stats.approvedThisMonth.label")}
           value={String(approvedThisMonth)}
-          hint="Toegevoegd aan pipeline"
+          hint={t("hub.stats.approvedThisMonth.hint")}
           gradient="from-emerald-500 to-teal-600"
           icon={<CheckCircle2 className="h-5 w-5" />}
         />
         <StatCard
-          label="AI-kosten deze maand"
+          label={t("hub.stats.aiCost.label")}
           value={`$${aiCostThisMonth.toFixed(2)}`}
-          hint="Tokens + LinkedIn API"
+          hint={t("hub.stats.aiCost.hint")}
           gradient="from-rose-500 to-pink-600"
           icon={<Coins className="h-5 w-5" />}
         />
@@ -191,10 +191,10 @@ export default function SourcingAgentHubPage() {
       {/* Tabs */}
       <Tabs defaultValue="briefs" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="briefs">Briefs</TabsTrigger>
-          <TabsTrigger value="runs">Runs</TabsTrigger>
-          <TabsTrigger value="findings">Findings</TabsTrigger>
-          <TabsTrigger value="audit">Audit trail</TabsTrigger>
+          <TabsTrigger value="briefs">{t("hub.tabs.briefs")}</TabsTrigger>
+          <TabsTrigger value="runs">{t("hub.tabs.runs")}</TabsTrigger>
+          <TabsTrigger value="findings">{t("hub.tabs.findings")}</TabsTrigger>
+          <TabsTrigger value="audit">{t("hub.tabs.audit")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="briefs" className="space-y-3">
@@ -257,6 +257,7 @@ function StatCard({
 // ─── Briefs tab ──────────────────────────────────────────────────────────────
 
 function BriefsTab({ onNewBrief }: { onNewBrief: () => void }) {
+  const { t } = useTranslation("sourcing");
   const { data, isLoading } = useAgentBriefs();
   if (isLoading) {
     return (
@@ -270,12 +271,12 @@ function BriefsTab({ onNewBrief }: { onNewBrief: () => void }) {
   if (!data || data.length === 0) {
     return (
       <EmptyState
-        title="Nog geen briefs"
-        description="Maak je eerste brief om de agent een vacature te laten sourcen."
+        title={t("hub.briefsTab.empty.title")}
+        description={t("hub.briefsTab.empty.description")}
         action={
           <Button onClick={onNewBrief}>
             <Plus className="mr-1.5 h-4 w-4" />
-            Nieuwe brief
+            {t("hub.hero.newBrief")}
           </Button>
         }
       />
@@ -291,6 +292,7 @@ function BriefsTab({ onNewBrief }: { onNewBrief: () => void }) {
 }
 
 function BriefCard({ brief }: { brief: AgentBrief }) {
+  const { t } = useTranslation("sourcing");
   const { data: jobs } = useJobs("all");
   const job = (jobs ?? []).find((j) => j.id === brief.job_id);
   return (
@@ -303,17 +305,19 @@ function BriefCard({ brief }: { brief: AgentBrief }) {
                 {job?.title ?? brief.job_id}
               </p>
               <p className="mt-0.5 text-[11px] text-muted-foreground">
-                {brief.search_locations.join(" · ")} · doel{" "}
-                {brief.target_count} kandidaten
+                {t("hub.briefsTab.card.meta", {
+                  locations: brief.search_locations.join(" · "),
+                  count: brief.target_count,
+                })}
               </p>
             </div>
             {brief.active ? (
               <Badge className="border-0 bg-emerald-100 text-[10px] text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-                Actief
+                {t("hub.briefsTab.card.active")}
               </Badge>
             ) : (
               <Badge className="border-0 bg-zinc-100 text-[10px] text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-                Gearchiveerd
+                {t("hub.briefsTab.card.archived")}
               </Badge>
             )}
           </div>
@@ -344,6 +348,7 @@ function BriefCard({ brief }: { brief: AgentBrief }) {
 // ─── Runs tab ────────────────────────────────────────────────────────────────
 
 function RunsTab() {
+  const { t } = useTranslation("sourcing");
   const { data, isLoading } = useAgentRuns();
   const { data: briefs } = useAgentBriefs();
   const { data: jobs } = useJobs("all");
@@ -351,8 +356,8 @@ function RunsTab() {
   if (!data || data.length === 0) {
     return (
       <EmptyState
-        title="Nog geen runs"
-        description="Open een brief en start een run om de agent op pad te sturen."
+        title={t("hub.runsTab.empty.title")}
+        description={t("hub.runsTab.empty.description")}
       />
     );
   }
@@ -364,22 +369,22 @@ function RunsTab() {
             <thead>
               <tr className="border-b border-border bg-zinc-50/60 dark:bg-zinc-800/40">
                 <th className="py-3 pl-5 pr-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Status
+                  {t("hub.runsTab.columns.status")}
                 </th>
                 <th className="py-3 px-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Brief
+                  {t("hub.runsTab.columns.brief")}
                 </th>
                 <th className="py-3 px-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Voortgang
+                  {t("hub.runsTab.columns.progress")}
                 </th>
                 <th className="py-3 px-4 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Gevonden
+                  {t("hub.runsTab.columns.found")}
                 </th>
                 <th className="py-3 px-4 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Goedgekeurd
+                  {t("hub.runsTab.columns.approved")}
                 </th>
                 <th className="py-3 pl-4 pr-5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Gestart
+                  {t("hub.runsTab.columns.started")}
                 </th>
               </tr>
             </thead>
@@ -444,7 +449,9 @@ function RunsTab() {
                           />
                         </div>
                         <span className="text-[11px] text-muted-foreground">
-                          iter {run.expansion_iteration}
+                          {t("hub.runsTab.iteration", {
+                            count: run.expansion_iteration,
+                          })}
                         </span>
                       </div>
                     </td>
@@ -471,6 +478,7 @@ function RunsTab() {
 // ─── Findings tab — cross-run inbox ──────────────────────────────────────────
 
 function FindingsTab() {
+  const { t } = useTranslation("sourcing");
   const { data: findings, isLoading } = useAgentFindings(undefined, {
     status: "pending_review",
   });

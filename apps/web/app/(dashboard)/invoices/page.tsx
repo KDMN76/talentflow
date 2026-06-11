@@ -9,6 +9,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import {
   ArrowRight,
   CheckCircle2,
@@ -33,25 +34,20 @@ import {
 import { useInvoices } from "@/hooks/useBackOffice";
 import type { InvoiceStatus } from "@/lib/types/backOffice";
 
-const STATUS_PILL: Record<InvoiceStatus, { label: string; cls: string }> = {
+const STATUS_PILL: Record<InvoiceStatus, { cls: string }> = {
   draft: {
-    label: "Concept",
     cls: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border-0",
   },
   sent: {
-    label: "Verzonden",
     cls: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border-0",
   },
   paid: {
-    label: "Betaald",
     cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-0",
   },
   overdue: {
-    label: "Te laat",
     cls: "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300 border-0",
   },
   void: {
-    label: "Geannuleerd",
     cls: "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400 border-0",
   },
 };
@@ -73,6 +69,7 @@ function formatMoney(amount: number, currency = "EUR"): string {
 }
 
 export default function InvoicesListPage() {
+  const { t } = useTranslation("invoices");
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | "all">(
     "all"
@@ -115,33 +112,33 @@ export default function InvoicesListPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Facturen"
-        description="Bekijk verkoopfacturen, sync naar boekhouding en markeer betalingen."
+        title={t("list.header.title")}
+        description={t("list.header.description")}
       />
 
       {/* Stats */}
       <div className="grid gap-3 sm:grid-cols-4">
         <StatTile
           icon={<Clock className="h-4 w-4" />}
-          label="Openstaand"
+          label={t("list.stats.outstanding")}
           value={formatMoney(stats.outstanding)}
           accent="indigo"
         />
         <StatTile
           icon={<CheckCircle2 className="h-4 w-4" />}
-          label="Betaald MTD"
+          label={t("list.stats.paidMtd")}
           value={formatMoney(stats.paid_mtd)}
           accent="emerald"
         />
         <StatTile
           icon={<Receipt className="h-4 w-4" />}
-          label="Te laat"
-          value={`${stats.overdue} factuur${stats.overdue === 1 ? "" : "en"}`}
+          label={t("list.stats.overdue")}
+          value={t("list.stats.overdueValue", { count: stats.overdue })}
           accent={stats.overdue > 0 ? "red" : "zinc"}
         />
         <StatTile
           icon={<Receipt className="h-4 w-4" />}
-          label="Totaal"
+          label={t("list.stats.total")}
           value={`${stats.count}`}
           accent="zinc"
         />
@@ -155,7 +152,7 @@ export default function InvoicesListPage() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Zoek op factuurnummer of klant..."
+              placeholder={t("list.filters.searchPlaceholder")}
               className="pl-9"
             />
             {search && (
@@ -179,12 +176,16 @@ export default function InvoicesListPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Alle statussen</SelectItem>
-                <SelectItem value="draft">Concept</SelectItem>
-                <SelectItem value="sent">Verzonden</SelectItem>
-                <SelectItem value="paid">Betaald</SelectItem>
-                <SelectItem value="overdue">Te laat</SelectItem>
-                <SelectItem value="void">Geannuleerd</SelectItem>
+                <SelectItem value="all">
+                  {t("list.filters.allStatuses")}
+                </SelectItem>
+                <SelectItem value="draft">{t("list.status.draft")}</SelectItem>
+                <SelectItem value="sent">{t("list.status.sent")}</SelectItem>
+                <SelectItem value="paid">{t("list.status.paid")}</SelectItem>
+                <SelectItem value="overdue">
+                  {t("list.status.overdue")}
+                </SelectItem>
+                <SelectItem value="void">{t("list.status.void")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -202,9 +203,9 @@ export default function InvoicesListPage() {
           ) : filtered.length === 0 ? (
             <div className="px-4 py-16 text-center">
               <Receipt className="mx-auto mb-3 h-10 w-10 text-muted-foreground/40" />
-              <p className="text-sm font-semibold">Geen facturen gevonden</p>
+              <p className="text-sm font-semibold">{t("list.empty.title")}</p>
               <p className="text-xs text-muted-foreground">
-                Genereer een factuur vanaf een actief contract.
+                {t("list.empty.description")}
               </p>
             </div>
           ) : (
@@ -212,12 +213,14 @@ export default function InvoicesListPage() {
               <table className="w-full text-sm">
                 <thead className="border-b border-border bg-zinc-50/50 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground dark:bg-zinc-900/40">
                   <tr>
-                    <th className="px-4 py-3">Nummer</th>
-                    <th className="px-4 py-3">Klant</th>
-                    <th className="px-4 py-3">Periode</th>
-                    <th className="px-4 py-3 text-right">Bedrag</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Vervaldatum</th>
+                    <th className="px-4 py-3">{t("list.columns.number")}</th>
+                    <th className="px-4 py-3">{t("list.columns.client")}</th>
+                    <th className="px-4 py-3">{t("list.columns.period")}</th>
+                    <th className="px-4 py-3 text-right">
+                      {t("list.columns.amount")}
+                    </th>
+                    <th className="px-4 py-3">{t("list.columns.status")}</th>
+                    <th className="px-4 py-3">{t("list.columns.dueDate")}</th>
                     <th className="w-10 px-2 py-3"></th>
                   </tr>
                 </thead>
@@ -241,7 +244,7 @@ export default function InvoicesListPage() {
                           {i.client_name ?? "—"}
                           {i.external_accounting_provider && (
                             <span className="ml-1.5 inline-flex items-center rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium uppercase text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-300">
-                              synced
+                              {t("list.syncedBadge")}
                             </span>
                           )}
                         </td>
@@ -253,7 +256,9 @@ export default function InvoicesListPage() {
                           {formatMoney(i.total_amount, i.currency)}
                         </td>
                         <td className="px-4 py-3">
-                          <Badge className={pill.cls}>{pill.label}</Badge>
+                          <Badge className={pill.cls}>
+                            {t(`list.status.${i.status}`)}
+                          </Badge>
                         </td>
                         <td
                           className={

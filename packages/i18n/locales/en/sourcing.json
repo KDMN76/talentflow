@@ -1,0 +1,243 @@
+{
+  "hub": {
+    "header": {
+      "title": "Sourcing Agent",
+      "description": "Submit a brief, get qualified candidates for your sign-off."
+    },
+    "hero": {
+      "badge": "Sprint Q4.5 — Agentic AI sourcing",
+      "title": "Submit a brief, get 25 qualified candidates for your sign-off.",
+      "description": "The agent searches LinkedIn, scores matches, and surfaces them for review. You always have the final say.",
+      "newBrief": "New brief"
+    },
+    "stats": {
+      "activeRuns": {
+        "label": "Active runs",
+        "hint": "{{count}} total"
+      },
+      "toReview": {
+        "label": "To review",
+        "hint": "Awaiting recruiter"
+      },
+      "approvedThisMonth": {
+        "label": "Approved this month",
+        "hint": "Added to pipeline"
+      },
+      "aiCost": {
+        "label": "AI cost this month",
+        "hint": "Tokens + LinkedIn API"
+      }
+    },
+    "tabs": {
+      "briefs": "Briefs",
+      "runs": "Runs",
+      "findings": "Findings",
+      "audit": "Audit trail"
+    },
+    "briefsTab": {
+      "empty": {
+        "title": "No briefs yet",
+        "description": "Create your first brief to let the agent source for a role."
+      },
+      "card": {
+        "meta": "{{locations}} · target {{count}} candidates",
+        "active": "Active",
+        "archived": "Archived"
+      }
+    },
+    "runsTab": {
+      "empty": {
+        "title": "No runs yet",
+        "description": "Open a brief and start a run to send the agent out."
+      },
+      "columns": {
+        "status": "Status",
+        "brief": "Brief",
+        "progress": "Progress",
+        "found": "Found",
+        "approved": "Approved",
+        "started": "Started"
+      },
+      "iteration": "iter {{count}}"
+    },
+    "findingsTab": {
+      "empty": {
+        "title": "No candidates to review",
+        "description": "Good news — everything is handled. Start a new run to keep going."
+      },
+      "selectedCount": "{{count}} selected",
+      "clear": "Clear",
+      "approve": "Approve",
+      "groupHeader": "{{title}} · {{count}} candidates",
+      "toasts": {
+        "bulkApproved": "{{count}} candidates approved"
+      }
+    },
+    "findingRow": {
+      "selectAria": "Select candidate",
+      "subtitle": "{{title}} · {{company}} · {{location}}",
+      "approve": "Approve",
+      "reject": "Reject",
+      "rejectReason": "Not relevant",
+      "toasts": {
+        "approved": "Approved",
+        "rejected": "Rejected"
+      }
+    },
+    "auditTab": {
+      "empty": {
+        "title": "No agent actions logged",
+        "description": "As soon as the agent executes runs, the full audit trail appears here."
+      },
+      "wormNotice": "WORM — read-only audit log for compliance.",
+      "runMeta": "run {{runId}} · {{datetime}}",
+      "awaitingApproval": "Awaiting approval",
+      "approved": "Approved",
+      "model": "model: {{model}}",
+      "cost": "cost: ${{cost}}"
+    },
+    "createDialog": {
+      "title": "New sourcing brief",
+      "description": "The agent uses this brief to find candidates, score them, and surface them for review.",
+      "jobLabel": "Job",
+      "jobPlaceholder": {
+        "loading": "Loading jobs...",
+        "empty": "No open jobs",
+        "choose": "Choose a job"
+      },
+      "briefLabel": "Brief",
+      "briefPlaceholder": "Describe the profile the way you would to a colleague — language, location, must-haves, dealbreakers...",
+      "targetCountLabel": "Target candidate count",
+      "targetCountValue": "{{count}} candidates",
+      "locationsLabel": "Locations",
+      "mustHaveLabel": "Must-have",
+      "exclusionsLabel": "Exclusions",
+      "chipPlaceholder": "Press Enter to add",
+      "cancel": "Cancel",
+      "submit": "Create brief",
+      "toasts": {
+        "missingFields": "Fill in all required fields",
+        "created": "Brief created"
+      }
+    },
+    "chip": {
+      "removeAria": "Remove"
+    },
+    "emptyState": {
+      "tip": "Tip: use the tabs above to navigate."
+    }
+  },
+  "briefDetail": {
+    "back": "Back to Sourcing Agent",
+    "error": {
+      "loadFailed": "Couldn't load brief — please try again.",
+      "notFound": "Brief not found."
+    },
+    "header": {
+      "description": "Brief — {{locations}} · target {{count}} candidates"
+    },
+    "startRun": "Start new run",
+    "activeRunTooltip": "A run is already in progress for this brief. Wait until it finishes or cancel it first.",
+    "createdAt": "Created {{relative}}",
+    "active": "Active",
+    "archived": "Archived",
+    "briefLabel": "Brief",
+    "chips": {
+      "mustHave": "Must-have",
+      "niceToHave": "Nice to have",
+      "exclusions": "Exclusions"
+    },
+    "stats": {
+      "targetCount": "Target count",
+      "languages": "Languages",
+      "status": "Status"
+    },
+    "statusValue": {
+      "active": "Active",
+      "archived": "Archived"
+    },
+    "recentRuns": "Recent runs",
+    "noRuns": {
+      "title": "No runs yet",
+      "description": "Click \"Start new run\" to send the agent out."
+    },
+    "runRow": {
+      "meta": "iter {{iteration}} · trigger {{trigger}}",
+      "found": "found",
+      "approved": "{{count}} approved"
+    },
+    "toasts": {
+      "runStarted": {
+        "title": "Run started",
+        "description": "The agent will now look for candidates."
+      }
+    }
+  },
+  "runDetail": {
+    "back": "Back to Sourcing Agent",
+    "error": {
+      "loadFailed": "Couldn't load run — please try again.",
+      "notFound": "Run not found."
+    },
+    "header": {
+      "title": "Run {{id}}",
+      "briefWithTitle": "Brief: {{title}}",
+      "briefFallback": "Brief {{briefId}}"
+    },
+    "cancelRun": "Cancel run",
+    "startedAt": "Started {{relative}}",
+    "finishedAt": "Finished {{relative}}",
+    "iteration": "iter {{count}}",
+    "stats": {
+      "found": "found",
+      "approved": "{{count}} approved",
+      "rejected": "{{count}} rejected"
+    },
+    "reasoning": {
+      "title": "Reasoning",
+      "empty": "No reasoning yet — the agent is still queued.",
+      "thinking": "Agent is still thinking..."
+    },
+    "candidates": {
+      "title": "Candidates ({{count}})",
+      "selectedCount": "{{count}} selected",
+      "approve": "Approve",
+      "reject": "Reject"
+    },
+    "findings": {
+      "empty": {
+        "title": "No findings yet",
+        "description": "The agent is working — candidates appear as soon as they're scored."
+      }
+    },
+    "findingCard": {
+      "selectAria": "Select candidate",
+      "title": "{{title}} · {{company}}",
+      "locationSource": "{{location}} · source: {{source}}",
+      "aiReasoning": "AI reasoning",
+      "source": "Source",
+      "approve": "Approve",
+      "reject": "Reject",
+      "rejectDialog": {
+        "title": "Reject candidate",
+        "placeholder": "Give a reason...",
+        "cancel": "Cancel",
+        "reject": "Reject"
+      }
+    },
+    "bulkReject": {
+      "title": "Reject {{count}} candidates",
+      "description": "Give a reason — it's stored in the audit trail.",
+      "placeholder": "E.g. 'Too far away', 'Insufficient Snowflake experience'...",
+      "cancel": "Cancel",
+      "reject": "Reject"
+    },
+    "toasts": {
+      "runCancelled": "Run cancelled",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "bulkApproved": "{{count}} candidates approved",
+      "bulkRejected": "{{count}} candidates rejected"
+    }
+  }
+}

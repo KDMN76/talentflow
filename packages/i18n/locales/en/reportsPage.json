@@ -1,0 +1,127 @@
+{
+  "list": {
+    "title": "Reports",
+    "description": "Build custom reports with KPIs, tables and charts.",
+    "newReport": "New report",
+    "tabs": {
+      "mine": "My reports",
+      "templates": "Templates",
+      "shared": "Shared"
+    },
+    "emptyHint": {
+      "mine": "Click 'New report' to get started.",
+      "shared": "No shared reports."
+    },
+    "defaultName": "New report",
+    "toasts": {
+      "createError": "Couldn't create report"
+    }
+  },
+  "createDialog": {
+    "title": "New report",
+    "description": "Enter a name or start straight from a template.",
+    "nameLabel": "Name",
+    "namePlaceholder": "e.g. Q3 Executive Briefing",
+    "cancel": "Cancel",
+    "openBlankBuilder": "Open blank builder"
+  },
+  "grid": {
+    "empty": {
+      "title": "No reports yet"
+    }
+  },
+  "card": {
+    "noDescription": "No description",
+    "blocks_one": "{{count}} block",
+    "blocks_other": "{{count}} blocks",
+    "lastRun": "Last run: {{date}}",
+    "neverRun": "Not run yet",
+    "liveEmbed": "Live embed",
+    "view": "View",
+    "viewTitle": "View report",
+    "edit": "Edit",
+    "editTitle": "Edit",
+    "duplicate": "Duplicate",
+    "duplicateTitle": "Duplicate",
+    "embed": "Embed",
+    "embedTitle": "Embed link",
+    "deleteTitle": "Delete",
+    "copySuffix": "copy",
+    "toasts": {
+      "deleted": "Report deleted",
+      "duplicated": "Report duplicated",
+      "embedError": "Couldn't create embed link",
+      "revoked": "Embed link revoked",
+      "revokeError": "Couldn't revoke link"
+    }
+  },
+  "deleteDialog": {
+    "title": "Delete report?",
+    "description": "“{{name}}” will be permanently deleted. Embed links will be revoked.",
+    "cancel": "Cancel",
+    "confirm": "Delete"
+  },
+  "embedDialog": {
+    "title": "Embed link",
+    "description": "Anyone with this link can view this report (read-only, no login required).",
+    "copy": "Copy",
+    "warning": "Anyone with this link can see the figures. Revoke it once you no longer want to share it.",
+    "close": "Close",
+    "revoke": "Revoke link",
+    "toasts": {
+      "copied": "Copied"
+    }
+  },
+  "templates": {
+    "blocks": "{{count}} blocks",
+    "useTemplate": "Use template →"
+  },
+  "builder": {
+    "loadError": {
+      "title": "Report not found",
+      "back": "Back to overview"
+    },
+    "header": {
+      "back": "Back",
+      "namePlaceholder": "Report name…",
+      "run": "Run",
+      "save": "Save",
+      "saving": "Saving…",
+      "embed": "Embed"
+    },
+    "saveStatus": {
+      "saving": "Saving…",
+      "unsaved": "Unsaved changes",
+      "lastRun": "Last run: {{date}}",
+      "ready": "Ready to build"
+    },
+    "embedMenu": {
+      "label": "Embed link",
+      "showLink": "Show link",
+      "revoke": "Revoke link",
+      "generate": "Generate public link"
+    },
+    "emptyCanvas": {
+      "title": "No blocks yet",
+      "description": "Add blocks from the palette on the left — or start from a template.",
+      "startWithTemplate": "Start from a template"
+    },
+    "embedDialog": {
+      "title": "Public embed link",
+      "description": "Anyone with this link can view this report read-only.",
+      "copy": "Copy",
+      "close": "Close",
+      "revoke": "Revoke link"
+    },
+    "toasts": {
+      "saved": "Report saved",
+      "saveError": "Couldn't save report",
+      "runError": "Couldn't run report",
+      "templateApplied": "Template '{{name}}' applied",
+      "embedError": "Couldn't create embed link",
+      "revoked": "Embed link revoked",
+      "revokeError": "Couldn't revoke link",
+      "copied": "Copied"
+    }
+  }
+}

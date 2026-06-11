@@ -1,0 +1,167 @@
+{
+  "list": {
+    "header": {
+      "title": "Interview kits",
+      "description": "Beheer herbruikbare interview-kits — vragen, follow-ups en gekoppelde scorecard-templates."
+    },
+    "newKit": "Nieuwe kit",
+    "error": {
+      "title": "Kon interview-kits niet laden — probeer opnieuw"
+    },
+    "empty": {
+      "description": "Nog geen interview-kits.",
+      "createFirst": "Maak je eerste kit"
+    },
+    "card": {
+      "generic": "Generiek",
+      "questions_one": "{{count}} vraag",
+      "questions_other": "{{count}} vragen",
+      "duration": "~{{count}} min",
+      "noDuration": "geen duur"
+    },
+    "createDialog": {
+      "title": "Nieuwe interview kit",
+      "description": "Vul de basisinfo in. Vragen voeg je toe op de detailpagina.",
+      "nameLabel": "Naam *",
+      "namePlaceholder": "bv. Senior FE Tech Interview",
+      "descriptionLabel": "Beschrijving",
+      "descriptionPlaceholder": "Korte uitleg waar deze kit voor bedoeld is",
+      "jobLabel": "Vacature (optioneel)",
+      "jobGeneric": "Generiek (geen vacature)",
+      "scorecardLabel": "Scorecard-template (optioneel)",
+      "scorecardNone": "Geen template",
+      "cancel": "Annuleren",
+      "create": "Aanmaken"
+    },
+    "confirmDelete": "Weet je zeker dat je \"{{name}}\" wilt verwijderen?",
+    "toasts": {
+      "created": "Kit aangemaakt",
+      "deleted": "Kit verwijderd"
+    }
+  },
+  "detail": {
+    "notFound": {
+      "label": "Kit niet gevonden.",
+      "back": "Terug naar overzicht"
+    },
+    "back": "Terug naar kits",
+    "untitled": "Naamloze kit",
+    "subtitle": "{{count}} vragen · ~{{duration}} min totaal",
+    "save": "Opslaan",
+    "basics": {
+      "title": "Basisgegevens",
+      "nameLabel": "Naam",
+      "descriptionLabel": "Beschrijving",
+      "descriptionPlaceholder": "Korte uitleg over wanneer deze kit te gebruiken",
+      "jobLabel": "Vacature",
+      "jobGeneric": "Generiek",
+      "scorecardLabel": "Scorecard-template",
+      "scorecardNone": "Geen template"
+    },
+    "questions": {
+      "title": "Vragen ({{count}})",
+      "addQuestion": "Vraag toevoegen",
+      "empty": "Nog geen vragen. Klik op \"Vraag toevoegen\" om te beginnen."
+    },
+    "categories": {
+      "behavioral": "Behavioral",
+      "technical": "Technisch",
+      "culture": "Cultuur",
+      "experience": "Ervaring",
+      "scenario": "Scenario"
+    },
+    "editor": {
+      "moveUp": "Omhoog",
+      "moveDown": "Omlaag",
+      "questionPlaceholder": "Wat is je vraag?",
+      "categoryLabel": "Categorie",
+      "durationLabel": "Verwachte duur (min)",
+      "criteriaLabel": "Beoordelingscriteria",
+      "criteriaPlaceholder": "bv. Diepgang, helderheid van uitleg, structuur",
+      "followupsLabel": "Suggested follow-ups",
+      "followupPlaceholder": "Voeg een vervolgvraag toe en druk op Enter",
+      "durationBadge": "~{{count}}m"
+    },
+    "toasts": {
+      "nameRequired": "Naam is verplicht",
+      "saved": "Kit opgeslagen"
+    }
+  },
+  "interview": {
+    "notFound": {
+      "label": "Interview niet gevonden.",
+      "back": "Terug naar overzicht"
+    },
+    "back": "Terug naar interviews",
+    "duration": "{{count}} min",
+    "actions": {
+      "reschedule": "Verplaatsen",
+      "cancel": "Annuleren"
+    },
+    "status": {
+      "scheduled": "Gepland",
+      "rescheduled": "Verplaatst",
+      "completed": "Afgerond",
+      "no_show": "No-show",
+      "cancelled": "Geannuleerd"
+    },
+    "locations": {
+      "google_meet": "Google Meet",
+      "teams": "Microsoft Teams",
+      "zoom": "Zoom",
+      "in_person": "In persoon",
+      "phone": "Telefonisch"
+    },
+    "tabs": {
+      "details": "Details",
+      "questions": "Vragen",
+      "recording": "Opname",
+      "scorecards": "Scorecards"
+    },
+    "details": {
+      "locationTitle": "Locatie",
+      "interviewersTitle": "Interviewers",
+      "kitTitle": "Interview kit",
+      "kitView": "Bekijken →",
+      "noKit": "Geen kit gekoppeld — vrij gesprek.",
+      "notesTitle": "Notities"
+    },
+    "recording": {
+      "uploadedBy": "Geüpload door {{name}}"
+    },
+    "questionsPanel": {
+      "noKit": "Aan dit interview is geen kit gekoppeld. Voeg er één toe via \"Bewerken\" om vragen te tonen.",
+      "kitNotFound": "Kit niet gevonden.",
+      "evaluateOn": "Beoordelen op: ",
+      "followupsTitle": "Suggested follow-ups"
+    },
+    "scorecards": {
+      "title": "Scorecards ({{count}})",
+      "description": "Per interviewer: huidige beoordeling. Klik op een rij om de detail in de application-pagina te bekijken.",
+      "empty": "Nog geen scorecards ingeleverd.",
+      "openCandidate": "Open kandidaat-pagina om scorecard in te vullen",
+      "scoreSuffix": "/5"
+    },
+    "cancelDialog": {
+      "title": "Interview annuleren",
+      "description": "We sturen automatisch een afbericht naar alle deelnemers. Geef een reden mee voor de audit-log.",
+      "reasonLabel": "Reden (optioneel)",
+      "reasonPlaceholder": "Kandidaat heeft zelf afgezegd...",
+      "keep": "Niet annuleren",
+      "confirm": "Bevestig annulering"
+    },
+    "rescheduleDialog": {
+      "title": "Interview verplaatsen",
+      "description": "Kies een nieuw tijdstip. Alle deelnemers krijgen automatisch een geüpdatete uitnodiging.",
+      "newStartLabel": "Nieuw tijdstip",
+      "cancel": "Annuleren",
+      "confirm": "Verplaats"
+    },
+    "toasts": {
+      "cancelled": "Interview geannuleerd",
+      "cancelledReason": "Reden: {{reason}}",
+      "cancelledDefault": "Het interview is geannuleerd.",
+      "rescheduled": "Interview verplaatst"
+    }
+  }
+}

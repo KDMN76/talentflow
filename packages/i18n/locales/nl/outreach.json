@@ -1,0 +1,217 @@
+{
+  "hub": {
+    "title": "Outreach",
+    "description": "AI-conceptberichten, replies, signals en quota's — alles op één plek.",
+    "tabs": {
+      "pending": "Te versturen",
+      "sent": "Verstuurd",
+      "replies": "Replies",
+      "signals": "Signals",
+      "quotas": "Quota's"
+    }
+  },
+  "pending": {
+    "empty": {
+      "title": "Inbox leeg",
+      "description": "Geen concepten of berichten die op goedkeuring wachten."
+    },
+    "subject": "Onderwerp: {{subject}}",
+    "hideMessage": "Verberg bericht",
+    "showMessage": "Toon bericht",
+    "approve": "Goedkeuren",
+    "editRegenerate": "Bewerken + regenereren",
+    "reject": "Afwijzen",
+    "rejectReason": "Niet relevant",
+    "toasts": {
+      "approved": "Goedgekeurd — gaat in de wachtrij",
+      "rejected": "Afgewezen",
+      "draftSaved": "Concept opgeslagen",
+      "regenerated": "Opnieuw gegenereerd"
+    },
+    "dialog": {
+      "title": "Bewerken & opnieuw genereren",
+      "currentDraftLabel": "Huidig concept",
+      "hintLabel": "Instructie voor AI (optioneel)",
+      "hintPlaceholder": "Bijv. 'maak het korter en persoonlijker' of 'noem hun recente promotie'",
+      "cancel": "Annuleren",
+      "saveWithoutRegenerate": "Opslaan zonder regenereren",
+      "regenerate": "Genereer opnieuw"
+    }
+  },
+  "sent": {
+    "empty": {
+      "title": "Nog niets verstuurd",
+      "description": "Goedgekeurde berichten komen hier terecht."
+    },
+    "messageCount_one": "{{count}} bericht",
+    "messageCount_other": "{{count}} berichten"
+  },
+  "replies": {
+    "empty": {
+      "title": "Geen replies geclassificeerd"
+    },
+    "unknownCandidate": "Onbekend",
+    "received": "Reply ontvangen {{time}}",
+    "original": "Origineel ({{channel}})",
+    "confidence": "Vertrouwen",
+    "nextActionAlert": "Voorgestelde volgende stap: {{action}}\n(echte actie gekoppeld aan backend in productie)",
+    "suggestedAction": "Voorgestelde actie: {{action}}",
+    "reasoning": "Redenering: {{reasoning}}",
+    "nextAction": {
+      "scheduleCall": "Plan gesprek",
+      "sendFollowup": "Stuur follow-up",
+      "pauseSequence": "Pauzeer sequence",
+      "removeFromOutreach": "Verwijder uit outreach",
+      "manualReview": "Recruiter beslist"
+    }
+  },
+  "signals": {
+    "empty": {
+      "title": "Geen signals gedetecteerd"
+    },
+    "columns": {
+      "candidate": "Kandidaat",
+      "type": "Type",
+      "change": "Verandering",
+      "source": "Bron",
+      "detected": "Gedetecteerd",
+      "actions": "Acties"
+    },
+    "processed": "Verwerkt",
+    "dismiss": "Dismiss",
+    "draftReactivation": "Stel reactivatie op",
+    "toasts": {
+      "dismissed": "Genegeerd",
+      "drafted": "Reactivatie opgesteld"
+    },
+    "dialog": {
+      "title": "Reactivatie-sequence kiezen",
+      "stepsAndDescription": "{{count}} stappen · {{description}}",
+      "cancel": "Annuleren",
+      "draft": "Opstellen"
+    }
+  },
+  "quotas": {
+    "empty": {
+      "title": "Geen quota's geconfigureerd"
+    },
+    "columns": {
+      "recruiter": "Recruiter",
+      "channel": "Kanaal",
+      "today": "Vandaag",
+      "thisWeek": "Deze week",
+      "adjust": "Aanpassen"
+    },
+    "edit": "Bewerken",
+    "toasts": {
+      "updated": "Quota bijgewerkt"
+    },
+    "dialog": {
+      "title": "Quota aanpassen",
+      "context": "{{channel}} · recruiter {{recruiterId}}",
+      "dailyLabel": "Dagelijkse limiet",
+      "weeklyLabel": "Wekelijkse limiet",
+      "cancel": "Annuleren",
+      "save": "Opslaan"
+    }
+  },
+  "inbox": {
+    "title": "Outreach Inbox",
+    "description": "Alles wat nu jouw aandacht nodig heeft — concepten + replies in één feed.",
+    "stats": {
+      "draftsToReview": "Concepten te beoordelen",
+      "repliesIn": "Replies binnen",
+      "interested": "Geïnteresseerd"
+    },
+    "empty": {
+      "title": "Inbox leeg",
+      "description": "Alle berichten zijn afgehandeld. Goed werk!"
+    },
+    "draftBadge": "Concept",
+    "review": "Beoordelen",
+    "unknownCandidate": "Onbekend",
+    "replyMeta": "reply · {{time}}",
+    "confidenceMeta": "vertrouwen {{percent}}%",
+    "handle": "Behandelen"
+  },
+  "sequences": {
+    "title": "Nurture sequences",
+    "description": "Multi-step funnels voor passive sourcing en reactivatie.",
+    "newSequence": "Nieuwe sequence",
+    "empty": {
+      "title": "Nog geen sequences",
+      "description": "Maak je eerste nurture-sequence om kandidaten op te warmen."
+    },
+    "noDescription": "Geen beschrijving",
+    "steps": "{{count}} stappen",
+    "active": "Actief",
+    "archived": "Gearchiveerd",
+    "openBuilder": "Bouwer openen",
+    "toasts": {
+      "activated": "Sequence actief",
+      "paused": "Sequence gepauzeerd",
+      "created": "Sequence aangemaakt"
+    },
+    "createDialog": {
+      "title": "Nieuwe sequence",
+      "nameLabel": "Naam",
+      "namePlaceholder": "Bijv. Senior Data Engineer outbound",
+      "descriptionLabel": "Beschrijving (optioneel)",
+      "cancel": "Annuleren",
+      "create": "Aanmaken"
+    }
+  },
+  "builder": {
+    "backToSequences": "Terug naar sequences",
+    "noDescription": "Geen beschrijving",
+    "newStepSubject": "Nieuwe stap",
+    "newStepBody": "Hi {first_name},\n\nKorte vraag — ben je open voor een rol?\n\nGroet,\n{recruiter_name}",
+    "steps": {
+      "empty": {
+        "title": "Nog geen stappen",
+        "description": "Voeg de eerste stap toe om de funnel te starten."
+      },
+      "addStep": "Stap toevoegen"
+    },
+    "enrollments": {
+      "title": "Enrollments",
+      "total": "Totaal",
+      "active": "Actief",
+      "paused": "Pauze",
+      "replied": "Reageerde",
+      "completed": "Voltooid",
+      "stopped": "Gestopt"
+    },
+    "replyRate": {
+      "title": "Reply-rate per stap",
+      "noData": "Nog geen data — voeg stappen toe.",
+      "step": "Stap {{number}}"
+    },
+    "stepCard": {
+      "moveAria": "Verplaats stap",
+      "waitDays": "Wacht {{count}} dagen",
+      "aiPersonalizes": "AI-personaliseert",
+      "stopOnReply": "Stop bij reply",
+      "edit": "Bewerken"
+    },
+    "toasts": {
+      "reordered": "Volgorde aangepast",
+      "stepAdded": "Stap toegevoegd",
+      "stepDeleted": "Stap verwijderd",
+      "stepUpdated": "Stap bijgewerkt"
+    },
+    "editDialog": {
+      "title": "Stap {{order}} bewerken",
+      "channelLabel": "Kanaal",
+      "delayLabel": "Wachttijd (dagen)",
+      "subjectLabel": "Onderwerp",
+      "subjectPlaceholder": "Bijv. 'Korte vraag van TalentFlow'",
+      "bodyLabel": "Template body",
+      "variablesHint": "Variabelen: {{firstName}}, {{recruiterName}}, {{personalizedOpener}}",
+      "aiPersonalizes": "AI personaliseert",
+      "stopOnReply": "Stop bij reply",
+      "cancel": "Annuleren",
+      "save": "Opslaan"
+    }
+  }
+}

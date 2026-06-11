@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import {
   Plus,
   Globe,
@@ -65,7 +66,8 @@ function TemplatePreview({
   primaryColor: string;
   headerText?: string;
 }) {
-  const baseHeader = headerText || "Werk bij ons";
+  const { t } = useTranslation("careerPages");
+  const baseHeader = headerText || t("preview.defaultHeader");
 
   if (template === "minimal") {
     return (
@@ -78,7 +80,7 @@ function TemplatePreview({
           <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 line-clamp-1">
             {baseHeader}
           </p>
-          <p className="text-[10px] text-muted-foreground">Minimaal · monochroom</p>
+          <p className="text-[10px] text-muted-foreground">{t("preview.minimal")}</p>
         </div>
       </div>
     );
@@ -98,7 +100,7 @@ function TemplatePreview({
           >
             {baseHeader}
           </p>
-          <p className="mt-1 text-[10px] text-zinc-500">Klassiek · serif</p>
+          <p className="mt-1 text-[10px] text-zinc-500">{t("preview.classic")}</p>
         </div>
       </div>
     );
@@ -141,7 +143,7 @@ function TemplatePreview({
           <p className="text-sm font-bold text-white drop-shadow line-clamp-1">
             {baseHeader}
           </p>
-          <p className="text-[10px] text-white/80">Creatief · gradient</p>
+          <p className="text-[10px] text-white/80">{t("preview.creative")}</p>
         </div>
       </div>
     );
@@ -161,7 +163,7 @@ function TemplatePreview({
         <p className="text-sm font-semibold text-white drop-shadow line-clamp-1">
           {baseHeader}
         </p>
-        <p className="text-[10px] text-white/80">Modern · gradient</p>
+        <p className="text-[10px] text-white/80">{t("preview.modern")}</p>
       </div>
     </div>
   );
@@ -170,6 +172,7 @@ function TemplatePreview({
 // ─── Career Page Card ────────────────────────────────────────────────────────
 
 function CareerPageCard({ page }: { page: CareerPage }) {
+  const { t } = useTranslation("careerPages");
   const updatePage = useUpdateCareerPage();
   const deletePage = useDeleteCareerPage();
   const { toast } = useToast();
@@ -182,9 +185,11 @@ function CareerPageCard({ page }: { page: CareerPage }) {
         onSuccess: () => {
           toast({
             title: page.active
-              ? "Career page gedeactiveerd"
-              : "Career page geactiveerd",
-            description: `/${page.slug} is nu ${page.active ? "offline" : "live"}.`,
+              ? t("card.toasts.deactivated.title")
+              : t("card.toasts.activated.title"),
+            description: page.active
+              ? t("card.toasts.statusOffline", { slug: page.slug })
+              : t("card.toasts.statusLive", { slug: page.slug }),
           });
         },
       }
@@ -195,8 +200,8 @@ function CareerPageCard({ page }: { page: CareerPage }) {
     deletePage.mutate(page.id, {
       onSuccess: () => {
         toast({
-          title: "Career page verwijderd",
-          description: `/${page.slug} is verwijderd.`,
+          title: t("card.toasts.deleted.title"),
+          description: t("card.toasts.deleted.description", { slug: page.slug }),
         });
         setConfirmDelete(false);
       },
@@ -231,11 +236,11 @@ function CareerPageCard({ page }: { page: CareerPage }) {
                   </h3>
                   {page.active ? (
                     <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
-                      Live
+                      {t("card.live")}
                     </span>
                   ) : (
                     <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                      Offline
+                      {t("card.offline")}
                     </span>
                   )}
                 </div>
@@ -251,7 +256,9 @@ function CareerPageCard({ page }: { page: CareerPage }) {
                   </a>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    {TEMPLATE_LABELS[page.template]} · geen custom domein
+                    {t("card.noCustomDomain", {
+                      template: TEMPLATE_LABELS[page.template],
+                    })}
                   </p>
                 )}
               </div>
@@ -264,14 +271,14 @@ function CareerPageCard({ page }: { page: CareerPage }) {
                 <span className="font-semibold text-zinc-900 dark:text-zinc-100">
                   {page.visit_count.toLocaleString("nl-NL")}
                 </span>
-                <span>bezoeken</span>
+                <span>{t("card.visits")}</span>
               </div>
               <div className="flex items-center gap-1.5 text-muted-foreground">
                 <FileText className="h-3.5 w-3.5" />
                 <span className="font-semibold text-zinc-900 dark:text-zinc-100">
                   {page.application_count}
                 </span>
-                <span>sollicitaties</span>
+                <span>{t("card.applications")}</span>
               </div>
             </div>
 
@@ -284,7 +291,7 @@ function CareerPageCard({ page }: { page: CareerPage }) {
               >
                 <Link href={`/career-pages/${page.id}`}>
                   <Settings2 className="h-3.5 w-3.5" />
-                  Bewerken
+                  {t("card.edit")}
                 </Link>
               </Button>
               <Button
@@ -292,7 +299,7 @@ function CareerPageCard({ page }: { page: CareerPage }) {
                 variant="outline"
                 size="sm"
                 className="gap-1.5"
-                title="Open publieke pagina"
+                title={t("card.openPublicPage")}
               >
                 <a
                   href={`/careers/${page.slug}`}
@@ -307,7 +314,7 @@ function CareerPageCard({ page }: { page: CareerPage }) {
                 size="sm"
                 onClick={handleToggleActive}
                 disabled={updatePage.isPending}
-                title={page.active ? "Deactiveren" : "Activeren"}
+                title={page.active ? t("card.deactivate") : t("card.activate")}
                 className={
                   page.active
                     ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400"
@@ -321,7 +328,7 @@ function CareerPageCard({ page }: { page: CareerPage }) {
                 size="sm"
                 onClick={() => setConfirmDelete(true)}
                 className="text-destructive hover:text-destructive hover:bg-red-50 dark:hover:bg-red-950/30"
-                title="Verwijderen"
+                title={t("card.delete")}
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
@@ -336,14 +343,13 @@ function CareerPageCard({ page }: { page: CareerPage }) {
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-950/40 mb-2">
               <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
             </div>
-            <DialogTitle>Career page verwijderen</DialogTitle>
+            <DialogTitle>{t("card.deleteDialog.title")}</DialogTitle>
             <DialogDescription>
-              Weet je zeker dat je{" "}
+              {t("card.deleteDialog.descriptionBefore")}{" "}
               <span className="font-semibold text-zinc-900 dark:text-zinc-100">
                 /{page.slug}
-              </span>{" "}
-              wilt verwijderen? Bezoekers zien de pagina niet meer en
-              sollicitaties komen niet meer binnen.
+              </span>
+              {t("card.deleteDialog.descriptionAfter")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-2">
@@ -352,14 +358,16 @@ function CareerPageCard({ page }: { page: CareerPage }) {
               onClick={() => setConfirmDelete(false)}
               disabled={deletePage.isPending}
             >
-              Annuleren
+              {t("card.deleteDialog.cancel")}
             </Button>
             <Button
               variant="destructive"
               onClick={handleDelete}
               disabled={deletePage.isPending}
             >
-              {deletePage.isPending ? "Verwijderen…" : "Verwijderen"}
+              {deletePage.isPending
+                ? t("card.deleteDialog.deleting")
+                : t("card.deleteDialog.confirm")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -377,6 +385,7 @@ function CreateCareerPageDialog({
   open: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation("careerPages");
   const { toast } = useToast();
   const createPage = useCreateCareerPage();
 
@@ -407,8 +416,8 @@ function CreateCareerPageDialog({
 
     if (!cleanSlug) {
       toast({
-        title: "Slug is verplicht",
-        description: "Kies een URL-vriendelijke slug, zoals 'kdmn'.",
+        title: t("createDialog.toasts.slugRequired.title"),
+        description: t("createDialog.toasts.slugRequired.description"),
         variant: "destructive",
       });
       return;
@@ -422,14 +431,16 @@ function CreateCareerPageDialog({
         primary_color: primaryColor,
       });
       toast({
-        title: "Career page aangemaakt",
-        description: `/${cleanSlug} is live en klaar voor configuratie.`,
+        title: t("createDialog.toasts.created.title"),
+        description: t("createDialog.toasts.created.description", {
+          slug: cleanSlug,
+        }),
       });
       handleClose();
     } catch {
       toast({
-        title: "Fout",
-        description: "Kon de career page niet aanmaken. Probeer het opnieuw.",
+        title: t("createDialog.toasts.error.title"),
+        description: t("createDialog.toasts.error.description"),
         variant: "destructive",
       });
     }

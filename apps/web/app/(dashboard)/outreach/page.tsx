@@ -11,6 +11,7 @@
  */
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Bell,
   CheckCircle2,
@@ -75,22 +76,23 @@ import type {
 } from "@/lib/types/outreach";
 
 export default function OutreachHubPage() {
+  const { t } = useTranslation("outreach");
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Outreach"
-        description="AI-conceptberichten, replies, signals en quota's — alles op één plek."
+        title={t("hub.title")}
+        description={t("hub.description")}
         actions={<AiDisclosureBadge />}
       />
       <AiDisclosureBadge variant="banner" />
 
       <Tabs defaultValue="pending" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="pending">Te versturen</TabsTrigger>
-          <TabsTrigger value="sent">Verstuurd</TabsTrigger>
-          <TabsTrigger value="replies">Replies</TabsTrigger>
-          <TabsTrigger value="signals">Signals</TabsTrigger>
-          <TabsTrigger value="quotas">Quota&apos;s</TabsTrigger>
+          <TabsTrigger value="pending">{t("hub.tabs.pending")}</TabsTrigger>
+          <TabsTrigger value="sent">{t("hub.tabs.sent")}</TabsTrigger>
+          <TabsTrigger value="replies">{t("hub.tabs.replies")}</TabsTrigger>
+          <TabsTrigger value="signals">{t("hub.tabs.signals")}</TabsTrigger>
+          <TabsTrigger value="quotas">{t("hub.tabs.quotas")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pending">
@@ -116,6 +118,7 @@ export default function OutreachHubPage() {
 // ─── Pending tab (drafts + pending_approval) ─────────────────────────────────
 
 function PendingTab() {
+  const { t } = useTranslation("outreach");
   const drafted = useOutreachMessages({ status: "drafted" });
   const pending = useOutreachMessages({ status: "pending_approval" });
   const messages: OutreachMessage[] = [
@@ -133,9 +136,9 @@ function PendingTab() {
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-500 dark:bg-emerald-950/40">
             <CheckCircle2 className="h-6 w-6" />
           </div>
-          <p className="text-sm font-medium">Inbox leeg</p>
+          <p className="text-sm font-medium">{t("pending.empty.title")}</p>
           <p className="text-xs text-muted-foreground">
-            Geen concepten of berichten die op goedkeuring wachten.
+            {t("pending.empty.description")}
           </p>
         </CardContent>
       </Card>
@@ -151,6 +154,7 @@ function PendingTab() {
 }
 
 function PendingMessageCard({ message }: { message: OutreachMessage }) {
+  const { t } = useTranslation("outreach");
   const [expanded, setExpanded] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [hint, setHint] = useState("");
@@ -187,7 +191,7 @@ function PendingMessageCard({ message }: { message: OutreachMessage }) {
             </div>
             {message.subject && (
               <p className="mt-2 text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                Onderwerp: {message.subject}
+                {t("pending.subject", { subject: message.subject })}
               </p>
             )}
           </div>
@@ -195,7 +199,7 @@ function PendingMessageCard({ message }: { message: OutreachMessage }) {
 
         <Collapsible open={expanded} onOpenChange={setExpanded}>
           <CollapsibleTrigger className="text-[11px] font-medium text-muted-foreground hover:text-foreground">
-            {expanded ? "Verberg bericht" : "Toon bericht"}
+            {expanded ? t("pending.hideMessage") : t("pending.showMessage")}
           </CollapsibleTrigger>
           <CollapsibleContent>
             <pre className="mt-2 whitespace-pre-wrap rounded-md bg-zinc-50 p-3 text-xs text-zinc-700 dark:bg-zinc-800/50 dark:text-zinc-300">
@@ -229,7 +233,7 @@ function PendingMessageCard({ message }: { message: OutreachMessage }) {
             disabled={approve.isPending}
             onClick={async () => {
               await approve.mutateAsync(message.id);
-              toast({ title: "Goedgekeurd — gaat in de wachtrij" });
+              toast({ title: t("pending.toasts.approved") });
             }}
             className="bg-emerald-600 text-white hover:bg-emerald-700"
           >
@@ -238,7 +242,7 @@ function PendingMessageCard({ message }: { message: OutreachMessage }) {
             ) : (
               <Send className="mr-1.5 h-3.5 w-3.5" />
             )}
-            Goedkeuren
+            {t("pending.approve")}
           </Button>
           <Button
             size="sm"
@@ -249,7 +253,7 @@ function PendingMessageCard({ message }: { message: OutreachMessage }) {
             }}
           >
             <Edit3 className="mr-1.5 h-3.5 w-3.5" />
-            Bewerken + regenereren
+            {t("pending.editRegenerate")}
           </Button>
           <Button
             size="sm"
@@ -259,13 +263,13 @@ function PendingMessageCard({ message }: { message: OutreachMessage }) {
             onClick={async () => {
               await reject.mutateAsync({
                 id: message.id,
-                reason: "Niet relevant",
+                reason: t("pending.rejectReason"),
               });
-              toast({ title: "Afgewezen" });
+              toast({ title: t("pending.toasts.rejected") });
             }}
           >
             <X className="mr-1.5 h-3.5 w-3.5" />
-            Afwijzen
+            {t("pending.reject")}
           </Button>
         </div>
 
@@ -279,12 +283,14 @@ function PendingMessageCard({ message }: { message: OutreachMessage }) {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-indigo-500" />
-                Bewerken & opnieuw genereren
+                {t("pending.dialog.title")}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-3">
               <div>
-                <Label htmlFor="body-override">Huidig concept</Label>
+                <Label htmlFor="body-override">
+                  {t("pending.dialog.currentDraftLabel")}
+                </Label>
                 <Textarea
                   id="body-override"
                   rows={6}
@@ -293,10 +299,10 @@ function PendingMessageCard({ message }: { message: OutreachMessage }) {
                 />
               </div>
               <div>
-                <Label htmlFor="hint">Instructie voor AI (optioneel)</Label>
+                <Label htmlFor="hint">{t("pending.dialog.hintLabel")}</Label>
                 <Input
                   id="hint"
-                  placeholder="Bijv. 'maak het korter en persoonlijker' of 'noem hun recente promotie'"
+                  placeholder={t("pending.dialog.hintPlaceholder")}
                   value={hint}
                   onChange={(e) => setHint(e.target.value)}
                 />
@@ -304,7 +310,7 @@ function PendingMessageCard({ message }: { message: OutreachMessage }) {
             </div>
             <DialogFooter className="gap-2">
               <Button variant="outline" onClick={() => setEditOpen(false)}>
-                Annuleren
+                {t("pending.dialog.cancel")}
               </Button>
               <Button
                 variant="secondary"
@@ -314,11 +320,11 @@ function PendingMessageCard({ message }: { message: OutreachMessage }) {
                     id: message.id,
                     body_override: bodyOverride,
                   });
-                  toast({ title: "Concept opgeslagen" });
+                  toast({ title: t("pending.toasts.draftSaved") });
                   setEditOpen(false);
                 }}
               >
-                Opslaan zonder regenereren
+                {t("pending.dialog.saveWithoutRegenerate")}
               </Button>
               <Button
                 disabled={regenerate.isPending}
@@ -328,7 +334,7 @@ function PendingMessageCard({ message }: { message: OutreachMessage }) {
                     hint,
                     body_override: bodyOverride,
                   });
-                  toast({ title: "Opnieuw gegenereerd" });
+                  toast({ title: t("pending.toasts.regenerated") });
                   setEditOpen(false);
                   setHint("");
                 }}
@@ -338,7 +344,7 @@ function PendingMessageCard({ message }: { message: OutreachMessage }) {
                   <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                 )}
                 <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-                Genereer opnieuw
+                {t("pending.dialog.regenerate")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -351,15 +357,16 @@ function PendingMessageCard({ message }: { message: OutreachMessage }) {
 // ─── Sent tab — timeline grouped per candidate ───────────────────────────────
 
 function SentTab() {
+  const { t } = useTranslation("outreach");
   const { data, isLoading } = useOutreachMessages({ status: "sent" });
   if (isLoading) return <Skeleton className="h-72 rounded-xl" />;
   if (!data || data.length === 0) {
     return (
       <Card className="border-0 shadow-sm">
         <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
-          <p className="text-sm font-medium">Nog niets verstuurd</p>
+          <p className="text-sm font-medium">{t("sent.empty.title")}</p>
           <p className="text-xs text-muted-foreground">
-            Goedgekeurde berichten komen hier terecht.
+            {t("sent.empty.description")}
           </p>
         </CardContent>
       </Card>
@@ -388,7 +395,7 @@ function SentTab() {
                     {cand.candidate_name ?? candId}
                   </p>
                   <p className="text-[11px] text-muted-foreground">
-                    {messages.length} bericht{messages.length === 1 ? "" : "en"}
+                    {t("sent.messageCount", { count: messages.length })}
                   </p>
                 </div>
               </div>
@@ -436,13 +443,14 @@ function SentTab() {
 // ─── Replies tab — classified inbox ──────────────────────────────────────────
 
 function RepliesTab() {
+  const { t } = useTranslation("outreach");
   const { data, isLoading } = useReplies();
   if (isLoading) return <Skeleton className="h-72 rounded-xl" />;
   if (!data || data.length === 0) {
     return (
       <Card className="border-0 shadow-sm">
         <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
-          <p className="text-sm font-medium">Geen replies geclassificeerd</p>
+          <p className="text-sm font-medium">{t("replies.empty.title")}</p>
         </CardContent>
       </Card>
     );
@@ -470,9 +478,10 @@ function ReplyCard({
   reply: OutreachMessage | null;
   original: OutreachMessage | null;
 }) {
+  const { t } = useTranslation("outreach");
   const pill = REPLY_CATEGORY_PILL[classification.category];
   const candName =
-    reply?.candidate_name ?? original?.candidate_name ?? "Onbekend";
+    reply?.candidate_name ?? original?.candidate_name ?? t("replies.unknownCandidate");
   return (
     <Card className="border-0 shadow-sm">
       <CardContent className="space-y-3 p-5">

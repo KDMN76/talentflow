@@ -10,6 +10,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import { ArrowLeft, FileSignature, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,6 +29,7 @@ import { useCreateContract } from "@/hooks/useBackOffice";
 import type { ContractType } from "@/lib/types/backOffice";
 
 export default function NewContractPage() {
+  const { t } = useTranslation("contracts");
   const router = useRouter();
   const { toast } = useToast();
   const createContract = useCreateContract();
@@ -78,12 +80,15 @@ export default function NewContractPage() {
         cao: cao || null,
       });
       toast({
-        title: "Contract aangemaakt",
-        description: `${candidateName} bij ${clientName} staat klaar als concept.`,
+        title: t("new.toasts.created.title"),
+        description: t("new.toasts.created.description", {
+          candidate: candidateName,
+          client: clientName,
+        }),
       });
       router.push(`/contracts/${created.id}`);
     } catch {
-      toast({ title: "Aanmaken mislukt", variant: "destructive" });
+      toast({ title: t("new.toasts.createError.title"), variant: "destructive" });
     }
     // job_title is collected for UI display only; hooks signature doesn't pass it.
     // (jobTitle var preserved to avoid TypeScript unused-warning during edits.)
@@ -95,57 +100,57 @@ export default function NewContractPage() {
       <Link href="/contracts">
         <Button variant="ghost" size="sm" className="-ml-2">
           <ArrowLeft className="mr-1 h-4 w-4" />
-          Terug naar contracten
+          {t("new.back")}
         </Button>
       </Link>
 
       <PageHeader
-        title="Nieuw contract"
-        description="Leg een uitzend-, detacherings- of freelance-overeenkomst vast."
+        title={t("new.title")}
+        description={t("new.description")}
       />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <Card className="border-0 shadow-sm">
           <CardContent className="space-y-6 p-6">
             {/* Section: parties */}
-            <Section title="Partijen">
+            <Section title={t("new.sections.parties")}>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Kandidaat">
+                <Field label={t("new.fields.candidate")}>
                   <Input
                     value={candidateName}
                     onChange={(e) => setCandidateName(e.target.value)}
-                    placeholder="Bv. Sophie de Vries"
+                    placeholder={t("new.fields.candidatePlaceholder")}
                   />
                 </Field>
-                <Field label="Kandidaat ID (optioneel)">
+                <Field label={t("new.fields.candidateId")}>
                   <Input
                     value={candidateId}
                     onChange={(e) => setCandidateId(e.target.value)}
-                    placeholder="cand-..."
+                    placeholder={t("new.fields.candidateIdPlaceholder")}
                   />
                 </Field>
-                <Field label="Klant">
+                <Field label={t("new.fields.client")}>
                   <Input
                     value={clientName}
                     onChange={(e) => setClientName(e.target.value)}
-                    placeholder="Bv. ING Bank N.V."
+                    placeholder={t("new.fields.clientPlaceholder")}
                   />
                 </Field>
-                <Field label="Klant org-ID (optioneel)">
+                <Field label={t("new.fields.clientOrgId")}>
                   <Input
                     value={clientOrgId}
                     onChange={(e) => setClientOrgId(e.target.value)}
-                    placeholder="org-..."
+                    placeholder={t("new.fields.clientOrgIdPlaceholder")}
                   />
                 </Field>
-                <Field label="Vacaturetitel (optioneel)">
+                <Field label={t("new.fields.jobTitle")}>
                   <Input
                     value={jobTitle}
                     onChange={(e) => setJobTitle(e.target.value)}
-                    placeholder="Bv. Senior Frontend Engineer"
+                    placeholder={t("new.fields.jobTitlePlaceholder")}
                   />
                 </Field>
-                <Field label="Type">
+                <Field label={t("new.fields.type")}>
                   <Select
                     value={contractType}
                     onValueChange={(v) => setContractType(v as ContractType)}
@@ -154,33 +159,33 @@ export default function NewContractPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="contract">Detachering</SelectItem>
-                      <SelectItem value="temp">Uitzend</SelectItem>
-                      <SelectItem value="freelance">Freelance</SelectItem>
-                      <SelectItem value="permanent">Vast</SelectItem>
+                      <SelectItem value="contract">{t("type.contract")}</SelectItem>
+                      <SelectItem value="temp">{t("type.temp")}</SelectItem>
+                      <SelectItem value="freelance">{t("type.freelance")}</SelectItem>
+                      <SelectItem value="permanent">{t("type.permanent")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </Field>
               </div>
             </Section>
 
-            <Section title="Periode & inzet">
+            <Section title={t("new.sections.period")}>
               <div className="grid gap-3 sm:grid-cols-3">
-                <Field label="Startdatum">
+                <Field label={t("new.fields.startDate")}>
                   <Input
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
                   />
                 </Field>
-                <Field label="Einddatum (optioneel)">
+                <Field label={t("new.fields.endDate")}>
                   <Input
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
                   />
                 </Field>
-                <Field label="Uren per week">
+                <Field label={t("new.fields.weeklyHours")}>
                   <Input
                     type="number"
                     min={1}
@@ -193,9 +198,9 @@ export default function NewContractPage() {
               </div>
             </Section>
 
-            <Section title="Tarieven">
+            <Section title={t("new.sections.rates")}>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Tarief kandidaat (€/u)">
+                <Field label={t("new.fields.rateCandidate")}>
                   <Input
                     type="number"
                     min={0}
@@ -205,7 +210,7 @@ export default function NewContractPage() {
                     placeholder="75.00"
                   />
                 </Field>
-                <Field label="Tarief klant (€/u)">
+                <Field label={t("new.fields.rateClient")}>
                   <Input
                     type="number"
                     min={0}
@@ -218,12 +223,12 @@ export default function NewContractPage() {
               </div>
             </Section>
 
-            <Section title="Compliance">
-              <Field label="CAO (optioneel)">
+            <Section title={t("new.sections.compliance")}>
+              <Field label={t("new.fields.cao")}>
                 <Input
                   value={cao}
                   onChange={(e) => setCao(e.target.value)}
-                  placeholder="Bv. CAO Banken"
+                  placeholder={t("new.fields.caoPlaceholder")}
                 />
               </Field>
             </Section>

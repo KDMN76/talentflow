@@ -1,0 +1,139 @@
+{
+  "header": {
+    "title": "Analytiek",
+    "description": "Inzicht in je recruitmentprestaties"
+  },
+  "tabs": {
+    "overview": "Overzicht",
+    "recruiters": "Recruiters",
+    "trends": "Trends"
+  },
+  "overview": {
+    "kpi": {
+      "openJobs": "Open vacatures",
+      "applicationsThisMonth": "Kandidaten deze maand",
+      "avgTimeToHire": "Gem. time-to-hire",
+      "hired": "Aangenomen",
+      "activeRecruiters": "Actieve recruiters",
+      "conversionRate": "Conversieratio"
+    },
+    "days": "dgn",
+    "funnel": {
+      "title": "Pipeline Funnel",
+      "tooltip": "kandidaten"
+    },
+    "sources": {
+      "title": "Kandidaatbronnen",
+      "tooltip": "aandeel"
+    }
+  },
+  "recruiters": {
+    "title": "Recruiter prestaties",
+    "columns": {
+      "recruiter": "Recruiter",
+      "openJobs": "Open vacatures",
+      "applications": "Sollicitaties",
+      "hired": "Aangenomen",
+      "avgDays": "Gem. days"
+    },
+    "days": "dgn"
+  },
+  "trends": {
+    "timeToHire": {
+      "title": "Time-to-Hire Trend",
+      "tooltipLabel": "Gem. time-to-hire",
+      "tooltipUnit": "dagen"
+    },
+    "applications": {
+      "title": "Sollicitaties per Week",
+      "tooltipUnit": "sollicitaties"
+    }
+  },
+  "backOffice": {
+    "header": {
+      "title": "Bureau-overzicht",
+      "description": "Live KPI's, forecast en marge-analyse voor je temp/contract-portfolio.",
+      "recompute": "Herbereken forecast"
+    },
+    "toasts": {
+      "recomputed": "Forecast herberekend",
+      "recomputeFailed": "Herberekenen mislukt"
+    },
+    "kpi": {
+      "activeContracts": "Actieve contracten",
+      "mtdRevenue": "MTD omzet",
+      "mtdMargin": "MTD marge",
+      "projectedNext": "Projectie volgende maand"
+    },
+    "forecast": {
+      "title": "Omzet-forecast — 6 maanden vooruit",
+      "description": "Verwachte omzet uit lopende contracten + pipeline van openstaande plaatsingen.",
+      "series": {
+        "expected": "Verwacht",
+        "pipeline": "Pipeline",
+        "total": "Totaal"
+      }
+    },
+    "margin": {
+      "titleClient": "Marge per klant",
+      "titleRecruiter": "Marge per recruiter",
+      "top": "Top {{count}} ·",
+      "descriptionClient": " Welke klanten leveren de hoogste bruto-marge?",
+      "descriptionRecruiter": " Welke recruiters dragen het meest bij?",
+      "perClient": "Per klant",
+      "perRecruiter": "Per recruiter",
+      "empty": "Nog geen marge-data.",
+      "series": {
+        "revenue": "Omzet",
+        "margin": "Marge",
+        "marginPct": "Marge %"
+      }
+    },
+    "commission": {
+      "title": "Commissie per recruiter — MTD",
+      "description": "Verdiende commissie deze maand, alle statussen.",
+      "empty": "Nog geen commissie geboekt deze maand.",
+      "series": {
+        "commission": "Commissie"
+      }
+    }
+  },
+  "costPerHire": {
+    "header": {
+      "title": "Cost-per-Hire",
+      "description": "Kosten en aannames per vacaturebank — vind je goedkoopste kanaal."
+    },
+    "filter": {
+      "jobLabel": "Vacature",
+      "allJobs": "Alle vacatures",
+      "boardCount_one": "{{count}} vacaturebank met activiteit",
+      "boardCount_other": "{{count}} vacaturebanken met activiteit"
+    },
+    "kpi": {
+      "totalSpend": "Totaal besteed",
+      "totalHires": "Totaal aangenomen",
+      "blendedCph": "Blended CPH",
+      "cheapestChannel": "Goedkoopste kanaal"
+    },
+    "empty": {
+      "title": "Plaats vacatures om kostencijfers te zien",
+      "description": "Zodra plaatsingen leiden tot aannames, verschijnt hier je CPH-overzicht."
+    },
+    "chart": {
+      "title": "CPH per vacaturebank",
+      "empty": "Nog geen aannames per kanaal — CPH wordt zichtbaar zodra de eerste hires zijn geregistreerd.",
+      "tooltip": "Cost-per-hire"
+    },
+    "table": {
+      "title": "Detailtabel",
+      "columns": {
+        "board": "Vacaturebank",
+        "postings": "Plaatsingen",
+        "hires": "Aannames",
+        "totalCost": "Totaal kosten",
+        "cph": "CPH"
+      },
+      "noHires": "geen aannames"
+    }
+  }
+}

@@ -12,6 +12,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import {
   ArrowRight,
   FileSignature,
@@ -36,34 +37,22 @@ import {
 import { useContracts } from "@/hooks/useBackOffice";
 import type { ContractStatus, ContractType } from "@/lib/types/backOffice";
 
-const STATUS_PILL: Record<ContractStatus, { label: string; cls: string }> = {
+const STATUS_PILL: Record<ContractStatus, { cls: string }> = {
   draft: {
-    label: "Concept",
     cls: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border-0",
   },
   active: {
-    label: "Actief",
     cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-0",
   },
   ended: {
-    label: "Beëindigd",
     cls: "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400 border-0",
   },
   terminated: {
-    label: "Vroegtijdig beëindigd",
     cls: "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300 border-0",
   },
   renewed: {
-    label: "Verlengd",
     cls: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border-0",
   },
-};
-
-const TYPE_LABEL: Record<ContractType, string> = {
-  temp: "Uitzend",
-  contract: "Detachering",
-  permanent: "Vast",
-  freelance: "Freelance",
 };
 
 function formatDate(value: string | null): string {
@@ -76,6 +65,7 @@ function formatDate(value: string | null): string {
 }
 
 export default function ContractsListPage() {
+  const { t } = useTranslation("contracts");
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<ContractStatus | "all">(
     "all"
@@ -118,13 +108,13 @@ export default function ContractsListPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Contracten"
-        description="Beheer uitzend-, detacherings- en freelance-contracten van plaatsing tot facturatie."
+        title={t("list.title")}
+        description={t("list.description")}
         actions={
           <Link href="/contracts/new">
             <Button className="border-0 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700">
               <Plus className="mr-1.5 h-4 w-4" />
-              Nieuw contract
+              {t("list.newContract")}
             </Button>
           </Link>
         }
@@ -132,10 +122,10 @@ export default function ContractsListPage() {
 
       {/* Stat cards */}
       <div className="grid gap-3 sm:grid-cols-3">
-        <StatCard label="Actieve contracten" value={stats.active} accent="emerald" />
-        <StatCard label="Totaal" value={stats.total} accent="indigo" />
+        <StatCard label={t("list.stats.active")} value={stats.active} accent="emerald" />
+        <StatCard label={t("list.stats.total")} value={stats.total} accent="indigo" />
         <StatCard
-          label="Loopt af binnen 30d"
+          label={t("list.stats.endingSoon")}
           value={stats.ending_soon}
           accent={stats.ending_soon > 0 ? "amber" : "zinc"}
         />
@@ -149,14 +139,14 @@ export default function ContractsListPage() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Zoek op kandidaat, klant of vacature..."
+              placeholder={t("list.searchPlaceholder")}
               className="pl-9"
             />
             {search && (
               <button
                 onClick={() => setSearch("")}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-zinc-600"
-                aria-label="Wis zoekopdracht"
+                aria-label={t("list.clearSearchAria")}
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -174,12 +164,12 @@ export default function ContractsListPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Alle statussen</SelectItem>
-                <SelectItem value="draft">Concept</SelectItem>
-                <SelectItem value="active">Actief</SelectItem>
-                <SelectItem value="ended">Beëindigd</SelectItem>
-                <SelectItem value="terminated">Vroegtijdig beëindigd</SelectItem>
-                <SelectItem value="renewed">Verlengd</SelectItem>
+                <SelectItem value="all">{t("list.filterStatus.all")}</SelectItem>
+                <SelectItem value="draft">{t("list.filterStatus.draft")}</SelectItem>
+                <SelectItem value="active">{t("list.filterStatus.active")}</SelectItem>
+                <SelectItem value="ended">{t("list.filterStatus.ended")}</SelectItem>
+                <SelectItem value="terminated">{t("list.filterStatus.terminated")}</SelectItem>
+                <SelectItem value="renewed">{t("list.filterStatus.renewed")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -202,14 +192,14 @@ export default function ContractsListPage() {
               <table className="w-full text-sm">
                 <thead className="border-b border-border bg-zinc-50/50 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground dark:bg-zinc-900/40">
                   <tr>
-                    <th className="px-4 py-3">Kandidaat</th>
-                    <th className="px-4 py-3">Klant</th>
-                    <th className="px-4 py-3">Type</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Start</th>
-                    <th className="px-4 py-3">Eind</th>
-                    <th className="px-4 py-3 text-right">Uren/wk</th>
-                    <th className="px-4 py-3 text-right">Marge %</th>
+                    <th className="px-4 py-3">{t("list.columns.candidate")}</th>
+                    <th className="px-4 py-3">{t("list.columns.client")}</th>
+                    <th className="px-4 py-3">{t("list.columns.type")}</th>
+                    <th className="px-4 py-3">{t("list.columns.status")}</th>
+                    <th className="px-4 py-3">{t("list.columns.start")}</th>
+                    <th className="px-4 py-3">{t("list.columns.end")}</th>
+                    <th className="px-4 py-3 text-right">{t("list.columns.weeklyHours")}</th>
+                    <th className="px-4 py-3 text-right">{t("list.columns.margin")}</th>
                     <th className="w-10 px-2 py-3"></th>
                   </tr>
                 </thead>
@@ -240,11 +230,11 @@ export default function ContractsListPage() {
                             variant="outline"
                             className="border-zinc-200 bg-white text-xs text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
                           >
-                            {TYPE_LABEL[c.contract_type]}
+                            {t(`type.${c.contract_type}`)}
                           </Badge>
                         </td>
                         <td className="px-4 py-3">
-                          <Badge className={status.cls}>{status.label}</Badge>
+                          <Badge className={status.cls}>{t(`status.${c.status}`)}</Badge>
                         </td>
                         <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
                           {formatDate(c.start_date)}
@@ -318,22 +308,22 @@ function StatCard({
 }
 
 function EmptyState() {
+  const { t } = useTranslation("contracts");
   return (
     <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
       <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 dark:bg-indigo-950/30">
         <FileSignature className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
       </div>
       <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-        Geen contracten gevonden
+        {t("list.empty.title")}
       </p>
       <p className="mt-1 max-w-sm text-xs text-muted-foreground">
-        Pas je filters aan of maak een nieuw contract aan om kandidaten op
-        plaatsing te zetten.
+        {t("list.empty.description")}
       </p>
       <Link href="/contracts/new" className="mt-4">
         <Button size="sm">
           <Plus className="mr-1.5 h-3.5 w-3.5" />
-          Nieuw contract
+          {t("list.empty.newContract")}
         </Button>
       </Link>
     </div>

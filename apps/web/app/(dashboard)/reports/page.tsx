@@ -10,6 +10,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import {
   Plus,
   Eye,
@@ -63,6 +64,7 @@ import { formatRelativeDate } from "@/lib/utils";
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function ReportsListPage() {
+  const { t } = useTranslation("reportsPage");
   const router = useRouter();
   const { data: reports, isLoading } = useReports();
   const { data: templates } = useReportTemplates();
@@ -75,7 +77,7 @@ export default function ReportsListPage() {
   const sharedReports = (reports ?? []).filter((r) => r.is_shared);
 
   const handleCreateBlank = async () => {
-    const name = newName.trim() || "Nieuw rapport";
+    const name = newName.trim() || t("list.defaultName");
     try {
       const r = await createReport.mutateAsync({
         name,
@@ -88,7 +90,7 @@ export default function ReportsListPage() {
       setNewName("");
       router.push(`/reports/builder/${r.id}`);
     } catch {
-      toast({ title: "Aanmaken mislukt", variant: "destructive" });
+      toast({ title: t("list.toasts.createError"), variant: "destructive" });
     }
   };
 
@@ -103,22 +105,22 @@ export default function ReportsListPage() {
       setCreateOpen(false);
       router.push(`/reports/builder/${r.id}`);
     } catch {
-      toast({ title: "Aanmaken mislukt", variant: "destructive" });
+      toast({ title: t("list.toasts.createError"), variant: "destructive" });
     }
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Rapporten"
-        description="Bouw aangepaste rapporten met KPI's, tabellen en grafieken."
+        title={t("list.title")}
+        description={t("list.description")}
         actions={
           <Button
             onClick={() => setCreateOpen(true)}
             className="gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
           >
             <Plus className="h-4 w-4" />
-            Nieuw rapport
+            {t("list.newReport")}
           </Button>
         }
       />
@@ -126,18 +128,18 @@ export default function ReportsListPage() {
       <Tabs defaultValue="mine" className="space-y-5">
         <TabsList className="bg-zinc-100/80 dark:bg-zinc-800/60 border border-border h-10">
           <TabsTrigger value="mine" className="px-5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            Mijn rapporten
+            {t("list.tabs.mine")}
           </TabsTrigger>
           <TabsTrigger value="templates" className="px-5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            Templates
+            {t("list.tabs.templates")}
           </TabsTrigger>
           <TabsTrigger value="shared" className="px-5 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            Gedeeld
+            {t("list.tabs.shared")}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="mine">
-          <ReportsGrid reports={myReports} loading={isLoading} emptyHint="Klik 'Nieuw rapport' om te starten." />
+          <ReportsGrid reports={myReports} loading={isLoading} emptyHint={t("list.emptyHint.mine")} />
         </TabsContent>
         <TabsContent value="templates">
           <TemplatesGrid
@@ -146,31 +148,31 @@ export default function ReportsListPage() {
           />
         </TabsContent>
         <TabsContent value="shared">
-          <ReportsGrid reports={sharedReports} loading={isLoading} emptyHint="Geen gedeelde rapporten." />
+          <ReportsGrid reports={sharedReports} loading={isLoading} emptyHint={t("list.emptyHint.shared")} />
         </TabsContent>
       </Tabs>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nieuw rapport</DialogTitle>
+            <DialogTitle>{t("createDialog.title")}</DialogTitle>
             <DialogDescription>
-              Geef een naam op of start direct vanuit een template.
+              {t("createDialog.description")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="new-report-name">Naam</Label>
+            <Label htmlFor="new-report-name">{t("createDialog.nameLabel")}</Label>
             <Input
               id="new-report-name"
               autoFocus
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              placeholder="Bijv. Q3 Executive Briefing"
+              placeholder={t("createDialog.namePlaceholder")}
             />
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setCreateOpen(false)}>
-              Annuleren
+              {t("createDialog.cancel")}
             </Button>
             <Button
               onClick={handleCreateBlank}
@@ -178,7 +180,7 @@ export default function ReportsListPage() {
               className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
             >
               <FileBarChart className="mr-2 h-4 w-4" />
-              Lege builder openen
+              {t("createDialog.openBlankBuilder")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -198,6 +200,7 @@ function ReportsGrid({
   loading: boolean;
   emptyHint: string;
 }) {
+  const { t } = useTranslation("reportsPage");
   if (loading) {
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -214,7 +217,7 @@ function ReportsGrid({
         <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50">
           <FileBarChart className="h-6 w-6 text-indigo-600" />
         </div>
-        <p className="text-base font-semibold">Nog geen rapporten</p>
+        <p className="text-base font-semibold">{t("grid.empty.title")}</p>
         <p className="mt-1 text-sm text-muted-foreground">{emptyHint}</p>
       </div>
     );
@@ -232,6 +235,7 @@ function ReportsGrid({
 // ─── Report card ─────────────────────────────────────────────────────────────
 
 function ReportCard({ report }: { report: Report }) {
+  const { t } = useTranslation("reportsPage");
   const router = useRouter();
   const { toast } = useToast();
   const deleteReport = useDeleteReport();
@@ -246,7 +250,7 @@ function ReportCard({ report }: { report: Report }) {
   const handleDelete = () => {
     deleteReport.mutate(report.id, {
       onSuccess: () => {
-        toast({ title: "Rapport verwijderd" });
+        toast({ title: t("card.toasts.deleted") });
         setConfirmDelete(false);
       },
     });
@@ -254,9 +258,9 @@ function ReportCard({ report }: { report: Report }) {
 
   const handleDuplicate = () => {
     dupReport.mutate(
-      { id: report.id, new_name: `${report.name} (kopie)` },
+      { id: report.id, new_name: `${report.name} (${t("card.copySuffix")})` },
       {
-        onSuccess: () => toast({ title: "Rapport gedupliceerd" }),
+        onSuccess: () => toast({ title: t("card.toasts.duplicated") }),
       }
     );
   };
@@ -276,17 +280,17 @@ function ReportCard({ report }: { report: Report }) {
       setEmbedUrl(res.url);
       setEmbedOpen(true);
     } catch {
-      toast({ title: "Embed-link aanmaken mislukt", variant: "destructive" });
+      toast({ title: t("card.toasts.embedError"), variant: "destructive" });
     }
   };
 
   const handleRevoke = async () => {
     try {
       await revokeEmbed.mutateAsync(report.id);
-      toast({ title: "Embed-link ingetrokken" });
+      toast({ title: t("card.toasts.revoked") });
       setEmbedOpen(false);
     } catch {
-      toast({ title: "Intrekken mislukt", variant: "destructive" });
+      toast({ title: t("card.toasts.revokeError"), variant: "destructive" });
     }
   };
 
@@ -311,24 +315,24 @@ function ReportCard({ report }: { report: Report }) {
               )}
             </div>
             <p className="line-clamp-2 min-h-[40px] text-xs text-muted-foreground">
-              {report.description ?? "Geen beschrijving"}
+              {report.description ?? t("card.noDescription")}
             </p>
             <div className="mt-3 flex items-center gap-3 text-[11px] text-muted-foreground">
               <span className="flex items-center gap-1">
                 <FileBarChart className="h-3 w-3" />
-                {blockCount} {blockCount === 1 ? "blok" : "blokken"}
+                {t("card.blocks", { count: blockCount })}
               </span>
               {report.last_run_at && (
                 <span>
-                  Laatst uitgevoerd: {formatRelativeDate(report.last_run_at)}
+                  {t("card.lastRun", { date: formatRelativeDate(report.last_run_at) })}
                 </span>
               )}
               {!report.last_run_at && (
-                <span>Nog niet uitgevoerd</span>
+                <span>{t("card.neverRun")}</span>
               )}
               {report.embed_enabled && (
                 <Badge variant="success" className="ml-auto">
-                  Live embed
+                  {t("card.liveEmbed")}
                 </Badge>
               )}
             </div>
@@ -341,11 +345,11 @@ function ReportCard({ report }: { report: Report }) {
               variant="ghost"
               size="sm"
               className="h-8 text-xs"
-              title="Bekijk rapport"
+              title={t("card.viewTitle")}
             >
               <Link href={`/reports/builder/${report.id}?view=run`}>
                 <Eye className="mr-1 h-3.5 w-3.5" />
-                Bekijk
+                {t("card.view")}
               </Link>
             </Button>
             <Button
@@ -353,11 +357,11 @@ function ReportCard({ report }: { report: Report }) {
               variant="ghost"
               size="sm"
               className="h-8 text-xs"
-              title="Bewerk"
+              title={t("card.editTitle")}
             >
               <Link href={`/reports/builder/${report.id}`}>
                 <Pencil className="mr-1 h-3.5 w-3.5" />
-                Bewerk
+                {t("card.edit")}
               </Link>
             </Button>
             <Button
@@ -365,20 +369,20 @@ function ReportCard({ report }: { report: Report }) {
               size="sm"
               className="h-8 text-xs"
               onClick={handleDuplicate}
-              title="Dupliceer"
+              title={t("card.duplicateTitle")}
             >
               <Copy className="mr-1 h-3.5 w-3.5" />
-              Dupliceer
+              {t("card.duplicate")}
             </Button>
             <Button
               variant="ghost"
               size="sm"
               className="h-8 text-xs"
               onClick={handleEmbed}
-              title="Embed-link"
+              title={t("card.embedTitle")}
             >
               <LinkIcon className="mr-1 h-3.5 w-3.5" />
-              Embed
+              {t("card.embed")}
             </Button>
             <span className="ml-auto" />
             <Button
@@ -386,7 +390,7 @@ function ReportCard({ report }: { report: Report }) {
               size="icon"
               className="h-8 w-8 text-zinc-400 hover:bg-red-50 hover:text-red-600"
               onClick={() => setConfirmDelete(true)}
-              title="Verwijder"
+              title={t("card.deleteTitle")}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
@@ -398,19 +402,18 @@ function ReportCard({ report }: { report: Report }) {
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Rapport verwijderen?</AlertDialogTitle>
+            <AlertDialogTitle>{t("deleteDialog.title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              &ldquo;{report.name}&rdquo; wordt permanent verwijderd. Embed-links
-              worden ingetrokken.
+              {t("deleteDialog.description", { name: report.name })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogCancel>{t("deleteDialog.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               className="bg-red-600 hover:bg-red-700"
             >
-              Verwijder
+              {t("deleteDialog.confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -420,10 +423,9 @@ function ReportCard({ report }: { report: Report }) {
       <Dialog open={embedOpen} onOpenChange={setEmbedOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Embed-link</DialogTitle>
+            <DialogTitle>{t("embedDialog.title")}</DialogTitle>
             <DialogDescription>
-              Iedereen met deze link kan dit rapport bekijken (read-only,
-              zonder login).
+              {t("embedDialog.description")}
             </DialogDescription>
           </DialogHeader>
           {embedUrl && (
@@ -438,30 +440,29 @@ function ReportCard({ report }: { report: Report }) {
                   onClick={() => {
                     if (typeof navigator !== "undefined" && navigator.clipboard) {
                       navigator.clipboard.writeText(embedUrl);
-                      toast({ title: "Gekopieerd" });
+                      toast({ title: t("embedDialog.toasts.copied") });
                     }
                   }}
                 >
-                  Kopieer
+                  {t("embedDialog.copy")}
                 </Button>
               </div>
               <div className="flex items-center gap-2 rounded-md bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
                 <AlertCircle className="h-4 w-4 shrink-0" />
-                Iedereen met deze link kan de cijfers zien. Trek hem in
-                wanneer je deze niet meer wilt delen.
+                {t("embedDialog.warning")}
               </div>
             </div>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setEmbedOpen(false)}>
-              Sluit
+              {t("embedDialog.close")}
             </Button>
             <Button
               variant="destructive"
               onClick={handleRevoke}
               disabled={revokeEmbed.isPending}
             >
-              Trek link in
+              {t("embedDialog.revoke")}
             </Button>
           </DialogFooter>
         </DialogContent>
