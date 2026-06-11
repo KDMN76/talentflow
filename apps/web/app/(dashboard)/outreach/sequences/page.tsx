@@ -9,6 +9,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import { ArrowRight, Loader2, Plus, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,20 +36,21 @@ import {
 } from "@/hooks/useNurture";
 
 export default function SequencesListPage() {
+  const { t } = useTranslation("outreach");
   const { data, isLoading } = useSequences();
   const [createOpen, setCreateOpen] = useState(false);
 
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Nurture sequences"
-        description="Multi-step funnels voor passive sourcing en reactivatie."
+        title={t("sequences.title")}
+        description={t("sequences.description")}
         actions={
           <div className="flex items-center gap-2">
             <AiDisclosureBadge />
             <Button onClick={() => setCreateOpen(true)}>
               <Plus className="mr-1.5 h-4 w-4" />
-              Nieuwe sequence
+              {t("sequences.newSequence")}
             </Button>
           </div>
         }
@@ -66,13 +68,13 @@ export default function SequencesListPage() {
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 text-indigo-500 dark:bg-indigo-950/40">
               <Sparkles className="h-5 w-5" />
             </div>
-            <p className="text-sm font-medium">Nog geen sequences</p>
+            <p className="text-sm font-medium">{t("sequences.empty.title")}</p>
             <p className="text-xs text-muted-foreground">
-              Maak je eerste nurture-sequence om kandidaten op te warmen.
+              {t("sequences.empty.description")}
             </p>
             <Button onClick={() => setCreateOpen(true)} className="mt-2">
               <Plus className="mr-1.5 h-4 w-4" />
-              Nieuwe sequence
+              {t("sequences.newSequence")}
             </Button>
           </CardContent>
         </Card>
@@ -97,6 +99,7 @@ function SequenceCard({
 }: {
   sequence: import("@/lib/types/outreach").NurtureSequence;
 }) {
+  const { t } = useTranslation("outreach");
   const update = useUpdateSequence();
   const archive = useArchiveSequence();
   const { toast } = useToast();
@@ -109,7 +112,7 @@ function SequenceCard({
               {sequence.name}
             </p>
             <p className="line-clamp-2 text-[11px] text-muted-foreground">
-              {sequence.description ?? "Geen beschrijving"}
+              {sequence.description ?? t("sequences.noDescription")}
             </p>
           </div>
           <Switch
@@ -120,25 +123,25 @@ function SequenceCard({
                   id: sequence.id,
                   patch: { active: true },
                 });
-                toast({ title: "Sequence actief" });
+                toast({ title: t("sequences.toasts.activated") });
               } else {
                 await archive.mutateAsync(sequence.id);
-                toast({ title: "Sequence gepauzeerd" });
+                toast({ title: t("sequences.toasts.paused") });
               }
             }}
           />
         </div>
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
           <span className="rounded-full bg-zinc-100 px-2 py-0.5 font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-            {sequence.total_steps} stappen
+            {t("sequences.steps", { count: sequence.total_steps })}
           </span>
           {sequence.active ? (
             <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-              Actief
+              {t("sequences.active")}
             </span>
           ) : (
             <span className="rounded-full bg-zinc-100 px-2 py-0.5 font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-              Gearchiveerd
+              {t("sequences.archived")}
             </span>
           )}
         </div>
@@ -146,7 +149,7 @@ function SequenceCard({
           href={`/outreach/sequences/${sequence.id}`}
           className="mt-auto inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
         >
-          Bouwer openen
+          {t("sequences.openBuilder")}
           <ArrowRight className="h-3 w-3" />
         </Link>
       </CardContent>
@@ -161,6 +164,7 @@ function CreateSequenceDialog({
   open: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation("outreach");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const create = useCreateSequence();
@@ -174,20 +178,22 @@ function CreateSequenceDialog({
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Nieuwe sequence</DialogTitle>
+          <DialogTitle>{t("sequences.createDialog.title")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div>
-            <Label htmlFor="seq-name">Naam</Label>
+            <Label htmlFor="seq-name">{t("sequences.createDialog.nameLabel")}</Label>
             <Input
               id="seq-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Bijv. Senior Data Engineer outbound"
+              placeholder={t("sequences.createDialog.namePlaceholder")}
             />
           </div>
           <div>
-            <Label htmlFor="seq-desc">Beschrijving (optioneel)</Label>
+            <Label htmlFor="seq-desc">
+              {t("sequences.createDialog.descriptionLabel")}
+            </Label>
             <Textarea
               id="seq-desc"
               rows={3}
@@ -198,7 +204,7 @@ function CreateSequenceDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Annuleren
+            {t("sequences.createDialog.cancel")}
           </Button>
           <Button
             disabled={!name.trim() || create.isPending}
@@ -207,7 +213,7 @@ function CreateSequenceDialog({
                 name: name.trim(),
                 description: description.trim() || undefined,
               });
-              toast({ title: "Sequence aangemaakt" });
+              toast({ title: t("sequences.toasts.created") });
               setName("");
               setDescription("");
               onClose();
@@ -216,7 +222,7 @@ function CreateSequenceDialog({
             {create.isPending && (
               <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
             )}
-            Aanmaken
+            {t("sequences.createDialog.create")}
           </Button>
         </DialogFooter>
       </DialogContent>

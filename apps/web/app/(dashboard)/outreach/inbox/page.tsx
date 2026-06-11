@@ -12,6 +12,7 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import {
   AlertTriangle,
   ArrowRight,
@@ -52,6 +53,7 @@ type InboxItem =
     };
 
 export default function InboxPage() {
+  const { t } = useTranslation("outreach");
   const drafts = useOutreachMessages({ status: "drafted" });
   const pending = useOutreachMessages({ status: "pending_approval" });
   const replies = useReplies();
@@ -87,27 +89,27 @@ export default function InboxPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Outreach Inbox"
-        description="Alles wat nu jouw aandacht nodig heeft — concepten + replies in één feed."
+        title={t("inbox.title")}
+        description={t("inbox.description")}
         actions={<AiDisclosureBadge />}
       />
 
       {/* Stat strip */}
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
-          label="Concepten te beoordelen"
+          label={t("inbox.stats.draftsToReview")}
           value={draftCount}
           icon={<AlertTriangle className="h-5 w-5" />}
           gradient="from-amber-500 to-orange-600"
         />
         <StatCard
-          label="Replies binnen"
+          label={t("inbox.stats.repliesIn")}
           value={replyCount}
           icon={<MessageSquare className="h-5 w-5" />}
           gradient="from-indigo-500 to-purple-600"
         />
         <StatCard
-          label="Geïnteresseerd"
+          label={t("inbox.stats.interested")}
           value={interestedCount}
           icon={<CheckCircle2 className="h-5 w-5" />}
           gradient="from-emerald-500 to-teal-600"
@@ -122,9 +124,9 @@ export default function InboxPage() {
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-500 dark:bg-emerald-950/40">
               <InboxIcon className="h-6 w-6" />
             </div>
-            <p className="text-sm font-medium">Inbox leeg</p>
+            <p className="text-sm font-medium">{t("inbox.empty.title")}</p>
             <p className="text-xs text-muted-foreground">
-              Alle berichten zijn afgehandeld. Goed werk!
+              {t("inbox.empty.description")}
             </p>
           </CardContent>
         </Card>
@@ -183,6 +185,7 @@ function StatCard({
 }
 
 function DraftItem({ message }: { message: OutreachMessage }) {
+  const { t } = useTranslation("outreach");
   const Icon = CHANNEL_ICON[message.channel];
   return (
     <li className="flex items-start gap-3 px-5 py-4 transition-colors hover:bg-zinc-50/80 dark:hover:bg-zinc-800/30">
@@ -192,7 +195,7 @@ function DraftItem({ message }: { message: OutreachMessage }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <Badge className="border-0 bg-amber-100 text-[10px] text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-            Concept
+            {t("inbox.draftBadge")}
           </Badge>
           <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
             {message.candidate_name ?? message.candidate_id}
@@ -218,7 +221,7 @@ function DraftItem({ message }: { message: OutreachMessage }) {
         href="/outreach"
         className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
       >
-        Beoordelen
+        {t("inbox.review")}
         <ArrowRight className="h-3 w-3" />
       </Link>
     </li>
@@ -234,7 +237,9 @@ function ReplyItem({
   reply: OutreachMessage | null;
   original: OutreachMessage | null;
 }) {
-  const candName = reply?.candidate_name ?? original?.candidate_name ?? "Onbekend";
+  const { t } = useTranslation("outreach");
+  const candName =
+    reply?.candidate_name ?? original?.candidate_name ?? t("inbox.unknownCandidate");
   const pill = REPLY_CATEGORY_PILL[classification.category];
   return (
     <li className="flex items-start gap-3 px-5 py-4 transition-colors hover:bg-zinc-50/80 dark:hover:bg-zinc-800/30">
@@ -248,10 +253,14 @@ function ReplyItem({
             {candName}
           </span>
           <span className="text-[11px] text-muted-foreground">
-            reply · {formatRelativeNL(classification.classified_at)}
+            {t("inbox.replyMeta", {
+              time: formatRelativeNL(classification.classified_at),
+            })}
           </span>
           <span className="text-[11px] text-muted-foreground">
-            vertrouwen {Math.round(classification.confidence * 100)}%
+            {t("inbox.confidenceMeta", {
+              percent: Math.round(classification.confidence * 100),
+            })}
           </span>
         </div>
         {reply && (
@@ -267,7 +276,7 @@ function ReplyItem({
         href="/outreach"
         className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
       >
-        Behandelen
+        {t("inbox.handle")}
         <ArrowRight className="h-3 w-3" />
       </Link>
     </li>
