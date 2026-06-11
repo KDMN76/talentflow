@@ -26,6 +26,7 @@ COPY package.json ./
 COPY apps/web/package.json ./apps/web/package.json
 COPY packages/shared/package.json ./packages/shared/package.json
 COPY packages/contracts/package.json ./packages/contracts/package.json
+COPY packages/i18n/package.json ./packages/i18n/package.json
 
 RUN npm install --no-audit --no-fund --include=dev --legacy-peer-deps --workspaces --include-workspace-root
 
@@ -49,7 +50,9 @@ COPY package.json ./
 COPY apps/web/package.json ./apps/web/package.json
 COPY packages/shared/package.json ./packages/shared/package.json
 COPY packages/contracts/package.json ./packages/contracts/package.json
+COPY packages/i18n/package.json ./packages/i18n/package.json
 COPY packages/contracts ./packages/contracts
+COPY packages/i18n ./packages/i18n
 COPY apps/web ./apps/web
 
 # Shared package mag onbroken-builden zodat de `dist`-export bestaat — Next.js

@@ -23,8 +23,10 @@
     "@types/react-dom": "18.3.7"
   },
   "comment:types-react": "App draait op React 18; Radix-peers (@types/react: *) hesen @types/react@19 op root waardoor de React-19 ReactNode (incl. bigint) botste met de React-18 JSX-runtime in apps/web (providers.tsx). Door @types/react 18.x als directe root-devDep te pinnen wint die de root-dedup en is er één versie in de hele monorepo.",
+  "comment:ioredis": "bullmq bundelt z'n eigen ioredis; met losse ^-ranges resolvet `npm install` (Docker-build, geen npm ci) een andere ioredis voor bullmq dan de top-level → dubbele Redis-typedefs → TS2322 in de worker-builds. Eén ioredis-versie forceren dedupet dat (zelfde dual-package-fix als @types/react hierboven).",
   "overrides": {
     "@types/react": "18.3.28",
-    "@types/react-dom": "18.3.7"
+    "@types/react-dom": "18.3.7",
+    "ioredis": "5.3.2"
   }
 }
