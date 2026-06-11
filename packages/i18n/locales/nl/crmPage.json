@@ -1,0 +1,78 @@
+{
+  "header": {
+    "title": "CRM",
+    "description": "Beheer klanten, contacten en sales-deals"
+  },
+  "tabs": {
+    "organizations": "Klanten",
+    "contacts": "Contacten",
+    "deals": "Deals"
+  },
+  "orgType": {
+    "client": "Klant",
+    "prospect": "Prospect",
+    "partner": "Partner"
+  },
+  "organizations": {
+    "searchPlaceholder": "Zoek klanten...",
+    "newButton": "Nieuwe klant",
+    "emptySearchTitle": "Geen klanten gevonden",
+    "emptyTitle": "Nog geen klanten",
+    "emptySearchDescription": "Probeer een andere zoekterm.",
+    "emptyDescription": "Voeg je eerste klant toe om te beginnen.",
+    "dialog": {
+      "title": "Nieuwe klant",
+      "nameLabel": "Naam *",
+      "namePlaceholder": "Bijv. ING Bank N.V.",
+      "industryLabel": "Branche",
+      "industryPlaceholder": "Bijv. Financiële dienstverlening",
+      "websiteLabel": "Website",
+      "typeLabel": "Type",
+      "notesLabel": "Notities",
+      "notesPlaceholder": "Optionele notities over deze klant..."
+    }
+  },
+  "contacts": {
+    "filterPlaceholder": "Filter op organisatie",
+    "allOrganizations": "Alle organisaties",
+    "newButton": "Nieuw contact",
+    "emptyTitle": "Nog geen contacten",
+    "emptyDescription": "Voeg contactpersonen toe binnen je klantorganisaties.",
+    "linkedinTitle": "LinkedIn-profiel",
+    "dialog": {
+      "title": "Nieuw contact",
+      "nameLabel": "Naam *",
+      "emailLabel": "E-mail",
+      "phoneLabel": "Telefoon",
+      "roleLabel": "Functie",
+      "rolePlaceholder": "Bijv. Head of Talent Acquisition",
+      "organizationLabel": "Organisatie *",
+      "organizationPlaceholder": "Selecteer organisatie",
+      "linkedinLabel": "LinkedIn URL"
+    }
+  },
+  "deals": {
+    "expectedRevenue": "Verwachte omzet deze maand",
+    "newButton": "Nieuwe deal",
+    "emptyTitle": "Nog geen deals",
+    "emptyDescription": "Maak je eerste deal aan om je sales-pipeline op te bouwen.",
+    "noDeals": "Geen deals",
+    "dialog": {
+      "title": "Nieuwe deal",
+      "titleLabel": "Titel *",
+      "titlePlaceholder": "Bijv. Plaatsing Senior Frontend",
+      "organizationLabel": "Organisatie *",
+      "organizationPlaceholder": "Selecteer organisatie",
+      "stageLabel": "Fase",
+      "valueLabel": "Waarde (€)",
+      "closeDateLabel": "Verwachte sluitdatum",
+      "notesLabel": "Notities",
+      "notesPlaceholder": "Optionele notities..."
+    }
+  },
+  "actions": {
+    "cancel": "Annuleren",
+    "saving": "Bezig...",
+    "create": "Aanmaken"
+  }
+}

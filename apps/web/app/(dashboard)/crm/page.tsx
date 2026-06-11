@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Building2,
   Users,
@@ -78,10 +79,12 @@ function formatDate(iso: string | null): string {
   });
 }
 
-const ORG_TYPE_LABELS: Record<Organization["type"], string> = {
-  client: "Klant",
-  prospect: "Prospect",
-  partner: "Partner",
+// Maps an organization type to its translation key suffix under `orgType.*`.
+// The label itself is resolved with `t` inside the consuming component.
+const ORG_TYPE_LABEL_KEYS: Record<Organization["type"], string> = {
+  client: "client",
+  prospect: "prospect",
+  partner: "partner",
 };
 
 const ORG_TYPE_BADGE: Record<Organization["type"], string> = {
@@ -129,26 +132,27 @@ const DEAL_STAGE_COLORS: Record<
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function CrmPage() {
+  const { t } = useTranslation("crmPage");
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="CRM"
-        description="Beheer klanten, contacten en sales-deals"
+        title={t("header.title")}
+        description={t("header.description")}
       />
 
       <Tabs defaultValue="organizations" className="space-y-4">
         <TabsList>
           <TabsTrigger value="organizations">
             <Building2 className="h-4 w-4 mr-2" />
-            Klanten
+            {t("tabs.organizations")}
           </TabsTrigger>
           <TabsTrigger value="contacts">
             <Users className="h-4 w-4 mr-2" />
-            Contacten
+            {t("tabs.contacts")}
           </TabsTrigger>
           <TabsTrigger value="deals">
             <Target className="h-4 w-4 mr-2" />
-            Deals
+            {t("tabs.deals")}
           </TabsTrigger>
         </TabsList>
 
@@ -169,6 +173,7 @@ export default function CrmPage() {
 // ─── Organizations Tab ──────────────────────────────────────────────────────
 
 function OrganizationsTab() {
+  const { t } = useTranslation("crmPage");
   const { data: orgs, isLoading } = useOrganizations();
   const [search, setSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
@@ -191,7 +196,7 @@ function OrganizationsTab() {
         <div className="relative max-w-sm w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Zoek klanten..."
+            placeholder={t("organizations.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -201,7 +206,7 @@ function OrganizationsTab() {
           <DialogTrigger asChild>
             <Button className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-sm border-0">
               <Plus className="mr-2 h-4 w-4" />
-              Nieuwe klant
+              {t("organizations.newButton")}
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -220,14 +225,16 @@ function OrganizationsTab() {
         <EmptyState
           icon={<Building2 className="h-12 w-12 text-muted-foreground/30" />}
           title={
-            search ? "Geen klanten gevonden" : "Nog geen klanten"
+            search
+              ? t("organizations.emptySearchTitle")
+              : t("organizations.emptyTitle")
           }
           description={
             search
-              ? "Probeer een andere zoekterm."
-              : "Voeg je eerste klant toe om te beginnen."
+              ? t("organizations.emptySearchDescription")
+              : t("organizations.emptyDescription")
           }
-          ctaLabel="Nieuwe klant"
+          ctaLabel={t("organizations.newButton")}
           onCta={() => setCreateOpen(true)}
         />
       ) : (
@@ -242,6 +249,7 @@ function OrganizationsTab() {
 }
 
 function OrganizationCard({ org }: { org: Organization }) {
+  const { t } = useTranslation("crmPage");
   return (
     <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-card shadow-sm p-5 hover:shadow-md hover:border-zinc-300 dark:hover:border-zinc-700 transition-all">
       <div className="flex items-start justify-between gap-3">
@@ -261,7 +269,7 @@ function OrganizationCard({ org }: { org: Organization }) {
             ORG_TYPE_BADGE[org.type]
           )}
         >
-          {ORG_TYPE_LABELS[org.type]}
+          {t(`orgType.${ORG_TYPE_LABEL_KEYS[org.type]}`)}
         </Badge>
       </div>
 
@@ -288,6 +296,7 @@ function OrganizationCard({ org }: { org: Organization }) {
 }
 
 function CreateOrganizationDialog({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation("crmPage");
   const create = useCreateOrganization();
   const [name, setName] = useState("");
   const [industry, setIndustry] = useState("");
@@ -311,32 +320,36 @@ function CreateOrganizationDialog({ onClose }: { onClose: () => void }) {
   return (
     <form onSubmit={submit} className="space-y-4">
       <DialogHeader>
-        <DialogTitle>Nieuwe klant</DialogTitle>
+        <DialogTitle>{t("organizations.dialog.title")}</DialogTitle>
       </DialogHeader>
 
       <div className="space-y-3">
         <div className="space-y-1.5">
-          <Label htmlFor="org-name">Naam *</Label>
+          <Label htmlFor="org-name">{t("organizations.dialog.nameLabel")}</Label>
           <Input
             id="org-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Bijv. ING Bank N.V."
+            placeholder={t("organizations.dialog.namePlaceholder")}
             required
             autoFocus
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="org-industry">Branche</Label>
+          <Label htmlFor="org-industry">
+            {t("organizations.dialog.industryLabel")}
+          </Label>
           <Input
             id="org-industry"
             value={industry}
             onChange={(e) => setIndustry(e.target.value)}
-            placeholder="Bijv. Financiële dienstverlening"
+            placeholder={t("organizations.dialog.industryPlaceholder")}
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="org-website">Website</Label>
+          <Label htmlFor="org-website">
+            {t("organizations.dialog.websiteLabel")}
+          </Label>
           <Input
             id="org-website"
             type="url"
@@ -346,7 +359,7 @@ function CreateOrganizationDialog({ onClose }: { onClose: () => void }) {
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="org-type">Type</Label>
+          <Label htmlFor="org-type">{t("organizations.dialog.typeLabel")}</Label>
           <Select
             value={type}
             onValueChange={(v) => setType(v as Organization["type"])}
@@ -355,20 +368,22 @@ function CreateOrganizationDialog({ onClose }: { onClose: () => void }) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="prospect">Prospect</SelectItem>
-              <SelectItem value="client">Klant</SelectItem>
-              <SelectItem value="partner">Partner</SelectItem>
+              <SelectItem value="prospect">{t("orgType.prospect")}</SelectItem>
+              <SelectItem value="client">{t("orgType.client")}</SelectItem>
+              <SelectItem value="partner">{t("orgType.partner")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="org-notes">Notities</Label>
+          <Label htmlFor="org-notes">
+            {t("organizations.dialog.notesLabel")}
+          </Label>
           <textarea
             id="org-notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
-            placeholder="Optionele notities over deze klant..."
+            placeholder={t("organizations.dialog.notesPlaceholder")}
             className="flex w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
           />
         </div>
@@ -376,14 +391,14 @@ function CreateOrganizationDialog({ onClose }: { onClose: () => void }) {
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onClose}>
-          Annuleren
+          {t("actions.cancel")}
         </Button>
         <Button
           type="submit"
           disabled={!name.trim() || create.isPending}
           className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 border-0"
         >
-          {create.isPending ? "Bezig..." : "Aanmaken"}
+          {create.isPending ? t("actions.saving") : t("actions.create")}
         </Button>
       </DialogFooter>
     </form>
@@ -393,6 +408,7 @@ function CreateOrganizationDialog({ onClose }: { onClose: () => void }) {
 // ─── Contacts Tab ───────────────────────────────────────────────────────────
 
 function ContactsTab() {
+  const { t } = useTranslation("crmPage");
   const [orgFilter, setOrgFilter] = useState<string>("all");
   const [createOpen, setCreateOpen] = useState(false);
   const { data: orgs } = useOrganizations();
@@ -412,10 +428,10 @@ function ContactsTab() {
         <div className="w-full sm:max-w-xs">
           <Select value={orgFilter} onValueChange={setOrgFilter}>
             <SelectTrigger>
-              <SelectValue placeholder="Filter op organisatie" />
+              <SelectValue placeholder={t("contacts.filterPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Alle organisaties</SelectItem>
+              <SelectItem value="all">{t("contacts.allOrganizations")}</SelectItem>
               {(orgs ?? []).map((o) => (
                 <SelectItem key={o.id} value={o.id}>
                   {o.name}
@@ -428,7 +444,7 @@ function ContactsTab() {
           <DialogTrigger asChild>
             <Button className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-sm border-0">
               <Plus className="mr-2 h-4 w-4" />
-              Nieuw contact
+              {t("contacts.newButton")}
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -450,9 +466,9 @@ function ContactsTab() {
       ) : !contacts || contacts.length === 0 ? (
         <EmptyState
           icon={<Users className="h-12 w-12 text-muted-foreground/30" />}
-          title="Nog geen contacten"
-          description="Voeg contactpersonen toe binnen je klantorganisaties."
-          ctaLabel="Nieuw contact"
+          title={t("contacts.emptyTitle")}
+          description={t("contacts.emptyDescription")}
+          ctaLabel={t("contacts.newButton")}
           onCta={() => setCreateOpen(true)}
         />
       ) : (
@@ -526,7 +542,7 @@ function ContactsTab() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400"
-                        title="LinkedIn-profiel"
+                        title={t("contacts.linkedinTitle")}
                       >
                         <Linkedin className="h-4 w-4" />
                       </a>
@@ -551,6 +567,7 @@ function CreateContactDialog({
   defaultOrganizationId?: string;
   onClose: () => void;
 }) {
+  const { t } = useTranslation("crmPage");
   const create = useCreateContact();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -578,12 +595,12 @@ function CreateContactDialog({
   return (
     <form onSubmit={submit} className="space-y-4">
       <DialogHeader>
-        <DialogTitle>Nieuw contact</DialogTitle>
+        <DialogTitle>{t("contacts.dialog.title")}</DialogTitle>
       </DialogHeader>
 
       <div className="space-y-3">
         <div className="space-y-1.5">
-          <Label htmlFor="ctc-name">Naam *</Label>
+          <Label htmlFor="ctc-name">{t("contacts.dialog.nameLabel")}</Label>
           <Input
             id="ctc-name"
             value={name}
@@ -594,7 +611,7 @@ function CreateContactDialog({
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label htmlFor="ctc-email">E-mail</Label>
+            <Label htmlFor="ctc-email">{t("contacts.dialog.emailLabel")}</Label>
             <Input
               id="ctc-email"
               type="email"
@@ -603,7 +620,7 @@ function CreateContactDialog({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="ctc-phone">Telefoon</Label>
+            <Label htmlFor="ctc-phone">{t("contacts.dialog.phoneLabel")}</Label>
             <Input
               id="ctc-phone"
               type="tel"
@@ -613,19 +630,23 @@ function CreateContactDialog({
           </div>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="ctc-role">Functie</Label>
+          <Label htmlFor="ctc-role">{t("contacts.dialog.roleLabel")}</Label>
           <Input
             id="ctc-role"
             value={role}
             onChange={(e) => setRole(e.target.value)}
-            placeholder="Bijv. Head of Talent Acquisition"
+            placeholder={t("contacts.dialog.rolePlaceholder")}
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="ctc-org">Organisatie *</Label>
+          <Label htmlFor="ctc-org">
+            {t("contacts.dialog.organizationLabel")}
+          </Label>
           <Select value={organizationId} onValueChange={setOrganizationId}>
             <SelectTrigger id="ctc-org">
-              <SelectValue placeholder="Selecteer organisatie" />
+              <SelectValue
+                placeholder={t("contacts.dialog.organizationPlaceholder")}
+              />
             </SelectTrigger>
             <SelectContent>
               {organizations.map((o) => (
@@ -637,7 +658,9 @@ function CreateContactDialog({
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="ctc-linkedin">LinkedIn URL</Label>
+          <Label htmlFor="ctc-linkedin">
+            {t("contacts.dialog.linkedinLabel")}
+          </Label>
           <Input
             id="ctc-linkedin"
             type="url"
@@ -650,14 +673,14 @@ function CreateContactDialog({
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onClose}>
-          Annuleren
+          {t("actions.cancel")}
         </Button>
         <Button
           type="submit"
           disabled={!name.trim() || !organizationId || create.isPending}
           className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 border-0"
         >
-          {create.isPending ? "Bezig..." : "Aanmaken"}
+          {create.isPending ? t("actions.saving") : t("actions.create")}
         </Button>
       </DialogFooter>
     </form>
@@ -667,6 +690,7 @@ function CreateContactDialog({
 // ─── Deals Tab ──────────────────────────────────────────────────────────────
 
 function DealsTab() {
+  const { t } = useTranslation("crmPage");
   const { data: pipeline, isLoading } = useDealsPipeline();
   const { data: orgs } = useOrganizations();
   const [createOpen, setCreateOpen] = useState(false);
@@ -699,7 +723,7 @@ function DealsTab() {
           </div>
           <div>
             <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">
-              Verwachte omzet deze maand
+              {t("deals.expectedRevenue")}
             </p>
             <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
               {formatCurrency(expectedRevenueThisMonth)}
@@ -710,7 +734,7 @@ function DealsTab() {
           <DialogTrigger asChild>
             <Button className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-sm border-0">
               <Plus className="mr-2 h-4 w-4" />
-              Nieuwe deal
+              {t("deals.newButton")}
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -731,9 +755,9 @@ function DealsTab() {
       ) : totalDeals === 0 ? (
         <EmptyState
           icon={<Target className="h-12 w-12 text-muted-foreground/30" />}
-          title="Nog geen deals"
-          description="Maak je eerste deal aan om je sales-pipeline op te bouwen."
-          ctaLabel="Nieuwe deal"
+          title={t("deals.emptyTitle")}
+          description={t("deals.emptyDescription")}
+          ctaLabel={t("deals.newButton")}
           onCta={() => setCreateOpen(true)}
         />
       ) : (
@@ -758,6 +782,7 @@ function DealColumn({
   stage: DealStage;
   deals: CrmDeal[];
 }) {
+  const { t } = useTranslation("crmPage");
   const colors = DEAL_STAGE_COLORS[stage];
   const total = deals.reduce((sum, d) => sum + d.value_eur, 0);
 
@@ -788,7 +813,7 @@ function DealColumn({
       <div className="flex-1 p-2 space-y-2">
         {deals.length === 0 ? (
           <p className="text-xs text-muted-foreground text-center py-4">
-            Geen deals
+            {t("deals.noDeals")}
           </p>
         ) : (
           deals.map((deal) => <DealCard key={deal.id} deal={deal} />)
@@ -855,6 +880,7 @@ function CreateDealDialog({
   organizations: Organization[];
   onClose: () => void;
 }) {
+  const { t } = useTranslation("crmPage");
   const create = useCreateDeal();
   const [title, setTitle] = useState("");
   const [organizationId, setOrganizationId] = useState(
@@ -884,26 +910,30 @@ function CreateDealDialog({
   return (
     <form onSubmit={submit} className="space-y-4">
       <DialogHeader>
-        <DialogTitle>Nieuwe deal</DialogTitle>
+        <DialogTitle>{t("deals.dialog.title")}</DialogTitle>
       </DialogHeader>
 
       <div className="space-y-3">
         <div className="space-y-1.5">
-          <Label htmlFor="deal-title">Titel *</Label>
+          <Label htmlFor="deal-title">{t("deals.dialog.titleLabel")}</Label>
           <Input
             id="deal-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Bijv. Plaatsing Senior Frontend"
+            placeholder={t("deals.dialog.titlePlaceholder")}
             required
             autoFocus
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="deal-org">Organisatie *</Label>
+          <Label htmlFor="deal-org">
+            {t("deals.dialog.organizationLabel")}
+          </Label>
           <Select value={organizationId} onValueChange={setOrganizationId}>
             <SelectTrigger id="deal-org">
-              <SelectValue placeholder="Selecteer organisatie" />
+              <SelectValue
+                placeholder={t("deals.dialog.organizationPlaceholder")}
+              />
             </SelectTrigger>
             <SelectContent>
               {organizations.map((o) => (
@@ -916,7 +946,7 @@ function CreateDealDialog({
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label htmlFor="deal-stage">Fase</Label>
+            <Label htmlFor="deal-stage">{t("deals.dialog.stageLabel")}</Label>
             <Select
               value={stage}
               onValueChange={(v) => setStage(v as DealStage)}
@@ -934,7 +964,7 @@ function CreateDealDialog({
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="deal-value">Waarde (€)</Label>
+            <Label htmlFor="deal-value">{t("deals.dialog.valueLabel")}</Label>
             <Input
               id="deal-value"
               type="number"
@@ -947,7 +977,7 @@ function CreateDealDialog({
           </div>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="deal-close">Verwachte sluitdatum</Label>
+          <Label htmlFor="deal-close">{t("deals.dialog.closeDateLabel")}</Label>
           <Input
             id="deal-close"
             type="date"
@@ -956,13 +986,13 @@ function CreateDealDialog({
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="deal-notes">Notities</Label>
+          <Label htmlFor="deal-notes">{t("deals.dialog.notesLabel")}</Label>
           <textarea
             id="deal-notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
-            placeholder="Optionele notities..."
+            placeholder={t("deals.dialog.notesPlaceholder")}
             className="flex w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
           />
         </div>
@@ -970,14 +1000,14 @@ function CreateDealDialog({
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onClose}>
-          Annuleren
+          {t("actions.cancel")}
         </Button>
         <Button
           type="submit"
           disabled={!title.trim() || !organizationId || create.isPending}
           className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 border-0"
         >
-          {create.isPending ? "Bezig..." : "Aanmaken"}
+          {create.isPending ? t("actions.saving") : t("actions.create")}
         </Button>
       </DialogFooter>
     </form>

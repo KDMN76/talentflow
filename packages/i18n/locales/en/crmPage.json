@@ -1,0 +1,78 @@
+{
+  "header": {
+    "title": "CRM",
+    "description": "Manage clients, contacts and sales deals"
+  },
+  "tabs": {
+    "organizations": "Clients",
+    "contacts": "Contacts",
+    "deals": "Deals"
+  },
+  "orgType": {
+    "client": "Client",
+    "prospect": "Prospect",
+    "partner": "Partner"
+  },
+  "organizations": {
+    "searchPlaceholder": "Search clients...",
+    "newButton": "New client",
+    "emptySearchTitle": "No clients found",
+    "emptyTitle": "No clients yet",
+    "emptySearchDescription": "Try a different search term.",
+    "emptyDescription": "Add your first client to get started.",
+    "dialog": {
+      "title": "New client",
+      "nameLabel": "Name *",
+      "namePlaceholder": "e.g. ING Bank N.V.",
+      "industryLabel": "Industry",
+      "industryPlaceholder": "e.g. Financial services",
+      "websiteLabel": "Website",
+      "typeLabel": "Type",
+      "notesLabel": "Notes",
+      "notesPlaceholder": "Optional notes about this client..."
+    }
+  },
+  "contacts": {
+    "filterPlaceholder": "Filter by organization",
+    "allOrganizations": "All organizations",
+    "newButton": "New contact",
+    "emptyTitle": "No contacts yet",
+    "emptyDescription": "Add contact persons within your client organizations.",
+    "linkedinTitle": "LinkedIn profile",
+    "dialog": {
+      "title": "New contact",
+      "nameLabel": "Name *",
+      "emailLabel": "Email",
+      "phoneLabel": "Phone",
+      "roleLabel": "Role",
+      "rolePlaceholder": "e.g. Head of Talent Acquisition",
+      "organizationLabel": "Organization *",
+      "organizationPlaceholder": "Select organization",
+      "linkedinLabel": "LinkedIn URL"
+    }
+  },
+  "deals": {
+    "expectedRevenue": "Expected revenue this month",
+    "newButton": "New deal",
+    "emptyTitle": "No deals yet",
+    "emptyDescription": "Create your first deal to start building your sales pipeline.",
+    "noDeals": "No deals",
+    "dialog": {
+      "title": "New deal",
+      "titleLabel": "Title *",
+      "titlePlaceholder": "e.g. Placement Senior Frontend",
+      "organizationLabel": "Organization *",
+      "organizationPlaceholder": "Select organization",
+      "stageLabel": "Stage",
+      "valueLabel": "Value (€)",
+      "closeDateLabel": "Expected close date",
+      "notesLabel": "Notes",
+      "notesPlaceholder": "Optional notes..."
+    }
+  },
+  "actions": {
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "create": "Create"
+  }
+}

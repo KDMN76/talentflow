@@ -26,6 +26,12 @@ import nlPipeline from "../locales/nl/pipeline.json";
 import enPipeline from "../locales/en/pipeline.json";
 import nlInterviews from "../locales/nl/interviews.json";
 import enInterviews from "../locales/en/interviews.json";
+import nlCrmPage from "../locales/nl/crmPage.json";
+import enCrmPage from "../locales/en/crmPage.json";
+import nlComms from "../locales/nl/comms.json";
+import enComms from "../locales/en/comms.json";
+import nlHm from "../locales/nl/hm.json";
+import enHm from "../locales/en/hm.json";
 
 export const SUPPORTED_LOCALES = ["nl", "en"] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
@@ -55,6 +61,9 @@ export const resources = {
     candidates: nlCandidates,
     pipeline: nlPipeline,
     interviews: nlInterviews,
+    crmPage: nlCrmPage,
+    comms: nlComms,
+    hm: nlHm,
   },
   en: {
     common: enCommon,
@@ -64,6 +73,9 @@ export const resources = {
     candidates: enCandidates,
     pipeline: enPipeline,
     interviews: enInterviews,
+    crmPage: enCrmPage,
+    comms: enComms,
+    hm: enHm,
   },
 } as const;
 

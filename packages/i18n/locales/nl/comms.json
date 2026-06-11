@@ -1,0 +1,70 @@
+{
+  "inbox": {
+    "title": "Berichten",
+    "description": "Alle communicatie met kandidaten op één plek",
+    "filters": {
+      "all": "Alle",
+      "email": "E-mail",
+      "whatsapp": "WhatsApp",
+      "sms": "SMS",
+      "searchPlaceholder": "Zoek op naam of bericht…"
+    },
+    "direction": {
+      "outbound": "→ Uit",
+      "inbound": "← In"
+    },
+    "unknownCandidate": "Onbekende kandidaat",
+    "empty": {
+      "title": "Geen berichten gevonden",
+      "description": "Pas je filters aan of stuur een eerste bericht."
+    }
+  },
+  "campaigns": {
+    "title": "Bulk-mail campagnes",
+    "description": "Verstuur in één keer een gepersonaliseerde mail naar een doelgroep kandidaten.",
+    "newCampaign": "Nieuwe campagne",
+    "dialogTitle": "Nieuwe bulk-mailcampagne",
+    "error": "Campagnes konden niet geladen worden. Probeer het opnieuw.",
+    "loading": "Campagnes laden…",
+    "status": {
+      "draft": "Concept",
+      "queued": "In wachtrij",
+      "running": "Bezig",
+      "completed": "Voltooid",
+      "failed": "Mislukt",
+      "paused": "Gepauzeerd"
+    },
+    "empty": {
+      "title": "Nog geen campagnes",
+      "description": "Start je eerste campagne om in één keer een doelgroep te bereiken."
+    },
+    "row": {
+      "via": "via {{provider}}",
+      "sentProgress": "{{sent}} / {{total}} verstuurd ({{pct}}%)",
+      "skipped": "{{count}} overgeslagen",
+      "failed": "{{count}} mislukt"
+    },
+    "detail": {
+      "viewMailboxIntegration": "Mailbox-integratie bekijken",
+      "subjectLabel": "Onderwerp",
+      "bodyLabel": "Bericht",
+      "counts": {
+        "inAudience": "In doelgroep",
+        "skipped": "Overgeslagen (geen consent)",
+        "sent": "Verstuurd",
+        "failed": "Mislukt"
+      },
+      "progress": "{{pct}}% voltooid — {{sent}} van {{total}} verstuurd",
+      "failures": {
+        "heading_one": "{{count}} mislukte verzending",
+        "heading_other": "{{count}} mislukte verzendingen"
+      },
+      "timestamps": {
+        "created": "Aangemaakt",
+        "started": "Gestart",
+        "completed": "Voltooid"
+      },
+      "empty": "—"
+    }
+  }
+}

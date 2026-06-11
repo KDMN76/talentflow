@@ -1,0 +1,79 @@
+{
+  "review": {
+    "header": {
+      "title": "Te beoordelen kandidaten",
+      "description": "Swipe of tik — links = afwijzen, rechts = geschikt, omhoog = later."
+    },
+    "counter_one": "{{count}} overig",
+    "counter_other": "{{count}} overig",
+    "stats": {
+      "toReview": "Te beoordelen",
+      "scorecardsOpen": "Scorecards open",
+      "approvedToday": "Goedgekeurd vandaag"
+    },
+    "tip": "Tip: ← afwijzen · → geschikt · ↑ later",
+    "empty": {
+      "title": "Geen kandidaten te beoordelen",
+      "description": "Geniet van je dag. We sturen een push-notificatie zodra er nieuwe kandidaten klaar staan."
+    },
+    "undoButton": "Ongedaan",
+    "toasts": {
+      "syncFailed": {
+        "title": "Synchroniseren mislukt",
+        "description": "We konden de beslissing niet doorzetten."
+      },
+      "undone": {
+        "title": "Ongedaan gemaakt",
+        "description": "{{name}} is terug op je stapel."
+      },
+      "later": {
+        "title": "Later",
+        "description": "{{name}} komt straks weer langs."
+      },
+      "rejected": {
+        "title": "Kandidaat afgewezen",
+        "description": "{{name}} — undo binnen 5s."
+      },
+      "approved": {
+        "title": "Goedgekeurd",
+        "description": "{{name}} is doorgezet naar de recruiter."
+      }
+    }
+  },
+  "scorecards": {
+    "header": {
+      "title": "Scorecard-deadlines",
+      "description": "Beoordelingen die nog wachten op jouw input.",
+      "openBadge": "{{count}} open"
+    },
+    "filters": {
+      "all": "Alles",
+      "overdue": "Te laat",
+      "today": "Vandaag",
+      "thisWeek": "Deze week"
+    },
+    "empty": {
+      "title": "Geen openstaande scorecards",
+      "description": "Lekker bezig — alles is op tijd."
+    },
+    "countdown": {
+      "over": "over ",
+      "tooLate": " te laat",
+      "daysHours": "{{prefix}}{{days}}d {{hours}}u{{suffix}}",
+      "hoursMinutes": "{{prefix}}{{hours}}u {{minutes}}m{{suffix}}",
+      "minutesTooLate": "{{minutes}}m te laat",
+      "inMinutes": "over {{minutes}}m"
+    },
+    "saving": "Opslaan…",
+    "toasts": {
+      "submitted": {
+        "title": "Scorecard ingediend",
+        "description": "Beoordeling voor {{name}} opgeslagen."
+      },
+      "saveFailed": {
+        "title": "Opslaan mislukt",
+        "description": "We konden de scorecard niet versturen."
+      }
+    }
+  }
+}

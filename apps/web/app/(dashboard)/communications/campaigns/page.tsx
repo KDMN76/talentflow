@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import {
   AlertCircle,
   CheckCircle2,
@@ -35,15 +36,6 @@ import { CampaignBuilder } from "@/components/communications/CampaignBuilder";
 
 // ─── Status helpers ─────────────────────────────────────────────────────────
 
-const STATUS_LABELS: Record<BulkCampaign["status"], string> = {
-  draft: "Concept",
-  queued: "In wachtrij",
-  running: "Bezig",
-  completed: "Voltooid",
-  failed: "Mislukt",
-  paused: "Gepauzeerd",
-};
-
 const STATUS_STYLES: Record<BulkCampaign["status"], string> = {
   draft: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
   queued: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400",
@@ -72,6 +64,7 @@ function StatusIcon({ status }: { status: BulkCampaign["status"] }) {
 // ─── Page ───────────────────────────────────────────────────────────────────
 
 export default function CampaignsPage() {
+  const { t } = useTranslation("comms");
   const { data: campaigns, isLoading, isError } = useBulkCampaigns();
   const [builderOpen, setBuilderOpen] = useState(false);
   const [detail, setDetail] = useState<BulkCampaign | null>(null);
@@ -79,15 +72,15 @@ export default function CampaignsPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Bulk-mail campagnes"
-        description="Verstuur in één keer een gepersonaliseerde mail naar een doelgroep kandidaten."
+        title={t("campaigns.title")}
+        description={t("campaigns.description")}
         actions={
           <Button
             onClick={() => setBuilderOpen(true)}
             className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 border-0"
           >
             <Plus className="h-4 w-4 mr-1.5" />
-            Nieuwe campagne
+            {t("campaigns.newCampaign")}
           </Button>
         }
       />
@@ -98,7 +91,7 @@ export default function CampaignsPage() {
           <CardContent className="p-5 flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
             <p className="text-sm text-destructive">
-              Campagnes konden niet geladen worden. Probeer het opnieuw.
+              {t("campaigns.error")}
             </p>
           </CardContent>
         </Card>
@@ -109,7 +102,7 @@ export default function CampaignsPage() {
         <Card className="border-0 shadow-sm">
           <CardContent className="p-8 text-center text-sm text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
-            Campagnes laden…
+            {t("campaigns.loading")}
           </CardContent>
         </Card>
       )}
@@ -121,10 +114,10 @@ export default function CampaignsPage() {
             <Inbox className="h-10 w-10 text-muted-foreground/40 mx-auto" />
             <div>
               <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                Nog geen campagnes
+                {t("campaigns.empty.title")}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                Start je eerste campagne om in één keer een doelgroep te bereiken.
+                {t("campaigns.empty.description")}
               </p>
             </div>
             <Button
@@ -133,7 +126,7 @@ export default function CampaignsPage() {
               className="bg-indigo-600 hover:bg-indigo-700 border-0"
             >
               <Plus className="h-3.5 w-3.5 mr-1.5" />
-              Nieuwe campagne
+              {t("campaigns.newCampaign")}
             </Button>
           </CardContent>
         </Card>
@@ -156,7 +149,7 @@ export default function CampaignsPage() {
       <Dialog open={builderOpen} onOpenChange={setBuilderOpen}>
         <DialogContent className="sm:max-w-[860px] max-h-[92vh] overflow-y-auto p-0">
           <DialogHeader className="sr-only">
-            <DialogTitle>Nieuwe bulk-mailcampagne</DialogTitle>
+            <DialogTitle>{t("campaigns.dialogTitle")}</DialogTitle>
           </DialogHeader>
           <CampaignBuilder
             onClose={() => setBuilderOpen(false)}
@@ -186,6 +179,7 @@ function CampaignRow({
   campaign: BulkCampaign;
   onClick: () => void;
 }) {
+  const { t } = useTranslation("comms");
   const total = campaign.eligible_count;
   const sent = campaign.sent_count;
   const failed = campaign.failed_count;
@@ -208,13 +202,13 @@ function CampaignRow({
               className={`text-[10px] px-1.5 py-0 border-0 inline-flex items-center gap-1 ${STATUS_STYLES[campaign.status]}`}
             >
               <StatusIcon status={campaign.status} />
-              {STATUS_LABELS[campaign.status]}
+              {t(`campaigns.status.${campaign.status}`)}
             </Badge>
             <Badge
               variant="outline"
               className="text-[10px] px-1.5 py-0 font-mono"
             >
-              via {PROVIDER_LABELS[campaign.provider]}
+              {t("campaigns.row.via", { provider: PROVIDER_LABELS[campaign.provider] })}
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground truncate">
@@ -240,12 +234,14 @@ function CampaignRow({
         </div>
         <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-muted-foreground">
           <span>
-            {sent} / {total} verstuurd ({pct}%)
+            {t("campaigns.row.sentProgress", { sent, total, pct })}
           </span>
-          {skipped > 0 && <span>{skipped} overgeslagen</span>}
+          {skipped > 0 && (
+            <span>{t("campaigns.row.skipped", { count: skipped })}</span>
+          )}
           {failed > 0 && (
             <span className="text-red-600 dark:text-red-400">
-              {failed} mislukt
+              {t("campaigns.row.failed", { count: failed })}
             </span>
           )}
           <span className="ml-auto">
@@ -270,6 +266,7 @@ function CampaignDetailDialog({
   campaign: BulkCampaign | null;
   onClose: () => void;
 }) {
+  const { t } = useTranslation("comms");
   const [showFailures, setShowFailures] = useState(false);
   if (!campaign) return null;
 
@@ -294,17 +291,17 @@ function CampaignDetailDialog({
               className={`text-xs px-2 py-0.5 border-0 inline-flex items-center gap-1 ${STATUS_STYLES[campaign.status]}`}
             >
               <StatusIcon status={campaign.status} />
-              {STATUS_LABELS[campaign.status]}
+              {t(`campaigns.status.${campaign.status}`)}
             </Badge>
             <Badge variant="outline" className="text-xs">
-              via {PROVIDER_LABELS[campaign.provider]}
+              {t("campaigns.row.via", { provider: PROVIDER_LABELS[campaign.provider] })}
             </Badge>
             {campaign.mailbox_integration_id && (
               <Link
                 href="/settings/integrations"
                 className="text-xs text-indigo-600 hover:underline"
               >
-                Mailbox-integratie bekijken
+                {t("campaigns.detail.viewMailboxIntegration")}
               </Link>
             )}
           </div>
@@ -312,7 +309,7 @@ function CampaignDetailDialog({
           {/* Subject */}
           <div className="rounded-lg border border-border bg-zinc-50 dark:bg-zinc-900/40 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-              Onderwerp
+              {t("campaigns.detail.subjectLabel")}
             </p>
             <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
               {campaign.subject}
@@ -323,7 +320,7 @@ function CampaignDetailDialog({
           <div className="rounded-lg border border-border overflow-hidden">
             <div className="bg-zinc-50 dark:bg-zinc-900/40 px-4 py-2 border-b border-border">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Bericht
+                {t("campaigns.detail.bodyLabel")}
               </p>
             </div>
             <div
@@ -335,18 +332,18 @@ function CampaignDetailDialog({
 
           {/* Counts */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <CountTile label="In doelgroep" value={total} />
+            <CountTile label={t("campaigns.detail.counts.inAudience")} value={total} />
             <CountTile
-              label="Overgeslagen (geen consent)"
+              label={t("campaigns.detail.counts.skipped")}
               value={campaign.skipped_count}
             />
             <CountTile
-              label="Verstuurd"
+              label={t("campaigns.detail.counts.sent")}
               value={campaign.sent_count}
               accent="emerald"
             />
             <CountTile
-              label="Mislukt"
+              label={t("campaigns.detail.counts.failed")}
               value={campaign.failed_count}
               accent={campaign.failed_count > 0 ? "red" : undefined}
             />
@@ -367,7 +364,7 @@ function CampaignDetailDialog({
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              {pct}% voltooid — {sent} van {total} verstuurd
+              {t("campaigns.detail.progress", { pct, sent, total })}
             </p>
           </div>
 
@@ -381,8 +378,9 @@ function CampaignDetailDialog({
               >
                 <span className="flex items-center gap-2 text-sm font-semibold text-red-800 dark:text-red-300">
                   <AlertCircle className="h-4 w-4" />
-                  {campaign.failures.length} mislukte verzending
-                  {campaign.failures.length === 1 ? "" : "en"}
+                  {t("campaigns.detail.failures.heading", {
+                    count: campaign.failures.length,
+                  })}
                 </span>
                 <ChevronRight
                   className={`h-4 w-4 text-red-600 transition-transform ${showFailures ? "rotate-90" : ""}`}
@@ -417,9 +415,18 @@ function CampaignDetailDialog({
 
           {/* Timestamps */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-            <TimeBox label="Aangemaakt" iso={campaign.created_at} />
-            <TimeBox label="Gestart" iso={campaign.started_at} />
-            <TimeBox label="Voltooid" iso={campaign.completed_at} />
+            <TimeBox
+              label={t("campaigns.detail.timestamps.created")}
+              iso={campaign.created_at}
+            />
+            <TimeBox
+              label={t("campaigns.detail.timestamps.started")}
+              iso={campaign.started_at}
+            />
+            <TimeBox
+              label={t("campaigns.detail.timestamps.completed")}
+              iso={campaign.completed_at}
+            />
           </div>
         </div>
       </DialogContent>
@@ -453,13 +460,14 @@ function CountTile({
 }
 
 function TimeBox({ label, iso }: { label: string; iso: string | null }) {
+  const { t } = useTranslation("comms");
   return (
     <div className="rounded-lg border border-border bg-zinc-50/50 dark:bg-zinc-900/40 px-3 py-2">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </p>
       <p className="text-xs text-zinc-700 dark:text-zinc-300 mt-0.5">
-        {iso ? new Date(iso).toLocaleString("nl-NL") : "—"}
+        {iso ? new Date(iso).toLocaleString("nl-NL") : t("campaigns.detail.empty")}
       </p>
     </div>
   );

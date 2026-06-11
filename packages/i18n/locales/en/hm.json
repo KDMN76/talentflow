@@ -1,0 +1,79 @@
+{
+  "review": {
+    "header": {
+      "title": "Candidates to review",
+      "description": "Swipe or tap — left = reject, right = good fit, up = later."
+    },
+    "counter_one": "{{count}} left",
+    "counter_other": "{{count}} left",
+    "stats": {
+      "toReview": "To review",
+      "scorecardsOpen": "Scorecards open",
+      "approvedToday": "Approved today"
+    },
+    "tip": "Tip: ← reject · → good fit · ↑ later",
+    "empty": {
+      "title": "No candidates to review",
+      "description": "Enjoy your day. We'll send a push notification as soon as new candidates are ready."
+    },
+    "undoButton": "Undo",
+    "toasts": {
+      "syncFailed": {
+        "title": "Sync failed",
+        "description": "We couldn't push your decision through."
+      },
+      "undone": {
+        "title": "Undone",
+        "description": "{{name}} is back on your stack."
+      },
+      "later": {
+        "title": "Later",
+        "description": "{{name}} will come back around soon."
+      },
+      "rejected": {
+        "title": "Candidate rejected",
+        "description": "{{name}} — undo within 5s."
+      },
+      "approved": {
+        "title": "Approved",
+        "description": "{{name}} has been moved on to the recruiter."
+      }
+    }
+  },
+  "scorecards": {
+    "header": {
+      "title": "Scorecard deadlines",
+      "description": "Reviews still waiting on your input.",
+      "openBadge": "{{count}} open"
+    },
+    "filters": {
+      "all": "All",
+      "overdue": "Overdue",
+      "today": "Today",
+      "thisWeek": "This week"
+    },
+    "empty": {
+      "title": "No outstanding scorecards",
+      "description": "Nice work — everything's on time."
+    },
+    "countdown": {
+      "over": "in ",
+      "tooLate": " overdue",
+      "daysHours": "{{prefix}}{{days}}d {{hours}}h{{suffix}}",
+      "hoursMinutes": "{{prefix}}{{hours}}h {{minutes}}m{{suffix}}",
+      "minutesTooLate": "{{minutes}}m overdue",
+      "inMinutes": "in {{minutes}}m"
+    },
+    "saving": "Saving…",
+    "toasts": {
+      "submitted": {
+        "title": "Scorecard submitted",
+        "description": "Review for {{name}} saved."
+      },
+      "saveFailed": {
+        "title": "Save failed",
+        "description": "We couldn't submit the scorecard."
+      }
+    }
+  }
+}

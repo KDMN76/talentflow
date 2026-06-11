@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import { Mail, MessageCircle, Phone, Search, MessageSquare } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -60,16 +61,17 @@ function StatusDot({ status }: { status: Communication["status"] }) {
 }
 
 function DirectionBadge({ direction }: { direction: Communication["direction"] }) {
+  const { t } = useTranslation("comms");
   if (direction === "outbound") {
     return (
       <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400">
-        → Uit
+        {t("inbox.direction.outbound")}
       </span>
     );
   }
   return (
     <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-      ← In
+      {t("inbox.direction.inbound")}
     </span>
   );
 }
@@ -77,6 +79,7 @@ function DirectionBadge({ direction }: { direction: Communication["direction"] }
 type ChannelFilter = "all" | CommunicationChannel;
 
 export default function CommunicationsPage() {
+  const { t } = useTranslation("comms");
   const { data: messages, isLoading } = useInbox();
   const [channelFilter, setChannelFilter] = useState<ChannelFilter>("all");
   const [search, setSearch] = useState("");
@@ -95,8 +98,8 @@ export default function CommunicationsPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Berichten"
-        description="Alle communicatie met kandidaten op één plek"
+        title={t("inbox.title")}
+        description={t("inbox.description")}
       />
 
       {/* Filters */}
@@ -107,16 +110,16 @@ export default function CommunicationsPage() {
         >
           <TabsList className="h-9">
             <TabsTrigger value="all" className="text-xs px-3">
-              Alle
+              {t("inbox.filters.all")}
             </TabsTrigger>
             <TabsTrigger value="email" className="text-xs px-3">
-              E-mail
+              {t("inbox.filters.email")}
             </TabsTrigger>
             <TabsTrigger value="whatsapp" className="text-xs px-3">
-              WhatsApp
+              {t("inbox.filters.whatsapp")}
             </TabsTrigger>
             <TabsTrigger value="sms" className="text-xs px-3">
-              SMS
+              {t("inbox.filters.sms")}
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -125,7 +128,7 @@ export default function CommunicationsPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
           <input
             type="text"
-            placeholder="Zoek op naam of bericht…"
+            placeholder={t("inbox.filters.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-lg border border-input bg-background pl-9 pr-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
@@ -145,10 +148,10 @@ export default function CommunicationsPage() {
               <MessageSquare className="h-8 w-8 text-zinc-400" />
             </div>
             <p className="text-base font-medium text-zinc-900 dark:text-zinc-100">
-              Geen berichten gevonden
+              {t("inbox.empty.title")}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              Pas je filters aan of stuur een eerste bericht.
+              {t("inbox.empty.description")}
             </p>
           </div>
         ) : (
@@ -167,7 +170,7 @@ export default function CommunicationsPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 transition-colors">
-                    {msg.candidate_name ?? "Onbekende kandidaat"}
+                    {msg.candidate_name ?? t("inbox.unknownCandidate")}
                   </span>
                   <DirectionBadge direction={msg.direction} />
                 </div>

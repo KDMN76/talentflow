@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   AlarmClock,
   CalendarClock,
@@ -26,25 +27,34 @@ import { cn } from "@/lib/utils";
 
 type Filter = "all" | "today" | "this_week" | "overdue";
 
-function formatCountdown(due: string): string {
+type CountdownTranslator = (key: string, options?: Record<string, unknown>) => string;
+
+function formatCountdown(due: string, t: CountdownTranslator): string {
   const ms = new Date(due).getTime() - Date.now();
   const abs = Math.abs(ms);
   const days = Math.floor(abs / 86400000);
   const hours = Math.floor((abs % 86400000) / 3600000);
   const minutes = Math.floor((abs % 3600000) / 60000);
-  const sign = ms < 0 ? "" : "over ";
   const overdue = ms < 0;
+  const prefix = overdue ? "" : t("scorecards.countdown.over");
+  const suffix = overdue ? t("scorecards.countdown.tooLate") : "";
   if (days >= 1) {
-    return `${sign}${days}d ${hours}u${overdue ? " te laat" : ""}`;
+    return t("scorecards.countdown.daysHours", { prefix, days, hours, suffix });
   }
   if (hours >= 1) {
-    return `${sign}${hours}u ${minutes}m${overdue ? " te laat" : ""}`;
+    return t("scorecards.countdown.hoursMinutes", {
+      prefix,
+      hours,
+      minutes,
+      suffix,
+    });
   }
-  if (overdue) return `${minutes}m te laat`;
-  return `over ${Math.max(1, minutes)}m`;
+  if (overdue) return t("scorecards.countdown.minutesTooLate", { minutes });
+  return t("scorecards.countdown.inMinutes", { minutes: Math.max(1, minutes) });
 }
 
 export default function HmScorecardsPage() {
+  const { t } = useTranslation("hm");
   const { data, isLoading } = useHmScorecardDeadlines();
   const decision = useHmDecision();
   const { toast } = useToast();
@@ -95,15 +105,17 @@ export default function HmScorecardsPage() {
         scorecard: input,
       });
       toast({
-        title: "Scorecard ingediend",
-        description: `Beoordeling voor ${scoring.candidate_name} opgeslagen.`,
+        title: t("scorecards.toasts.submitted.title"),
+        description: t("scorecards.toasts.submitted.description", {
+          name: scoring.candidate_name,
+        }),
       });
       setScoring(null);
     } catch {
       toast({
         variant: "destructive",
-        title: "Opslaan mislukt",
-        description: "We konden de scorecard niet versturen.",
+        title: t("scorecards.toasts.saveFailed.title"),
+        description: t("scorecards.toasts.saveFailed.description"),
       });
     } finally {
       setSubmitting(false);
@@ -114,12 +126,12 @@ export default function HmScorecardsPage() {
     <>
       <div className="space-y-5 pb-28 lg:pb-0 animate-fade-in">
         <PageHeader
-          title="Scorecard-deadlines"
-          description="Beoordelingen die nog wachten op jouw input."
+          title={t("scorecards.header.title")}
+          description={t("scorecards.header.description")}
           actions={
             <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400">
               <ClipboardList className="h-3.5 w-3.5" />
-              {counts.all} open
+              {t("scorecards.header.openBadge", { count: counts.all })}
             </span>
           }
         />
@@ -131,14 +143,14 @@ export default function HmScorecardsPage() {
             onClick={() => setFilter("all")}
             count={counts.all}
             Icon={ClipboardList}
-            label="Alles"
+            label={t("scorecards.filters.all")}
           />
           <FilterPill
             active={filter === "overdue"}
             onClick={() => setFilter("overdue")}
             count={counts.overdue}
             Icon={AlarmClock}
-            label="Te laat"
+            label={t("scorecards.filters.overdue")}
             tone="rose"
           />
           <FilterPill
@@ -146,7 +158,7 @@ export default function HmScorecardsPage() {
             onClick={() => setFilter("today")}
             count={counts.today}
             Icon={Clock}
-            label="Vandaag"
+            label={t("scorecards.filters.today")}
             tone="amber"
           />
           <FilterPill
@@ -154,7 +166,7 @@ export default function HmScorecardsPage() {
             onClick={() => setFilter("this_week")}
             count={counts.this_week}
             Icon={CalendarDays}
-            label="Deze week"
+            label={t("scorecards.filters.thisWeek")}
           />
         </div>
 
@@ -169,9 +181,9 @@ export default function HmScorecardsPage() {
           <Card className="border-0 shadow-sm">
             <CardContent className="flex flex-col items-center justify-center gap-2 py-14 text-center">
               <CalendarClock className="h-8 w-8 text-emerald-600" />
-              <p className="text-sm font-semibold">Geen openstaande scorecards</p>
+              <p className="text-sm font-semibold">{t("scorecards.empty.title")}</p>
               <p className="text-xs text-muted-foreground">
-                Lekker bezig — alles is op tijd.
+                {t("scorecards.empty.description")}
               </p>
             </CardContent>
           </Card>
@@ -215,7 +227,7 @@ export default function HmScorecardsPage() {
         <div className="pointer-events-none fixed inset-0 z-[60] flex items-center justify-center">
           <div className="rounded-full bg-zinc-900/80 px-3 py-2 text-xs font-medium text-white inline-flex items-center gap-2">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            Opslaan…
+            {t("scorecards.saving")}
           </div>
         </div>
       )}
@@ -270,6 +282,7 @@ function DeadlineBadge({
   bucket: HMScorecardDeadline["bucket"];
   due: string;
 }) {
+  const { t } = useTranslation("hm");
   const tone =
     bucket === "overdue"
       ? "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"
@@ -290,7 +303,7 @@ function DeadlineBadge({
       )}
     >
       <Icon className="h-3 w-3" />
-      {formatCountdown(due)}
+      {formatCountdown(due, t)}
     </span>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { CheckCircle2, Clock, Sparkles, Undo2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,6 +31,7 @@ interface PendingDecision {
 }
 
 export default function HiringManagerPage() {
+  const { t } = useTranslation("hm");
   const { data: queue, isLoading } = useHmCandidatesToReview();
   const { data: stats } = useHmStats();
   const decisionMutation = useHmDecision();
@@ -102,12 +104,12 @@ export default function HiringManagerPage() {
         // any other failure is surfaced as a toast below.
         toast({
           variant: "destructive",
-          title: "Synchroniseren mislukt",
-          description: "We konden de beslissing niet doorzetten.",
+          title: t("review.toasts.syncFailed.title"),
+          description: t("review.toasts.syncFailed.description"),
         });
       }
     },
-    [decisionMutation, toast]
+    [decisionMutation, toast, t]
   );
 
   const undoDecision = useCallback(
@@ -125,14 +127,16 @@ export default function HiringManagerPage() {
           // Put the candidate back on top.
           setStack((s) => [entry.candidate, ...s]);
           toast({
-            title: "Ongedaan gemaakt",
-            description: `${entry.candidate.candidate_name} is terug op je stapel.`,
+            title: t("review.toasts.undone.title"),
+            description: t("review.toasts.undone.description", {
+              name: entry.candidate.candidate_name,
+            }),
           });
         }
         return prev.filter((p) => p.candidate.application_id !== applicationId);
       });
     },
-    [toast]
+    [toast, t]
   );
 
   /** Schedule an undo-able action: pop the candidate now, fire the API after
@@ -196,8 +200,10 @@ export default function HiringManagerPage() {
           scheduledAt: Date.now(),
         });
         toast({
-          title: "Later",
-          description: `${candidate.candidate_name} komt straks weer langs.`,
+          title: t("review.toasts.later.title"),
+          description: t("review.toasts.later.description", {
+            name: candidate.candidate_name,
+          }),
         });
         return;
       }
@@ -206,8 +212,10 @@ export default function HiringManagerPage() {
       setStack((s) => s.filter((c) => c.application_id !== candidateId));
       scheduleUndoableDecision(candidate, "reject");
       toast({
-        title: "Kandidaat afgewezen",
-        description: `${candidate.candidate_name} — undo binnen 5s.`,
+        title: t("review.toasts.rejected.title"),
+        description: t("review.toasts.rejected.description", {
+          name: candidate.candidate_name,
+        }),
         action: (
           <button
             type="button"
@@ -215,12 +223,12 @@ export default function HiringManagerPage() {
             className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-rose-600 ring-1 ring-rose-200 hover:bg-rose-50"
           >
             <Undo2 className="h-3.5 w-3.5" />
-            Ongedaan
+            {t("review.undoButton")}
           </button>
         ),
       });
     },
-    [stack, scheduleUndoableDecision, commitDecision, toast, undoDecision]
+    [stack, scheduleUndoableDecision, commitDecision, toast, undoDecision, t]
   );
 
   /** Called from HmActionButtons. Triggers the deck animation, which then
@@ -241,15 +249,17 @@ export default function HiringManagerPage() {
           scorecard: input,
         });
         toast({
-          title: "Goedgekeurd",
-          description: `${scoring.candidate_name} is doorgezet naar de recruiter.`,
+          title: t("review.toasts.approved.title"),
+          description: t("review.toasts.approved.description", {
+            name: scoring.candidate_name,
+          }),
         });
         setScoring(null);
       } finally {
         setSubmittingScorecard(false);
       }
     },
-    [scoring, commitDecision, toast]
+    [scoring, commitDecision, toast, t]
   );
 
   const handleScorecardCancel = useCallback(() => {
@@ -259,18 +269,17 @@ export default function HiringManagerPage() {
     setScoring(null);
   }, [scoring]);
 
-  const counterText = useMemo(() => {
-    if (remaining === 0) return "0 overig";
-    if (remaining === 1) return "1 overig";
-    return `${remaining} overig`;
-  }, [remaining]);
+  const counterText = useMemo(
+    () => t("review.counter", { count: remaining }),
+    [remaining, t]
+  );
 
   return (
     <>
       <div className="space-y-5 pb-28 lg:pb-0 animate-fade-in">
         <PageHeader
-          title="Te beoordelen kandidaten"
-          description="Swipe of tik — links = afwijzen, rechts = geschikt, omhoog = later."
+          title={t("review.header.title")}
+          description={t("review.header.description")}
           actions={
             <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400">
               <Sparkles className="h-3.5 w-3.5" />
@@ -285,17 +294,17 @@ export default function HiringManagerPage() {
         {stats && (
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
             <MiniStat
-              label="Te beoordelen"
+              label={t("review.stats.toReview")}
               value={stats.to_review}
               tone="indigo"
             />
             <MiniStat
-              label="Scorecards open"
+              label={t("review.stats.scorecardsOpen")}
               value={stats.scorecards_due_today + stats.scorecards_overdue}
               tone={stats.scorecards_overdue > 0 ? "rose" : "amber"}
             />
             <MiniStat
-              label="Goedgekeurd vandaag"
+              label={t("review.stats.approvedToday")}
               value={stats.approved_today}
               tone="emerald"
             />
@@ -324,7 +333,7 @@ export default function HiringManagerPage() {
                 />
               </div>
               <p className="mt-3 text-center text-[11px] uppercase tracking-widest text-muted-foreground">
-                Tip: ← afwijzen &nbsp;·&nbsp; → geschikt &nbsp;·&nbsp; ↑ later
+                {t("review.tip")}
               </p>
             </>
           )}
@@ -349,6 +358,7 @@ export default function HiringManagerPage() {
 // ============================================================================
 
 function EmptyState() {
+  const { t } = useTranslation("hm");
   return (
     <Card className="border-0 shadow-sm">
       <CardContent className="flex flex-col items-center justify-center gap-3 py-20 text-center">
@@ -356,11 +366,10 @@ function EmptyState() {
           <CheckCircle2 className="h-8 w-8 text-emerald-600" />
         </div>
         <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
-          Geen kandidaten te beoordelen
+          {t("review.empty.title")}
         </h3>
         <p className="text-sm text-muted-foreground max-w-xs">
-          Geniet van je dag. We sturen een push-notificatie zodra er nieuwe
-          kandidaten klaar staan.
+          {t("review.empty.description")}
         </p>
       </CardContent>
     </Card>

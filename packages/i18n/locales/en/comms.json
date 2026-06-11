@@ -1,0 +1,70 @@
+{
+  "inbox": {
+    "title": "Messages",
+    "description": "All candidate communication in one place",
+    "filters": {
+      "all": "All",
+      "email": "Email",
+      "whatsapp": "WhatsApp",
+      "sms": "SMS",
+      "searchPlaceholder": "Search by name or message…"
+    },
+    "direction": {
+      "outbound": "→ Out",
+      "inbound": "← In"
+    },
+    "unknownCandidate": "Unknown candidate",
+    "empty": {
+      "title": "No messages found",
+      "description": "Adjust your filters or send a first message."
+    }
+  },
+  "campaigns": {
+    "title": "Bulk email campaigns",
+    "description": "Send a personalized email to a target group of candidates in one go.",
+    "newCampaign": "New campaign",
+    "dialogTitle": "New bulk email campaign",
+    "error": "Campaigns could not be loaded. Please try again.",
+    "loading": "Loading campaigns…",
+    "status": {
+      "draft": "Draft",
+      "queued": "Queued",
+      "running": "Running",
+      "completed": "Completed",
+      "failed": "Failed",
+      "paused": "Paused"
+    },
+    "empty": {
+      "title": "No campaigns yet",
+      "description": "Start your first campaign to reach a target group in one go."
+    },
+    "row": {
+      "via": "via {{provider}}",
+      "sentProgress": "{{sent}} / {{total}} sent ({{pct}}%)",
+      "skipped": "{{count}} skipped",
+      "failed": "{{count}} failed"
+    },
+    "detail": {
+      "viewMailboxIntegration": "View mailbox integration",
+      "subjectLabel": "Subject",
+      "bodyLabel": "Message",
+      "counts": {
+        "inAudience": "In audience",
+        "skipped": "Skipped (no consent)",
+        "sent": "Sent",
+        "failed": "Failed"
+      },
+      "progress": "{{pct}}% complete — {{sent}} of {{total}} sent",
+      "failures": {
+        "heading_one": "{{count}} failed delivery",
+        "heading_other": "{{count}} failed deliveries"
+      },
+      "timestamps": {
+        "created": "Created",
+        "started": "Started",
+        "completed": "Completed"
+      },
+      "empty": "—"
+    }
+  }
+}
