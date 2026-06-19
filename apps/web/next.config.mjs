@@ -21,6 +21,20 @@ const nextConfig = {
   // zodra de package in `transpilePackages` staat.
   transpilePackages: ['@talentflow/contracts', '@talentflow/i18n'],
 
+  // `/` redirect naar het dashboard op routing-niveau. Een `redirect()` in een
+  // root `app/page.tsx` werkt NIET in deze standalone build van Next 14.2.3: het
+  // renderen van `/page` (zowel statisch als met `force-dynamic`) crasht met
+  // "Cannot read properties of undefined (reading 'clientModules')" omdat de
+  // client-reference-manifest van `/page` niet in het render-pad wordt ingeladen
+  // → HTTP 500 (incident 2026-06-19). `force-dynamic` lost dat niet op: de
+  // pagina blijft renderen. Een redirect hier wordt door next-server afgehandeld
+  // vóór enige page-render, dus dat kapotte render-pad wordt nooit geraakt.
+  async redirects() {
+    return [
+      { source: '/', destination: '/dashboard', permanent: false },
+    ];
+  },
+
   images: {
     remotePatterns: [
       {
