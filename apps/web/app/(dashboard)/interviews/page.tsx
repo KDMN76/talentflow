@@ -344,8 +344,8 @@ function CountChip({ n }: { n: number }) {
 
 function InterviewRow({ iv }: { iv: Interview }) {
   const { t } = useTranslation("interviews");
-  const status = STATUS_BADGE[iv.status];
-  const LocIcon = LOCATION_ICON[iv.location_type];
+  const status = STATUS_BADGE[iv.status] ?? STATUS_BADGE.scheduled;
+  const LocIcon = LOCATION_ICON[iv.location_type] ?? Video;
   const interviewers = (iv.participants ?? []).filter(
     (p) => p.role === "interviewer" || p.role === "hiring_manager"
   );
