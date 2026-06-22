@@ -1,0 +1,54 @@
+{
+  "skills": {
+    "header": {
+      "title": "Skills",
+      "description": "Trending skills, demand-supply balance and the ESCO skills database — anonymized, aggregated and AI-assisted."
+    },
+    "tabs": {
+      "trending": "Trending",
+      "demand": "Demand vs supply",
+      "database": "Database"
+    },
+    "category": {
+      "IT": "IT",
+      "Cloud": "Cloud",
+      "DevOps": "DevOps",
+      "Data": "Data",
+      "Security": "Security",
+      "Frontend": "Frontend",
+      "Backend": "Backend",
+      "Mobile": "Mobile",
+      "Soft": "Soft skills",
+      "Other": "Other"
+    },
+    "trending": {
+      "aiBadge": "AI-assisted",
+      "chartTitle": "Demand growth over recent weeks",
+      "tableTitle": "Top trending skills",
+      "top5InChart": "Top 5 in chart",
+      "noTrending": "No trending skills for this filter.",
+      "columns": {
+        "skill": "Skill",
+        "growth": "Growth",
+        "demand": "Demand",
+        "supply": "Supply",
+        "gap": "Gap"
+      }
+    },
+    "demand": {
+      "aiBadge": "AI-assisted",
+      "chartTitle": "Demand vs supply by category",
+      "columns": {
+        "category": "Category",
+        "demand": "Demand",
+        "supply": "Supply",
+        "gap": "Gap"
+      }
+    },
+    "database": {
+      "candidates": "{{count}} candidates",
+      "empty": "No skills found.",
+      "searchPlaceholder": "Search a skill…"
+    }
+  }
+}

@@ -622,3 +622,30 @@ zodat items meteen oppakbaar zijn. Kaan's eigen, expliciet terecht genoemde hoof
 - Career-page "Test Button #1": exacte knop + verwacht gedrag (4.1).
 - Kandidaat-filter: welk filter, welk gedrag (4.3).
 - Pipeline: absolute datum gewenst en/of client-filter (4.11)?
+
+---
+
+## Sectie 5: Evaluatie-feedback Kaan (2026-06-23)
+
+Feedback tijdens live doorklikken op het load-test-account. Default P2.
+
+### 5.1 — [FEATURE] E-mailintegratie ook zonder Outlook/Gmail (eigen domein via DNS/SMTP)
+- **Priority**: P2
+- **Status**: Open
+- **Type**: [FEATURE]
+- **Context**: Naast OAuth-koppeling met Outlook/Gmail ook een optie voor klanten die geen van beide gebruiken: verzenden vanaf het eigen domein via DNS-records (SPF/DKIM/DMARC-verificatie) en/of eigen SMTP-credentials. Zo kan elk bureau e-mail vanuit zijn eigen domein versturen, ongeacht mailprovider.
+- **Cross-ref**: Sectie 2 "Integraties (Gmail/Outlook, Calendar, jobboards)".
+
+### 5.2 — [UX] CRM Deals: sub-zoekbalk + filters
+- **Priority**: P2
+- **Status**: Open
+- **Type**: [UX]
+- **Files**: `apps/web/app/(dashboard)/crm/page.tsx` (DealsTab)
+- **Context**: Op het deals-kanban-bord een zoekbalk (deal-titel/organisatie) + filters (fase, recruiter, waarde) om snel te kunnen filteren.
+
+### 5.3 — [UX] CRM Contacten: zoekbalk (naam / bedrijf / e-mail)
+- **Priority**: P2
+- **Status**: Open
+- **Type**: [UX]
+- **Files**: `apps/web/app/(dashboard)/crm/page.tsx` (ContactsTab)
+- **Context**: De contactenlijst heeft nu alleen een organisatie-dropdown. Voeg een vrije zoekbalk toe die filtert op contactnaam, bedrijf én e-mailadres.

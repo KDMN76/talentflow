@@ -99,7 +99,7 @@ export async function getTrendingSkills(
   const limit = Math.max(1, Math.min(options.limit ?? 25, 100));
 
   return withTenant(tenantId, async (client) => {
-    const params: unknown[] = [];
+    const params: unknown[] = [tenantId];
     let categoryFilter = '';
     if (options.category) {
       params.push(options.category);
@@ -108,6 +108,8 @@ export async function getTrendingSkills(
     params.push(limit);
 
     // Self-join: laatste twee snapshots per skill via window functions.
+    // LET OP: expliciet op tenant_id filteren. RLS is inert onder de owner-rol,
+    // dus zonder deze WHERE lekken snapshots van ALLE tenants door (cross-tenant).
     const { rows } = await client.query<TrendingRow>(
       `WITH ranked AS (
          SELECT t.esco_skill_id,
@@ -120,6 +122,7 @@ export async function getTrendingSkills(
                   ORDER BY t.week_starting DESC
                 ) AS rn
            FROM skills_trending_snapshots t
+          WHERE t.tenant_id = $1
        ),
        latest AS (
          SELECT esco_skill_id, candidate_count, job_demand, hire_count
@@ -194,6 +197,7 @@ export async function getSkillDemandSupply(
            JOIN jobs j ON j.id = m.job_id
           WHERE j.deleted_at IS NULL
             AND j.status = 'open'
+            AND m.tenant_id = $1
        ),
        cand_skills AS (
          SELECT DISTINCT s.category, m.esco_skill_id
@@ -201,6 +205,7 @@ export async function getSkillDemandSupply(
            JOIN esco_skills s ON s.id = m.esco_skill_id
            JOIN candidates c ON c.id = m.candidate_id
           WHERE c.deleted_at IS NULL
+            AND m.tenant_id = $1
        )
        SELECT COALESCE(j.category, c.category) AS category,
               COUNT(j.esco_skill_id)::int AS demand,
@@ -209,7 +214,8 @@ export async function getSkillDemandSupply(
          FULL OUTER JOIN cand_skills c
            ON j.category = c.category AND j.esco_skill_id = c.esco_skill_id
         GROUP BY COALESCE(j.category, c.category)
-        ORDER BY demand DESC, supply DESC`
+        ORDER BY demand DESC, supply DESC`,
+      [tenantId]
     );
 
     const per_category: DemandSupplyEntry[] = rows.map((r) => {

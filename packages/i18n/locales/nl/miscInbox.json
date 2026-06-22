@@ -1,0 +1,54 @@
+{
+  "skills": {
+    "header": {
+      "title": "Skills",
+      "description": "Trending skills, vraag-en-aanbodbalans en de ESCO-skillsdatabase — geanonimiseerd, geaggregeerd en AI-ondersteund."
+    },
+    "tabs": {
+      "trending": "Trending",
+      "demand": "Vraag vs aanbod",
+      "database": "Database"
+    },
+    "category": {
+      "IT": "IT",
+      "Cloud": "Cloud",
+      "DevOps": "DevOps",
+      "Data": "Data",
+      "Security": "Security",
+      "Frontend": "Frontend",
+      "Backend": "Backend",
+      "Mobile": "Mobile",
+      "Soft": "Soft skills",
+      "Other": "Overig"
+    },
+    "trending": {
+      "aiBadge": "AI-ondersteund",
+      "chartTitle": "Demand-groei over de laatste weken",
+      "tableTitle": "Top trending skills",
+      "top5InChart": "Top 5 in grafiek",
+      "noTrending": "Geen trending skills voor deze filter.",
+      "columns": {
+        "skill": "Skill",
+        "growth": "Groei",
+        "demand": "Vraag",
+        "supply": "Aanbod",
+        "gap": "Gap"
+      }
+    },
+    "demand": {
+      "aiBadge": "AI-ondersteund",
+      "chartTitle": "Vraag vs aanbod per categorie",
+      "columns": {
+        "category": "Categorie",
+        "demand": "Vraag",
+        "supply": "Aanbod",
+        "gap": "Gap"
+      }
+    },
+    "database": {
+      "candidates": "{{count}} kandidaten",
+      "empty": "Geen skills gevonden.",
+      "searchPlaceholder": "Zoek een skill…"
+    }
+  }
+}

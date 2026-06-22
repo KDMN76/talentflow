@@ -48,6 +48,8 @@ import nlReportsPage from "../locales/nl/reportsPage.json";
 import enReportsPage from "../locales/en/reportsPage.json";
 import nlInterviewKits from "../locales/nl/interviewKits.json";
 import enInterviewKits from "../locales/en/interviewKits.json";
+import nlMiscInbox from "../locales/nl/miscInbox.json";
+import enMiscInbox from "../locales/en/miscInbox.json";
 
 export const SUPPORTED_LOCALES = ["nl", "en"] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
@@ -88,6 +90,7 @@ export const resources = {
     sourcing: nlSourcing,
     reportsPage: nlReportsPage,
     interviewKits: nlInterviewKits,
+    miscInbox: nlMiscInbox,
   },
   en: {
     common: enCommon,
@@ -108,6 +111,7 @@ export const resources = {
     sourcing: enSourcing,
     reportsPage: enReportsPage,
     interviewKits: enInterviewKits,
+    miscInbox: enMiscInbox,
   },
 } as const;
 
