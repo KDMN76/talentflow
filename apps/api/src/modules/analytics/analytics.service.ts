@@ -27,9 +27,9 @@ export async function getOverview(tenantId: string): Promise<{
       );
 
       const { rows: [avgTimeRow] } = await client.query(
-        `SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (filled_at - created_at)) / 86400), 0) as avg_days
+        `SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (close_date::timestamptz - created_at)) / 86400), 0) as avg_days
          FROM jobs
-         WHERE tenant_id = $1 AND filled_at IS NOT NULL AND deleted_at IS NULL`,
+         WHERE tenant_id = $1 AND close_date::timestamptz IS NOT NULL AND deleted_at IS NULL`,
         [tenantId]
       );
 
@@ -56,13 +56,14 @@ export async function getOverview(tenantId: string): Promise<{
       };
     });
   } catch {
+    // Geen verzonnen demo-cijfers: bij een fout tonen we eerlijke nullen.
     return {
-      open_jobs: 12,
-      total_candidates: 247,
-      applications_this_month: 38,
-      avg_time_to_hire_days: 21.5,
-      hired_this_month: 4,
-      active_recruiters: 5,
+      open_jobs: 0,
+      total_candidates: 0,
+      applications_this_month: 0,
+      avg_time_to_hire_days: 0,
+      hired_this_month: 0,
+      active_recruiters: 0,
     };
   }
 }
@@ -93,13 +94,7 @@ export async function getFunnel(tenantId: string): Promise<Array<{
       }));
     });
   } catch {
-    return [
-      { stage_name: 'New Application', count: 120, conversion_rate: 100 },
-      { stage_name: 'Phone Screen',    count: 72,  conversion_rate: 60  },
-      { stage_name: 'Interview',       count: 35,  conversion_rate: 29.2 },
-      { stage_name: 'Offer',           count: 12,  conversion_rate: 10  },
-      { stage_name: 'Hired',           count: 8,   conversion_rate: 6.7 },
-    ];
+    return [];
   }
 }
 
@@ -120,7 +115,7 @@ export async function getRecruiterStats(tenantId: string): Promise<Array<{
            COUNT(DISTINCT j.id) FILTER (WHERE j.status = 'open' AND j.deleted_at IS NULL) as open_jobs,
            COUNT(DISTINCT a.id) FILTER (WHERE a.applied_at >= date_trunc('month', now())) as applications_this_month,
            COUNT(DISTINCT a.id) FILTER (WHERE a.status = 'hired' AND a.updated_at >= date_trunc('month', now())) as hires_this_month,
-           COALESCE(AVG(EXTRACT(EPOCH FROM (j.filled_at - j.created_at)) / 86400) FILTER (WHERE j.filled_at IS NOT NULL), 0) as avg_time_to_hire_days
+           COALESCE(AVG(EXTRACT(EPOCH FROM (j.close_date::timestamptz - j.created_at)) / 86400) FILTER (WHERE j.close_date::timestamptz IS NOT NULL), 0) as avg_time_to_hire_days
          FROM users u
          LEFT JOIN jobs j ON j.recruiter_id = u.id AND j.tenant_id = $1 AND j.deleted_at IS NULL
          LEFT JOIN applications a ON a.job_id = j.id AND a.tenant_id = $1
@@ -140,32 +135,7 @@ export async function getRecruiterStats(tenantId: string): Promise<Array<{
       }));
     });
   } catch {
-    return [
-      {
-        recruiter_id: '00000000-0000-0000-0000-000000000001',
-        recruiter_name: 'Sarah de Vries',
-        open_jobs: 4,
-        applications_this_month: 14,
-        hires_this_month: 2,
-        avg_time_to_hire_days: 18.5,
-      },
-      {
-        recruiter_id: '00000000-0000-0000-0000-000000000002',
-        recruiter_name: 'Thomas Bakker',
-        open_jobs: 3,
-        applications_this_month: 11,
-        hires_this_month: 1,
-        avg_time_to_hire_days: 24.0,
-      },
-      {
-        recruiter_id: '00000000-0000-0000-0000-000000000003',
-        recruiter_name: 'Lisa Janssen',
-        open_jobs: 5,
-        applications_this_month: 13,
-        hires_this_month: 1,
-        avg_time_to_hire_days: 21.0,
-      },
-    ];
+    return [];
   }
 }
 
@@ -194,13 +164,7 @@ export async function getSourceBreakdown(tenantId: string): Promise<Array<{
       }));
     });
   } catch {
-    return [
-      { source: 'LinkedIn',    count: 98,  percentage: 39.7 },
-      { source: 'Indeed',      count: 62,  percentage: 25.1 },
-      { source: 'Referral',    count: 45,  percentage: 18.2 },
-      { source: 'Company Site', count: 28, percentage: 11.3 },
-      { source: 'Other',       count: 14,  percentage: 5.7  },
-    ];
+    return [];
   }
 }
 
@@ -214,7 +178,7 @@ export async function getTimeToHireTrend(tenantId: string): Promise<Array<{
         `SELECT
            to_char(date_trunc('month', created_at), 'Mon YYYY') as month,
            COALESCE(
-             AVG(EXTRACT(EPOCH FROM (filled_at - created_at)) / 86400) FILTER (WHERE filled_at IS NOT NULL),
+             AVG(EXTRACT(EPOCH FROM (close_date::timestamptz - created_at)) / 86400) FILTER (WHERE close_date::timestamptz IS NOT NULL),
              0
            ) as avg_days
          FROM jobs
@@ -232,14 +196,7 @@ export async function getTimeToHireTrend(tenantId: string): Promise<Array<{
       }));
     });
   } catch {
-    return [
-      { month: 'Nov 2024', avg_days: 24.0 },
-      { month: 'Dec 2024', avg_days: 22.5 },
-      { month: 'Jan 2025', avg_days: 20.0 },
-      { month: 'Feb 2025', avg_days: 21.5 },
-      { month: 'Mar 2025', avg_days: 19.0 },
-      { month: 'Apr 2025', avg_days: 18.5 },
-    ];
+    return [];
   }
 }
 
@@ -267,15 +224,6 @@ export async function getApplicationsTrend(tenantId: string): Promise<Array<{
       }));
     });
   } catch {
-    return [
-      { week: '03 Mar', count: 18 },
-      { week: '10 Mar', count: 24 },
-      { week: '17 Mar', count: 21 },
-      { week: '24 Mar', count: 29 },
-      { week: '31 Mar', count: 32 },
-      { week: '07 Apr', count: 27 },
-      { week: '14 Apr', count: 35 },
-      { week: '21 Apr', count: 38 },
-    ];
+    return [];
   }
 }

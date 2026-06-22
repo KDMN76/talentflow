@@ -121,7 +121,7 @@ export default function InterviewsPage() {
   const interviewerOptions = useMemo(() => {
     const seen = new Map<string, string>();
     for (const iv of data ?? []) {
-      for (const p of iv.participants) {
+      for (const p of iv.participants ?? []) {
         if (
           (p.role === "interviewer" || p.role === "hiring_manager") &&
           !seen.has(p.user_id)
@@ -346,7 +346,7 @@ function InterviewRow({ iv }: { iv: Interview }) {
   const { t } = useTranslation("interviews");
   const status = STATUS_BADGE[iv.status];
   const LocIcon = LOCATION_ICON[iv.location_type];
-  const interviewers = iv.participants.filter(
+  const interviewers = (iv.participants ?? []).filter(
     (p) => p.role === "interviewer" || p.role === "hiring_manager"
   );
   return (
