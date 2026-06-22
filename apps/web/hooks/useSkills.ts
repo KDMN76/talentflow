@@ -241,11 +241,28 @@ export function useTrendingSkills(filters: TrendingSkillsFilters = {}) {
     queryKey: ["skills", "trending", filters],
     queryFn: async (): Promise<TrendingSkill[]> => {
       try {
+        // "all" betekent geen categorie-filter; stuur 'm dus niet mee (anders
+        // filtert de backend op category = 'all' en komt er niets terug).
+        const params: Record<string, unknown> = {};
+        if (filters.category && filters.category !== "all") {
+          params.category = filters.category;
+        }
+        if (filters.limit) params.limit = filters.limit;
         const { data } = await api.get<{ data: TrendingSkill[] }>(
           "/skills/trending",
-          { params: filters }
+          { params }
         );
-        return data.data;
+        // De backend levert candidate_count/job_demand (+ geen series); de UI
+        // verwacht current_supply/current_demand + series. Map dat hier om.
+        return (data.data ?? []).map((s) => {
+          const raw = s as unknown as Record<string, unknown>;
+          return {
+            ...s,
+            current_demand: Number(raw.current_demand ?? raw.job_demand ?? 0),
+            current_supply: Number(raw.current_supply ?? raw.candidate_count ?? 0),
+            series: (raw.series as TrendingSkill["series"]) ?? [],
+          };
+        });
       } catch {
         let list = [...mockTrendingSkills];
         if (filters.category && filters.category !== "all") {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Activity,
   Database,
@@ -40,38 +41,30 @@ import {
 import { cn } from "@/lib/utils";
 import type { EscoCategory } from "@/lib/types/skills";
 
-const CATEGORY_LABEL: Record<EscoCategory, string> = {
-  technical: "Technisch",
-  tool: "Tool",
-  soft: "Soft skill",
-  language: "Taal",
-  certification: "Certificering",
-  domain: "Domein",
-};
-
 const SERIES_COLORS = ["#6366f1", "#a855f7", "#06b6d4", "#10b981", "#f59e0b", "#ef4444"];
 
 export default function SkillsPage() {
+  const { t } = useTranslation("miscInbox");
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Skills Graph"
-        description="Trending skills, vraag-en-aanbod balans en de ESCO-database — alles geanonimiseerd, geaggregeerd en AI-ondersteund."
+        title={t("skills.header.title")}
+        description={t("skills.header.description")}
       />
 
       <Tabs defaultValue="trending" className="space-y-4">
         <TabsList className="bg-muted/50 p-1">
           <TabsTrigger value="trending" className="gap-1.5">
             <TrendingUp className="h-3.5 w-3.5" />
-            Trending
+            {t("skills.tabs.trending")}
           </TabsTrigger>
           <TabsTrigger value="demand" className="gap-1.5">
             <Activity className="h-3.5 w-3.5" />
-            Vraag vs aanbod
+            {t("skills.tabs.demand")}
           </TabsTrigger>
           <TabsTrigger value="database" className="gap-1.5">
             <Database className="h-3.5 w-3.5" />
-            Database
+            {t("skills.tabs.database")}
           </TabsTrigger>
         </TabsList>
 
@@ -92,12 +85,14 @@ export default function SkillsPage() {
 // ─── Trending tab ────────────────────────────────────────────────────────────
 
 function TrendingTab() {
+  const { t } = useTranslation("miscInbox");
   const [category, setCategory] = useState<EscoCategory | "all">("all");
   const { data: trending, isLoading } = useTrendingSkills({ category, limit: 20 });
 
   // Build merged line-chart data over 8 weeks. We pivot by week_start.
   const chartData = useMemo(() => {
-    if (!trending || trending.length === 0) return [];
+    if (!trending || trending.length === 0 || !trending[0].series?.length)
+      return [];
     const weeks = trending[0].series.map((p) => p.week_start);
     return weeks.map((w, i) => {
       const row: Record<string, string | number> = {
@@ -120,22 +115,22 @@ function TrendingTab() {
           <CategoryFilter value={category} onChange={setCategory} />
           <Badge variant="secondary" className="gap-1">
             <Sparkles className="h-3 w-3" />
-            Top 5 in chart
+            {t("skills.trending.top5InChart")}
           </Badge>
         </div>
-        <AIBadge label="Trending-berekening op basis van vacature-volume per ESCO-skill over 8 weken." />
+        <AIBadge label={t("skills.trending.aiBadge")} />
       </div>
 
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Demand-groei over 8 weken</CardTitle>
+          <CardTitle className="text-base">{t("skills.trending.chartTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <Skeleton className="h-72 w-full" />
           ) : !trending || trending.length === 0 ? (
             <p className="py-12 text-center text-sm text-muted-foreground">
-              Geen trending skills voor deze filter.
+              {t("skills.trending.noTrending")}
             </p>
           ) : (
             <ResponsiveContainer width="100%" height={300}>
@@ -182,7 +177,7 @@ function TrendingTab() {
 
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Top trending skills</CardTitle>
+          <CardTitle className="text-base">{t("skills.trending.tableTitle")}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {isLoading ? (
@@ -192,11 +187,11 @@ function TrendingTab() {
           ) : (
             <div className="divide-y divide-border">
               <div className="grid grid-cols-12 gap-2 px-4 py-2 text-[11px] uppercase tracking-wider text-muted-foreground font-semibold bg-muted/30">
-                <span className="col-span-5">Skill</span>
-                <span className="col-span-2 text-right">Groei</span>
-                <span className="col-span-2 text-right">Demand</span>
-                <span className="col-span-2 text-right">Supply</span>
-                <span className="col-span-1 text-right">Gap</span>
+                <span className="col-span-5">{t("skills.trending.columns.skill")}</span>
+                <span className="col-span-2 text-right">{t("skills.trending.columns.growth")}</span>
+                <span className="col-span-2 text-right">{t("skills.trending.columns.demand")}</span>
+                <span className="col-span-2 text-right">{t("skills.trending.columns.supply")}</span>
+                <span className="col-span-1 text-right">{t("skills.trending.columns.gap")}</span>
               </div>
               {(trending ?? []).map((t) => {
                 const gap = t.current_demand - t.current_supply;
@@ -253,17 +248,22 @@ function TrendingTab() {
 // ─── Demand vs supply tab ────────────────────────────────────────────────────
 
 function DemandSupplyTab() {
+  const { t } = useTranslation("miscInbox");
   const { data, isLoading } = useDemandSupply();
+
+  const categoryLabel = (category: EscoCategory) =>
+    t(`skills.category.${category}`, { defaultValue: category });
 
   const chartData = useMemo(
     () =>
       (data?.per_category ?? []).map((b) => ({
-        category: CATEGORY_LABEL[b.category] ?? b.category,
+        category: categoryLabel(b.category),
         Demand: b.demand,
         Supply: b.supply,
         gap: b.gap,
       })),
-    [data]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [data, t]
   );
 
   return (
@@ -271,8 +271,8 @@ function DemandSupplyTab() {
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
-            Vraag vs aanbod per categorie
-            <AIBadge label="Berekend uit het verschil tussen actieve vacatures en kandidaten met de skill." />
+            {t("skills.demand.chartTitle")}
+            <AIBadge label={t("skills.demand.aiBadge")} />
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -327,10 +327,10 @@ function DemandSupplyTab() {
         <CardContent className="p-0">
           <div className="divide-y divide-border">
             <div className="grid grid-cols-12 gap-2 px-4 py-2 text-[11px] uppercase tracking-wider text-muted-foreground font-semibold bg-muted/30">
-              <span className="col-span-4">Categorie</span>
-              <span className="col-span-3 text-right">Demand</span>
-              <span className="col-span-3 text-right">Supply</span>
-              <span className="col-span-2 text-right">Gap</span>
+              <span className="col-span-4">{t("skills.demand.columns.category")}</span>
+              <span className="col-span-3 text-right">{t("skills.demand.columns.demand")}</span>
+              <span className="col-span-3 text-right">{t("skills.demand.columns.supply")}</span>
+              <span className="col-span-2 text-right">{t("skills.demand.columns.gap")}</span>
             </div>
             {(data?.per_category ?? []).map((b) => (
               <div
@@ -338,7 +338,7 @@ function DemandSupplyTab() {
                 className="grid grid-cols-12 gap-2 px-4 py-2.5 items-center"
               >
                 <span className="col-span-4 text-sm font-medium">
-                  {CATEGORY_LABEL[b.category] ?? b.category}
+                  {categoryLabel(b.category)}
                 </span>
                 <span className="col-span-3 text-right text-sm tabular-nums">
                   {b.demand}
@@ -368,6 +368,7 @@ function DemandSupplyTab() {
 // ─── Database tab ────────────────────────────────────────────────────────────
 
 function DatabaseTab() {
+  const { t } = useTranslation("miscInbox");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<EscoCategory | "all">("all");
   const { data, isLoading } = useEscoSearch({ q: query, category, limit: 100 });
@@ -380,7 +381,7 @@ function DatabaseTab() {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Zoek in ESCO-skills..."
+            placeholder={t("skills.database.searchPlaceholder")}
             className="pl-9"
           />
         </div>
@@ -395,7 +396,7 @@ function DatabaseTab() {
             </div>
           ) : !data || data.length === 0 ? (
             <p className="py-12 text-center text-sm text-muted-foreground">
-              Geen skills gevonden.
+              {t("skills.database.empty")}
             </p>
           ) : (
             <div className="divide-y divide-border">
@@ -426,7 +427,7 @@ function DatabaseTab() {
                     variant="secondary"
                     className="shrink-0 bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border-0"
                   >
-                    {s.candidate_count ?? 0} kandidaten
+                    {t("skills.database.candidates", { count: s.candidate_count ?? 0 })}
                   </Badge>
                 </div>
               ))}
