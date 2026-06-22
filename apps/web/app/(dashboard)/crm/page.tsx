@@ -412,6 +412,7 @@ function ContactsTab() {
   const { t } = useTranslation("crmPage");
   const [orgFilter, setOrgFilter] = useState<string>("all");
   const [createOpen, setCreateOpen] = useState(false);
+  const [search, setSearch] = useState("");
   const { data: orgs } = useOrganizations();
   const { data: contacts, isLoading } = useContacts(
     orgFilter === "all" ? undefined : orgFilter
@@ -423,9 +424,33 @@ function ContactsTab() {
     return map;
   }, [orgs]);
 
+  const filtered = useMemo(() => {
+    if (!contacts) return [];
+    const q = search.toLowerCase().trim();
+    if (!q) return contacts;
+    return contacts.filter((c) => {
+      const orgName = orgById.get(c.organization_id)?.name ?? "";
+      return (
+        c.name?.toLowerCase().includes(q) ||
+        c.email?.toLowerCase().includes(q) ||
+        orgName.toLowerCase().includes(q)
+      );
+    });
+  }, [contacts, search, orgById]);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:flex-1">
+        <div className="relative w-full sm:max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Zoek op naam, bedrijf of e-mail…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
         <div className="w-full sm:max-w-xs">
           <Select value={orgFilter} onValueChange={setOrgFilter}>
             <SelectTrigger>
@@ -440,6 +465,7 @@ function ContactsTab() {
               ))}
             </SelectContent>
           </Select>
+        </div>
         </div>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
@@ -464,7 +490,7 @@ function ContactsTab() {
             <Skeleton key={i} className="h-16 rounded-xl" />
           ))}
         </div>
-      ) : !contacts || contacts.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <EmptyState
           icon={<Users className="h-12 w-12 text-muted-foreground/30" />}
           title={t("contacts.emptyTitle")}
@@ -474,7 +500,7 @@ function ContactsTab() {
         />
       ) : (
         <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-card shadow-sm overflow-hidden">
-          {contacts.map((c, idx) => {
+          {filtered.map((c, idx) => {
             const org = orgById.get(c.organization_id);
             return (
               <div
@@ -696,6 +722,7 @@ function DealsTab() {
   const { data: orgs } = useOrganizations();
   const moveStage = useUpdateDealStage();
   const [createOpen, setCreateOpen] = useState(false);
+  const [search, setSearch] = useState("");
 
   const expectedRevenueThisMonth = useMemo(() => {
     if (!pipeline) return 0;
@@ -715,6 +742,22 @@ function DealsTab() {
     if (!pipeline) return 0;
     return DEAL_STAGES.reduce((sum, s) => sum + pipeline[s].length, 0);
   }, [pipeline]);
+
+  const filteredPipeline = useMemo(() => {
+    if (!pipeline) return pipeline;
+    const q = search.toLowerCase().trim();
+    if (!q) return pipeline;
+    const out = { ...pipeline };
+    for (const s of DEAL_STAGES) {
+      out[s] = (pipeline[s] ?? []).filter(
+        (d) =>
+          d.title?.toLowerCase().includes(q) ||
+          d.organization_name?.toLowerCase().includes(q) ||
+          d.recruiter_name?.toLowerCase().includes(q)
+      );
+    }
+    return out;
+  }, [pipeline, search]);
 
   return (
     <div className="space-y-4">
@@ -748,6 +791,16 @@ function DealsTab() {
         </Dialog>
       </div>
 
+      <div className="relative max-w-sm w-full">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Zoek op deal, organisatie of recruiter…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -768,7 +821,7 @@ function DealsTab() {
             <DealColumn
               key={stage}
               stage={stage}
-              deals={pipeline?.[stage] ?? []}
+              deals={filteredPipeline?.[stage] ?? []}
               onMoveDeal={(dealId) => moveStage.mutate({ id: dealId, stage })}
             />
           ))}
