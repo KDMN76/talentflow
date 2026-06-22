@@ -471,3 +471,154 @@ groen), en een volledige `next build`.
 - **Source**: Kaan
 - **Date added**: 2026-05-17
 - **Context**: AVG art. 17 — recht op verwijdering. Kandidaat vraagt verwijdering aan via self-service of DSAR-flow, recruiter krijgt approval-melding, na akkoord wordt PII geanonimiseerd of fysiek verwijderd (afhankelijk van retentie-policy). Audit-event blijft staan zonder PII.
+
+---
+
+## Sectie 4: Stagebedrijf-feedback (2026-06-22)
+
+Batch feedback van het stagebedrijf, vastgelegd door Claude Code. Elk item op **P2** (alleen
+Kaan promoot). Type-tags: `[BUG]` / `[UX]` / `[FEATURE]`. **Bug-claims zijn nog niet
+gereproduceerd.** Bestandsverwijzingen komen uit een read-only codebase-verkenning (2026-06-22)
+zodat items meteen oppakbaar zijn. Kaan's eigen, expliciet terecht genoemde hoofdwens:
+**menu declutter** (item 4.5).
+
+### 4.1 — Career Page "Test Button #1" bug
+- **Priority**: P2
+- **Status**: Open — te reproduceren
+- **Type**: [BUG]
+- **Files**: `apps/web/app/(dashboard)/career-pages/[id]/builder/page.tsx`; knop vermoedelijk in `apps/web/components/career-builder/CanvasBlock.tsx` of `EditPanel.tsx`
+- **Context**: Stagebedrijf meldt dat "Test Button #1" een bug heeft. Verkenning kon de exacte knop niet pinpointen. Nodig: welke knop, welk gedrag (klik=niks / fout / verkeerde target).
+- **Cross-ref**: Sectie 2 "Career pages per tenant".
+
+### 4.2 — CRM Deals bug
+- **Priority**: P2
+- **Status**: Open — te reproduceren
+- **Type**: [BUG]
+- **Files**: `apps/web/app/(dashboard)/crm/page.tsx` (`DealsTab` / `CreateDealDialog`), hook `apps/web/hooks/useCrm.ts` (`useDealsPipeline`)
+- **Context**: "Controleer de deals." Concrete suspect: `CreateDealDialog` initialiseert `organizationId = organizations[0]?.id ?? ""`; zonder organisaties kan een deal met lege `organizationId` worden aangemaakt (geen guard/validatie). Reproduceren + bevestigen of dit de gemelde bug is.
+
+### 4.3 — Kandidaat-filtersysteem bug
+- **Priority**: P2
+- **Status**: Open — te reproduceren
+- **Type**: [BUG]
+- **Files**: `apps/web/app/(dashboard)/candidates/page.tsx`
+- **Context**: Source-filter is case/label-gevoelig; filterchips (o.a. "Behance") matchen mogelijk niet de echte `source`-waarden in de DB → silent 0 resultaten. Repro: welk filter, welk gedrag verwacht vs werkelijk.
+
+### 4.4 — [UX] KPI-cards overal kleiner/dunner
+- **Priority**: P2
+- **Status**: Open
+- **Type**: [UX]
+- **Files**: GEEN gedeelde card — 3-4 varianten: `apps/web/components/dashboard/StatsCard.tsx` (text-3xl/p-6), inline `KpiCard` in `apps/web/app/(dashboard)/analytics/page.tsx` (text-2xl/p-4), inline `StatCard` in `apps/web/app/(dashboard)/contracts/page.tsx` (p-5), `apps/web/components/reports/blocks/KpiBlock.tsx` (text-4xl)
+- **Context**: Feedback "KPI's overal kleiner en minder dik" komt 4× terug (Dashboard, Analytiek, CRM, Bureau). Aanpak: consolideer naar één compacte gedeelde stat-card en zet alle pagina's daarop — geen losse tweaks per pagina.
+- **Cross-ref**: Sectie 2 "DESIGN.md uitrol over bestaande pagina's".
+
+### 4.5 — [UX] Menu declutter (hoofdwens Kaan)
+- **Priority**: P2
+- **Status**: Open
+- **Type**: [UX]
+- **Files**: `apps/web/components/layout/Sidebar.tsx` (~24 top-level + ~30 nested items, 6 groepen)
+- **Context**: Menu is te druk. Collapse-logica via `children` bestaat al. Aanpak: minder top-level items / secundaire items onder bestaande inklapbare groepen en default ingeklapt. Designkeuze (welke items secundair) → voorstel/akkoord van Kaan nodig vóór uitvoer.
+
+### 4.6 — [UX] Achtergrond witter
+- **Priority**: P2
+- **Status**: Open
+- **Type**: [UX]
+- **Files**: `apps/web/app/(dashboard)/layout.tsx` (regel ~40)
+- **Context**: 1-regel: `bg-zinc-50` → `bg-white` (of `bg-zinc-100` voor net niet helemaal puur wit).
+
+### 4.7 — [UX] Klantportaal-link responsive maken
+- **Priority**: P2
+- **Status**: Open
+- **Type**: [UX]
+- **Files**: `apps/web/app/(dashboard)/portal-links/page.tsx`
+- **Context**: Op het ene scherm netjes, op een ander veel te groot/onleesbaar. De link/card heeft geen max-width/clamp. Voeg responsive breedte-constraint toe zodat hij op elk scherm past.
+
+### 4.8 — [FEATURE/UX] Dashboard export (PDF/Excel/CSV) + breadcrumb
+- **Priority**: P2
+- **Status**: Open
+- **Type**: [FEATURE] (export) + [UX] (breadcrumb)
+- **Files**: `apps/web/app/(dashboard)/dashboard/page.tsx`. Hergebruik: `eventsToCsv` in `apps/web/components/compliance/AuditTrailViewer.tsx` (CSV) + `downloadInvoicePdf` blob-patroon (`apps/web/app/(dashboard)/invoices/[id]/page.tsx`, PDF). Breadcrumb bestaat niet (alleen `apps/web/components/layout/PageHeader.tsx`).
+- **Context**: Export naar PDF/Excel/CSV (belangrijk voor analytiek→rapport) + breadcrumb-navigatie. Export bestaat nog nergens generiek.
+- **Cross-ref**: Sectie 2 "Reports module fix".
+
+### 4.9 — [UX/FEATURE] Analytiek: filter + (tussen)zoekbalk + KPI kleiner
+- **Priority**: P2
+- **Status**: Open
+- **Type**: [UX] + [FEATURE]
+- **Files**: `apps/web/app/(dashboard)/analytics/page.tsx` (geen filter/zoek nu). Hergebruik `apps/web/components/jobs/JobsFilterBar.tsx` / `apps/web/components/reports/FilterBuilder.tsx`. KPI-grootte = item 4.4.
+- **Context**: KPI's iets kleiner + een filter + een tussenzoekbalk toevoegen.
+- **Cross-ref**: Sectie 2 "Analytics module (echte data ipv mock)".
+
+### 4.10 — [UX] Skills: empty-state bij "Top trending skills"
+- **Priority**: P2
+- **Status**: Open
+- **Type**: [UX]
+- **Files**: `apps/web/app/(dashboard)/skills/page.tsx` (`TrendingTab`)
+- **Context**: "Top trending skills" toont niets zonder uitleg. Empty-state is i18n-key-gebaseerd (`skills.trending.noTrending`) en lijkt leeg. Zet/herstel de tekst (bijv. "geen skills voor deze filter") zodat leeg ≠ kapot. ("Geen skills nog toegevoegd" elders is een correcte empty-state, geen bug.)
+
+### 4.11 — [UX/FEATURE] Pipeline/Kandidaat: datum + client-filter
+- **Priority**: P2
+- **Status**: Open — deels al aanwezig
+- **Type**: [UX] + [FEATURE]
+- **Files**: `apps/web/components/pipeline/KanbanCard.tsx` (toont al `applied_at`, relatief), pipeline-pagina `apps/web/app/(dashboard)/jobs/[id]/pipeline/page.tsx`
+- **Context**: Sollicitatiedatum wordt AL relatief getoond. Open: client-filter + overzicht ontbreken; mogelijk wil men absolute datum. Te bevestigen wat precies.
+
+### 4.12 — [UX] AI Suite (Sourcing Agent) opschonen
+- **Priority**: P2
+- **Status**: Open — interpretatie te bevestigen
+- **Type**: [UX]
+- **Files**: `apps/web/app/(dashboard)/sourcing-agent/page.tsx`
+- **Context**: Vacaturebank-verbindknop "op één lijn", maximaal aantal tonen tegen clutter, sub-zoekbalk in de pipeline. Bevestigen: exacte knop/scherm (welke is de "vacaturebank-verbindknop").
+
+### 4.13 — [UX/FEATURE] CRM minimaliseren + overzicht per klant
+- **Priority**: P2
+- **Status**: Open
+- **Type**: [UX] + [FEATURE]
+- **Files**: `apps/web/app/(dashboard)/crm/page.tsx`
+- **Context**: CRM minimaliseren/opschonen + nieuw overzicht per klant: hoeveel kandidaten per locatie geplaatst. "Placed per location" bestaat nog niet.
+- **Cross-ref**: Sectie 2 "Clients/CRM module".
+
+### 4.14 — [UX/FEATURE] Communicatie/kanalen: delete + flags + WhatsApp emoji
+- **Priority**: P2
+- **Status**: Open — interpretatie te bevestigen
+- **Type**: [UX] + [FEATURE]
+- **Files**: `apps/web/app/(dashboard)/inbox/page.tsx` (archive bestaat — geen delete; pin+labels ≈ flags). WhatsApp-composer in `apps/web/app/(dashboard)/candidates/[id]/page.tsx` (nu plain textarea, geen emoji).
+- **Context**: ("Reactieve indeling" geïnterpreteerd als Communicatie/kanalen.) Mails kunnen verwijderen + flags; WhatsApp-bericht naar sollicitant: emoji-picker toevoegen.
+
+### 4.15 — [UX] Taal-switch verbergen in Instellingen
+- **Priority**: P2
+- **Status**: Open
+- **Type**: [UX]
+- **Files**: `apps/web/components/i18n/LanguageSwitcher.tsx` (nu gerenderd in `apps/web/components/layout/Sidebar.tsx`, regel ~629) → naar `apps/web/app/(dashboard)/settings/page.tsx`
+- **Context**: NL/EN-switch uit de sidebar halen en in de instellingen onderbrengen.
+
+### 4.16 — [UX] "Nurture Sequence" hernoemen
+- **Priority**: P2
+- **Status**: Open — nieuwe naam te kiezen
+- **Type**: [UX]
+- **Files**: i18n-key `outreach.sequences.title` (gebruikt in `apps/web/app/(dashboard)/outreach/sequences/page.tsx`)
+- **Context**: Heet al "Nurture Sequence" (niet "Nature"); naam wordt als moeilijk ervaren. Eenvoudiger naam kiezen en de i18n-string aanpassen.
+
+### 4.17 — [FEATURE] Logboek / wie-deed-wat / inzicht bij verwijderen + backups
+- **Priority**: P2
+- **Status**: Open — infra bestaat grotendeels al
+- **Type**: [FEATURE]
+- **Files**: BESTAAT AL: `apps/api/src/lib/audit.ts` (WORM-audit), `apps/api/src/lib/auditActions.ts`, web `apps/web/app/(dashboard)/compliance/audit-events/page.tsx` (zoek/diff/CSV-export + per-kandidaat audit-link)
+- **Context**: Logboek + activiteit-tracing ("wie deed wat", inzicht bij per ongeluk verwijderen) is grotendeels al gebouwd. Echte gaten: vindbaarheid (zit onder Compliance, niet als "Statistiek van gebruikers"), evt. een per-gebruiker-activiteitenview, en een backup/herstel-strategie voor ongelukkige verwijderingen.
+- **Cross-ref**: Sectie 2 "Audit logs".
+
+### 4.18 — [FEATURE] Systeem-hulp / uitleg overal
+- **Priority**: P2
+- **Status**: Open
+- **Type**: [FEATURE]
+- **Files**: `apps/web/components/ui/tooltip.tsx` (Radix-tooltip bestaat, wordt nauwelijks gebruikt)
+- **Context**: Per onderdeel uitleg: wat is wat, wat kun je ermee, hoe doe je het. Bouw een help/tooltip-laag (en evt. help-overlay per scherm) bovenop de bestaande tooltip-primitive.
+
+### Open interpretaties (te bevestigen door Kaan)
+- "Reactieve indeling" = Communicatie/kanalen (item 4.14)?
+- AI-Suite: welke knop is de "vacaturebank-verbindknop" en welk scherm precies (4.12)?
+- Bedoeling "tussenzoekbalk" in Analytiek (4.9): secundaire filter/zoekbalk boven de resultaten?
+- Nieuwe naam voor "Nurture Sequence" (4.16).
+- Career-page "Test Button #1": exacte knop + verwacht gedrag (4.1).
+- Kandidaat-filter: welk filter, welk gedrag (4.3).
+- Pipeline: absolute datum gewenst en/of client-filter (4.11)?
