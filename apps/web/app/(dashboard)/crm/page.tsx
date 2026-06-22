@@ -46,6 +46,7 @@ import {
   useCreateContact,
   useDealsPipeline,
   useCreateDeal,
+  useUpdateDealStage,
   DEAL_STAGES,
   DEAL_STAGE_LABELS,
   type DealStage,
@@ -693,6 +694,7 @@ function DealsTab() {
   const { t } = useTranslation("crmPage");
   const { data: pipeline, isLoading } = useDealsPipeline();
   const { data: orgs } = useOrganizations();
+  const moveStage = useUpdateDealStage();
   const [createOpen, setCreateOpen] = useState(false);
 
   const expectedRevenueThisMonth = useMemo(() => {
@@ -767,6 +769,7 @@ function DealsTab() {
               key={stage}
               stage={stage}
               deals={pipeline?.[stage] ?? []}
+              onMoveDeal={(dealId) => moveStage.mutate({ id: dealId, stage })}
             />
           ))}
         </div>
@@ -778,16 +781,35 @@ function DealsTab() {
 function DealColumn({
   stage,
   deals,
+  onMoveDeal,
 }: {
   stage: DealStage;
   deals: CrmDeal[];
+  onMoveDeal: (dealId: string) => void;
 }) {
   const { t } = useTranslation("crmPage");
   const colors = DEAL_STAGE_COLORS[stage];
   const total = deals.reduce((sum, d) => sum + d.value_eur, 0);
+  const [isOver, setIsOver] = useState(false);
 
   return (
-    <div className="flex flex-col rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30 min-h-[300px]">
+    <div
+      onDragOver={(e) => {
+        e.preventDefault();
+        if (!isOver) setIsOver(true);
+      }}
+      onDragLeave={() => setIsOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setIsOver(false);
+        const dealId = e.dataTransfer.getData("text/plain");
+        if (dealId) onMoveDeal(dealId);
+      }}
+      className={cn(
+        "flex flex-col rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30 min-h-[300px] transition-shadow",
+        isOver && "ring-2 ring-indigo-400 ring-inset"
+      )}
+    >
       <div
         className={cn(
           "rounded-t-xl border-b px-3 py-2.5 flex items-center justify-between",
@@ -827,8 +849,13 @@ function DealCard({ deal }: { deal: CrmDeal }) {
   const colors = DEAL_STAGE_COLORS[deal.stage];
   return (
     <div
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData("text/plain", deal.id);
+        e.dataTransfer.effectAllowed = "move";
+      }}
       className={cn(
-        "rounded-lg border border-zinc-200 dark:border-zinc-800 bg-card p-3 shadow-sm hover:shadow-md hover:ring-2 transition-all cursor-pointer",
+        "rounded-lg border border-zinc-200 dark:border-zinc-800 bg-card p-3 shadow-sm hover:shadow-md hover:ring-2 transition-all cursor-grab active:cursor-grabbing",
         colors.ring
       )}
     >
