@@ -96,6 +96,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
+# server.js (cwd /app) serveert public vanuit /app/public, maar Next bouwt het
+# op /app/apps/web/public. Beide paden behouden — anders 404 op /sw.js,
+# /manifest.json en /icons (zelfde monorepo-tracer-valkuil als static hierboven).
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./public
 
 USER nextjs
 
