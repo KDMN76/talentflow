@@ -188,10 +188,26 @@ export function useDealsPipeline() {
   return useQuery({
     queryKey: ["crm", "deals", "pipeline"],
     queryFn: async () => {
-      const { data } = await api.get<Record<DealStage, CrmDeal[]>>(
-        "/crm/deals/pipeline/board"
-      );
-      return data;
+      // De API geeft `{ data: [{ stage, deals }] }` terug, maar de UI verwacht
+      // een object per stage (`pipeline[stage]` = deals[]). Hier normaliseren —
+      // anders is `pipeline.gewonnen`/`pipeline[stage]` undefined en breekt het
+      // kanban-bord + de "verwachte omzet"-berekening.
+      const { data } = await api.get<{
+        data: Array<{ stage: DealStage; deals: CrmDeal[] }>;
+      }>("/crm/deals/pipeline/board");
+      const board: Record<DealStage, CrmDeal[]> = {
+        prospect: [],
+        offerte: [],
+        onderhandeling: [],
+        gewonnen: [],
+        verloren: [],
+      };
+      for (const group of data?.data ?? []) {
+        if (group?.stage && group.stage in board) {
+          board[group.stage] = group.deals ?? [];
+        }
+      }
+      return board;
     },
   });
 }
