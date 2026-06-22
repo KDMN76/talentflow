@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -68,41 +69,26 @@ const LOC_ICON: Record<InterviewLocationType, typeof Video> = {
   phone: Phone,
 };
 
-const LOC_LABEL: Record<InterviewLocationType, string> = {
-  google_meet: "Google Meet",
-  teams: "Microsoft Teams",
-  zoom: "Zoom",
-  in_person: "In persoon",
-  phone: "Telefonisch",
-};
-
-const STATUS_BADGE: Record<
-  Interview["status"],
-  { label: string; cls: string }
-> = {
+const STATUS_BADGE: Record<Interview["status"], { cls: string }> = {
   scheduled: {
-    label: "Gepland",
     cls: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
   },
   rescheduled: {
-    label: "Verplaatst",
     cls: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
   },
   completed: {
-    label: "Afgerond",
     cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
   },
   no_show: {
-    label: "No-show",
     cls: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
   },
   cancelled: {
-    label: "Geannuleerd",
     cls: "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300",
   },
 };
 
 export default function InterviewDetailPage() {
+  const { t } = useTranslation("interviewKits");
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { data: interview, isLoading } = useInterview(params.id);
@@ -127,7 +113,7 @@ export default function InterviewDetailPage() {
       <Card>
         <CardContent className="py-12 text-center">
           <p className="text-sm text-muted-foreground">
-            Interview niet gevonden.
+            {t("interview.notFound.label")}
           </p>
           <Button
             variant="outline"
@@ -135,7 +121,7 @@ export default function InterviewDetailPage() {
             onClick={() => router.push("/interviews")}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Terug naar overzicht
+            {t("interview.notFound.back")}
           </Button>
         </CardContent>
       </Card>
@@ -149,7 +135,7 @@ export default function InterviewDetailPage() {
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-zinc-900 dark:hover:text-zinc-100"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
-        Terug naar interviews
+        {t("interview.back")}
       </Link>
 
       {/* Header */}
@@ -175,10 +161,10 @@ export default function InterviewDetailPage() {
                 <Badge
                   className={cn(
                     "border-transparent rounded-md text-[10px] uppercase tracking-wide",
-                    STATUS_BADGE[interview.status].cls
+                    (STATUS_BADGE[interview.status] ?? STATUS_BADGE.scheduled).cls
                   )}
                 >
-                  {STATUS_BADGE[interview.status].label}
+                  {t(`interview.status.${interview.status}`)}
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">
@@ -188,7 +174,9 @@ export default function InterviewDetailPage() {
                 <span className="inline-flex items-center gap-1">
                   <Clock className="h-3 w-3" />
                   {formatLong(interview.scheduled_start)} ·{" "}
-                  {interview.duration_minutes} min
+                  {t("interview.duration", {
+                    count: interview.duration_minutes,
+                  })}
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
@@ -203,7 +191,8 @@ export default function InterviewDetailPage() {
                   size="sm"
                   onClick={() => setRescheduleOpen(true)}
                 >
-                  <Edit3 className="h-3.5 w-3.5 mr-1.5" /> Verplaatsen
+                  <Edit3 className="h-3.5 w-3.5 mr-1.5" />{" "}
+                  {t("interview.actions.reschedule")}
                 </Button>
                 <Button
                   variant="outline"
@@ -211,7 +200,8 @@ export default function InterviewDetailPage() {
                   onClick={() => setConfirmCancelOpen(true)}
                   className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
                 >
-                  <X className="h-3.5 w-3.5 mr-1.5" /> Annuleren
+                  <X className="h-3.5 w-3.5 mr-1.5" />{" "}
+                  {t("interview.actions.cancel")}
                 </Button>
               </div>
             )}
@@ -222,16 +212,20 @@ export default function InterviewDetailPage() {
       {/* Tabs */}
       <Tabs defaultValue="details">
         <TabsList>
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="questions">Vragen</TabsTrigger>
+          <TabsTrigger value="details">
+            {t("interview.tabs.details")}
+          </TabsTrigger>
+          <TabsTrigger value="questions">
+            {t("interview.tabs.questions")}
+          </TabsTrigger>
           <TabsTrigger value="recording">
-            Opname
+            {t("interview.tabs.recording")}
             {interview.has_recording && (
               <span className="ml-1.5 h-1.5 w-1.5 rounded-full bg-rose-500" />
             )}
           </TabsTrigger>
           <TabsTrigger value="scorecards">
-            Scorecards
+            {t("interview.tabs.scorecards")}
             {interview.scorecard_count > 0 && (
               <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-semibold text-white">
                 {interview.scorecard_count}
@@ -262,8 +256,10 @@ export default function InterviewDetailPage() {
                     </CardTitle>
                     <CardDescription>
                       {formatBytes(rec.size_bytes)} ·{" "}
-                      {formatDuration(rec.duration_seconds)} · Geüpload door{" "}
-                      {rec.uploaded_by_name}
+                      {formatDuration(rec.duration_seconds)} ·{" "}
+                      {t("interview.recording.uploadedBy", {
+                        name: rec.uploaded_by_name,
+                      })}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -288,10 +284,10 @@ export default function InterviewDetailPage() {
         onConfirm={async (reason) => {
           await cancel.mutateAsync({ id: interview.id, reason });
           toast({
-            title: "Interview geannuleerd",
+            title: t("interview.toasts.cancelled"),
             description: reason
-              ? `Reden: ${reason}`
-              : "Het interview is geannuleerd.",
+              ? t("interview.toasts.cancelledReason", { reason })
+              : t("interview.toasts.cancelledDefault"),
           });
           setConfirmCancelOpen(false);
         }}
@@ -309,7 +305,7 @@ export default function InterviewDetailPage() {
             scheduled_start: start,
           });
           toast({
-            title: "Interview verplaatst",
+            title: t("interview.toasts.rescheduled"),
             description: formatLong(start),
           });
           setRescheduleOpen(false);
@@ -323,19 +319,20 @@ export default function InterviewDetailPage() {
 // ─── Details panel ──────────────────────────────────────────────────────────
 
 function DetailsPanel({ interview }: { interview: Interview }) {
-  const LocIcon = LOC_ICON[interview.location_type];
+  const { t } = useTranslation("interviewKits");
+  const LocIcon = LOC_ICON[interview.location_type] ?? Video;
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm flex items-center gap-2">
             <LocIcon className="h-4 w-4 text-purple-500" />
-            Locatie
+            {t("interview.details.locationTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm font-semibold">
-            {LOC_LABEL[interview.location_type]}
+            {t(`interview.locations.${interview.location_type}`)}
           </p>
           {interview.location_url && (
             <a
@@ -359,7 +356,7 @@ function DetailsPanel({ interview }: { interview: Interview }) {
         <CardHeader className="pb-3">
           <CardTitle className="text-sm flex items-center gap-2">
             <Users className="h-4 w-4 text-indigo-500" />
-            Interviewers
+            {t("interview.details.interviewersTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -393,7 +390,7 @@ function DetailsPanel({ interview }: { interview: Interview }) {
         <CardHeader className="pb-3">
           <CardTitle className="text-sm flex items-center gap-2">
             <Star className="h-4 w-4 text-amber-500" />
-            Interview kit
+            {t("interview.details.kitTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -405,13 +402,13 @@ function DetailsPanel({ interview }: { interview: Interview }) {
                   href={`/interview-kits/${interview.kit_id}`}
                   className="text-xs text-indigo-600 hover:underline"
                 >
-                  Bekijken →
+                  {t("interview.details.kitView")}
                 </Link>
               )}
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">
-              Geen kit gekoppeld — vrij gesprek.
+              {t("interview.details.noKit")}
             </p>
           )}
         </CardContent>
@@ -420,7 +417,9 @@ function DetailsPanel({ interview }: { interview: Interview }) {
       {interview.notes && (
         <Card className="md:col-span-2">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Notities</CardTitle>
+            <CardTitle className="text-sm">
+              {t("interview.details.notesTitle")}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm whitespace-pre-line text-zinc-700 dark:text-zinc-300">
@@ -454,14 +453,14 @@ function RsvpBadge({
 // ─── Questions panel ────────────────────────────────────────────────────────
 
 function QuestionsPanel({ kitId }: { kitId: string | null }) {
+  const { t } = useTranslation("interviewKits");
   const { data: kit, isLoading } = useInterviewKit(kitId);
 
   if (!kitId) {
     return (
       <Card>
         <CardContent className="py-8 text-center text-sm text-muted-foreground">
-          Aan dit interview is geen kit gekoppeld. Voeg er één toe via
-          "Bewerken" om vragen te tonen.
+          {t("interview.questionsPanel.noKit")}
         </CardContent>
       </Card>
     );
@@ -473,7 +472,7 @@ function QuestionsPanel({ kitId }: { kitId: string | null }) {
     return (
       <Card>
         <CardContent className="py-8 text-center text-sm text-muted-foreground">
-          Kit niet gevonden.
+          {t("interview.questionsPanel.kitNotFound")}
         </CardContent>
       </Card>
     );
@@ -509,14 +508,16 @@ function QuestionsPanel({ kitId }: { kitId: string | null }) {
                 </p>
                 {q.evaluation_criteria && (
                   <p className="text-xs text-muted-foreground mt-1.5">
-                    <span className="font-semibold">Beoordelen op: </span>
+                    <span className="font-semibold">
+                      {t("interview.questionsPanel.evaluateOn")}
+                    </span>
                     {q.evaluation_criteria}
                   </p>
                 )}
                 {q.suggested_followups.length > 0 && (
                   <div className="mt-2 rounded-md bg-zinc-50 dark:bg-zinc-900/40 px-2.5 py-1.5 border border-border">
                     <p className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground mb-1">
-                      Suggested follow-ups
+                      {t("interview.questionsPanel.followupsTitle")}
                     </p>
                     <ul className="space-y-0.5">
                       {q.suggested_followups.map((f, j) => (
@@ -543,6 +544,7 @@ function QuestionsPanel({ kitId }: { kitId: string | null }) {
 // ─── Scorecards panel ───────────────────────────────────────────────────────
 
 function ScorecardsPanel({ interview }: { interview: Interview }) {
+  const { t } = useTranslation("interviewKits");
   const { data: scorecards = [] } = useScorecardsForApplication(
     interview.application_id
   );
@@ -552,22 +554,21 @@ function ScorecardsPanel({ interview }: { interview: Interview }) {
         <CardHeader className="pb-3">
           <CardTitle className="text-sm flex items-center gap-2">
             <Star className="h-4 w-4 text-amber-500" />
-            Scorecards ({scorecards.length})
+            {t("interview.scorecards.title", { count: scorecards.length })}
           </CardTitle>
           <CardDescription>
-            Per interviewer: huidige beoordeling. Klik op een rij om de detail
-            in de application-pagina te bekijken.
+            {t("interview.scorecards.description")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {scorecards.length === 0 ? (
             <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-              Nog geen scorecards ingeleverd.
+              {t("interview.scorecards.empty")}
               <Link
                 href={`/candidates/${interview.candidate_id}`}
                 className="block mt-2 text-xs text-indigo-600 hover:underline"
               >
-                Open kandidaat-pagina om scorecard in te vullen
+                {t("interview.scorecards.openCandidate")}
               </Link>
             </div>
           ) : (
@@ -592,7 +593,9 @@ function ScorecardsPanel({ interview }: { interview: Interview }) {
                   </div>
                   <span className="text-base font-bold text-indigo-600 dark:text-indigo-400">
                     {sc.overall_score.toFixed(1)}
-                    <span className="text-xs text-muted-foreground">/5</span>
+                    <span className="text-xs text-muted-foreground">
+                      {t("interview.scorecards.scoreSuffix")}
+                    </span>
                   </span>
                 </div>
               ))}
@@ -621,29 +624,31 @@ function CancelDialog({
   onConfirm: (reason: string) => Promise<void>;
   loading: boolean;
 }) {
+  const { t } = useTranslation("interviewKits");
   const [reason, setReason] = useState("");
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Interview annuleren</DialogTitle>
+          <DialogTitle>{t("interview.cancelDialog.title")}</DialogTitle>
           <DialogDescription>
-            We sturen automatisch een afbericht naar alle deelnemers. Geef een
-            reden mee voor de audit-log.
+            {t("interview.cancelDialog.description")}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2 py-2">
-          <Label htmlFor="cancel-reason">Reden (optioneel)</Label>
+          <Label htmlFor="cancel-reason">
+            {t("interview.cancelDialog.reasonLabel")}
+          </Label>
           <Input
             id="cancel-reason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="Kandidaat heeft zelf afgezegd..."
+            placeholder={t("interview.cancelDialog.reasonPlaceholder")}
           />
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Niet annuleren
+            {t("interview.cancelDialog.keep")}
           </Button>
           <Button
             onClick={() => onConfirm(reason)}
@@ -651,7 +656,7 @@ function CancelDialog({
             className="bg-rose-600 hover:bg-rose-700"
           >
             {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Bevestig annulering
+            {t("interview.cancelDialog.confirm")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -672,6 +677,7 @@ function RescheduleDialog({
   onConfirm: (newStart: string) => Promise<void>;
   loading: boolean;
 }) {
+  const { t } = useTranslation("interviewKits");
   // Pre-fill datetime-local value with the current start (truncate seconds + Z).
   const [value, setValue] = useState(() => {
     const d = new Date(currentStart);
@@ -682,14 +688,15 @@ function RescheduleDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Interview verplaatsen</DialogTitle>
+          <DialogTitle>{t("interview.rescheduleDialog.title")}</DialogTitle>
           <DialogDescription>
-            Kies een nieuw tijdstip. Alle deelnemers krijgen automatisch een
-            geüpdatete uitnodiging.
+            {t("interview.rescheduleDialog.description")}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2 py-2">
-          <Label htmlFor="new-start">Nieuw tijdstip</Label>
+          <Label htmlFor="new-start">
+            {t("interview.rescheduleDialog.newStartLabel")}
+          </Label>
           <Input
             id="new-start"
             type="datetime-local"
@@ -699,7 +706,7 @@ function RescheduleDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Annuleren
+            {t("interview.rescheduleDialog.cancel")}
           </Button>
           <Button
             onClick={() => onConfirm(new Date(value).toISOString())}
@@ -707,7 +714,7 @@ function RescheduleDialog({
             className="bg-indigo-600 hover:bg-indigo-700"
           >
             {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Verplaats
+            {t("interview.rescheduleDialog.confirm")}
           </Button>
         </DialogFooter>
       </DialogContent>
