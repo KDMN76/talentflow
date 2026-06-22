@@ -286,7 +286,14 @@ export async function listInterviews(
     }
 
     const { rows } = await client.query(
-      `SELECT i.* FROM interviews i
+      `SELECT i.*,
+              COALESCE(i.meeting_provider, CASE WHEN i.location IS NOT NULL THEN 'in_person' END) AS location_type,
+              c.name AS candidate_name,
+              j.title AS job_title
+       FROM interviews i
+       LEFT JOIN applications a ON a.id = i.application_id AND a.tenant_id = i.tenant_id
+       LEFT JOIN candidates c ON c.id = a.candidate_id AND c.tenant_id = i.tenant_id
+       LEFT JOIN jobs j ON j.id = a.job_id AND j.tenant_id = i.tenant_id
        WHERE ${where.join(' AND ')}
        ORDER BY i.scheduled_start ASC
        LIMIT 500`,
@@ -302,7 +309,15 @@ export async function getInterview(
 ): Promise<InterviewWithParticipants> {
   return withTenant(tenantId, async (client) => {
     const { rows } = await client.query(
-      `SELECT * FROM interviews WHERE id = $1 AND tenant_id = $2`,
+      `SELECT i.*,
+              COALESCE(i.meeting_provider, CASE WHEN i.location IS NOT NULL THEN 'in_person' END) AS location_type,
+              c.name AS candidate_name,
+              j.title AS job_title
+       FROM interviews i
+       LEFT JOIN applications a ON a.id = i.application_id AND a.tenant_id = i.tenant_id
+       LEFT JOIN candidates c ON c.id = a.candidate_id AND c.tenant_id = i.tenant_id
+       LEFT JOIN jobs j ON j.id = a.job_id AND j.tenant_id = i.tenant_id
+       WHERE i.id = $1 AND i.tenant_id = $2`,
       [id, tenantId]
     );
     if (rows.length === 0) {

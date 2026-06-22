@@ -6,7 +6,8 @@
  * onder controle te houden. Bevat:
  *   - cache-first voor static assets (/_next/static, /icons)
  *   - network-first voor /api/* met offline-fallback
- *   - stale-while-revalidate voor pages
+ *   - network-first voor pages + RSC (zodat een deploy METEEN zichtbaar is;
+ *     stale-while-revalidate serveerde de oude app tot de SW zichzelf verving)
  *   - push-notification handler
  *   - notification-click tracker (best-effort)
  *
@@ -14,7 +15,7 @@
  * 'activate' geleegd. Doe dit bij elke breaking SW-wijziging.
  */
 
-const CACHE_VERSION = 'tf-v1';
+const CACHE_VERSION = 'tf-v2';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 const PAGE_CACHE = `${CACHE_VERSION}-pages`;
@@ -107,15 +108,16 @@ self.addEventListener('fetch', (event) => {
   // Service worker zelf — nooit cachen, altijd fresh
   if (url.pathname === '/sw.js') return;
 
-  // Pages: stale-while-revalidate (alleen navigatie + same-origin docs)
+  // Pages: network-first (alleen navigatie + same-origin docs). Zo ziet de
+  // gebruiker na een deploy direct de nieuwe app; cache is enkel offline-vangnet.
   if (req.mode === 'navigate' || req.destination === 'document') {
-    event.respondWith(staleWhileRevalidate(req, PAGE_CACHE));
+    event.respondWith(networkFirstPage(req, PAGE_CACHE));
     return;
   }
 
-  // Overige same-origin requests (RSC chunks, fonts via /_next/...) →
-  // standaard SWR is veilig.
-  event.respondWith(staleWhileRevalidate(req, PAGE_CACHE));
+  // Overige same-origin requests (RSC-payloads, /_next/data, fonts) →
+  // network-first zodat verse RSC-data wordt geserveerd na een deploy.
+  event.respondWith(networkFirstPage(req, PAGE_CACHE));
 });
 
 // ---------------------------------------------------------------
@@ -259,6 +261,25 @@ async function networkFirst(req, cacheName) {
         headers: { 'Content-Type': 'application/json' },
       },
     );
+  }
+}
+
+// Network-first voor navigatie/RSC: altijd verse app na een deploy; cache en
+// offline.html zijn alleen het offline-vangnet.
+async function networkFirstPage(req, cacheName) {
+  try {
+    const fresh = await fetch(req);
+    if (fresh && fresh.ok) {
+      const cache = await caches.open(cacheName);
+      cache.put(req, fresh.clone()).catch(() => {});
+    }
+    return fresh;
+  } catch {
+    const cached = await caches.match(req);
+    if (cached) return cached;
+    const offline = await caches.match('/offline.html');
+    if (offline) return offline;
+    return new Response('Offline', { status: 503 });
   }
 }
 

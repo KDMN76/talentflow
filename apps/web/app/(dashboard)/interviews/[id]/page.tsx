@@ -332,7 +332,9 @@ function DetailsPanel({ interview }: { interview: Interview }) {
         </CardHeader>
         <CardContent>
           <p className="text-sm font-semibold">
-            {t(`interview.locations.${interview.location_type}`)}
+            {interview.location_type
+              ? t(`interview.locations.${interview.location_type}`)
+              : "Onbekend"}
           </p>
           {interview.location_url && (
             <a
