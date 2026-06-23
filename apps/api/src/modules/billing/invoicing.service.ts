@@ -177,8 +177,9 @@ export async function listInvoices(
 ): Promise<{ data: InvoiceRow[]; next_cursor: string | null }> {
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
   return withTenant(tenantId, async (client) => {
-    const conditions: string[] = [];
-    const params: unknown[] = [];
+    // RLS is inert onder de owner-rol → tenant_id-predicaat is de enige isolatie.
+    const conditions: string[] = ['tenant_id = $1'];
+    const params: unknown[] = [tenantId];
     if (opts.status) {
       params.push(opts.status);
       conditions.push(`status = $${params.length}`);
@@ -221,14 +222,14 @@ export async function getInvoice(
 ): Promise<{ invoice: InvoiceRow; lines: InvoiceLineRow[] } | null> {
   return withTenant(tenantId, async (client) => {
     const { rows } = await client.query(
-      `SELECT * FROM invoices WHERE id = $1`,
-      [invoiceId]
+      `SELECT * FROM invoices WHERE id = $1 AND tenant_id = $2`,
+      [invoiceId, tenantId]
     );
     if (!rows[0]) return null;
     const { rows: lines } = await client.query(
-      `SELECT * FROM invoice_lines WHERE invoice_id = $1
+      `SELECT * FROM invoice_lines WHERE invoice_id = $1 AND tenant_id = $2
         ORDER BY created_at ASC, id ASC`,
-      [invoiceId]
+      [invoiceId, tenantId]
     );
     return {
       invoice: rowToInvoice(rows[0]),
@@ -417,8 +418,8 @@ export async function generateInvoiceFromContract(
     }
 
     const { rows: finalRows } = await client.query(
-      `SELECT * FROM invoices WHERE id = $1`,
-      [invoiceId]
+      `SELECT * FROM invoices WHERE id = $1 AND tenant_id = $2`,
+      [invoiceId, tenantId]
     );
     const invoice = rowToInvoice(finalRows[0]);
 
@@ -469,8 +470,8 @@ export async function issueInvoice(
   // 1) Transitionnal DB update + audit
   const { invoice, lines } = await withTenant(tenantId, async (client) => {
     const { rows: existing } = await client.query(
-      `SELECT * FROM invoices WHERE id = $1 FOR UPDATE`,
-      [invoiceId]
+      `SELECT * FROM invoices WHERE id = $1 AND tenant_id = $2 FOR UPDATE`,
+      [invoiceId, tenantId]
     );
     if (!existing[0]) {
       throw new AppError(404, 'INVOICE_NOT_FOUND', 'Factuur niet gevonden');
@@ -485,14 +486,14 @@ export async function issueInvoice(
               issued_date = $1,
               due_date    = $2,
               updated_at  = now()
-        WHERE id = $3
+        WHERE id = $3 AND tenant_id = $4
         RETURNING *`,
-      [issuedDate, dueDate, invoiceId]
+      [issuedDate, dueDate, invoiceId, tenantId]
     );
     const { rows: lineRows } = await client.query(
-      `SELECT * FROM invoice_lines WHERE invoice_id = $1
+      `SELECT * FROM invoice_lines WHERE invoice_id = $1 AND tenant_id = $2
         ORDER BY created_at ASC, id ASC`,
-      [invoiceId]
+      [invoiceId, tenantId]
     );
     await logAudit(
       client,
@@ -546,8 +547,8 @@ export async function issueInvoice(
     await getStorage().put(storageKey, pdf, 'application/pdf');
     await withTenant(tenantId, async (client) => {
       await client.query(
-        `UPDATE invoices SET pdf_storage_key = $1, updated_at = now() WHERE id = $2`,
-        [storageKey, invoiceId]
+        `UPDATE invoices SET pdf_storage_key = $1, updated_at = now() WHERE id = $2 AND tenant_id = $3`,
+        [storageKey, invoiceId, tenantId]
       );
     });
     invoice.pdf_storage_key = storageKey;
@@ -582,8 +583,8 @@ export async function markPaid(
 ): Promise<InvoiceRow> {
   return withTenant(tenantId, async (client) => {
     const { rows: existing } = await client.query(
-      `SELECT * FROM invoices WHERE id = $1 FOR UPDATE`,
-      [invoiceId]
+      `SELECT * FROM invoices WHERE id = $1 AND tenant_id = $2 FOR UPDATE`,
+      [invoiceId, tenantId]
     );
     if (!existing[0]) {
       throw new AppError(404, 'INVOICE_NOT_FOUND', 'Factuur niet gevonden');
@@ -593,9 +594,9 @@ export async function markPaid(
     const { rows: updated } = await client.query(
       `UPDATE invoices
           SET status = 'paid', paid_date = $1, updated_at = now()
-        WHERE id = $2
+        WHERE id = $2 AND tenant_id = $3
         RETURNING *`,
-      [paidDate, invoiceId]
+      [paidDate, invoiceId, tenantId]
     );
     await logAudit(
       client,
@@ -622,8 +623,8 @@ export async function voidInvoice(
 ): Promise<InvoiceRow> {
   return withTenant(tenantId, async (client) => {
     const { rows: existing } = await client.query(
-      `SELECT * FROM invoices WHERE id = $1 FOR UPDATE`,
-      [invoiceId]
+      `SELECT * FROM invoices WHERE id = $1 AND tenant_id = $2 FOR UPDATE`,
+      [invoiceId, tenantId]
     );
     if (!existing[0]) {
       throw new AppError(404, 'INVOICE_NOT_FOUND', 'Factuur niet gevonden');
@@ -649,9 +650,9 @@ export async function voidInvoice(
     const { rows: updated } = await client.query(
       `UPDATE invoices
           SET status = 'void', notes = $1, updated_at = now()
-        WHERE id = $2
+        WHERE id = $2 AND tenant_id = $3
         RETURNING *`,
-      [newNotes, invoiceId]
+      [newNotes, invoiceId, tenantId]
     );
     await logAudit(
       client,

@@ -171,7 +171,7 @@ services:
       STORAGE_S3_ACCESS_KEY: ${STORAGE_S3_ACCESS_KEY}
       STORAGE_S3_SECRET_KEY: ${STORAGE_S3_SECRET_KEY}
       STORAGE_S3_REGION: ${STORAGE_S3_REGION}
-      SENTRY_DSN: ${SENTRY_DSN_API}
+      SENTRY_DSN_API: ${SENTRY_DSN_API}
       SENTRY_ENV: ${SENTRY_ENV}
       # Hotfix 2026-05-15: zet op 'true' om POST /api/auth/register dicht
       # te zetten (403 REGISTRATION_DISABLED). Invite-only flow komt morgen.
@@ -226,7 +226,7 @@ services:
       STORAGE_S3_ACCESS_KEY: ${STORAGE_S3_ACCESS_KEY}
       STORAGE_S3_SECRET_KEY: ${STORAGE_S3_SECRET_KEY}
       STORAGE_S3_REGION: ${STORAGE_S3_REGION}
-      SENTRY_DSN: ${SENTRY_DSN_API}
+      SENTRY_DSN_API: ${SENTRY_DSN_API}
       SENTRY_ENV: ${SENTRY_ENV}
     depends_on:
       api:

@@ -228,7 +228,9 @@ export async function listSchemes(
 ): Promise<CommissionSchemeRow[]> {
   return withTenant(tenantId, async (client) => {
     const { rows } = await client.query(
-      `SELECT * FROM commission_schemes ORDER BY created_at DESC, id DESC`
+      `SELECT * FROM commission_schemes WHERE tenant_id = $1
+        ORDER BY created_at DESC, id DESC`,
+      [tenantId]
     );
     return rows.map(rowToScheme);
   });
@@ -292,8 +294,8 @@ export async function updateScheme(
 ): Promise<CommissionSchemeRow> {
   return withTenant(tenantId, async (client) => {
     const { rows: existing } = await client.query(
-      `SELECT * FROM commission_schemes WHERE id = $1`,
-      [schemeId]
+      `SELECT * FROM commission_schemes WHERE id = $1 AND tenant_id = $2`,
+      [schemeId, tenantId]
     );
     if (!existing[0]) {
       throw new AppError(
@@ -325,9 +327,11 @@ export async function updateScheme(
     }
     fields.push(`updated_at = now()`);
     params.push(schemeId);
+    const idIdx = params.length;
+    params.push(tenantId);
     const { rows } = await client.query(
       `UPDATE commission_schemes SET ${fields.join(', ')}
-        WHERE id = $${params.length}
+        WHERE id = $${idIdx} AND tenant_id = $${params.length}
        RETURNING *`,
       params
     );
@@ -358,8 +362,8 @@ export async function listAssignments(
   filters: { contract_id?: string; recruiter_id?: string } = {}
 ): Promise<CommissionAssignmentRow[]> {
   return withTenant(tenantId, async (client) => {
-    const conditions: string[] = [];
-    const params: unknown[] = [];
+    const conditions: string[] = ['tenant_id = $1'];
+    const params: unknown[] = [tenantId];
     if (filters.contract_id) {
       params.push(filters.contract_id);
       conditions.push(`contract_id = $${params.length}`);
@@ -368,10 +372,11 @@ export async function listAssignments(
       params.push(filters.recruiter_id);
       conditions.push(`recruiter_id = $${params.length}`);
     }
-    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const where = `WHERE ${conditions.join(' AND ')}`;
     const { rows } = await client.query(
       `SELECT * FROM commission_assignments ${where}
-        ORDER BY created_at DESC, id DESC`
+        ORDER BY created_at DESC, id DESC`,
+      params
     );
     return rows.map(rowToAssignment);
   });
@@ -400,8 +405,8 @@ export async function assignToContract(
   return withTenant(tenantId, async (client) => {
     // Validate scheme exists + active
     const { rows: schemes } = await client.query(
-      `SELECT id, active FROM commission_schemes WHERE id = $1`,
-      [data.scheme_id]
+      `SELECT id, active FROM commission_schemes WHERE id = $1 AND tenant_id = $2`,
+      [data.scheme_id, tenantId]
     );
     if (!schemes[0]) {
       throw new AppError(404, 'SCHEME_NOT_FOUND', 'Commissie-regeling niet gevonden');
@@ -452,6 +457,7 @@ interface InternalSchemeWithAssignment {
 
 async function loadAssignmentsForContract(
   client: PoolClient,
+  tenantId: string,
   contractId: string
 ): Promise<InternalSchemeWithAssignment[]> {
   const { rows } = await client.query<{
@@ -471,8 +477,9 @@ async function loadAssignmentsForContract(
        FROM commission_assignments a
        JOIN commission_schemes s ON s.id = a.scheme_id AND s.tenant_id = a.tenant_id
       WHERE a.contract_id = $1
+        AND a.tenant_id = $2
         AND s.active = TRUE`,
-    [contractId]
+    [contractId, tenantId]
   );
   return rows.map((r) => ({
     assignment_id: r.id,
@@ -503,8 +510,8 @@ export async function recordCommissionsForInvoice(
     }>(
       `SELECT id, contract_id, subtotal_amount, period_start, period_end
          FROM invoices
-        WHERE id = $1`,
-      [invoiceId]
+        WHERE id = $1 AND tenant_id = $2`,
+      [invoiceId, tenantId]
     );
     const inv = invRows[0];
     if (!inv || !inv.contract_id) return [];
@@ -532,7 +539,7 @@ export async function recordCommissionsForInvoice(
     const subtotal = Number(inv.subtotal_amount ?? 0);
     const margin = round2(subtotal - candidateAmount);
 
-    const assignments = await loadAssignmentsForContract(client, inv.contract_id);
+    const assignments = await loadAssignmentsForContract(client, tenantId, inv.contract_id);
     const created: CommissionRecordRow[] = [];
     for (const a of assignments) {
       const base =
@@ -582,8 +589,8 @@ export async function listCommissions(
 ): Promise<{ data: CommissionRecordRow[]; next_cursor: string | null }> {
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
   return withTenant(tenantId, async (client) => {
-    const conditions: string[] = [];
-    const params: unknown[] = [];
+    const conditions: string[] = ['tenant_id = $1'];
+    const params: unknown[] = [tenantId];
     if (opts.recruiter_id) {
       params.push(opts.recruiter_id);
       conditions.push(`recruiter_id = $${params.length}`);
@@ -625,8 +632,8 @@ async function transitionRecord(
 ): Promise<CommissionRecordRow> {
   return withTenant(tenantId, async (client) => {
     const { rows: existing } = await client.query(
-      `SELECT * FROM commission_records WHERE id = $1 FOR UPDATE`,
-      [recordId]
+      `SELECT * FROM commission_records WHERE id = $1 AND tenant_id = $2 FOR UPDATE`,
+      [recordId, tenantId]
     );
     if (!existing[0]) {
       throw new AppError(
@@ -655,10 +662,12 @@ async function transitionRecord(
       extraSet = ', paid_at = now()';
     }
     params.push(recordId);
+    const idIdx = params.length;
+    params.push(tenantId);
     const { rows } = await client.query(
       `UPDATE commission_records
           SET status = $1${extraSet}
-        WHERE id = $${params.length}
+        WHERE id = $${idIdx} AND tenant_id = $${params.length}
         RETURNING *`,
       params
     );

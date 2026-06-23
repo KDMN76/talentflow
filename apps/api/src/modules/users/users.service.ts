@@ -1,9 +1,11 @@
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import { withTenant } from '../../db/pool';
 import { AppError } from '../../middleware/errorHandler';
 import { emailSenderQueue } from '../../queue/queues';
 
 const SALT_ROUNDS = 12;
+const INVITE_TTL_DAYS = 7;
 
 export interface UserListItem {
   id: string;
@@ -51,31 +53,71 @@ export async function inviteUser(
   data: { email: string; name: string; role: string }
 ): Promise<UserListItem> {
   return withTenant(tenantId, async (client) => {
-    // Check if user already exists
-    const { rows: existing } = await client.query(
-      `SELECT id FROM users WHERE tenant_id = $1 AND email = $2`,
-      [tenantId, data.email.toLowerCase()]
+    const email = data.email.toLowerCase();
+
+    // Bestaat de user al? Een ACTIEF lid = echt al in gebruik → 409. Een
+    // nog-inactieve (uitgenodigde, niet-geaccepteerde) user mag opnieuw worden
+    // uitgenodigd: we hergebruiken de rij en geven een vers token uit.
+    const { rows: existing } = await client.query<{ id: string; is_active: boolean }>(
+      `SELECT id, is_active FROM users WHERE tenant_id = $1 AND email = $2`,
+      [tenantId, email]
     );
-    if (existing.length > 0) {
+    if (existing.length > 0 && existing[0].is_active) {
       throw new AppError(409, 'USER_ALREADY_EXISTS', 'Dit e-mailadres is al in gebruik');
     }
 
-    // Create inactive user with a temporary password
-    const tempPassword = Math.random().toString(36).slice(-12) + 'Tf1!';
-    const passwordHash = await bcrypt.hash(tempPassword, SALT_ROUNDS);
+    // Single-use invite-token: alleen de sha256-hash wordt opgeslagen; de raw
+    // token zit enkel in de uitnodigingsmail (accept-invite-link).
+    const inviteToken = crypto.randomBytes(32).toString('base64url');
+    const inviteTokenHash = crypto.createHash('sha256').update(inviteToken).digest('hex');
+    const expiresAt = new Date(Date.now() + INVITE_TTL_DAYS * 24 * 60 * 60 * 1000);
 
-    const { rows: [user] } = await client.query(
-      `INSERT INTO users (tenant_id, email, password_hash, name, role, is_active)
-       VALUES ($1, $2, $3, $4, $5, false)
-       RETURNING id, email, name, role, avatar_url, is_active, created_at`,
-      [tenantId, data.email.toLowerCase(), passwordHash, data.name, data.role]
+    let user: UserListItem;
+    if (existing.length > 0) {
+      // Re-invite van een inactieve user: naam/rol bijwerken + oude tokens
+      // intrekken zodat alleen het nieuwste token geldig is.
+      const { rows: [u] } = await client.query(
+        `UPDATE users SET name = $3, role = $4
+          WHERE id = $1 AND tenant_id = $2
+          RETURNING id, email, name, role, avatar_url, is_active, created_at`,
+        [existing[0].id, tenantId, data.name, data.role]
+      );
+      user = u;
+      await client.query(
+        `UPDATE user_invite_tokens SET consumed_at = now()
+          WHERE user_id = $1 AND tenant_id = $2 AND consumed_at IS NULL`,
+        [existing[0].id, tenantId]
+      );
+    } else {
+      // Nieuwe user: inactief + niet-loginnbare placeholder-hash (random, nooit
+      // gecommuniceerd). Het echte wachtwoord wordt pas gezet bij accept-invite.
+      const placeholder = await bcrypt.hash(
+        crypto.randomBytes(32).toString('hex'),
+        SALT_ROUNDS
+      );
+      const { rows: [u] } = await client.query(
+        `INSERT INTO users (tenant_id, email, password_hash, name, role, is_active)
+         VALUES ($1, $2, $3, $4, $5, false)
+         RETURNING id, email, name, role, avatar_url, is_active, created_at`,
+        [tenantId, email, placeholder, data.name, data.role]
+      );
+      user = u;
+    }
+
+    await client.query(
+      `INSERT INTO user_invite_tokens (tenant_id, user_id, token_hash, expires_at)
+       VALUES ($1, $2, $3, $4)`,
+      [tenantId, user.id, inviteTokenHash, expiresAt]
     );
 
-    // Queue invitation email (stub)
+    const baseUrl = process.env.PUBLIC_APP_URL ?? 'https://talentflow.kdmn.nl';
     await emailSenderQueue.add('user-invitation', {
-      to: data.email,
+      to: user.email,
       subject: 'Uitnodiging voor TalentFlow',
-      body: `U bent uitgenodigd door ${invitedBy}. Uw tijdelijk wachtwoord is: ${tempPassword}. Wijzig dit na uw eerste inlog.`,
+      body:
+        `U bent uitgenodigd door ${invitedBy} voor TalentFlow. ` +
+        `Stel uw wachtwoord in via: ${baseUrl}/accept-invite?token=${inviteToken} ` +
+        `(deze link verloopt over ${INVITE_TTL_DAYS} dagen).`,
     });
 
     return user;

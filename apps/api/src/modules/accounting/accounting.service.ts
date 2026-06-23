@@ -120,8 +120,8 @@ async function loadIntegrationCreds(
   }>(
     `SELECT id, tenant_id, provider, settings, credentials_encrypted
        FROM accounting_integrations
-      WHERE provider = $1 AND status = 'connected'`,
-    [provider]
+      WHERE provider = $1 AND tenant_id = $2 AND status = 'connected'`,
+    [provider, tenantId]
   );
   if (!rows[0]) return null;
   if (rows[0].tenant_id !== tenantId) return null;
@@ -140,7 +140,9 @@ export async function listCatalog(
       id: string;
       provider: AccountingProviderId;
       status: AccountingIntegrationStatus;
-    }>(`SELECT id, provider, status FROM accounting_integrations`);
+    }>(`SELECT id, provider, status FROM accounting_integrations WHERE tenant_id = $1`, [
+      tenantId,
+    ]);
     const byProvider = new Map(rows.map((r) => [r.provider, r]));
     return listAccountingConnectors().map<AccountingCatalogEntry>((conn) => {
       const row = byProvider.get(conn.id);
@@ -163,7 +165,9 @@ export async function listIntegrations(
               default_revenue_account, default_vat_code,
               connected_by, connected_at, last_synced_at, last_error, created_at
          FROM accounting_integrations
-        ORDER BY created_at DESC`
+        WHERE tenant_id = $1
+        ORDER BY created_at DESC`,
+      [tenantId]
     );
     return rows.map(rowToIntegration);
   });
@@ -247,8 +251,8 @@ export async function disconnectIntegration(
 ): Promise<void> {
   await withTenant(tenantId, async (client) => {
     const { rows: existing } = await client.query<{ id: string }>(
-      `SELECT id FROM accounting_integrations WHERE provider = $1`,
-      [provider]
+      `SELECT id FROM accounting_integrations WHERE provider = $1 AND tenant_id = $2`,
+      [provider, tenantId]
     );
     if (!existing[0]) {
       throw new AppError(
@@ -262,8 +266,8 @@ export async function disconnectIntegration(
     await client.query(
       `UPDATE accounting_integrations
           SET status = 'disconnected', credentials_encrypted = NULL
-        WHERE id = $1`,
-      [integrationId]
+        WHERE id = $1 AND tenant_id = $2`,
+      [integrationId, tenantId]
     );
 
     await logAudit(
@@ -304,9 +308,10 @@ async function pickPrimaryIntegration(
   }>(
     `SELECT id, tenant_id, provider, settings, credentials_encrypted
        FROM accounting_integrations
-      WHERE status = 'connected'
+      WHERE tenant_id = $1 AND status = 'connected'
       ORDER BY connected_at DESC NULLS LAST
-      LIMIT 1`
+      LIMIT 1`,
+    [tenantId]
   );
   if (!rows[0]) return null;
   if (rows[0].tenant_id !== tenantId) return null;
@@ -350,7 +355,7 @@ export async function syncInvoiceToAccounting(
       notes: string | null;
       external_accounting_id: string | null;
       external_accounting_provider: AccountingProviderId | null;
-    }>(`SELECT * FROM invoices WHERE id = $1`, [invoiceId]);
+    }>(`SELECT * FROM invoices WHERE id = $1 AND tenant_id = $2`, [invoiceId, tenantId]);
     const invRow = invRows[0];
     if (!invRow) {
       throw new AppError(
@@ -398,9 +403,9 @@ export async function syncInvoiceToAccounting(
       `SELECT id, description, quantity, unit, unit_price, line_total,
               vat_rate, metadata
          FROM invoice_lines
-        WHERE invoice_id = $1
+        WHERE invoice_id = $1 AND tenant_id = $2
         ORDER BY created_at ASC, id ASC`,
-      [invoiceId]
+      [invoiceId, tenantId]
     );
 
     const invoice: NormalizedInvoice = {
@@ -444,8 +449,8 @@ export async function syncInvoiceToAccounting(
       await client.query(
         `UPDATE accounting_integrations
             SET last_error = $1, status = 'error'
-          WHERE id = $2`,
-        [(err as Error).message.slice(0, 500), integration.id]
+          WHERE id = $2 AND tenant_id = $3`,
+        [(err as Error).message.slice(0, 500), integration.id, tenantId]
       );
       throw err;
     }
@@ -456,14 +461,14 @@ export async function syncInvoiceToAccounting(
               external_accounting_provider = $2,
               external_synced_at = now(),
               updated_at = now()
-        WHERE id = $3`,
-      [result.external_id, integration.provider, invoiceId]
+        WHERE id = $3 AND tenant_id = $4`,
+      [result.external_id, integration.provider, invoiceId, tenantId]
     );
     await client.query(
       `UPDATE accounting_integrations
           SET last_synced_at = now(), last_error = NULL, status = 'connected'
-        WHERE id = $1`,
-      [integration.id]
+        WHERE id = $1 AND tenant_id = $2`,
+      [integration.id, tenantId]
     );
 
     await logAudit(

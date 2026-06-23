@@ -173,8 +173,8 @@ export async function getCandidateSkillProfile(
   return withTenant(tenantId, async (client) => {
     // Verifieer dat de kandidaat bestaat (RLS-veilige read).
     const { rows: existsRows } = await client.query<{ id: string }>(
-      `SELECT id FROM candidates WHERE id = $1 AND deleted_at IS NULL LIMIT 1`,
-      [candidateId]
+      `SELECT id FROM candidates WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL LIMIT 1`,
+      [candidateId, tenantId]
     );
     if (existsRows.length === 0) {
       throw new AppError(404, 'CANDIDATE_NOT_FOUND', 'Kandidaat niet gevonden');
@@ -190,9 +190,9 @@ export async function getCandidateSkillProfile(
               m.matched_via
          FROM candidate_skill_mappings m
          JOIN esco_skills s ON s.id = m.esco_skill_id
-        WHERE m.candidate_id = $1
+        WHERE m.candidate_id = $1 AND m.tenant_id = $2
         ORDER BY s.preferred_label ASC`,
-      [candidateId]
+      [candidateId, tenantId]
     );
 
     const skill_categories: Record<string, number> = {};
@@ -219,8 +219,8 @@ export async function getJobSkillProfile(
 ): Promise<JobSkillProfile> {
   return withTenant(tenantId, async (client) => {
     const { rows: existsRows } = await client.query<{ id: string }>(
-      `SELECT id FROM jobs WHERE id = $1 AND deleted_at IS NULL LIMIT 1`,
-      [jobId]
+      `SELECT id FROM jobs WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL LIMIT 1`,
+      [jobId, tenantId]
     );
     if (existsRows.length === 0) {
       throw new AppError(404, 'JOB_NOT_FOUND', 'Vacature niet gevonden');
@@ -235,9 +235,9 @@ export async function getJobSkillProfile(
               m.source_skill_text
          FROM job_skill_mappings m
          JOIN esco_skills s ON s.id = m.esco_skill_id
-        WHERE m.job_id = $1
+        WHERE m.job_id = $1 AND m.tenant_id = $2
         ORDER BY m.required DESC, s.preferred_label ASC`,
-      [jobId]
+      [jobId, tenantId]
     );
 
     const skill_categories: Record<string, number> = {};
@@ -270,13 +270,14 @@ interface CandidateSourceSkill {
 
 async function loadCandidateSourceSkills(
   client: PoolClient,
+  tenantId: string,
   candidateId: string
 ): Promise<CandidateSourceSkill[]> {
   const { rows: cand } = await client.query<{
     skills: string[] | null;
   }>(
-    `SELECT skills FROM candidates WHERE id = $1 AND deleted_at IS NULL LIMIT 1`,
-    [candidateId]
+    `SELECT skills FROM candidates WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL LIMIT 1`,
+    [candidateId, tenantId]
   );
   if (cand.length === 0) {
     throw new AppError(404, 'CANDIDATE_NOT_FOUND', 'Kandidaat niet gevonden');
@@ -287,8 +288,8 @@ async function loadCandidateSourceSkills(
     skill: string;
     score: number | null;
   }>(
-    `SELECT skill, score FROM candidate_skills WHERE candidate_id = $1`,
-    [candidateId]
+    `SELECT skill, score FROM candidate_skills WHERE candidate_id = $1 AND tenant_id = $2`,
+    [candidateId, tenantId]
   );
 
   // Merge: scored entries hebben priority op proficiency. Free-form ondersteunt
@@ -317,7 +318,7 @@ export async function syncCandidateSkillsToEsco(
   candidateId: string
 ): Promise<SyncResult> {
   return withTenant(tenantId, async (client) => {
-    const sources = await loadCandidateSourceSkills(client, candidateId);
+    const sources = await loadCandidateSourceSkills(client, tenantId, candidateId);
     if (sources.length === 0) {
       return { mapped: 0, unmapped: 0 };
     }
@@ -406,8 +407,8 @@ export async function syncJobSkillsToEsco(
     }>(
       `SELECT required_skills, nice_to_have_skills
          FROM jobs
-        WHERE id = $1 AND deleted_at IS NULL LIMIT 1`,
-      [jobId]
+        WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL LIMIT 1`,
+      [jobId, tenantId]
     );
     if (rows.length === 0) {
       throw new AppError(404, 'JOB_NOT_FOUND', 'Vacature niet gevonden');
@@ -528,8 +529,8 @@ export async function analyzeSkillsGap(
               m.required
          FROM job_skill_mappings m
          JOIN esco_skills s ON s.id = m.esco_skill_id
-        WHERE m.job_id = $1`,
-      [jobId]
+        WHERE m.job_id = $1 AND m.tenant_id = $2`,
+      [jobId, tenantId]
     );
 
     // Candidate skills
@@ -540,8 +541,8 @@ export async function analyzeSkillsGap(
               m.proficiency
          FROM candidate_skill_mappings m
          JOIN esco_skills s ON s.id = m.esco_skill_id
-        WHERE m.candidate_id = $1`,
-      [candidateId]
+        WHERE m.candidate_id = $1 AND m.tenant_id = $2`,
+      [candidateId, tenantId]
     );
 
     if (jobSkillRows.length === 0) {

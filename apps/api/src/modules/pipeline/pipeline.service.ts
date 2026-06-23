@@ -188,8 +188,8 @@ export async function createStage(
     let position = data.position;
     if (position === undefined) {
       const { rows: [maxRow] } = await client.query(
-        `SELECT COALESCE(MAX(position), 0) + 1 as next_pos FROM pipeline_stages WHERE job_id = $1`,
-        [jobId]
+        `SELECT COALESCE(MAX(position), 0) + 1 as next_pos FROM pipeline_stages WHERE job_id = $1 AND tenant_id = $2`,
+        [jobId, tenantId]
       );
       position = maxRow.next_pos;
     }

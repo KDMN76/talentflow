@@ -649,3 +649,28 @@ Feedback tijdens live doorklikken op het load-test-account. Default P2.
 - **Type**: [UX]
 - **Files**: `apps/web/app/(dashboard)/crm/page.tsx` (ContactsTab)
 - **Context**: De contactenlijst heeft nu alleen een organisatie-dropdown. Voeg een vrije zoekbalk toe die filtert op contactnaam, bedrijf én e-mailadres.
+
+---
+
+## Sectie 6: Go-live blokkers (2026-06-23)
+
+Uit de multi-agent go-live-audit. De 🔴-blokkers zijn deze sessie gefixt (zie "Opgelost"); de rest is 🟡 (vóór betalende klant) en blijft Open op P2 tot Kaan promoot.
+
+### 6.1 — [TASK] Load-test tenant verwijderen uit prod-DB (UITGESTELD)
+- **Priority**: P2
+- **Status**: Open — bewust uitgesteld (stagebedrijf logt nog in op dit account)
+- **Type**: [TASK]
+- **Context**: Tenant `10ad7e57-0000-4000-8000-000000000001` ('load-test', ~50k kandidaten + login `admin@load-test.kdmn.nl`) staat in de productie-DB. Verwijderen vlak vóór de échte go-live. Maak eerst een backup (`sudo /opt/talentflow/infra/backup.sh`), draai dan `apps/api/scripts/cleanup-load-test.sql` (data) + de full-removal SQL (users + tenant + refresh_tokens) met before/after row-counts. Roteer daarna de gepubliceerde `LoadTest!2026`-credential. Load-tests voortaan op een aparte wegwerp-DB.
+
+### 6.2 — [TASK] Resterende go-live-items vóór eerste betalende klant (🟡)
+- **Priority**: P2
+- **Status**: Open
+- **Type**: [TASK]
+- **Context**: Nog te doen vóór monetisatie: billing/Stripe (geen betaalpad — cross-ref Sectie 3), wachtwoord-reset afmaken (stub → token-flow, cross-ref Sectie 2), rate-limit op `/auth/login`, `/health` echte DB+Redis-check i.p.v. liveness-only, externe uptime-monitor, en de mock-features die in prod succes faken (Sourcing Agent mock-kandidaten, Voice belt niet echt, job-board posten faket, Hiring-Manager swipe slikt schrijf-fouten in, WhatsApp template mock-approve). CI `deploy.yml` is stale/stuk (verkeerde domeinen + dode git-pull). Verifieer `ANTHROPIC_API_KEY` + `RESEND_API_KEY` in prod.
+
+### Opgelost deze sessie (2026-06-23) — 🔴 go-live-blokkers
+- **Tenant-isolatie**: expliciete `tenant_id`-filters toegevoegd aan ~33 lekkende queries in `billing/invoicing`, `commissions`, `accounting` (incl. functionele bug in `pickPrimaryIntegration`), `forecasting`, `skills` en `pipeline.createStage` — cross-tenant lezen/schrijven van financiële + kandidaatdata gedicht (RLS blijft inert onder de owner-rol; non-owner-cutover blijft aparte L-taak in Sectie 2).
+- **2FA-login lockout**: web verwerkt nu `requires_2fa`/`partial_token` + nieuwe `/2fa`-challenge-pagina.
+- **Logout**: `Sidebar.handleLogout` roept nu `/auth/logout` + wist React-Query-cache → server-sessie wordt echt ingetrokken (fixt de "automatisch weer ingelogd"-bug).
+- **Invite-flow**: migratie `038_user_invite_tokens.sql` + token-flow (`inviteUser` → `acceptInvite` zet wachtwoord + `is_active=true`) + `/accept-invite`-pagina; geen plaintext-wachtwoord meer; re-invite voor inactieve users toegestaan.
+- **Sentry**: compose env-naam `SENTRY_DSN` → `SENTRY_DSN_API` (api + api-worker) zodat API-errors echt gereporteerd worden zodra de DSN gevuld is.

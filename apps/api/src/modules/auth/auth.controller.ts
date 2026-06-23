@@ -32,6 +32,11 @@ const forgotPasswordSchema = z.object({
   tenantSlug: z.string().min(1),
 });
 
+const acceptInviteSchema = z.object({
+  token: z.string().min(20),
+  password: z.string().min(8),
+});
+
 export async function register(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     // Hotfix 2026-05-15: publieke open registratie tijdelijk dicht. Iedereen
@@ -122,6 +127,27 @@ export async function forgotPassword(req: Request, res: Response, next: NextFunc
     await authService.forgotPassword(email, tenantSlug);
     // Always return 200 to prevent email enumeration
     res.json({ message: 'Als dit e-mailadres bestaat, ontvangt u een e-mail' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function acceptInvite(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const input = acceptInviteSchema.parse(req.body);
+    const result = await authService.acceptInvite(
+      input.token,
+      input.password,
+      auditCtxFromReq(req)
+    );
+
+    // Net als login/register: refresh-cookie zetten + accessToken teruggeven,
+    // zodat de gebruiker direct is ingelogd na het instellen van het wachtwoord.
+    res.cookie(REFRESH_COOKIE, result.refreshToken, COOKIE_OPTIONS);
+    res.json({
+      accessToken: result.accessToken,
+      user: result.user,
+    });
   } catch (err) {
     next(err);
   }

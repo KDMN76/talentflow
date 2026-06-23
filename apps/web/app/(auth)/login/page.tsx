@@ -51,6 +51,18 @@ export default function LoginPage() {
       }
 
       const response = await api.post("/auth/login", data);
+
+      // De API geeft {requires_2fa:true, partial_token} terug (ZONDER
+      // accessToken) als de gebruiker 2FA aan heeft staan. Token hier opslaan
+      // zou `undefined` persisten → 401 overal. Stuur door naar de challenge.
+      if (response.data?.requires_2fa) {
+        // partial_token is kortlevend (5m); via sessionStorage i.p.v. de URL
+        // zodat het JWT niet in history/referrer-logs belandt.
+        sessionStorage.setItem("tf_partial_token", response.data.partial_token);
+        router.push("/2fa");
+        return;
+      }
+
       setToken(response.data.accessToken);
       router.push("/dashboard");
     } catch (error) {

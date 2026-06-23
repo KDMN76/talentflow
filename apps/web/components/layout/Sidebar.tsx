@@ -51,10 +51,12 @@ import {
 } from "lucide-react";
 import { useState, type ComponentType } from "react";
 import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { api } from "@/lib/api";
 import { clearToken } from "@/lib/auth";
 import { getInitials } from "@/lib/utils";
 import { useReactivationStats } from "@/hooks/useReactivation";
@@ -430,6 +432,7 @@ export function Sidebar({ onClose }: SidebarProps) {
   const { data: reactivationStats } = useReactivationStats();
   const { data: unreadThreads } = useInboxThreads({ unread: true });
   const { data: currentUser } = useCurrentUser();
+  const queryClient = useQueryClient();
   const inboxUnread = (unreadThreads ?? []).length;
   // Auto-expand a section when one of its children is active so the user
   // doesn't lose context on a hard refresh.
@@ -448,8 +451,18 @@ export function Sidebar({ onClose }: SidebarProps) {
     );
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      // Server-sessie intrekken (verwijdert de refresh-token-rij + wist de
+      // httpOnly cookie). Best-effort: logout nooit blokkeren op een API-fout.
+      await api.post("/auth/logout");
+    } catch {
+      // negeren — we wissen hieronder sowieso de client-state
+    }
     clearToken();
+    // Wis de React-Query cache zodat een volgende gebruiker in dezelfde tab
+    // niet kort de vorige tenant z'n data ziet.
+    queryClient.clear();
     router.push("/login");
   };
 

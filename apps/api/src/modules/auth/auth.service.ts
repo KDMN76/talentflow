@@ -504,6 +504,88 @@ export async function forgotPassword(email: string, tenantSlug: string): Promise
   });
 }
 
+/**
+ * Accept-invite: wissel een single-use invite-token in voor een actieve sessie.
+ *
+ * Dit is de ontbrekende schakel die de invite-flow heel maakt: inviteUser maakt
+ * de user is_active=false en mailt een token; hier wordt het wachtwoord gezet
+ * ÉN is_active=true geflipt, waarna de gebruiker direct ingelogd is.
+ *
+ * Lookup op token_hash gebeurt via auth_context (de hash is de enige sleutel,
+ * geen tenant-context). De consume is race-veilig: `WHERE consumed_at IS NULL`
+ * met RETURNING, zodat twee parallelle accepts er hooguit één laten slagen.
+ */
+export async function acceptInvite(
+  token: string,
+  newPassword: string,
+  ctx: AuditContext = {}
+): Promise<AuthResult> {
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+  // 1) Token opzoeken op hash (geen tenant-context).
+  const rec = await withAuthTx(async (client) => {
+    const { rows: [row] } = await client.query(
+      `SELECT it.id AS token_id, it.tenant_id, it.user_id,
+              it.expires_at, it.consumed_at,
+              u.email, u.role, u.name
+         FROM user_invite_tokens it
+         JOIN users u ON u.id = it.user_id
+        WHERE it.token_hash = $1`,
+      [tokenHash]
+    );
+    return row ?? null;
+  }, { authContext: true });
+
+  if (!rec) {
+    throw new AppError(404, 'INVALID_INVITE_TOKEN', 'Uitnodiging niet gevonden');
+  }
+  if (rec.consumed_at) {
+    throw new AppError(409, 'INVITE_ALREADY_USED', 'Deze uitnodiging is al gebruikt');
+  }
+  if (new Date(rec.expires_at) < new Date()) {
+    throw new AppError(410, 'INVITE_EXPIRED', 'Deze uitnodiging is verlopen');
+  }
+
+  const tenantId: string = rec.tenant_id;
+  const userId: string = rec.user_id;
+  const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+
+  // 2) Token consumeren + user activeren binnen tenant-context (atomair).
+  await withTenant(tenantId, async (client) => {
+    const consumed = await client.query(
+      `UPDATE user_invite_tokens
+          SET consumed_at = now()
+        WHERE id = $1 AND tenant_id = $2 AND consumed_at IS NULL AND expires_at > now()`,
+      [rec.token_id, tenantId]
+    );
+    if (consumed.rowCount === 0) {
+      // Race: tussen lookup en hier alsnog geconsumeerd/verlopen.
+      throw new AppError(409, 'INVITE_ALREADY_USED', 'Deze uitnodiging is al gebruikt');
+    }
+    await client.query(
+      `UPDATE users
+          SET password_hash = $1, is_active = true
+        WHERE id = $2 AND tenant_id = $3`,
+      [passwordHash, userId, tenantId]
+    );
+    await logAudit(
+      client,
+      tenantId,
+      {
+        action: AuditActions.USER_INVITED,
+        entityType: 'user',
+        entityId: userId,
+        after: { accepted_invite: true, email: rec.email },
+        userId,
+      },
+      ctx
+    );
+  });
+
+  // 3) Direct inloggen — hergebruikt de bestaande sessie-uitgifte.
+  return issueSessionForUser(userId, tenantId, rec.email, rec.role, rec.name, ctx);
+}
+
 export function signRefreshJwt(refreshToken: string): string {
   return jwt.sign({ token: refreshToken }, getRefreshSecret(), {
     expiresIn: `${REFRESH_TOKEN_TTL_DAYS}d`,

@@ -11,6 +11,8 @@ router.post('/login', authRateLimit, authController.login);
 router.post('/refresh', authController.refresh);
 router.post('/logout', authController.logout);
 router.post('/forgot-password', authRateLimit, authController.forgotPassword);
+// Accept-invite: token is de credential (geen requireAuth), net als /forgot-password.
+router.post('/accept-invite', authRateLimit, authController.acceptInvite);
 
 // ─── Sprint Q4.2 — 2FA TOTP ─────────────────────────────────────────────────
 // /verify gebruikt een partial-token (geen volledige JWT) — geen requireAuth.

@@ -129,7 +129,8 @@ interface DealForPipeline {
 }
 
 async function loadActiveContracts(
-  client: PoolClient
+  client: PoolClient,
+  tenantId: string
 ): Promise<ContractForForecast[]> {
   const { rows } = await client.query<{
     id: string;
@@ -140,7 +141,9 @@ async function loadActiveContracts(
   }>(
     `SELECT id, start_date, end_date, weekly_hours, hourly_rate_client
        FROM contracts
-      WHERE status IN ('active','renewed')`
+      WHERE status IN ('active','renewed')
+        AND tenant_id = $1`,
+    [tenantId]
   );
   return rows.map((r) => ({
     id: r.id,
@@ -152,7 +155,10 @@ async function loadActiveContracts(
   }));
 }
 
-async function loadOpenDeals(client: PoolClient): Promise<DealForPipeline[]> {
+async function loadOpenDeals(
+  client: PoolClient,
+  tenantId: string
+): Promise<DealForPipeline[]> {
   try {
     const { rows } = await client.query<{
       id: string;
@@ -162,7 +168,9 @@ async function loadOpenDeals(client: PoolClient): Promise<DealForPipeline[]> {
     }>(
       `SELECT id, value_eur, stage, expected_close_date
          FROM crm_deals
-        WHERE stage NOT IN ('gewonnen','verloren','closed_lost')`
+        WHERE stage NOT IN ('gewonnen','verloren','closed_lost')
+          AND tenant_id = $1`,
+      [tenantId]
     );
     return rows.map((r) => ({
       id: r.id,
@@ -196,8 +204,8 @@ export async function computeForecastSlices(
   monthsAhead: number = 6
 ): Promise<ComputedForecastSlice[]> {
   return withTenant(tenantId, async (client) => {
-    const contracts = await loadActiveContracts(client);
-    const deals = await loadOpenDeals(client);
+    const contracts = await loadActiveContracts(client, tenantId);
+    const deals = await loadOpenDeals(client, tenantId);
 
     const today = new Date();
     const slices: ComputedForecastSlice[] = [];
@@ -310,9 +318,10 @@ export async function getForecasts(
     const end = toIsoDate(firstOfMonth(addMonths(today, monthsAhead)));
     const { rows } = await client.query(
       `SELECT * FROM revenue_forecasts
-        WHERE forecast_month >= $1::date AND forecast_month < $2::date
+        WHERE tenant_id = $3
+          AND forecast_month >= $1::date AND forecast_month < $2::date
         ORDER BY forecast_month ASC`,
-      [start, end]
+      [start, end, tenantId]
     );
     return rows.map((r) => ({
       id: String(r.id),
@@ -344,8 +353,11 @@ export async function getMarginReport(
   filters: MarginReportFilters
 ): Promise<MarginReportRow[]> {
   return withTenant(tenantId, async (client) => {
-    const params: unknown[] = [];
-    const conditions: string[] = [`i.status IN ('paid','sent','overdue')`];
+    const params: unknown[] = [tenantId];
+    const conditions: string[] = [
+      `i.tenant_id = $1`,
+      `i.status IN ('paid','sent','overdue')`,
+    ];
     if (filters.period_start) {
       params.push(filters.period_start);
       conditions.push(`i.period_start >= $${params.length}::date`);
@@ -429,7 +441,7 @@ export async function getMarginReport(
              COALESCE(SUM(inv.subtotal_amount * a.share_percent / 100.0), 0) AS total_revenue,
              COALESCE(SUM(cost.candidate_cost * a.share_percent / 100.0), 0) AS total_cost
         FROM inv
-        JOIN commission_assignments a ON a.contract_id = inv.contract_id
+        JOIN commission_assignments a ON a.contract_id = inv.contract_id AND a.tenant_id = $1
         LEFT JOIN cost ON cost.invoice_id = inv.invoice_id
        GROUP BY a.recruiter_id
     `;
