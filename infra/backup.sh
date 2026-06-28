@@ -43,10 +43,25 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
-# shellcheck disable=SC1090
-set -a
-source "$ENV_FILE"
-set +a
+# Lees ALLEEN de benodigde vars uit, ZONDER het bestand te bash-sourcen.
+# .env.prod is een docker-compose env-bestand en mag waarden met spaties /
+# shell-metatekens bevatten (bv. RESEND_FROM="Naam <a@b>") die `source` breken.
+read_env() { sed -n "s/^$1=//p" "$ENV_FILE" | tail -n1 | tr -d '\r'; }
+
+POSTGRES_USER="$(read_env POSTGRES_USER)"
+POSTGRES_DB="$(read_env POSTGRES_DB)"
+BACKUP_R2_ACCESS_KEY="$(read_env BACKUP_R2_ACCESS_KEY)"
+BACKUP_R2_SECRET_KEY="$(read_env BACKUP_R2_SECRET_KEY)"
+BACKUP_R2_BUCKET="$(read_env BACKUP_R2_BUCKET)"
+BACKUP_R2_ENDPOINT="$(read_env BACKUP_R2_ENDPOINT)"
+# Optioneel — MinIO-mirror + notify (leeg als niet gezet)
+STORAGE_S3_BUCKET="$(read_env STORAGE_S3_BUCKET)"
+STORAGE_S3_ACCESS_KEY="$(read_env STORAGE_S3_ACCESS_KEY)"
+STORAGE_S3_SECRET_KEY="$(read_env STORAGE_S3_SECRET_KEY)"
+STORAGE_S3_ENDPOINT="$(read_env STORAGE_S3_ENDPOINT)"
+BACKUP_MINIO_ENABLED="$(read_env BACKUP_MINIO_ENABLED)"
+BACKUP_MINIO_ENDPOINT="$(read_env BACKUP_MINIO_ENDPOINT)"
+DEPLOY_NOTIFY_WEBHOOK="$(read_env DEPLOY_NOTIFY_WEBHOOK)"
 
 : "${POSTGRES_USER:?must be set}"
 : "${POSTGRES_DB:?must be set}"
