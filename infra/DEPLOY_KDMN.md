@@ -115,7 +115,7 @@ cd /opt/talentflow
 # 32 idempotente migraties — kunnen 2x gedraaid worden zonder issues.
 docker compose --env-file infra/.env.prod \
   -f infra/docker-compose.prod.yml \
-  exec api npm run migrate
+  exec api npm run migrate:prod
 
 # Verifieer dat alle migraties geslaagd zijn:
 docker compose --env-file infra/.env.prod \
@@ -242,7 +242,7 @@ docker compose --env-file infra/.env.prod \
 # Indien nieuwe migraties:
 docker compose --env-file infra/.env.prod \
   -f infra/docker-compose.prod.yml \
-  exec api npm run migrate
+  exec api npm run migrate:prod
 ```
 
 Of automatisch via GitHub Actions — zie `.github/workflows/deploy.yml`
@@ -290,5 +290,5 @@ docker compose --env-file infra/.env.prod \
   exec postgres createdb -U talentflow talentflow
 docker compose --env-file infra/.env.prod \
   -f infra/docker-compose.prod.yml \
-  exec api npm run migrate
+  exec api npm run migrate:prod
 ```

@@ -18,6 +18,11 @@
 #   BACKUP_R2_BUCKET
 #   BACKUP_R2_ENDPOINT
 #
+# Optional — MinIO object backup (uploaded CVs), opt in with:
+#   BACKUP_MINIO_ENABLED=true
+#   BACKUP_MINIO_ENDPOINT   (host-reachable MinIO URL; defaults to STORAGE_S3_ENDPOINT)
+#   (hergebruikt STORAGE_S3_BUCKET / STORAGE_S3_ACCESS_KEY / STORAGE_S3_SECRET_KEY)
+#
 # Dependencies on host:
 #   - docker
 #   - awscli  (apt install awscli  OR  curl -L … installer)
@@ -84,6 +89,33 @@ aws s3 cp "$DUMP_FILE" "s3://${BACKUP_R2_BUCKET}/${R2_KEY}" \
   --no-progress
 
 echo "[$(date -u +%FT%TZ)] Upload complete: s3://${BACKUP_R2_BUCKET}/${R2_KEY}"
+
+# ── Optional: MinIO object storage (uploaded CVs) -> R2 ──────────────────────
+# Postgres alleen is niet genoeg: kandidaat-CV's staan in MinIO op één named
+# volume. Zonder offsite-kopie verlies je bij een schijfcrash elk geüpload
+# bestand. Opt in met BACKUP_MINIO_ENABLED=true zodra BACKUP_MINIO_ENDPOINT
+# vanaf de host bereikbaar is. Best-effort: een fout hier wordt gelogd maar laat
+# de (kritieke) Postgres-backup hierboven NIET falen.
+if [[ "${BACKUP_MINIO_ENABLED:-false}" == "true" ]]; then
+  : "${STORAGE_S3_BUCKET:?must be set for MinIO backup}"
+  : "${STORAGE_S3_ACCESS_KEY:?must be set for MinIO backup}"
+  : "${STORAGE_S3_SECRET_KEY:?must be set for MinIO backup}"
+  MINIO_ENDPOINT="${BACKUP_MINIO_ENDPOINT:-${STORAGE_S3_ENDPOINT:-http://127.0.0.1:9000}}"
+  FILES_DIR="$TMPDIR/minio-files"
+  mkdir -p "$FILES_DIR"
+  if AWS_ACCESS_KEY_ID="$STORAGE_S3_ACCESS_KEY" \
+     AWS_SECRET_ACCESS_KEY="$STORAGE_S3_SECRET_KEY" \
+     aws s3 sync "s3://${STORAGE_S3_BUCKET}" "$FILES_DIR" \
+       --endpoint-url "$MINIO_ENDPOINT" --no-progress \
+  && AWS_ACCESS_KEY_ID="$BACKUP_R2_ACCESS_KEY" \
+     AWS_SECRET_ACCESS_KEY="$BACKUP_R2_SECRET_KEY" \
+     aws s3 sync "$FILES_DIR" "s3://${BACKUP_R2_BUCKET}/talentflow-files/${DATE_PREFIX}/" \
+       --endpoint-url "$BACKUP_R2_ENDPOINT" --no-progress; then
+    echo "[$(date -u +%FT%TZ)] MinIO files mirrored to R2 under talentflow-files/${DATE_PREFIX}/"
+  else
+    echo "[WARN] MinIO -> R2 mirror failed (Postgres backup still OK)" >&2
+  fi
+fi
 
 # ── Optional: notify on success/failure (Slack/Discord webhook) ────────────
 if [[ -n "${DEPLOY_NOTIFY_WEBHOOK:-}" ]]; then
