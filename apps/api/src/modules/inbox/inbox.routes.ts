@@ -193,6 +193,32 @@ router.post('/threads/:id/unarchive', async (req, res, next) => {
 });
 
 // ───────────────────────────────────────────────────────────────────────────
+// DELETE /threads/:id — soft-delete (verdwijnt uit de lijst, blijft in de DB)
+// ───────────────────────────────────────────────────────────────────────────
+
+router.delete('/threads/:id', async (req, res, next) => {
+  try {
+    const row = await inbox.deleteThread(req.user!.tenantId, req.params.id);
+    await withTenant(req.user!.tenantId, async (client) => {
+      await logAudit(
+        client,
+        req.user!.tenantId,
+        {
+          action: 'thread_deleted',
+          entityType: 'inbox_thread',
+          entityId: req.params.id,
+          userId: req.user!.userId,
+        },
+        auditCtxFromReq(req)
+      );
+    });
+    res.json({ data: row });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ───────────────────────────────────────────────────────────────────────────
 // labels
 // ───────────────────────────────────────────────────────────────────────────
 

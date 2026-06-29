@@ -20,6 +20,7 @@ import Link from "next/link";
 import {
   Archive,
   ArchiveRestore,
+  Trash2,
   Inbox as InboxIcon,
   Pin,
   PinOff,
@@ -55,6 +56,7 @@ import { ComposeBar } from "@/components/inbox/ComposeBar";
 import {
   useArchiveThread,
   useAssignThread,
+  useDeleteThread,
   useInboxThreads,
   useMarkThreadRead,
   usePinThread,
@@ -519,6 +521,7 @@ function ThreadDetail({
   const markRead = useMarkThreadRead();
   const pin = usePinThread();
   const archive = useArchiveThread();
+  const del = useDeleteThread();
   const assign = useAssignThread();
   const { addLabel, removeLabel } = useThreadLabels();
 
@@ -526,6 +529,7 @@ function ThreadDetail({
   const [assigneeId, setAssigneeId] = useState(thread.assignee_user_id ?? "");
   const [labelInput, setLabelInput] = useState("");
   const [labelsOpen, setLabelsOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   useEffect(() => {
     if (thread.unread_count_for_assignee > 0) {
@@ -654,6 +658,14 @@ function ThreadDetail({
               </>
             )}
           </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="gap-1 text-xs text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/30"
+            onClick={() => setDeleteOpen(true)}
+          >
+            <Trash2 className="h-3.5 w-3.5" /> Verwijderen
+          </Button>
         </div>
       </div>
 
@@ -737,6 +749,35 @@ function ThreadDetail({
               }}
             >
               Toewijzen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirm dialog */}
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Bericht verwijderen?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Deze thread verdwijnt uit je inbox. Berichten blijven bewaard voor
+            de audit, maar zijn hier niet meer zichtbaar.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+              Annuleren
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={del.isPending}
+              onClick={async () => {
+                await del.mutateAsync(thread.id);
+                toast({ title: "Bericht verwijderd" });
+                setDeleteOpen(false);
+              }}
+            >
+              {del.isPending ? "Verwijderen…" : "Verwijderen"}
             </Button>
           </DialogFooter>
         </DialogContent>

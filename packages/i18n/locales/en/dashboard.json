@@ -4,22 +4,36 @@
   "error": {
     "loadFailed": "Couldn't load the dashboard — please try again"
   },
+  "export": {
+    "button": "Export",
+    "filenamePrefix": "dashboard",
+    "kpiSection": "KPI",
+    "topJobSection": "Top job",
+    "colSection": "Section",
+    "colItem": "Item",
+    "colValue": "Value",
+    "success": "Dashboard exported"
+  },
   "kpi": {
     "openJobs": {
       "title": "Open jobs",
-      "description": "currently active"
+      "description": "currently active",
+      "hint": "Jobs that are currently open and accepting applications."
     },
     "candidatesThisMonth": {
       "title": "Candidates this month",
-      "description": "newly added"
+      "description": "newly added",
+      "hint": "New candidates added in the last 30 days."
     },
     "applicationsThisWeek": {
       "title": "Applications this week",
-      "description": "active applications"
+      "description": "active applications",
+      "hint": "Applications received in the last 7 days."
     },
     "hiredThisMonth": {
       "title": "Hired this month",
-      "description": "successful placements"
+      "description": "successful placements",
+      "hint": "Candidates successfully placed this month."
     }
   },
   "recentActivity": {

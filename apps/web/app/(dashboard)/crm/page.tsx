@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Euro,
   Search,
+  Award,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -176,8 +177,19 @@ export default function CrmPage() {
 function OrganizationsTab() {
   const { t } = useTranslation("crmPage");
   const { data: orgs, isLoading } = useOrganizations();
+  const { data: dealsPipeline } = useDealsPipeline();
   const [search, setSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
+
+  // Plaatsingen per klant = gewonnen deals per organisatie (client-side uit de
+  // al-geladen pipeline; jobs hebben geen directe org-koppeling).
+  const placedByOrg = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const d of dealsPipeline?.gewonnen ?? []) {
+      m.set(d.organization_id, (m.get(d.organization_id) ?? 0) + 1);
+    }
+    return m;
+  }, [dealsPipeline]);
 
   const filtered = useMemo(() => {
     if (!orgs) return [];
@@ -241,7 +253,11 @@ function OrganizationsTab() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filtered.map((org) => (
-            <OrganizationCard key={org.id} org={org} />
+            <OrganizationCard
+              key={org.id}
+              org={org}
+              placedCount={placedByOrg.get(org.id) ?? 0}
+            />
           ))}
         </div>
       )}
@@ -249,7 +265,13 @@ function OrganizationsTab() {
   );
 }
 
-function OrganizationCard({ org }: { org: Organization }) {
+function OrganizationCard({
+  org,
+  placedCount,
+}: {
+  org: Organization;
+  placedCount: number;
+}) {
   const { t } = useTranslation("crmPage");
   return (
     <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-card shadow-sm p-5 hover:shadow-md hover:border-zinc-300 dark:hover:border-zinc-700 transition-all">
@@ -273,6 +295,18 @@ function OrganizationCard({ org }: { org: Organization }) {
           {t(`orgType.${ORG_TYPE_LABEL_KEYS[org.type]}`)}
         </Badge>
       </div>
+
+      {placedCount > 0 && (
+        <div className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1 text-sm dark:bg-emerald-950/30">
+          <Award className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+          <span className="font-semibold text-emerald-700 dark:text-emerald-300">
+            {placedCount}
+          </span>
+          <span className="text-emerald-700/80 dark:text-emerald-300/80">
+            {t("organizations.placedCount", { count: placedCount })}
+          </span>
+        </div>
+      )}
 
       {org.website && (
         <a

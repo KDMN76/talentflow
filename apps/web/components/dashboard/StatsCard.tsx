@@ -1,6 +1,7 @@
 import { LucideIcon, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
+import { HelpHint } from "@/components/ui/HelpHint";
 
 interface StatsCardProps {
   title: string;
@@ -10,6 +11,8 @@ interface StatsCardProps {
   trend?: number;
   iconColor?: string;
   iconBg?: string;
+  /** Optional inline help text shown as a "(?)" next to the title. */
+  hint?: string;
 }
 
 export function StatsCard({
@@ -20,6 +23,7 @@ export function StatsCard({
   trend,
   iconColor = "text-indigo-600",
   iconBg = "bg-indigo-50 dark:bg-indigo-950/50",
+  hint,
 }: StatsCardProps) {
   const TrendIcon =
     trend === undefined || trend === 0
@@ -40,7 +44,10 @@ export function StatsCard({
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <p className="text-sm font-medium text-muted-foreground">{title}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-medium text-muted-foreground">{title}</p>
+              {hint && <HelpHint text={hint} />}
+            </div>
             <p className="mt-1 text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
               {value}
             </p>

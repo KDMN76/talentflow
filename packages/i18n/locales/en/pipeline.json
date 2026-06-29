@@ -23,5 +23,9 @@
   },
   "board": {
     "dropHere": "Drag candidates here"
+  },
+  "filters": {
+    "searchPlaceholder": "Search candidate by name or email…",
+    "absoluteDate": "Exact date"
   }
 }

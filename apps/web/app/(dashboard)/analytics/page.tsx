@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Briefcase,
@@ -9,6 +10,7 @@ import {
   TrendingUp,
   Users2,
   BarChart3,
+  Search,
 } from "lucide-react";
 import {
   BarChart,
@@ -31,6 +33,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { HelpHint } from "@/components/ui/HelpHint";
 import { cn, getInitials } from "@/lib/utils";
 
 import {
@@ -54,17 +58,21 @@ interface KpiCardProps {
   icon: React.ElementType;
   iconBg: string;
   iconColor: string;
+  helpText?: string;
 }
 
-function KpiCard({ label, value, icon: Icon, iconBg, iconColor }: KpiCardProps) {
+function KpiCard({ label, value, icon: Icon, iconBg, iconColor, helpText }: KpiCardProps) {
   return (
     <Card className="border shadow-sm hover:shadow-md transition-shadow duration-200">
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-muted-foreground leading-tight">
-              {label}
-            </p>
+            <div className="flex items-center gap-1">
+              <p className="text-xs font-medium text-muted-foreground leading-tight">
+                {label}
+              </p>
+              {helpText && <HelpHint text={helpText} />}
+            </div>
             <p className="mt-2 text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
               {value}
             </p>
@@ -183,6 +191,7 @@ function OverviewTab() {
         <KpiCard
           label={t("overview.kpi.openJobs")}
           value={overview?.open_jobs ?? 0}
+          helpText={t("overview.hint.openJobs")}
           icon={Briefcase}
           iconBg="bg-indigo-50 dark:bg-indigo-950/50"
           iconColor="text-indigo-600 dark:text-indigo-400"
@@ -190,6 +199,7 @@ function OverviewTab() {
         <KpiCard
           label={t("overview.kpi.applicationsThisMonth")}
           value={overview?.applications_this_month ?? 0}
+          helpText={t("overview.hint.applicationsThisMonth")}
           icon={Users}
           iconBg="bg-violet-50 dark:bg-violet-950/50"
           iconColor="text-violet-600 dark:text-violet-400"
@@ -197,6 +207,7 @@ function OverviewTab() {
         <KpiCard
           label={t("overview.kpi.avgTimeToHire")}
           value={`${overview?.avg_time_to_hire_days ?? 0} ${t("overview.days")}`}
+          helpText={t("overview.hint.avgTimeToHire")}
           icon={Clock}
           iconBg="bg-blue-50 dark:bg-blue-950/50"
           iconColor="text-blue-600 dark:text-blue-400"
@@ -204,6 +215,7 @@ function OverviewTab() {
         <KpiCard
           label={t("overview.kpi.hired")}
           value={overview?.hired_this_month ?? 0}
+          helpText={t("overview.hint.hired")}
           icon={UserCheck}
           iconBg="bg-emerald-50 dark:bg-emerald-950/50"
           iconColor="text-emerald-600 dark:text-emerald-400"
@@ -211,6 +223,7 @@ function OverviewTab() {
         <KpiCard
           label={t("overview.kpi.activeRecruiters")}
           value={overview?.active_recruiters ?? 0}
+          helpText={t("overview.hint.activeRecruiters")}
           icon={Users2}
           iconBg="bg-amber-50 dark:bg-amber-950/50"
           iconColor="text-amber-600 dark:text-amber-400"
@@ -218,6 +231,7 @@ function OverviewTab() {
         <KpiCard
           label={t("overview.kpi.conversionRate")}
           value={`${conversionRate}%`}
+          helpText={t("overview.hint.conversionRate")}
           icon={TrendingUp}
           iconBg="bg-rose-50 dark:bg-rose-950/50"
           iconColor="text-rose-600 dark:text-rose-400"
@@ -339,16 +353,34 @@ function OverviewTab() {
 function RecruitersTab() {
   const { t } = useTranslation("analytics");
   const { data: recruiters, isLoading } = useAnalyticsRecruiterStats();
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return recruiters ?? [];
+    return (recruiters ?? []).filter((r) =>
+      r.recruiter_name.toLowerCase().includes(q)
+    );
+  }, [recruiters, search]);
 
   if (isLoading) return <RecruitersSkeleton />;
 
   return (
     <Card className="border shadow-sm">
-      <CardHeader className="pb-3">
+      <CardHeader className="flex flex-col gap-3 pb-3 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
           <Users2 className="h-4 w-4 text-indigo-500" />
           {t("recruiters.title")}
         </CardTitle>
+        <div className="relative w-full sm:max-w-[220px]">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t("recruiters.searchPlaceholder")}
+            className="h-9 pl-9"
+          />
+        </div>
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
@@ -373,7 +405,17 @@ function RecruitersTab() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {recruiters?.map((r) => (
+              {filtered.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="py-8 text-center text-sm text-muted-foreground"
+                  >
+                    {t("recruiters.empty")}
+                  </td>
+                </tr>
+              )}
+              {filtered.map((r) => (
                 <tr
                   key={r.recruiter_id}
                   className="hover:bg-zinc-50/80 dark:hover:bg-zinc-800/30 transition-colors"

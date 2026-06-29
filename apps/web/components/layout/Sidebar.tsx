@@ -27,6 +27,7 @@ import {
   Key,
   Terminal,
   History,
+  Activity,
   Coins,
   FileSignature,
   Clock,
@@ -137,6 +138,7 @@ const NAV_INSIGHTS: NavItem[] = [
 ];
 
 const NAV_SYSTEM: NavItem[] = [
+  { label: "Activiteit", href: "/compliance/audit-events", icon: Activity },
   { label: "Workflows", href: "/workflows", icon: GitBranch },
   {
     label: "AVG / Privacy",

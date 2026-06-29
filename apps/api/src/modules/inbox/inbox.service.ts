@@ -130,7 +130,7 @@ export async function listThreads(
   opts: ListThreadsOptions = {}
 ): Promise<ListThreadsResult> {
   const limit = Math.min(Math.max(opts.limit ?? DEFAULT_LIMIT, 1), MAX_LIMIT);
-  const filters: string[] = ['t.tenant_id = $1'];
+  const filters: string[] = ['t.tenant_id = $1', 't.deleted_at IS NULL'];
   const params: unknown[] = [tenantId];
 
   if (opts.unread === true) {
@@ -548,6 +548,30 @@ export async function setArchived(
         WHERE id = $1 AND tenant_id = $2
         RETURNING *`,
       [threadId, tenantId, archived]
+    );
+    if (rows.length === 0) {
+      throw new AppError(404, 'THREAD_NOT_FOUND', 'Thread niet gevonden');
+    }
+    return rows[0];
+  });
+}
+
+/**
+ * Soft-delete: markeer de thread als verwijderd. De rij blijft bestaan voor
+ * audit/herstel maar verdwijnt uit de inbox-lijst (deleted_at IS NULL-filter).
+ */
+export async function deleteThread(
+  tenantId: string,
+  threadId: string
+): Promise<UnifiedThread> {
+  return withTenant(tenantId, async (client) => {
+    const { rows } = await client.query<UnifiedThread>(
+      `UPDATE unified_threads
+          SET deleted_at = now(),
+              updated_at = now()
+        WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
+        RETURNING *`,
+      [threadId, tenantId]
     );
     if (rows.length === 0) {
       throw new AppError(404, 'THREAD_NOT_FOUND', 'Thread niet gevonden');

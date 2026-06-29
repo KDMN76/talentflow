@@ -2,7 +2,7 @@
 
 import { useDraggable } from "@dnd-kit/core";
 import { GripVertical, Calendar } from "lucide-react";
-import { cn, getInitials, getScoreColor, formatRelativeDate } from "@/lib/utils";
+import { cn, getInitials, getScoreColor, formatRelativeDate, formatDate } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SkillsGapViewerCompact } from "@/components/skills/SkillsGapViewer";
 import type { Application } from "@/lib/mockData";
@@ -14,7 +14,13 @@ function resolveCandidate(application: Application) {
   return { name, email, aiScore };
 }
 
-export function KanbanCard({ application }: { application: Application }) {
+export function KanbanCard({
+  application,
+  showAbsoluteDate,
+}: {
+  application: Application;
+  showAbsoluteDate?: boolean;
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: application.id,
     data: { application },
@@ -56,7 +62,11 @@ export function KanbanCard({ application }: { application: Application }) {
       <div className="mt-3 flex items-center justify-between">
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <Calendar className="h-3 w-3" />
-          <span>{formatRelativeDate(application.applied_at)}</span>
+          <span title={formatDate(application.applied_at)}>
+            {showAbsoluteDate
+              ? formatDate(application.applied_at)
+              : formatRelativeDate(application.applied_at)}
+          </span>
         </div>
         {aiScore !== null && (
           <span className={cn("inline-flex items-center rounded-md px-2 py-0.5 text-xs font-bold", getScoreColor(aiScore))}>
@@ -80,7 +90,13 @@ export function KanbanCard({ application }: { application: Application }) {
   );
 }
 
-export function KanbanCardOverlay({ application }: { application: Application }) {
+export function KanbanCardOverlay({
+  application,
+  showAbsoluteDate,
+}: {
+  application: Application;
+  showAbsoluteDate?: boolean;
+}) {
   const { name, email, aiScore } = resolveCandidate(application);
 
   return (
@@ -99,7 +115,11 @@ export function KanbanCardOverlay({ application }: { application: Application })
       <div className="mt-3 flex items-center justify-between">
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <Calendar className="h-3 w-3" />
-          <span>{formatRelativeDate(application.applied_at)}</span>
+          <span>
+            {showAbsoluteDate
+              ? formatDate(application.applied_at)
+              : formatRelativeDate(application.applied_at)}
+          </span>
         </div>
         {aiScore !== null && (
           <span className={cn("inline-flex items-center rounded-md px-2 py-0.5 text-xs font-bold", getScoreColor(aiScore))}>

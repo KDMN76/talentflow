@@ -16,6 +16,8 @@
   "organizations": {
     "searchPlaceholder": "Zoek klanten...",
     "newButton": "Nieuwe klant",
+    "placedCount_one": "plaatsing",
+    "placedCount_other": "plaatsingen",
     "emptySearchTitle": "Geen klanten gevonden",
     "emptyTitle": "Nog geen klanten",
     "emptySearchDescription": "Probeer een andere zoekterm.",

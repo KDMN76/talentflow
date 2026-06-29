@@ -23,5 +23,9 @@
   },
   "board": {
     "dropHere": "Sleep kandidaten hierheen"
+  },
+  "filters": {
+    "searchPlaceholder": "Zoek kandidaat op naam of e-mail…",
+    "absoluteDate": "Exacte datum"
   }
 }

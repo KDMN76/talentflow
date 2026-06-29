@@ -25,6 +25,7 @@ import {
   Paperclip,
   Phone,
   Send,
+  Smile,
   Linkedin,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -64,6 +65,12 @@ const ALL_CHANNELS: ChannelType[] = [
   "linkedin_inmail",
 ];
 
+// Snelle emoji-set voor de composer (geen extra dependency).
+const QUICK_EMOJIS = [
+  "😊", "👍", "🎉", "✅", "🙏", "💪", "🚀", "📞",
+  "📅", "✨", "👏", "🤝", "💼", "⭐", "❤️", "😀",
+];
+
 const CHANNEL_ICON_COMPONENT: Record<ChannelType, React.ComponentType<{ className?: string }>> = {
   email: Mail,
   whatsapp: MessageCircle,
@@ -101,6 +108,7 @@ export function ComposeBar({
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [templateId, setTemplateId] = useState<string>("");
+  const [showEmoji, setShowEmoji] = useState(false);
 
   const { data: consent } = useWhatsAppConsentForCandidate(candidateId);
   const { data: conversations } = useWhatsAppConversations({ candidate_id: candidateId });
@@ -117,6 +125,10 @@ export function ComposeBar({
   const whatsAppConnected = whatsappIntegration?.status === "connected";
   const voiceConnected = voiceIntegration?.status === "connected";
   const consentGranted = consent?.status === "granted";
+  // Vrije tekst (en dus emoji) kan op alle kanalen behalve voice, en bij
+  // WhatsApp alleen binnen het open 24u-sessievenster.
+  const canType =
+    channel !== "voice" && !(channel === "whatsapp" && !sessionOpen);
 
   const channelDisabled = useMemo<Partial<Record<ChannelType, string>>>(() => {
     const reasons: Partial<Record<ChannelType, string>> = {};
@@ -332,30 +344,65 @@ export function ComposeBar({
         )}
 
         {channel !== "voice" && (
-          <div className="flex items-center justify-between">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 text-xs gap-1.5 text-muted-foreground"
-              disabled
-            >
-              <Paperclip className="h-3.5 w-3.5" />
-              Bijlage
-            </Button>
-            <Button
-              type="button"
-              onClick={handleSend}
-              disabled={
-                sendEmail.isPending ||
-                sendWhatsApp.isPending ||
-                (channel === "whatsapp" && !sessionOpen && !templateId)
-              }
-              className="gap-1.5"
-            >
-              <Send className="h-4 w-4" />
-              Verzenden
-            </Button>
+          <div className="space-y-2">
+            {showEmoji && canType && (
+              <div className="flex flex-wrap gap-1 rounded-lg border border-border bg-zinc-50 p-2 dark:bg-zinc-800/50">
+                {QUICK_EMOJIS.map((e) => (
+                  <button
+                    key={e}
+                    type="button"
+                    onClick={() => setBody((b) => b + e)}
+                    className="flex h-8 w-8 items-center justify-center rounded text-lg transition-colors hover:bg-white dark:hover:bg-zinc-700"
+                    aria-label={`Emoji ${e}`}
+                  >
+                    {e}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-xs gap-1.5 text-muted-foreground"
+                  disabled
+                >
+                  <Paperclip className="h-3.5 w-3.5" />
+                  Bijlage
+                </Button>
+                {canType && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowEmoji((v) => !v)}
+                    className={cn(
+                      "h-8 gap-1.5 text-xs text-muted-foreground",
+                      showEmoji && "bg-zinc-100 text-foreground dark:bg-zinc-800"
+                    )}
+                    aria-label="Emoji toevoegen"
+                  >
+                    <Smile className="h-3.5 w-3.5" />
+                    Emoji
+                  </Button>
+                )}
+              </div>
+              <Button
+                type="button"
+                onClick={handleSend}
+                disabled={
+                  sendEmail.isPending ||
+                  sendWhatsApp.isPending ||
+                  (channel === "whatsapp" && !sessionOpen && !templateId)
+                }
+                className="gap-1.5"
+              >
+                <Send className="h-4 w-4" />
+                Verzenden
+              </Button>
+            </div>
           </div>
         )}
       </div>

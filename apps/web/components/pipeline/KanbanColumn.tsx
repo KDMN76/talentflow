@@ -12,9 +12,10 @@ interface KanbanColumnProps {
   stage: PipelineStage;
   applications: Application[];
   isOver?: boolean;
+  showAbsoluteDate?: boolean;
 }
 
-export function KanbanColumn({ stage, applications, isOver }: KanbanColumnProps) {
+export function KanbanColumn({ stage, applications, isOver, showAbsoluteDate }: KanbanColumnProps) {
   const { t } = useTranslation("pipeline");
   const { setNodeRef, isOver: droppableIsOver } = useDroppable({ id: stage.id });
   const active = isOver || droppableIsOver;
@@ -44,7 +45,7 @@ export function KanbanColumn({ stage, applications, isOver }: KanbanColumnProps)
         )}
       >
         {applications.map((app) => (
-          <KanbanCard key={app.id} application={app} />
+          <KanbanCard key={app.id} application={app} showAbsoluteDate={showAbsoluteDate} />
         ))}
 
         {applications.length === 0 && (

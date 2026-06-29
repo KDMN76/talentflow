@@ -1,6 +1,6 @@
 "use client";
 
-import { Briefcase, Users, FileText, TrendingUp, Activity, ArrowRight } from "lucide-react";
+import { Briefcase, Users, FileText, TrendingUp, Activity, ArrowRight, Download } from "lucide-react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -12,7 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ReactivationAlertsWidget } from "@/components/matching/ReactivationAlertsWidget";
+import { useToast } from "@/components/ui/use-toast";
 import { formatRelativeDate, getInitials } from "@/lib/utils";
+import { downloadCsv } from "@/lib/downloadHelper";
 import { api } from "@/lib/api";
 
 function getActivityIcon(type: string) {
@@ -63,6 +65,7 @@ const EMPTY_STATS: ApiDashboardStats = {
 
 export default function DashboardPage() {
   const { t } = useTranslation("dashboard");
+  const { toast } = useToast();
   const { data: apiStats, isLoading, isError, error } = useQuery<ApiDashboardStats>({
     queryKey: ["dashboard", "stats"],
     queryFn: async () => {
@@ -110,9 +113,37 @@ export default function DashboardPage() {
 
   const stats = apiStats ?? EMPTY_STATS;
 
+  const handleExportCsv = () => {
+    const rows: Array<[string, string, string | number]> = [
+      [t("export.kpiSection"), t("kpi.openJobs.title"), stats.openJobs],
+      [t("export.kpiSection"), t("kpi.candidatesThisMonth.title"), stats.candidatesThisMonth],
+      [t("export.kpiSection"), t("kpi.applicationsThisWeek.title"), stats.applicationsThisWeek],
+      [t("export.kpiSection"), t("kpi.hiredThisMonth.title"), stats.hiredThisMonth],
+      ...stats.topJobs.map(
+        (j) =>
+          [t("export.topJobSection"), j.title, j.application_count] as [string, string, number]
+      ),
+    ];
+    downloadCsv(
+      `${t("export.filenamePrefix")}-${new Date().toISOString().slice(0, 10)}.csv`,
+      [t("export.colSection"), t("export.colItem"), t("export.colValue")],
+      rows
+    );
+    toast({ title: t("export.success") });
+  };
+
   return (
     <div className="space-y-8 animate-fade-in">
-      <PageHeader title={t("title")} description={t("subtitle")} />
+      <PageHeader
+        title={t("title")}
+        description={t("subtitle")}
+        actions={
+          <Button variant="outline" size="sm" onClick={handleExportCsv}>
+            <Download className="mr-1.5 h-4 w-4" />
+            {t("export.button")}
+          </Button>
+        }
+      />
 
       {/* Stats row */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -120,6 +151,7 @@ export default function DashboardPage() {
           title={t("kpi.openJobs.title")}
           value={stats.openJobs}
           description={t("kpi.openJobs.description")}
+          hint={t("kpi.openJobs.hint")}
           icon={Briefcase}
           iconColor="text-indigo-600"
           iconBg="bg-indigo-50 dark:bg-indigo-950/50"
@@ -128,6 +160,7 @@ export default function DashboardPage() {
           title={t("kpi.candidatesThisMonth.title")}
           value={stats.candidatesThisMonth}
           description={t("kpi.candidatesThisMonth.description")}
+          hint={t("kpi.candidatesThisMonth.hint")}
           icon={Users}
           iconColor="text-violet-600"
           iconBg="bg-violet-50 dark:bg-violet-950/50"
@@ -136,6 +169,7 @@ export default function DashboardPage() {
           title={t("kpi.applicationsThisWeek.title")}
           value={stats.applicationsThisWeek}
           description={t("kpi.applicationsThisWeek.description")}
+          hint={t("kpi.applicationsThisWeek.hint")}
           icon={FileText}
           iconColor="text-blue-600"
           iconBg="bg-blue-50 dark:bg-blue-950/50"
@@ -144,6 +178,7 @@ export default function DashboardPage() {
           title={t("kpi.hiredThisMonth.title")}
           value={stats.hiredThisMonth}
           description={t("kpi.hiredThisMonth.description")}
+          hint={t("kpi.hiredThisMonth.hint")}
           icon={TrendingUp}
           iconColor="text-emerald-600"
           iconBg="bg-emerald-50 dark:bg-emerald-950/50"

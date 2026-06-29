@@ -4,22 +4,36 @@
   "error": {
     "loadFailed": "Kon dashboard niet laden — probeer opnieuw"
   },
+  "export": {
+    "button": "Exporteren",
+    "filenamePrefix": "dashboard",
+    "kpiSection": "KPI",
+    "topJobSection": "Top vacature",
+    "colSection": "Sectie",
+    "colItem": "Item",
+    "colValue": "Waarde",
+    "success": "Dashboard geëxporteerd"
+  },
   "kpi": {
     "openJobs": {
       "title": "Openstaande vacatures",
-      "description": "actief op dit moment"
+      "description": "actief op dit moment",
+      "hint": "Vacatures die nu open staan en sollicitaties ontvangen."
     },
     "candidatesThisMonth": {
       "title": "Kandidaten deze maand",
-      "description": "nieuw binnengekomen"
+      "description": "nieuw binnengekomen",
+      "hint": "Nieuwe kandidaten toegevoegd in de afgelopen 30 dagen."
     },
     "applicationsThisWeek": {
       "title": "Sollicitaties deze week",
-      "description": "actieve sollicitaties"
+      "description": "actieve sollicitaties",
+      "hint": "Sollicitaties binnengekomen in de afgelopen 7 dagen."
     },
     "hiredThisMonth": {
       "title": "Aangenomen deze maand",
-      "description": "succesvolle plaatsingen"
+      "description": "succesvolle plaatsingen",
+      "hint": "Kandidaten die deze maand succesvol zijn geplaatst."
     }
   },
   "recentActivity": {

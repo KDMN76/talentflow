@@ -17,6 +17,14 @@
       "activeRecruiters": "Active recruiters",
       "conversionRate": "Conversion rate"
     },
+    "hint": {
+      "openJobs": "Jobs that are currently open and accepting applications.",
+      "applicationsThisMonth": "New applications received this month.",
+      "avgTimeToHire": "Average days from first application to hire.",
+      "hired": "Candidates hired this month.",
+      "activeRecruiters": "Recruiters with at least one activity this month.",
+      "conversionRate": "Share of intake that reaches the final stage."
+    },
     "days": "days",
     "funnel": {
       "title": "Pipeline Funnel",
@@ -36,7 +44,9 @@
       "hired": "Hired",
       "avgDays": "Avg. days"
     },
-    "days": "days"
+    "days": "days",
+    "searchPlaceholder": "Search recruiter…",
+    "empty": "No recruiters found."
   },
   "trends": {
     "timeToHire": {

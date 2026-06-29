@@ -141,6 +141,16 @@ export function useArchiveThread() {
   });
 }
 
+export function useDeleteThread() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (threadId: string): Promise<void> => {
+      await api.delete(`/inbox/threads/${threadId}`);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["inbox"] }),
+  });
+}
+
 export function useThreadLabels() {
   const qc = useQueryClient();
   const addLabel = useMutation({

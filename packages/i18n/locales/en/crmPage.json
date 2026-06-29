@@ -16,6 +16,8 @@
   "organizations": {
     "searchPlaceholder": "Search clients...",
     "newButton": "New client",
+    "placedCount_one": "placement",
+    "placedCount_other": "placements",
     "emptySearchTitle": "No clients found",
     "emptyTitle": "No clients yet",
     "emptySearchDescription": "Try a different search term.",

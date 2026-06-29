@@ -485,18 +485,27 @@ function FindingsTab() {
   const { data: briefs } = useAgentBriefs();
   const { data: jobs } = useJobs("all");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [search, setSearch] = useState("");
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const bulkApprove = useBulkApproveFindings();
   const { toast } = useToast();
 
   const grouped = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const matches = (f: NonNullable<typeof findings>[number]) =>
+      !q ||
+      [f.full_name, f.current_title, f.current_company, f.location, ...(f.skills ?? [])]
+        .filter(Boolean)
+        .some((v) => String(v).toLowerCase().includes(q));
     const map = new Map<string, typeof findings>();
     for (const f of findings ?? []) {
+      if (!matches(f)) continue;
       const arr = map.get(f.brief_id) ?? [];
       arr.push(f);
       map.set(f.brief_id, arr);
     }
     return map;
-  }, [findings]);
+  }, [findings, search]);
 
   const selectedIds = Object.entries(selected)
     .filter(([, v]) => v)
@@ -513,6 +522,16 @@ function FindingsTab() {
   }
   return (
     <div className="space-y-4">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Zoek op naam, functie, bedrijf of skill…"
+          className="pl-9"
+        />
+      </div>
+
       {selectedIds.length > 0 && (
         <Card className="border-indigo-200 bg-indigo-50/60 shadow-sm dark:border-indigo-900 dark:bg-indigo-950/30">
           <CardContent className="flex items-center justify-between gap-3 p-4">
@@ -555,16 +574,19 @@ function FindingsTab() {
         const job = brief
           ? (jobs ?? []).find((j) => j.id === brief.job_id)
           : undefined;
+        const list = items ?? [];
+        const isExpanded = !!expanded[briefId];
+        const shown = isExpanded ? list : list.slice(0, 6);
         return (
           <div key={briefId} className="space-y-2">
             <div className="flex items-center gap-2 px-1">
               <Briefcase className="h-3.5 w-3.5 text-indigo-500" />
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {job?.title ?? briefId} · {(items ?? []).length} kandidaten
+                {job?.title ?? briefId} · {list.length} kandidaten
               </p>
             </div>
             <div className="grid gap-3 lg:grid-cols-2">
-              {(items ?? []).map((f) => (
+              {shown.map((f) => (
                 <FindingInboxRow
                   key={f.id}
                   finding={f}
@@ -575,9 +597,28 @@ function FindingsTab() {
                 />
               ))}
             </div>
+            {list.length > 6 && (
+              <button
+                type="button"
+                onClick={() =>
+                  setExpanded((cur) => ({ ...cur, [briefId]: !isExpanded }))
+                }
+                className="px-1 text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+              >
+                {isExpanded
+                  ? "Minder weergeven"
+                  : `Toon alle ${list.length} (+${list.length - 6})`}
+              </button>
+            )}
           </div>
         );
       })}
+
+      {grouped.size === 0 && (
+        <p className="px-1 py-10 text-center text-sm text-muted-foreground">
+          Geen kandidaten gevonden voor “{search}”.
+        </p>
+      )}
     </div>
   );
 }
