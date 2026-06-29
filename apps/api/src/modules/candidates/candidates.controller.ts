@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import * as candidatesService from './candidates.service';
+import { findDuplicatesForCandidate } from './dedupe.service';
 import { AppError } from '../../middleware/errorHandler';
 import { auditCtxFromReq } from '../../lib/audit';
 import {
@@ -157,6 +158,15 @@ export async function getCandidateTimeline(req: Request, res: Response, next: Ne
   try {
     const timeline = await candidatesService.getCandidateTimeline(req.user!.tenantId, req.params.id);
     res.json({ data: timeline });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getCandidateDuplicates(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const matches = await findDuplicatesForCandidate(req.user!.tenantId, req.params.id);
+    res.json({ data: matches });
   } catch (err) {
     next(err);
   }

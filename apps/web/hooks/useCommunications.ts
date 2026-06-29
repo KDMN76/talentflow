@@ -21,18 +21,17 @@ export interface Communication {
 export function useCommunications(candidateId?: string) {
   return useQuery({
     queryKey: ["communications", candidateId ?? "all"],
-    queryFn: async () => {
-      if (candidateId) {
-        const { data } = await api.get<Communication[]>(
-          `/communications/candidates/${candidateId}`
-        );
-        return data;
-      } else {
-        const { data } = await api.get<Communication[]>(
-          "/communications/inbox"
-        );
-        return data;
-      }
+    queryFn: async (): Promise<Communication[]> => {
+      const url = candidateId
+        ? `/communications/candidates/${candidateId}`
+        : "/communications/inbox";
+      // De backend wikkelt in `{ data: [...] }`. Pak altijd de array uit —
+      // anders crasht `.map`/`.filter` op het wrapper-object (witte pagina op
+      // de kandidaat-detailpagina). Tolerant voor zowel array als wrapper.
+      const { data } = await api.get<{ data: Communication[] } | Communication[]>(
+        url
+      );
+      return Array.isArray(data) ? data : data?.data ?? [];
     },
   });
 }

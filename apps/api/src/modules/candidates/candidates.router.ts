@@ -98,4 +98,7 @@ router.get(
 // Activity timeline
 router.get('/:id/timeline', candidatesController.getCandidateTimeline);
 
+// Duplicate detection (email/phone/name+company match)
+router.get('/:id/duplicates', candidatesController.getCandidateDuplicates);
+
 export default router;
