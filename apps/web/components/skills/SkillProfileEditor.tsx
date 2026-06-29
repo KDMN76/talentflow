@@ -227,13 +227,14 @@ export function SkillProfileEditor({ candidateId }: SkillProfileEditorProps) {
   // Local draft state derived from server profile.
   const [draft, setDraft] = useState<ProfileSkill[]>([]);
   useEffect(() => {
-    if (data) setDraft(data.skills);
+    if (data) setDraft(data.skills ?? []);
   }, [data]);
 
   const dirty = useMemo(() => {
     if (!data) return false;
-    if (data.skills.length !== draft.length) return true;
-    return data.skills.some((srv, i) => {
+    const serverSkills = data.skills ?? [];
+    if (serverSkills.length !== draft.length) return true;
+    return serverSkills.some((srv, i) => {
       const local = draft[i];
       if (!local) return true;
       return (

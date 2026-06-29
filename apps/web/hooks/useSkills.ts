@@ -78,10 +78,38 @@ export function useCandidateSkillProfile(candidateId: string | undefined) {
     enabled: !!candidateId,
     queryFn: async (): Promise<CandidateSkillProfile> => {
       try {
-        const { data } = await api.get<CandidateSkillProfile>(
-          `/candidates/${candidateId}/skill-profile`
-        );
-        return data;
+        // De API levert de skills onder `esco_skills` (candidate_skill_mappings),
+        // maar de editor verwacht `skills: ProfileSkill[]`. Normaliseer hier zodat
+        // de vorm altijd klopt en `data.skills` nooit undefined is (→ geen crash
+        // op de kandidaat-detailpagina). Tolerant voor beide veldnamen.
+        const { data } = await api.get<{
+          candidate_id?: string;
+          skills?: ProfileSkill[];
+          esco_skills?: Array<Record<string, unknown>>;
+          last_synced_at?: string | null;
+        }>(`/candidates/${candidateId}/skill-profile`);
+
+        const rawSkills = data.skills ?? data.esco_skills ?? [];
+        const skills: ProfileSkill[] = rawSkills.map((s) => {
+          const r = s as Record<string, unknown>;
+          const escoId = (r.esco_id ?? r.esco_skill_id ?? null) as string | null;
+          return {
+            id: String(r.id ?? escoId ?? r.preferred_label ?? ""),
+            esco_id: escoId,
+            esco_uri: (r.esco_uri ?? null) as string | null,
+            preferred_label: String(r.preferred_label ?? ""),
+            category: (r.category ?? "transversal") as EscoCategory,
+            proficiency: typeof r.proficiency === "number" ? r.proficiency : 3,
+            source: (r.source ?? "esco_match") as ProfileSkill["source"],
+            confidence: typeof r.confidence === "number" ? r.confidence : 1,
+          };
+        });
+
+        return {
+          candidate_id: data.candidate_id ?? candidateId!,
+          skills,
+          last_synced_at: data.last_synced_at ?? null,
+        };
       } catch {
         return getMockCandidateSkillProfile(candidateId!);
       }
