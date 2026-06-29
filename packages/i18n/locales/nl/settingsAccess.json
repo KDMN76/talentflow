@@ -1,0 +1,156 @@
+{
+  "rolesList": {
+    "backToSecurity": "Terug naar beveiliging",
+    "title": "Rollen & rechten",
+    "description": "Beheer rollen, hun rechten en wie ze toegewezen krijgt.",
+    "newRole": "Nieuwe rol",
+    "tabs": {
+      "list": "Lijst",
+      "matrix": "Rechtenmatrix"
+    },
+    "loading": "Rollen laden…",
+    "badge": {
+      "system": "Systeem",
+      "custom": "Aangepast"
+    },
+    "userCount_one": "{{count}} gebruiker",
+    "userCount_other": "{{count}} gebruikers",
+    "resourcesGranted_one": "{{count}} recht toegekend",
+    "resourcesGranted_other": "{{count}} rechten toegekend",
+    "inheritsFrom": "Erft van {{label}}",
+    "inheritsFromUnknown": "onbekende rol",
+    "view": "Bekijken",
+    "edit": "Bewerken",
+    "matrix": {
+      "title": "Rechten per rol",
+      "resource": "Onderdeel",
+      "action": "Actie"
+    },
+    "confirmDelete": "Rol \"{{label}}\" verwijderen?{{warning}}",
+    "confirmDeleteWarning_one": " Er is nog {{count}} gebruiker aan deze rol gekoppeld.",
+    "confirmDeleteWarning_other": " Er zijn nog {{count}} gebruikers aan deze rol gekoppeld.",
+    "toasts": {
+      "fieldsMissing": {
+        "title": "Velden ontbreken",
+        "description": "Sleutel en label zijn verplicht."
+      },
+      "created": {
+        "title": "Rol aangemaakt"
+      },
+      "createError": {
+        "title": "Aanmaken mislukt",
+        "fallback": "De rol kon niet worden aangemaakt."
+      },
+      "notAllowed": {
+        "title": "Niet toegestaan",
+        "description": "Systeemrollen kunnen niet worden verwijderd."
+      },
+      "deleted": {
+        "title": "Rol verwijderd"
+      },
+      "deleteError": {
+        "title": "Verwijderen mislukt",
+        "fallback": "De rol kon niet worden verwijderd."
+      }
+    },
+    "wizard": {
+      "title": "Nieuwe rol — stap {{step}} van 2",
+      "keyLabel": "Sleutel",
+      "keyPlaceholder": "bijv. senior_recruiter",
+      "keyHint": "Unieke technische sleutel. Alleen kleine letters, cijfers en underscores.",
+      "labelLabel": "Label",
+      "labelPlaceholder": "bijv. Senior Recruiter",
+      "descriptionLabel": "Beschrijving",
+      "descriptionPlaceholder": "Waar is deze rol voor bedoeld?",
+      "inheritsLabel": "Erft van",
+      "inheritsPlaceholder": "Geen — begin met lege rechten",
+      "inheritsHint": "Neem de rechten van een systeemrol als basis over.",
+      "step2Hint": "Vink aan welke rechten deze rol krijgt. Overgeërfde rechten zijn al aangevinkt.",
+      "cancel": "Annuleren",
+      "previous": "Vorige",
+      "next": "Volgende",
+      "createRole": "Rol aanmaken"
+    }
+  },
+  "roleDetail": {
+    "loading": "Rol laden…",
+    "backToRoles": "Terug naar rollen",
+    "descriptionSystem": "Ingebouwde systeemrol — alleen-lezen.",
+    "descriptionCustom": "Aangepaste rol — pas label, beschrijving en rechten aan.",
+    "badge": {
+      "system": "Systeem",
+      "custom": "Aangepast"
+    },
+    "tabs": {
+      "config": "Configuratie",
+      "permissions": "Rechten",
+      "users_one": "Gebruikers ({{count}})",
+      "users_other": "Gebruikers ({{count}})"
+    },
+    "labelLabel": "Label",
+    "descriptionLabel": "Beschrijving",
+    "inheritsLabel": "Erft van",
+    "inheritsPlaceholder": "Geen",
+    "delete": "Verwijderen",
+    "saveChanges": "Wijzigingen opslaan",
+    "permissionMatrixTitle": "Rechtenmatrix",
+    "savePermissions": "Rechten opslaan",
+    "noUsersTitle": "Nog geen gebruikers met deze rol.",
+    "expiresOn": "Verloopt op {{date}}",
+    "removeAssignment": "Verwijderen",
+    "confirmDelete": "Rol \"{{label}}\" verwijderen?",
+    "confirmUnassign": "Deze gebruiker uit de rol verwijderen?",
+    "toasts": {
+      "updated": {
+        "title": "Rol bijgewerkt"
+      },
+      "updateError": {
+        "title": "Bijwerken mislukt",
+        "fallback": "De rol kon niet worden bijgewerkt."
+      },
+      "deleted": {
+        "title": "Rol verwijderd"
+      },
+      "deleteError": {
+        "title": "Verwijderen mislukt",
+        "fallback": "De rol kon niet worden verwijderd."
+      },
+      "unassigned": {
+        "title": "Gebruiker uit rol verwijderd"
+      }
+    }
+  },
+  "userDetail": {
+    "backToSettings": "Terug naar instellingen",
+    "member": {
+      "loading": "Laden…",
+      "loadError": "Gebruiker laden mislukt",
+      "notFound": "Gebruiker niet gevonden",
+      "noEmail": "Geen e-mailadres"
+    },
+    "rolesTitle": "Rollen",
+    "currentRolesLabel": "Huidige rollen",
+    "loading": "Rollen laden…",
+    "noRolesAssigned": "Nog geen rollen toegewezen.",
+    "expiresOn": "verloopt {{date}}",
+    "removeTitle": "Rol verwijderen",
+    "addRoleLabel": "Rol toevoegen",
+    "rolePlaceholder": "Kies een rol",
+    "systemSuffix": "systeem",
+    "expiresAtLabel": "Verloopt op",
+    "assign": "Toewijzen",
+    "confirmUnassign": "Deze rol bij de gebruiker verwijderen?",
+    "toasts": {
+      "alreadyAssigned": {
+        "title": "Al toegewezen",
+        "description": "Deze gebruiker heeft deze rol al."
+      },
+      "assigned": {
+        "title": "Rol toegewezen"
+      },
+      "unassigned": {
+        "title": "Rol verwijderd"
+      }
+    }
+  }
+}

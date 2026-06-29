@@ -1,0 +1,172 @@
+{
+  "accounting": {
+    "header": {
+      "title": "Boekhoudkoppelingen",
+      "description": "Koppel je boekhoudpakket zodat facturen en grootboekboekingen automatisch synchroniseren."
+    },
+    "status": {
+      "connected": "Gekoppeld",
+      "error": "Fout",
+      "notConnected": "Niet gekoppeld"
+    },
+    "card": {
+      "lastSync": "Laatst gesynchroniseerd op {{date}}",
+      "ledger": "Grootboek {{account}} · btw-code {{vat}}",
+      "working": "Koppeling werkt naar behoren"
+    },
+    "actions": {
+      "disconnect": "Ontkoppelen",
+      "connect": "Koppelen"
+    },
+    "disconnectDialog": {
+      "title": "Koppeling verbreken?",
+      "description": "De synchronisatie stopt en bestaande boekingen blijven ongewijzigd. Je kunt later opnieuw koppelen.",
+      "cancel": "Annuleren",
+      "confirm": "Ontkoppelen"
+    },
+    "connectForm": {
+      "title": "{{provider}} koppelen",
+      "descriptionApiKey": "Voer je API-sleutel in en stel de standaard grootboekrekening en btw-code in.",
+      "descriptionOAuth": "Je wordt doorgestuurd om de koppeling te autoriseren. Stel daarna de standaard grootboekrekening en btw-code in.",
+      "apiKeyLabel": "API-sleutel",
+      "revenueAccountLabel": "Omzetrekening",
+      "vatCodeLabel": "Btw-code",
+      "oauthScope1": "Lees- en schrijftoegang tot verkoopfacturen",
+      "oauthScope2": "Geen toegang tot bankgegevens of overige administratie",
+      "submitApiKey": "Koppelen met API-sleutel",
+      "submitOAuth": "Autoriseren en koppelen"
+    },
+    "toast": {
+      "disconnected": {
+        "title": "Koppeling verbroken",
+        "description": "De boekhoudkoppeling is succesvol ontkoppeld."
+      },
+      "disconnectFailed": {
+        "title": "Ontkoppelen mislukt"
+      },
+      "connected": {
+        "title": "Koppeling actief",
+        "description": "Het boekhoudpakket is gekoppeld en synchroniseert nu."
+      },
+      "connectFailed": {
+        "title": "Koppelen mislukt"
+      }
+    }
+  },
+  "availability": {
+    "backToSettings": "Terug naar instellingen",
+    "loadError": "Beschikbaarheid kon niet worden geladen. Probeer het opnieuw.",
+    "title": "Beschikbaarheid",
+    "description": "Stel je wekelijkse beschikbaarheid en uitzonderingen in voor het inplannen van gesprekken.",
+    "save": "Opslaan",
+    "timezone": {
+      "title": "Tijdzone",
+      "description": "Alle tijden worden weergegeven en ingepland in deze tijdzone."
+    },
+    "weeklySchedule": {
+      "title": "Weekrooster",
+      "description": "Geef per dag aan op welke tijden je beschikbaar bent voor gesprekken.",
+      "addBlock": "Blok toevoegen",
+      "notAvailable": "Niet beschikbaar",
+      "until": "tot"
+    },
+    "weekdays": {
+      "monday": "Maandag",
+      "tuesday": "Dinsdag",
+      "wednesday": "Woensdag",
+      "thursday": "Donderdag",
+      "friday": "Vrijdag",
+      "saturday": "Zaterdag",
+      "sunday": "Zondag"
+    },
+    "overrides": {
+      "title": "Uitzonderingen",
+      "description": "Blokkeer specifieke datums waarop je niet beschikbaar bent, bijvoorbeeld vakantie of verlof.",
+      "dateLabel": "Datum",
+      "reasonLabel": "Reden",
+      "reasonPlaceholder": "Bijv. vakantie of verlof",
+      "blockDate": "Datum blokkeren",
+      "blockedHeading": "Geblokkeerde datums"
+    },
+    "toast": {
+      "saved": {
+        "title": "Beschikbaarheid opgeslagen",
+        "description": "{{count}} blokken opgeslagen in {{timezone}}."
+      },
+      "blocked": {
+        "title": "Datum geblokkeerd"
+      }
+    }
+  },
+  "payTransparency": {
+    "header": {
+      "title": "Loontransparantie",
+      "description": "Beheer hoe je bureau omgaat met salarisinformatie en voldoe aan de EU-richtlijn loontransparantie."
+    },
+    "directive": {
+      "title": "EU-richtlijn loontransparantie",
+      "paragraph1": "De EU-richtlijn loontransparantie verplicht werkgevers om kandidaten vooraf een salarisindicatie te geven en verbiedt het vragen naar het huidige salaris.",
+      "paragraph2": "Lidstaten moeten de richtlijn uiterlijk in 2026 omzetten in nationale wetgeving. Stel je beleid hieronder in om voorbereid te zijn.",
+      "readMore": "Lees de richtlijn"
+    },
+    "policy": {
+      "title": "Beleid",
+      "description": "Bepaal welke regels TalentFlow afdwingt bij het plaatsen van vacatures en het voeren van gesprekken.",
+      "enforceSalaryRange": {
+        "title": "Salarisrange verplichten",
+        "description": "Vacatures kunnen pas gepubliceerd worden met een ingevulde salarisrange."
+      },
+      "forbidCurrentSalary": {
+        "title": "Vraag naar huidig salaris verbieden",
+        "description": "Verberg en blokkeer velden waarin naar het huidige salaris van een kandidaat wordt gevraagd."
+      },
+      "anonymousBenchmark": {
+        "title": "Anonieme benchmark toestaan",
+        "description": "Deel geanonimiseerde salarisdata om brancheweide loonbenchmarks mogelijk te maken."
+      },
+      "reportingThreshold": {
+        "label": "Rapportagedrempel (medewerkers)",
+        "help": "Aantal medewerkers waarboven loonkloofrapportage verplicht wordt."
+      },
+      "defaultCurrency": {
+        "label": "Standaardvaluta",
+        "help": "Valuta die standaard wordt gebruikt voor salarisranges."
+      },
+      "save": "Opslaan"
+    },
+    "currencies": {
+      "eur": "Euro (EUR)",
+      "gbp": "Brits pond (GBP)",
+      "usd": "Amerikaanse dollar (USD)",
+      "chf": "Zwitserse frank (CHF)"
+    },
+    "toast": {
+      "saved": {
+        "title": "Beleid opgeslagen",
+        "description": "Je instellingen voor loontransparantie zijn bijgewerkt."
+      },
+      "error": {
+        "title": "Opslaan mislukt",
+        "description": "Het beleid kon niet worden opgeslagen. Probeer het opnieuw."
+      }
+    }
+  },
+  "talentFit": {
+    "breadcrumb": "Instellingen",
+    "breadcrumbCurrent": "Talent Fit Model",
+    "header": {
+      "title": "Talent Fit Model",
+      "description": "Een per-bureau model dat leert van je historische hires en rejects om kandidaten beter te rangschikken."
+    },
+    "toast": {
+      "trained": {
+        "title": "Model getraind",
+        "description": "Het Talent Fit Model is opnieuw getraind op je meest recente data."
+      },
+      "trainFailed": {
+        "title": "Trainen mislukt",
+        "description": "Het model kon niet getraind worden. Probeer het opnieuw."
+      }
+    }
+  }
+}

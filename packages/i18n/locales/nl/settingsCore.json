@@ -1,0 +1,243 @@
+{
+  "index": {
+    "title": "Instellingen",
+    "description": "Beheer je organisatie, team, beveiliging en integraties.",
+    "subpages": {
+      "security": {
+        "title": "Beveiliging",
+        "description": "Tweestapsverificatie, sessies en toegangsbeleid."
+      },
+      "branding": {
+        "title": "Branding",
+        "description": "Logo, kleuren en huisstijl voor je portaal en e-mails."
+      },
+      "customFields": {
+        "title": "Aangepaste velden",
+        "description": "Eigen velden voor kandidaten en vacatures."
+      },
+      "integrations": {
+        "title": "Integraties",
+        "description": "Koppel externe tools en diensten."
+      },
+      "notifications": {
+        "title": "Notificaties",
+        "description": "Bepaal welke meldingen je ontvangt en waar."
+      },
+      "talentFit": {
+        "title": "Talent Fit",
+        "description": "Configureer de AI-matching en scoringsregels."
+      },
+      "payTransparency": {
+        "title": "Loontransparantie",
+        "description": "Instellingen voor salarisweergave en compliance."
+      },
+      "accounting": {
+        "title": "Boekhouding",
+        "description": "Facturatie en koppeling met je boekhoudpakket."
+      },
+      "availability": {
+        "title": "Beschikbaarheid",
+        "description": "Werktijden en planning voor gesprekken."
+      },
+      "whatsapp": {
+        "title": "WhatsApp",
+        "description": "Koppel WhatsApp voor kandidaatcommunicatie."
+      },
+      "voice": {
+        "title": "Telefonie",
+        "description": "Bel-integratie en spraakinstellingen."
+      }
+    },
+    "validation": {
+      "companyNameRequired": "Bedrijfsnaam is verplicht.",
+      "timezoneRequired": "Tijdzone is verplicht.",
+      "passwordMinLength": "Wachtwoord moet minimaal 8 tekens bevatten.",
+      "passwordsMismatch": "Wachtwoorden komen niet overeen."
+    },
+    "roles": {
+      "admin": "Beheerder",
+      "recruiter": "Recruiter",
+      "viewer": "Lezer"
+    },
+    "permissions": {
+      "candidatesRead": "Kandidaten lezen",
+      "candidatesWrite": "Kandidaten bewerken",
+      "jobsRead": "Vacatures lezen",
+      "jobsWrite": "Vacatures bewerken",
+      "pipelineRead": "Pijplijn lezen",
+      "pipelineWrite": "Pijplijn bewerken"
+    },
+    "relativeDate": {
+      "today": "Vandaag",
+      "yesterday": "Gisteren",
+      "daysAgo_one": "{{count}} dag geleden",
+      "daysAgo_other": "{{count}} dagen geleden",
+      "weeksAgo_one": "{{count}} week geleden",
+      "weeksAgo_other": "{{count}} weken geleden",
+      "monthsAgo_one": "{{count}} maand geleden",
+      "monthsAgo_other": "{{count}} maanden geleden",
+      "yearsAgo_one": "{{count}} jaar geleden",
+      "yearsAgo_other": "{{count}} jaar geleden"
+    },
+    "toasts": {
+      "tenantSaved": {
+        "title": "Opgeslagen",
+        "description": "De organisatiegegevens zijn bijgewerkt."
+      },
+      "passwordChanged": {
+        "title": "Wachtwoord gewijzigd",
+        "description": "Je wachtwoord is succesvol bijgewerkt."
+      },
+      "inviteSent": {
+        "title": "Uitnodiging verstuurd",
+        "description": "Er is een uitnodiging gestuurd naar {{email}}."
+      },
+      "keyCreateError": {
+        "title": "Aanmaken mislukt",
+        "description": "De API-sleutel kon niet worden aangemaakt. Probeer het opnieuw."
+      },
+      "keyRevoked": {
+        "title": "Sleutel ingetrokken",
+        "description": "De API-sleutel is ingetrokken en werkt niet meer."
+      },
+      "webhookCreated": {
+        "title": "Webhook aangemaakt",
+        "description": "De webhook is geconfigureerd en actief."
+      },
+      "webhookCreateError": {
+        "title": "Aanmaken mislukt",
+        "description": "De webhook kon niet worden aangemaakt. Probeer het opnieuw."
+      },
+      "webhookDeleted": {
+        "title": "Webhook verwijderd"
+      },
+      "keyCopied": {
+        "title": "Gekopieerd",
+        "description": "De API-sleutel staat op je klembord."
+      }
+    },
+    "tabs": {
+      "general": "Algemeen",
+      "users": "Gebruikers",
+      "security": "Beveiliging",
+      "apiKeys": "API-sleutels",
+      "webhooks": "Webhooks"
+    },
+    "general": {
+      "title": "Organisatie",
+      "description": "Basisgegevens van je bureau.",
+      "companyNameLabel": "Bedrijfsnaam",
+      "companyNamePlaceholder": "Naam van je bureau",
+      "timezoneLabel": "Tijdzone",
+      "timezonePlaceholder": "Europe/Amsterdam",
+      "planLabel": "Abonnement",
+      "upgrade": "Upgraden",
+      "save": "Opslaan"
+    },
+    "users": {
+      "inviteTitle": "Teamlid uitnodigen",
+      "inviteDescription": "Nodig collega's uit om samen te werken in TalentFlow.",
+      "invitePlaceholder": "naam@bedrijf.nl",
+      "inviteButton": "Uitnodigen",
+      "teamTitleCount": "Team ({{count}})",
+      "teamTitle": "Team",
+      "loading": "Team laden…",
+      "loadError": "Het team kon niet worden geladen.",
+      "empty": "Nog geen teamleden.",
+      "you": "Jij"
+    },
+    "security": {
+      "title": "Wachtwoord wijzigen",
+      "description": "Kies een sterk, uniek wachtwoord voor je account.",
+      "currentLabel": "Huidig wachtwoord",
+      "currentPlaceholder": "Je huidige wachtwoord",
+      "newLabel": "Nieuw wachtwoord",
+      "newPlaceholder": "Minimaal 8 tekens",
+      "confirmLabel": "Bevestig wachtwoord",
+      "confirmPlaceholder": "Herhaal het nieuwe wachtwoord",
+      "submit": "Wachtwoord wijzigen"
+    },
+    "apiKeys": {
+      "title": "API-sleutels",
+      "description": "Beheer sleutels voor toegang tot de TalentFlow API.",
+      "newKey": "Nieuwe sleutel",
+      "loading": "Sleutels laden…",
+      "empty": "Nog geen API-sleutels aangemaakt.",
+      "lastUsed": "Laatst gebruikt:",
+      "neverUsed": "nooit gebruikt",
+      "revoke": "Intrekken",
+      "dialog": {
+        "title": "Nieuwe API-sleutel",
+        "nameLabel": "Naam",
+        "namePlaceholder": "Bijv. Productie-integratie",
+        "permissionsLabel": "Rechten",
+        "cancel": "Annuleren",
+        "create": "Aanmaken"
+      },
+      "created": {
+        "title": "API-sleutel aangemaakt",
+        "warning": "Kopieer deze sleutel nu — je kunt hem later niet meer bekijken.",
+        "keyLabel": "Je API-sleutel",
+        "copyTitle": "Kopiëren naar klembord",
+        "close": "Sluiten"
+      }
+    },
+    "webhooks": {
+      "title": "Webhooks",
+      "description": "Ontvang real-time meldingen van gebeurtenissen in TalentFlow.",
+      "add": "Webhook toevoegen",
+      "loading": "Webhooks laden…",
+      "empty": "Nog geen webhooks geconfigureerd.",
+      "active": "Actief",
+      "inactive": "Inactief",
+      "deactivate": "Deactiveren",
+      "activate": "Activeren",
+      "dialog": {
+        "title": "Nieuwe webhook",
+        "nameLabel": "Naam",
+        "namePlaceholder": "Bijv. Slack-meldingen",
+        "urlLabel": "URL",
+        "urlPlaceholder": "https://jouw-endpoint.nl/webhook",
+        "eventsLabel": "Gebeurtenissen",
+        "cancel": "Annuleren",
+        "save": "Opslaan"
+      }
+    }
+  },
+  "branding": {
+    "title": "Branding",
+    "description": "Pas het portaal en de e-mails aan met je eigen huisstijl.",
+    "toasts": {
+      "invalidPrimary": {
+        "title": "Ongeldige primaire kleur",
+        "description": "Geef een geldige hexkleur op, bijvoorbeeld #6366f1."
+      },
+      "invalidAccent": {
+        "title": "Ongeldige accentkleur",
+        "description": "Geef een geldige hexkleur op, bijvoorbeeld #8b5cf6."
+      },
+      "updated": {
+        "title": "Branding opgeslagen",
+        "description": "Je huisstijl is bijgewerkt en direct actief."
+      },
+      "saveError": {
+        "title": "Opslaan mislukt",
+        "description": "De branding kon niet worden opgeslagen. Probeer het opnieuw."
+      }
+    },
+    "logo": {
+      "title": "Logo & favicon",
+      "description": "Toon je eigen logo in het portaal en de e-mails.",
+      "logoUrlLabel": "Logo-URL",
+      "logoUrlPlaceholder": "https://jouw-bureau.nl/logo.png",
+      "faviconUrlLabel": "Favicon-URL",
+      "faviconUrlPlaceholder": "https://jouw-bureau.nl/favicon.ico"
+    },
+    "colors": {
+      "title": "Kleuren",
+      "description": "Stel je primaire en accentkleur in.",
+      "primaryLabel": "Primaire kleur",
+      "primaryAria": "Primaire kleur"
+    }
+  }
+}

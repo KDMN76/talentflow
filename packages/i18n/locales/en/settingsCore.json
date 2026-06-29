@@ -1,0 +1,243 @@
+{
+  "index": {
+    "title": "Settings",
+    "description": "Manage your organization, team, security and integrations.",
+    "subpages": {
+      "security": {
+        "title": "Security",
+        "description": "Two-factor authentication, sessions and access policy."
+      },
+      "branding": {
+        "title": "Branding",
+        "description": "Logo, colors and house style for your portal and emails."
+      },
+      "customFields": {
+        "title": "Custom fields",
+        "description": "Your own fields for candidates and jobs."
+      },
+      "integrations": {
+        "title": "Integrations",
+        "description": "Connect external tools and services."
+      },
+      "notifications": {
+        "title": "Notifications",
+        "description": "Choose which alerts you receive and where."
+      },
+      "talentFit": {
+        "title": "Talent Fit",
+        "description": "Configure AI matching and scoring rules."
+      },
+      "payTransparency": {
+        "title": "Pay transparency",
+        "description": "Settings for salary display and compliance."
+      },
+      "accounting": {
+        "title": "Accounting",
+        "description": "Invoicing and integration with your accounting software."
+      },
+      "availability": {
+        "title": "Availability",
+        "description": "Working hours and scheduling for interviews."
+      },
+      "whatsapp": {
+        "title": "WhatsApp",
+        "description": "Connect WhatsApp for candidate communication."
+      },
+      "voice": {
+        "title": "Telephony",
+        "description": "Calling integration and voice settings."
+      }
+    },
+    "validation": {
+      "companyNameRequired": "Company name is required.",
+      "timezoneRequired": "Time zone is required.",
+      "passwordMinLength": "Password must be at least 8 characters.",
+      "passwordsMismatch": "Passwords do not match."
+    },
+    "roles": {
+      "admin": "Admin",
+      "recruiter": "Recruiter",
+      "viewer": "Viewer"
+    },
+    "permissions": {
+      "candidatesRead": "Read candidates",
+      "candidatesWrite": "Edit candidates",
+      "jobsRead": "Read jobs",
+      "jobsWrite": "Edit jobs",
+      "pipelineRead": "Read pipeline",
+      "pipelineWrite": "Edit pipeline"
+    },
+    "relativeDate": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "daysAgo_one": "{{count}} day ago",
+      "daysAgo_other": "{{count}} days ago",
+      "weeksAgo_one": "{{count}} week ago",
+      "weeksAgo_other": "{{count}} weeks ago",
+      "monthsAgo_one": "{{count}} month ago",
+      "monthsAgo_other": "{{count}} months ago",
+      "yearsAgo_one": "{{count}} year ago",
+      "yearsAgo_other": "{{count}} years ago"
+    },
+    "toasts": {
+      "tenantSaved": {
+        "title": "Saved",
+        "description": "Your organization details have been updated."
+      },
+      "passwordChanged": {
+        "title": "Password changed",
+        "description": "Your password has been updated successfully."
+      },
+      "inviteSent": {
+        "title": "Invitation sent",
+        "description": "An invitation has been sent to {{email}}."
+      },
+      "keyCreateError": {
+        "title": "Creation failed",
+        "description": "The API key could not be created. Please try again."
+      },
+      "keyRevoked": {
+        "title": "Key revoked",
+        "description": "The API key has been revoked and no longer works."
+      },
+      "webhookCreated": {
+        "title": "Webhook created",
+        "description": "The webhook has been configured and is active."
+      },
+      "webhookCreateError": {
+        "title": "Creation failed",
+        "description": "The webhook could not be created. Please try again."
+      },
+      "webhookDeleted": {
+        "title": "Webhook deleted"
+      },
+      "keyCopied": {
+        "title": "Copied",
+        "description": "The API key is on your clipboard."
+      }
+    },
+    "tabs": {
+      "general": "General",
+      "users": "Users",
+      "security": "Security",
+      "apiKeys": "API keys",
+      "webhooks": "Webhooks"
+    },
+    "general": {
+      "title": "Organization",
+      "description": "Basic details of your agency.",
+      "companyNameLabel": "Company name",
+      "companyNamePlaceholder": "Your agency name",
+      "timezoneLabel": "Time zone",
+      "timezonePlaceholder": "Europe/Amsterdam",
+      "planLabel": "Plan",
+      "upgrade": "Upgrade",
+      "save": "Save"
+    },
+    "users": {
+      "inviteTitle": "Invite team member",
+      "inviteDescription": "Invite colleagues to collaborate in TalentFlow.",
+      "invitePlaceholder": "name@company.com",
+      "inviteButton": "Invite",
+      "teamTitleCount": "Team ({{count}})",
+      "teamTitle": "Team",
+      "loading": "Loading team…",
+      "loadError": "The team could not be loaded.",
+      "empty": "No team members yet.",
+      "you": "You"
+    },
+    "security": {
+      "title": "Change password",
+      "description": "Choose a strong, unique password for your account.",
+      "currentLabel": "Current password",
+      "currentPlaceholder": "Your current password",
+      "newLabel": "New password",
+      "newPlaceholder": "At least 8 characters",
+      "confirmLabel": "Confirm password",
+      "confirmPlaceholder": "Repeat the new password",
+      "submit": "Change password"
+    },
+    "apiKeys": {
+      "title": "API keys",
+      "description": "Manage keys for access to the TalentFlow API.",
+      "newKey": "New key",
+      "loading": "Loading keys…",
+      "empty": "No API keys created yet.",
+      "lastUsed": "Last used:",
+      "neverUsed": "never used",
+      "revoke": "Revoke",
+      "dialog": {
+        "title": "New API key",
+        "nameLabel": "Name",
+        "namePlaceholder": "e.g. Production integration",
+        "permissionsLabel": "Permissions",
+        "cancel": "Cancel",
+        "create": "Create"
+      },
+      "created": {
+        "title": "API key created",
+        "warning": "Copy this key now — you won't be able to view it again later.",
+        "keyLabel": "Your API key",
+        "copyTitle": "Copy to clipboard",
+        "close": "Close"
+      }
+    },
+    "webhooks": {
+      "title": "Webhooks",
+      "description": "Receive real-time notifications of events in TalentFlow.",
+      "add": "Add webhook",
+      "loading": "Loading webhooks…",
+      "empty": "No webhooks configured yet.",
+      "active": "Active",
+      "inactive": "Inactive",
+      "deactivate": "Deactivate",
+      "activate": "Activate",
+      "dialog": {
+        "title": "New webhook",
+        "nameLabel": "Name",
+        "namePlaceholder": "e.g. Slack notifications",
+        "urlLabel": "URL",
+        "urlPlaceholder": "https://your-endpoint.com/webhook",
+        "eventsLabel": "Events",
+        "cancel": "Cancel",
+        "save": "Save"
+      }
+    }
+  },
+  "branding": {
+    "title": "Branding",
+    "description": "Customize the portal and emails with your own house style.",
+    "toasts": {
+      "invalidPrimary": {
+        "title": "Invalid primary color",
+        "description": "Enter a valid hex color, for example #6366f1."
+      },
+      "invalidAccent": {
+        "title": "Invalid accent color",
+        "description": "Enter a valid hex color, for example #8b5cf6."
+      },
+      "updated": {
+        "title": "Branding saved",
+        "description": "Your house style has been updated and is active immediately."
+      },
+      "saveError": {
+        "title": "Save failed",
+        "description": "The branding could not be saved. Please try again."
+      }
+    },
+    "logo": {
+      "title": "Logo & favicon",
+      "description": "Show your own logo in the portal and emails.",
+      "logoUrlLabel": "Logo URL",
+      "logoUrlPlaceholder": "https://your-agency.com/logo.png",
+      "faviconUrlLabel": "Favicon URL",
+      "faviconUrlPlaceholder": "https://your-agency.com/favicon.ico"
+    },
+    "colors": {
+      "title": "Colors",
+      "description": "Set your primary and accent color.",
+      "primaryLabel": "Primary color",
+      "primaryAria": "Primary color"
+    }
+  }
+}

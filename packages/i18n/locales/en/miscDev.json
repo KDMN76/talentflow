@@ -1,0 +1,163 @@
+{
+  "webhooks": {
+    "header": {
+      "title": "Webhooks",
+      "description": "Forward events to external systems in real time and track deliveries."
+    },
+    "tabs": {
+      "subscriptions": "Subscriptions",
+      "deliveries": "Deliveries",
+      "test": "Test"
+    },
+    "relative": {
+      "justNow": "Just now",
+      "minutesAgo_one": "{{count}} minute ago",
+      "minutesAgo_other": "{{count}} minutes ago",
+      "hoursAgo_one": "{{count}} hour ago",
+      "hoursAgo_other": "{{count}} hours ago"
+    },
+    "deliveryStatus": {
+      "succeeded": "Succeeded",
+      "failed": "Failed",
+      "dead": "Dead",
+      "pending": "Pending",
+      "delivering": "Delivering"
+    },
+    "subscriptions": {
+      "count_one": "{{count}} subscription",
+      "count_other": "{{count}} subscriptions",
+      "new": "New subscription",
+      "emptyLine1": "No webhook subscriptions yet. Click",
+      "emptyLink": "New subscription",
+      "emptyLine2": "to create one.",
+      "confirmDelete": "Delete subscription \"{{name}}\"?",
+      "confirmRotate": "Rotate secret? The current secret will stop working immediately."
+    },
+    "toasts": {
+      "deleted": "Subscription deleted",
+      "updated": "Subscription updated",
+      "created": "Subscription created",
+      "createErrorTitle": "Creation failed",
+      "createErrorDescription": "The subscription could not be created. Please try again.",
+      "retryStarted": "Retry started"
+    },
+    "deliveries": {
+      "subscriptionLabel": "Subscription",
+      "statusLabel": "Status",
+      "all": "All",
+      "empty": "No deliveries yet.",
+      "columns": {
+        "time": "Time",
+        "event": "Event",
+        "subscription": "Subscription",
+        "status": "Status",
+        "attempt": "Attempt",
+        "response": "Response",
+        "actions": "Actions"
+      }
+    },
+    "test": {
+      "title": "Test webhook",
+      "description": "Send a test payload to a URL and inspect the response and signature.",
+      "targetUrlLabel": "Target URL",
+      "targetUrlPlaceholder": "https://example.com/webhook",
+      "eventTypeLabel": "Event type",
+      "payloadLabel": "Payload (JSON)",
+      "invalidJsonTitle": "Invalid JSON",
+      "invalidJsonDescription": "The payload is not valid JSON. Check the contents.",
+      "urlMissingTitle": "Enter a target URL",
+      "send": "Send",
+      "result": {
+        "statusLabel": "Status:",
+        "httpStatus": "HTTP {{status}}",
+        "noResponse": "No response",
+        "durationMs": "{{duration}} ms",
+        "signatureLabel": "Signature: "
+      }
+    },
+    "subscriptionRow": {
+      "toggleDetailsAria": "Show or hide details",
+      "active": "Active",
+      "off": "Off",
+      "failedCount_one": "{{count}} failure",
+      "failedCount_other": "{{count}} failures",
+      "rotateSecretTitle": "Rotate secret",
+      "lastDelivery": "Last delivery:",
+      "lastFailure": "Last failure:",
+      "edit": "Edit",
+      "nameLabel": "Name",
+      "urlLabel": "URL",
+      "descriptionLabel": "Description",
+      "eventsLabel": "Events",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "eventSelect": {
+      "allEvents": "All events (*)"
+    },
+    "createDialog": {
+      "title": "New webhook subscription",
+      "description": "Provide a name and URL, then select the events you want to receive.",
+      "nameLabel": "Name",
+      "namePlaceholder": "e.g. Production integration",
+      "urlLabel": "URL",
+      "urlPlaceholder": "https://example.com/webhook",
+      "descriptionLabel": "Description",
+      "eventsLabel": "Events",
+      "cancel": "Cancel",
+      "create": "Create"
+    },
+    "secretDialog": {
+      "title": "Secret for \"{{name}}\"",
+      "description": "Store this secret securely. It is shown only once.",
+      "copy": "Copy",
+      "understood": "Got it"
+    },
+    "detailDialog": {
+      "title": "Delivery details",
+      "description": "Full request and response for this delivery attempt.",
+      "eventLabel": "Event",
+      "statusLabel": "Status",
+      "attemptLabel": "Attempt",
+      "durationLabel": "Duration",
+      "errorLabel": "Error:",
+      "request": "Request",
+      "response": "Response",
+      "noResponse": "No response body",
+      "retry": "Retry",
+      "close": "Close"
+    }
+  },
+  "workflows": {
+    "neverRun": "Never run",
+    "card": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "noAction": "No action",
+      "more_one": "+{{count}} action",
+      "more_other": "+{{count}} actions",
+      "runCount_one": "Run {{count}} time",
+      "runCount_other": "Run {{count}} times",
+      "last": "Last: {{date}}",
+      "deactivate": "Deactivate",
+      "activate": "Activate",
+      "delete": "Delete",
+      "toasts": {
+        "deactivatedTitle": "Workflow deactivated",
+        "activatedTitle": "Workflow activated",
+        "toggledOff": "\"{{name}}\" has been deactivated.",
+        "toggledOn": "\"{{name}}\" has been activated.",
+        "deletedTitle": "Workflow deleted",
+        "deletedDescription": "\"{{name}}\" has been deleted."
+      }
+    },
+    "deleteDialog": {
+      "title": "Delete workflow?",
+      "descriptionPrefix": "Are you sure you want to delete",
+      "descriptionSuffix": "? This action cannot be undone.",
+      "cancel": "Cancel",
+      "deleting": "Deleting…",
+      "delete": "Delete"
+    }
+  }
+}

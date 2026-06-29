@@ -50,6 +50,22 @@ import nlInterviewKits from "../locales/nl/interviewKits.json";
 import enInterviewKits from "../locales/en/interviewKits.json";
 import nlMiscInbox from "../locales/nl/miscInbox.json";
 import enMiscInbox from "../locales/en/miscInbox.json";
+import nlJobBoards from "../locales/nl/jobBoards.json";
+import enJobBoards from "../locales/en/jobBoards.json";
+import nlSettingsCore from "../locales/nl/settingsCore.json";
+import enSettingsCore from "../locales/en/settingsCore.json";
+import nlSettingsSecurity from "../locales/nl/settingsSecurity.json";
+import enSettingsSecurity from "../locales/en/settingsSecurity.json";
+import nlSettingsAccess from "../locales/nl/settingsAccess.json";
+import enSettingsAccess from "../locales/en/settingsAccess.json";
+import nlSettingsAdvanced from "../locales/nl/settingsAdvanced.json";
+import enSettingsAdvanced from "../locales/en/settingsAdvanced.json";
+import nlMiscHome from "../locales/nl/miscHome.json";
+import enMiscHome from "../locales/en/miscHome.json";
+import nlMiscDev from "../locales/nl/miscDev.json";
+import enMiscDev from "../locales/en/miscDev.json";
+import nlMiscPortals from "../locales/nl/miscPortals.json";
+import enMiscPortals from "../locales/en/miscPortals.json";
 
 export const SUPPORTED_LOCALES = ["nl", "en"] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
@@ -91,6 +107,14 @@ export const resources = {
     reportsPage: nlReportsPage,
     interviewKits: nlInterviewKits,
     miscInbox: nlMiscInbox,
+    jobBoards: nlJobBoards,
+    settingsCore: nlSettingsCore,
+    settingsSecurity: nlSettingsSecurity,
+    settingsAccess: nlSettingsAccess,
+    settingsAdvanced: nlSettingsAdvanced,
+    miscHome: nlMiscHome,
+    miscDev: nlMiscDev,
+    miscPortals: nlMiscPortals,
   },
   en: {
     common: enCommon,
@@ -112,6 +136,14 @@ export const resources = {
     reportsPage: enReportsPage,
     interviewKits: enInterviewKits,
     miscInbox: enMiscInbox,
+    jobBoards: enJobBoards,
+    settingsCore: enSettingsCore,
+    settingsSecurity: enSettingsSecurity,
+    settingsAccess: enSettingsAccess,
+    settingsAdvanced: enSettingsAdvanced,
+    miscHome: enMiscHome,
+    miscDev: enMiscDev,
+    miscPortals: enMiscPortals,
   },
 } as const;
 

@@ -1,0 +1,133 @@
+{
+  "auditEvents": {
+    "header": {
+      "title": "Audit-events",
+      "description": "Onveranderlijk logboek van alle beveiligings- en beheeracties binnen je organisatie."
+    },
+    "realtime": {
+      "on": "Live aan",
+      "off": "Live uit"
+    },
+    "export": "Exporteren",
+    "exportToast": {
+      "title": "Export gestart",
+      "description": "Export-taak {{jobId}} aangemaakt — circa {{rows}} regels."
+    },
+    "entityTypes": {
+      "all": "Alle entiteiten",
+      "user": "Gebruiker",
+      "candidate": "Kandidaat",
+      "role": "Rol",
+      "roleAssignment": "Roltoewijzing",
+      "securitySettings": "Beveiligingsinstellingen",
+      "ssoConfig": "SSO-configuratie",
+      "scimToken": "SCIM-token",
+      "apiKey": "API-sleutel"
+    },
+    "filters": {
+      "searchPlaceholder": "Zoeken op actie, gebruiker of entiteit…",
+      "allCategories": "Alle categorieën",
+      "actionPlaceholder": "Actie-patroon (bijv. user.*)",
+      "from": "Van",
+      "until": "Tot",
+      "clear": "Filters wissen"
+    },
+    "table": {
+      "wormTrail": "WORM-trail",
+      "wormNote": "Write-once, read-many — events kunnen niet worden gewijzigd of verwijderd.",
+      "eventsCount": "{{shown}} van {{total}} events",
+      "colTime": "Tijdstip",
+      "colAction": "Actie",
+      "colEntity": "Entiteit",
+      "colUser": "Gebruiker",
+      "colIp": "IP-adres",
+      "colDetails": "Details",
+      "emptyTitle": "Geen events gevonden",
+      "emptyDescription": "Pas je filters aan of verruim de periode.",
+      "loadMore": "Meer laden"
+    },
+    "detail": {
+      "title": "Event-details",
+      "time": "Tijdstip",
+      "action": "Actie",
+      "actionKey": "Actiesleutel",
+      "category": "Categorie",
+      "entity": "Entiteit",
+      "entityRef": "Entiteitreferentie",
+      "performedBy": "Uitgevoerd door",
+      "role": "Rol",
+      "ip": "IP-adres",
+      "requestId": "Request-ID",
+      "userAgent": "User agent",
+      "diff": "Wijzigingen",
+      "metadata": "Metadata",
+      "wormSeal": "WORM-zegel:"
+    },
+    "diff": {
+      "noChanges": "Geen veldwijzigingen vastgelegd.",
+      "field": "Veld",
+      "before": "Voor",
+      "after": "Na"
+    }
+  },
+  "auditTrail": {
+    "back": "Terug",
+    "exportPdf": "Exporteer naar pdf",
+    "exportToast": {
+      "title": "Export gestart",
+      "description": "De pdf-export wordt voorbereid en is zo beschikbaar."
+    },
+    "headerEyebrow": "Audit-trail · {{entity}}",
+    "headerDescription": "Volledig chronologisch logboek van alles wat er met deze entiteit is gebeurd.",
+    "entityLabel": {
+      "candidate": "Kandidaat",
+      "job": "Vacature",
+      "application": "Sollicitatie"
+    },
+    "filterByType": "Filter op type",
+    "groups": {
+      "writes": "Wijzigingen",
+      "ai": "AI",
+      "consent": "Toestemming",
+      "communications": "Communicatie",
+      "access": "Toegang",
+      "exports": "Exports"
+    },
+    "error": {
+      "title": "Kon de audit-trail niet laden",
+      "description": "Er ging iets mis bij het ophalen van de events. Probeer het opnieuw.",
+      "retry": "Opnieuw proberen"
+    },
+    "emptyFilter": "Geen events voor de geselecteerde filters.",
+    "monthLabel": "{{month}} {{year}}",
+    "months": [
+      "Januari",
+      "Februari",
+      "Maart",
+      "April",
+      "Mei",
+      "Juni",
+      "Juli",
+      "Augustus",
+      "September",
+      "Oktober",
+      "November",
+      "December"
+    ],
+    "events_one": "{{count}} event",
+    "events_other": "{{count}} events",
+    "diff": {
+      "title": "Wijzigingen",
+      "field": "Veld",
+      "before": "Voor",
+      "after": "Na",
+      "empty": "leeg"
+    },
+    "metadata": "Metadata",
+    "empty": "—",
+    "boolean": {
+      "yes": "Ja",
+      "no": "Nee"
+    }
+  }
+}

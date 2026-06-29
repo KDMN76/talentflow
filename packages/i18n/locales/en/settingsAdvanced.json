@@ -1,0 +1,172 @@
+{
+  "accounting": {
+    "header": {
+      "title": "Accounting integrations",
+      "description": "Connect your accounting software so invoices and ledger entries sync automatically."
+    },
+    "status": {
+      "connected": "Connected",
+      "error": "Error",
+      "notConnected": "Not connected"
+    },
+    "card": {
+      "lastSync": "Last synced on {{date}}",
+      "ledger": "Ledger {{account}} · VAT code {{vat}}",
+      "working": "Integration is working correctly"
+    },
+    "actions": {
+      "disconnect": "Disconnect",
+      "connect": "Connect"
+    },
+    "disconnectDialog": {
+      "title": "Disconnect integration?",
+      "description": "Syncing will stop and existing entries remain unchanged. You can reconnect later.",
+      "cancel": "Cancel",
+      "confirm": "Disconnect"
+    },
+    "connectForm": {
+      "title": "Connect {{provider}}",
+      "descriptionApiKey": "Enter your API key and set the default ledger account and VAT code.",
+      "descriptionOAuth": "You'll be redirected to authorize the connection. Then set the default ledger account and VAT code.",
+      "apiKeyLabel": "API key",
+      "revenueAccountLabel": "Revenue account",
+      "vatCodeLabel": "VAT code",
+      "oauthScope1": "Read and write access to sales invoices",
+      "oauthScope2": "No access to banking data or other records",
+      "submitApiKey": "Connect with API key",
+      "submitOAuth": "Authorize and connect"
+    },
+    "toast": {
+      "disconnected": {
+        "title": "Integration disconnected",
+        "description": "The accounting integration was disconnected successfully."
+      },
+      "disconnectFailed": {
+        "title": "Disconnect failed"
+      },
+      "connected": {
+        "title": "Integration active",
+        "description": "The accounting software is connected and now syncing."
+      },
+      "connectFailed": {
+        "title": "Connection failed"
+      }
+    }
+  },
+  "availability": {
+    "backToSettings": "Back to settings",
+    "loadError": "Availability could not be loaded. Please try again.",
+    "title": "Availability",
+    "description": "Set your weekly availability and exceptions for scheduling interviews.",
+    "save": "Save",
+    "timezone": {
+      "title": "Time zone",
+      "description": "All times are displayed and scheduled in this time zone."
+    },
+    "weeklySchedule": {
+      "title": "Weekly schedule",
+      "description": "Indicate per day the times you're available for interviews.",
+      "addBlock": "Add block",
+      "notAvailable": "Not available",
+      "until": "until"
+    },
+    "weekdays": {
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday",
+      "sunday": "Sunday"
+    },
+    "overrides": {
+      "title": "Exceptions",
+      "description": "Block specific dates when you're unavailable, such as holidays or leave.",
+      "dateLabel": "Date",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "E.g. holiday or leave",
+      "blockDate": "Block date",
+      "blockedHeading": "Blocked dates"
+    },
+    "toast": {
+      "saved": {
+        "title": "Availability saved",
+        "description": "{{count}} blocks saved in {{timezone}}."
+      },
+      "blocked": {
+        "title": "Date blocked"
+      }
+    }
+  },
+  "payTransparency": {
+    "header": {
+      "title": "Pay transparency",
+      "description": "Manage how your agency handles salary information and comply with the EU Pay Transparency Directive."
+    },
+    "directive": {
+      "title": "EU Pay Transparency Directive",
+      "paragraph1": "The EU Pay Transparency Directive requires employers to give candidates a salary indication up front and prohibits asking about current pay.",
+      "paragraph2": "Member states must transpose the directive into national law by 2026. Configure your policy below to stay prepared.",
+      "readMore": "Read the directive"
+    },
+    "policy": {
+      "title": "Policy",
+      "description": "Choose which rules TalentFlow enforces when posting vacancies and conducting interviews.",
+      "enforceSalaryRange": {
+        "title": "Require salary range",
+        "description": "Vacancies can only be published once a salary range is filled in."
+      },
+      "forbidCurrentSalary": {
+        "title": "Forbid current-salary question",
+        "description": "Hide and block fields that ask for a candidate's current salary."
+      },
+      "anonymousBenchmark": {
+        "title": "Allow anonymous benchmark",
+        "description": "Share anonymized salary data to enable industry-wide pay benchmarks."
+      },
+      "reportingThreshold": {
+        "label": "Reporting threshold (employees)",
+        "help": "Number of employees above which pay-gap reporting becomes mandatory."
+      },
+      "defaultCurrency": {
+        "label": "Default currency",
+        "help": "Currency used by default for salary ranges."
+      },
+      "save": "Save"
+    },
+    "currencies": {
+      "eur": "Euro (EUR)",
+      "gbp": "British pound (GBP)",
+      "usd": "US dollar (USD)",
+      "chf": "Swiss franc (CHF)"
+    },
+    "toast": {
+      "saved": {
+        "title": "Policy saved",
+        "description": "Your pay transparency settings have been updated."
+      },
+      "error": {
+        "title": "Save failed",
+        "description": "The policy could not be saved. Please try again."
+      }
+    }
+  },
+  "talentFit": {
+    "breadcrumb": "Settings",
+    "breadcrumbCurrent": "Talent Fit Model",
+    "header": {
+      "title": "Talent Fit Model",
+      "description": "A per-agency model that learns from your historical hires and rejects to rank candidates better."
+    },
+    "toast": {
+      "trained": {
+        "title": "Model trained",
+        "description": "The Talent Fit Model has been retrained on your most recent data."
+      },
+      "trainFailed": {
+        "title": "Training failed",
+        "description": "The model could not be trained. Please try again."
+      }
+    }
+  }
+}

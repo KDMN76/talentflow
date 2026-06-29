@@ -1,0 +1,156 @@
+{
+  "rolesList": {
+    "backToSecurity": "Back to security",
+    "title": "Roles & permissions",
+    "description": "Manage roles, their permissions and who they are assigned to.",
+    "newRole": "New role",
+    "tabs": {
+      "list": "List",
+      "matrix": "Permission matrix"
+    },
+    "loading": "Loading roles…",
+    "badge": {
+      "system": "System",
+      "custom": "Custom"
+    },
+    "userCount_one": "{{count}} user",
+    "userCount_other": "{{count}} users",
+    "resourcesGranted_one": "{{count}} permission granted",
+    "resourcesGranted_other": "{{count}} permissions granted",
+    "inheritsFrom": "Inherits from {{label}}",
+    "inheritsFromUnknown": "unknown role",
+    "view": "View",
+    "edit": "Edit",
+    "matrix": {
+      "title": "Permissions per role",
+      "resource": "Resource",
+      "action": "Action"
+    },
+    "confirmDelete": "Delete role \"{{label}}\"?{{warning}}",
+    "confirmDeleteWarning_one": " {{count}} user is still assigned to this role.",
+    "confirmDeleteWarning_other": " {{count}} users are still assigned to this role.",
+    "toasts": {
+      "fieldsMissing": {
+        "title": "Missing fields",
+        "description": "Key and label are required."
+      },
+      "created": {
+        "title": "Role created"
+      },
+      "createError": {
+        "title": "Could not create role",
+        "fallback": "The role could not be created."
+      },
+      "notAllowed": {
+        "title": "Not allowed",
+        "description": "System roles cannot be deleted."
+      },
+      "deleted": {
+        "title": "Role deleted"
+      },
+      "deleteError": {
+        "title": "Could not delete role",
+        "fallback": "The role could not be deleted."
+      }
+    },
+    "wizard": {
+      "title": "New role — step {{step}} of 2",
+      "keyLabel": "Key",
+      "keyPlaceholder": "e.g. senior_recruiter",
+      "keyHint": "Unique technical key. Lowercase letters, digits and underscores only.",
+      "labelLabel": "Label",
+      "labelPlaceholder": "e.g. Senior Recruiter",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "What is this role for?",
+      "inheritsLabel": "Inherits from",
+      "inheritsPlaceholder": "None — start with empty permissions",
+      "inheritsHint": "Use the permissions of a system role as a starting point.",
+      "step2Hint": "Select the permissions this role gets. Inherited permissions are already checked.",
+      "cancel": "Cancel",
+      "previous": "Previous",
+      "next": "Next",
+      "createRole": "Create role"
+    }
+  },
+  "roleDetail": {
+    "loading": "Loading role…",
+    "backToRoles": "Back to roles",
+    "descriptionSystem": "Built-in system role — read-only.",
+    "descriptionCustom": "Custom role — edit its label, description and permissions.",
+    "badge": {
+      "system": "System",
+      "custom": "Custom"
+    },
+    "tabs": {
+      "config": "Configuration",
+      "permissions": "Permissions",
+      "users_one": "Users ({{count}})",
+      "users_other": "Users ({{count}})"
+    },
+    "labelLabel": "Label",
+    "descriptionLabel": "Description",
+    "inheritsLabel": "Inherits from",
+    "inheritsPlaceholder": "None",
+    "delete": "Delete",
+    "saveChanges": "Save changes",
+    "permissionMatrixTitle": "Permission matrix",
+    "savePermissions": "Save permissions",
+    "noUsersTitle": "No users have this role yet.",
+    "expiresOn": "Expires on {{date}}",
+    "removeAssignment": "Remove",
+    "confirmDelete": "Delete role \"{{label}}\"?",
+    "confirmUnassign": "Remove this user from the role?",
+    "toasts": {
+      "updated": {
+        "title": "Role updated"
+      },
+      "updateError": {
+        "title": "Could not update role",
+        "fallback": "The role could not be updated."
+      },
+      "deleted": {
+        "title": "Role deleted"
+      },
+      "deleteError": {
+        "title": "Could not delete role",
+        "fallback": "The role could not be deleted."
+      },
+      "unassigned": {
+        "title": "User removed from role"
+      }
+    }
+  },
+  "userDetail": {
+    "backToSettings": "Back to settings",
+    "member": {
+      "loading": "Loading…",
+      "loadError": "Failed to load user",
+      "notFound": "User not found",
+      "noEmail": "No email address"
+    },
+    "rolesTitle": "Roles",
+    "currentRolesLabel": "Current roles",
+    "loading": "Loading roles…",
+    "noRolesAssigned": "No roles assigned yet.",
+    "expiresOn": "expires {{date}}",
+    "removeTitle": "Remove role",
+    "addRoleLabel": "Add role",
+    "rolePlaceholder": "Choose a role",
+    "systemSuffix": "system",
+    "expiresAtLabel": "Expires on",
+    "assign": "Assign",
+    "confirmUnassign": "Remove this role from the user?",
+    "toasts": {
+      "alreadyAssigned": {
+        "title": "Already assigned",
+        "description": "This user already has this role."
+      },
+      "assigned": {
+        "title": "Role assigned"
+      },
+      "unassigned": {
+        "title": "Role removed"
+      }
+    }
+  }
+}

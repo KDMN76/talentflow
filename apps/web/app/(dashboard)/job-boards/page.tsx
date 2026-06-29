@@ -566,7 +566,7 @@ function BoardCard({
           <div className="flex min-w-0 items-center gap-3">
             {iconBox}
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+              <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                 {board.display_name}
               </p>
               {meta}

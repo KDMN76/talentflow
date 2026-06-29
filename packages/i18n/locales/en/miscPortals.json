@@ -1,0 +1,238 @@
+{
+  "portalList": {
+    "header": {
+      "title": "Client portals",
+      "description": "Securely share candidates with clients through a protected link.",
+      "newLink": "New link"
+    },
+    "empty": {
+      "title": "No portal links yet",
+      "description": "Create a shared link so a client can review the candidates for a job.",
+      "newLink": "Create first link"
+    },
+    "card": {
+      "unnamedClient": "Unnamed client",
+      "expired": "Expired",
+      "jobFallback": "Unknown job",
+      "expiresOn": "Expires on {{date}}",
+      "noExpiry": "No expiry date",
+      "viewCount_one": "{{count}} view",
+      "viewCount_other": "{{count}} views",
+      "lastViewed": " · last viewed {{date}}",
+      "copyTitle": "Copy link",
+      "copyLink": "Copy"
+    },
+    "permissionLabels": {
+      "view_candidates": "View candidates",
+      "view_resumes": "View resumes",
+      "view_ai_scores": "View AI scores",
+      "view_contact_info": "View contact info",
+      "accept_reject": "Accept or reject",
+      "comment": "Comment",
+      "download_cv": "Download CV",
+      "view_pipeline_history": "View pipeline history"
+    },
+    "createDialog": {
+      "title": "Create client portal",
+      "jobLabel": "Job",
+      "jobPlaceholder": "Select a job",
+      "clientNameLabel": "Client name",
+      "clientNamePlaceholder": "e.g. Company Inc.",
+      "permissionsLabel": "Permissions",
+      "defaultBadge": "Default",
+      "expiresLabel": "Expiry date (optional)",
+      "cancel": "Cancel",
+      "create": "Create"
+    },
+    "createdDialog": {
+      "title": "Link created",
+      "intro": "The portal link is ready to share with your client.",
+      "linkLabel": "Portal link",
+      "copyTitle": "Copy link",
+      "close": "Close"
+    },
+    "toasts": {
+      "jobRequiredTitle": "Job missing",
+      "jobRequiredDescription": "Select a job before creating the link.",
+      "createdTitle": "Link created",
+      "createdDescription": "The client portal is ready to share.",
+      "errorTitle": "Creation failed",
+      "errorDescription": "The link could not be created. Please try again.",
+      "deletedTitle": "Link deleted",
+      "copiedTitle": "Copied",
+      "copiedDescription": "The link is on your clipboard."
+    }
+  },
+  "portalDetail": {
+    "back": "Back to portals",
+    "unknownClient": "Unknown client",
+    "jobLabel": "Job:",
+    "jobFallback": "Unknown job",
+    "active": "Active",
+    "disabled": "Disabled",
+    "customDomain": "Custom domain",
+    "lastActivity_one": "Last activity {{date}} · {{count}} view",
+    "lastActivity_other": "Last activity {{date}} · {{count}} views",
+    "openPortal": "Open portal",
+    "copyUrl": "Copy URL",
+    "tabs": {
+      "settings": "Settings",
+      "activity": "Activity",
+      "domain": "Domain",
+      "token": "Token"
+    },
+    "permissions": {
+      "title": "Permissions",
+      "description": "Control what the client can see and do in the portal."
+    },
+    "notifications": {
+      "title": "Notifications",
+      "description": "Get notified as soon as the client takes action.",
+      "emailLabel": "Notification email",
+      "emailPlaceholder": "name@company.com",
+      "frequencyLabel": "Frequency",
+      "frequency": {
+        "realtime": "Real-time",
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "off": "Off"
+      }
+    },
+    "activity": {
+      "title": "Activity",
+      "description": "Everything the client has done in this portal."
+    },
+    "domain": {
+      "title": "Custom domain",
+      "description": "Use your own domain for a professional look.",
+      "domainLabel": "Domain",
+      "domainPlaceholder": "portal.company.com",
+      "verify": "Verify",
+      "statusLabel": "Status:",
+      "status": {
+        "verified": "Verified",
+        "pending": "Pending",
+        "failed": "Failed",
+        "none": "Not set"
+      },
+      "dnsIntro": "Add the following DNS record to verify the domain:",
+      "dnsType": "Type",
+      "dnsName": "Name",
+      "dnsValue": "Value",
+      "cnameNote": "Also point a CNAME record to"
+    },
+    "token": {
+      "title": "Access token",
+      "description": "The token is part of the portal link and controls access.",
+      "currentUrlLabel": "Current URL",
+      "warningTitle": "Caution when rotating",
+      "warningBody": "A new token invalidates the existing link. Be sure to share the new link afterwards.",
+      "rotate": "Rotate token"
+    },
+    "rotateDialog": {
+      "title": "Rotate token?",
+      "description": "The current link will stop working. You will need to share the new link again.",
+      "cancel": "Cancel",
+      "confirm": "Rotate"
+    },
+    "toasts": {
+      "copied": "{{label}} copied",
+      "permissionsUpdated": "Permissions updated",
+      "notifyEmailUpdated": "Notification email updated",
+      "frequencyUpdated": "Frequency updated",
+      "domainVerifiedTitle": "Domain verified",
+      "domainVerifiedDescription": "{{domain}} has been verified and is active.",
+      "dnsNotFoundTitle": "DNS record not found",
+      "dnsNotFoundDescription": "Check the DNS record and try again.",
+      "tokenRotatedTitle": "Token rotated",
+      "tokenRotatedDescription": "The old link no longer works. Share the new link.",
+      "portalUrlLabel": "Portal URL",
+      "txtRecordLabel": "TXT record",
+      "urlLabel": "URL",
+      "domainSaved": "Domain saved"
+    }
+  },
+  "reactivation": {
+    "header": {
+      "title": "Reactivation",
+      "description": "Past candidates who now match an open job again.",
+      "aiLabel": "AI matching",
+      "newThisWeek_one": "{{count}} new this week",
+      "newThisWeek_other": "{{count}} new this week"
+    },
+    "filters": {
+      "jobLabel": "Job",
+      "allJobs": "All jobs",
+      "statusLabel": "Status",
+      "scoreLabel": "Score",
+      "reset": "Clear filters"
+    },
+    "statusOptions": {
+      "all": "All statuses",
+      "new": "New",
+      "acknowledged": "Reviewed",
+      "dismissed": "Dismissed"
+    },
+    "scoreRanges": {
+      "all": "All scores",
+      "high": "High (80+)",
+      "mid": "Mid (60–79)",
+      "low": "Low (below 60)"
+    },
+    "empty": {
+      "title": "No reactivations",
+      "description": "There are currently no past candidates that match these filters again."
+    },
+    "results": {
+      "noun_one": "candidate",
+      "noun_other": "candidates",
+      "found": "found"
+    }
+  },
+  "voiceCall": {
+    "back": "Back",
+    "error": {
+      "loadFailed": "The call could not be loaded.",
+      "notFound": "Call not found."
+    },
+    "header": {
+      "unknownCandidate": "Unknown candidate",
+      "inbound": "Inbound",
+      "outbound": "Outbound",
+      "voicemail": "Voicemail",
+      "recruiterLabel": "Recruiter:",
+      "noDate": "No date"
+    },
+    "timeline": {
+      "title": "Timeline",
+      "started": "Started",
+      "answered": "Answered",
+      "ended": "Ended",
+      "recordingAvailable": "Recording available"
+    },
+    "recording": {
+      "title": "Recording",
+      "unsupported": "Your browser does not support audio playback."
+    },
+    "transcription": {
+      "title": "Transcript",
+      "generate": "Generate transcript",
+      "copied": "Copied",
+      "copy": "Copy",
+      "pending": "The transcript is being generated. This may take a moment.",
+      "none": "No transcript available yet."
+    },
+    "notes": {
+      "title": "Notes",
+      "saved": "Saved",
+      "saving": "Saving…",
+      "willSave": "Changes will be saved",
+      "placeholder": "Add notes about this call…"
+    },
+    "toasts": {
+      "transcriptionCopied": "Transcript copied",
+      "copyFailed": "Copy failed",
+      "transcriptionRequested": "Transcript requested"
+    }
+  }
+}

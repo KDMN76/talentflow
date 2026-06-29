@@ -1,0 +1,238 @@
+{
+  "portalList": {
+    "header": {
+      "title": "Klantportalen",
+      "description": "Deel kandidaten veilig met opdrachtgevers via een afgeschermde link.",
+      "newLink": "Nieuwe link"
+    },
+    "empty": {
+      "title": "Nog geen portallinks",
+      "description": "Maak een gedeelde link aan zodat een opdrachtgever de kandidaten voor een vacature kan bekijken.",
+      "newLink": "Eerste link aanmaken"
+    },
+    "card": {
+      "unnamedClient": "Naamloze opdrachtgever",
+      "expired": "Verlopen",
+      "jobFallback": "Onbekende vacature",
+      "expiresOn": "Verloopt op {{date}}",
+      "noExpiry": "Geen vervaldatum",
+      "viewCount_one": "{{count}} weergave",
+      "viewCount_other": "{{count}} weergaven",
+      "lastViewed": " · laatst bekeken {{date}}",
+      "copyTitle": "Link kopiëren",
+      "copyLink": "Kopiëren"
+    },
+    "permissionLabels": {
+      "view_candidates": "Kandidaten bekijken",
+      "view_resumes": "Cv's bekijken",
+      "view_ai_scores": "AI-scores bekijken",
+      "view_contact_info": "Contactgegevens bekijken",
+      "accept_reject": "Goed- of afkeuren",
+      "comment": "Reageren",
+      "download_cv": "Cv downloaden",
+      "view_pipeline_history": "Pijplijnhistorie bekijken"
+    },
+    "createDialog": {
+      "title": "Klantportal aanmaken",
+      "jobLabel": "Vacature",
+      "jobPlaceholder": "Kies een vacature",
+      "clientNameLabel": "Naam opdrachtgever",
+      "clientNamePlaceholder": "Bijv. Bedrijf B.V.",
+      "permissionsLabel": "Rechten",
+      "defaultBadge": "Standaard",
+      "expiresLabel": "Vervaldatum (optioneel)",
+      "cancel": "Annuleren",
+      "create": "Aanmaken"
+    },
+    "createdDialog": {
+      "title": "Link aangemaakt",
+      "intro": "De portallink is klaar om te delen met je opdrachtgever.",
+      "linkLabel": "Portallink",
+      "copyTitle": "Link kopiëren",
+      "close": "Sluiten"
+    },
+    "toasts": {
+      "jobRequiredTitle": "Vacature ontbreekt",
+      "jobRequiredDescription": "Kies eerst een vacature voordat je de link aanmaakt.",
+      "createdTitle": "Link aangemaakt",
+      "createdDescription": "De klantportal is klaar om te delen.",
+      "errorTitle": "Aanmaken mislukt",
+      "errorDescription": "De link kon niet worden aangemaakt. Probeer het opnieuw.",
+      "deletedTitle": "Link verwijderd",
+      "copiedTitle": "Gekopieerd",
+      "copiedDescription": "De link staat op je klembord."
+    }
+  },
+  "portalDetail": {
+    "back": "Terug naar portalen",
+    "unknownClient": "Onbekende opdrachtgever",
+    "jobLabel": "Vacature:",
+    "jobFallback": "Onbekende vacature",
+    "active": "Actief",
+    "disabled": "Uitgeschakeld",
+    "customDomain": "Eigen domein",
+    "lastActivity_one": "Laatste activiteit {{date}} · {{count}} weergave",
+    "lastActivity_other": "Laatste activiteit {{date}} · {{count}} weergaven",
+    "openPortal": "Portal openen",
+    "copyUrl": "URL kopiëren",
+    "tabs": {
+      "settings": "Instellingen",
+      "activity": "Activiteit",
+      "domain": "Domein",
+      "token": "Token"
+    },
+    "permissions": {
+      "title": "Rechten",
+      "description": "Bepaal wat de opdrachtgever in de portal kan zien en doen."
+    },
+    "notifications": {
+      "title": "Meldingen",
+      "description": "Ontvang een bericht zodra de opdrachtgever activiteit vertoont.",
+      "emailLabel": "E-mailadres voor meldingen",
+      "emailPlaceholder": "naam@bedrijf.nl",
+      "frequencyLabel": "Frequentie",
+      "frequency": {
+        "realtime": "Realtime",
+        "daily": "Dagelijks",
+        "weekly": "Wekelijks",
+        "off": "Uit"
+      }
+    },
+    "activity": {
+      "title": "Activiteit",
+      "description": "Alles wat de opdrachtgever in deze portal heeft gedaan."
+    },
+    "domain": {
+      "title": "Eigen domein",
+      "description": "Gebruik je eigen domein voor een professionele uitstraling.",
+      "domainLabel": "Domein",
+      "domainPlaceholder": "portal.bedrijf.nl",
+      "verify": "Verifiëren",
+      "statusLabel": "Status:",
+      "status": {
+        "verified": "Geverifieerd",
+        "pending": "In behandeling",
+        "failed": "Mislukt",
+        "none": "Niet ingesteld"
+      },
+      "dnsIntro": "Voeg de volgende DNS-record toe om het domein te verifiëren:",
+      "dnsType": "Type",
+      "dnsName": "Naam",
+      "dnsValue": "Waarde",
+      "cnameNote": "Wijs daarnaast een CNAME-record aan naar"
+    },
+    "token": {
+      "title": "Toegangstoken",
+      "description": "Het token zit in de portallink en bepaalt de toegang.",
+      "currentUrlLabel": "Huidige URL",
+      "warningTitle": "Let op bij vernieuwen",
+      "warningBody": "Een nieuw token maakt de bestaande link ongeldig. Deel daarna de nieuwe link opnieuw.",
+      "rotate": "Token vernieuwen"
+    },
+    "rotateDialog": {
+      "title": "Token vernieuwen?",
+      "description": "De huidige link werkt hierna niet meer. Je moet de nieuwe link opnieuw delen.",
+      "cancel": "Annuleren",
+      "confirm": "Vernieuwen"
+    },
+    "toasts": {
+      "copied": "{{label}} gekopieerd",
+      "permissionsUpdated": "Rechten bijgewerkt",
+      "notifyEmailUpdated": "Meldingsadres bijgewerkt",
+      "frequencyUpdated": "Frequentie bijgewerkt",
+      "domainVerifiedTitle": "Domein geverifieerd",
+      "domainVerifiedDescription": "{{domain}} is geverifieerd en actief.",
+      "dnsNotFoundTitle": "DNS-record niet gevonden",
+      "dnsNotFoundDescription": "Controleer de DNS-record en probeer het opnieuw.",
+      "tokenRotatedTitle": "Token vernieuwd",
+      "tokenRotatedDescription": "De oude link werkt niet meer. Deel de nieuwe link.",
+      "portalUrlLabel": "Portal-URL",
+      "txtRecordLabel": "TXT-record",
+      "urlLabel": "URL",
+      "domainSaved": "Domein opgeslagen"
+    }
+  },
+  "reactivation": {
+    "header": {
+      "title": "Reactivering",
+      "description": "Eerdere kandidaten die nu opnieuw passen bij een openstaande vacature.",
+      "aiLabel": "AI-matching",
+      "newThisWeek_one": "{{count}} nieuw deze week",
+      "newThisWeek_other": "{{count}} nieuw deze week"
+    },
+    "filters": {
+      "jobLabel": "Vacature",
+      "allJobs": "Alle vacatures",
+      "statusLabel": "Status",
+      "scoreLabel": "Score",
+      "reset": "Filters wissen"
+    },
+    "statusOptions": {
+      "all": "Alle statussen",
+      "new": "Nieuw",
+      "acknowledged": "Bekeken",
+      "dismissed": "Genegeerd"
+    },
+    "scoreRanges": {
+      "all": "Alle scores",
+      "high": "Hoog (80+)",
+      "mid": "Middel (60–79)",
+      "low": "Laag (onder 60)"
+    },
+    "empty": {
+      "title": "Geen reactiveringen",
+      "description": "Er zijn op dit moment geen eerdere kandidaten die opnieuw passen bij deze filters."
+    },
+    "results": {
+      "noun_one": "kandidaat",
+      "noun_other": "kandidaten",
+      "found": "gevonden"
+    }
+  },
+  "voiceCall": {
+    "back": "Terug",
+    "error": {
+      "loadFailed": "Het gesprek kon niet worden geladen.",
+      "notFound": "Gesprek niet gevonden."
+    },
+    "header": {
+      "unknownCandidate": "Onbekende kandidaat",
+      "inbound": "Inkomend",
+      "outbound": "Uitgaand",
+      "voicemail": "Voicemail",
+      "recruiterLabel": "Recruiter:",
+      "noDate": "Geen datum"
+    },
+    "timeline": {
+      "title": "Tijdlijn",
+      "started": "Gestart",
+      "answered": "Opgenomen",
+      "ended": "Beëindigd",
+      "recordingAvailable": "Opname beschikbaar"
+    },
+    "recording": {
+      "title": "Opname",
+      "unsupported": "Je browser ondersteunt geen audio-weergave."
+    },
+    "transcription": {
+      "title": "Transcript",
+      "generate": "Transcript genereren",
+      "copied": "Gekopieerd",
+      "copy": "Kopiëren",
+      "pending": "Het transcript wordt gegenereerd. Dit kan even duren.",
+      "none": "Nog geen transcript beschikbaar."
+    },
+    "notes": {
+      "title": "Notities",
+      "saved": "Opgeslagen",
+      "saving": "Opslaan…",
+      "willSave": "Wijzigingen worden opgeslagen",
+      "placeholder": "Voeg notities over dit gesprek toe…"
+    },
+    "toasts": {
+      "transcriptionCopied": "Transcript gekopieerd",
+      "copyFailed": "Kopiëren mislukt",
+      "transcriptionRequested": "Transcript aangevraagd"
+    }
+  }
+}

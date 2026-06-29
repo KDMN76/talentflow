@@ -1,0 +1,260 @@
+{
+  "backToSecurity": "Back to security",
+  "loading": "Loading…",
+  "overview": {
+    "title": "Security",
+    "description": "Manage authentication, access restrictions and the password policy for your organization.",
+    "sections": {
+      "sso": {
+        "label": "Single sign-on (SSO)",
+        "description": "Let users sign in through your own identity provider.",
+        "active": "{{provider}} active",
+        "notConfigured": "Not configured",
+        "autoCreateOn": "Automatic account creation is on",
+        "autoCreateOff": "Automatic account creation is off"
+      },
+      "twofa": {
+        "label": "Two-factor authentication (2FA)",
+        "description": "An extra verification step with an authenticator app at sign-in.",
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "policyPrefix": "Policy: ",
+        "policyAll": "required for everyone",
+        "policyAdmins": "required for admins",
+        "policyNone": "optional"
+      },
+      "ipAllowlist": {
+        "label": "IP allowlist",
+        "description": "Restrict access to trusted IP addresses and network ranges.",
+        "active_one": "Active · {{count}} range",
+        "active_other": "Active · {{count}} ranges",
+        "inactiveWithRanges_one": "Inactive · {{count}} range configured",
+        "inactiveWithRanges_other": "Inactive · {{count}} ranges configured",
+        "noRestriction": "No restriction"
+      },
+      "passwordPolicy": {
+        "label": "Password policy",
+        "description": "Set requirements for passwords, the 2FA policy and session timeout.",
+        "minLength_one": "Minimum {{count}} character",
+        "minLength_other": "Minimum {{count}} characters",
+        "empty": "Not set"
+      }
+    },
+    "headerBadges": {
+      "sso": "SSO",
+      "twofaAll": "2FA: everyone",
+      "twofaAdmins": "2FA: admins",
+      "twofaNone": "2FA: optional",
+      "ipAllowlist": "IP allowlist"
+    },
+    "roles": {
+      "label": "Roles and permissions",
+      "description": "Decide which roles can access which parts of the platform."
+    },
+    "audit": {
+      "label": "Audit log",
+      "description": "Review security events and changes across your organization."
+    }
+  },
+  "twofa": {
+    "title": "Two-factor authentication",
+    "description": "Protect your account with an extra verification step at sign-in.",
+    "badge": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "policyBanner": {
+      "title": "2FA is required for your account",
+      "deadline": "Set up 2FA before {{date}}, otherwise your access will be restricted.",
+      "noDeadline": "Set up 2FA as soon as possible to keep your access."
+    },
+    "active": {
+      "title": "Two-factor authentication is active",
+      "enrolledAt": "Enabled on {{date}}.",
+      "enrolled": "Enabled.",
+      "backupRemaining": "{{remaining}} backup codes remaining.",
+      "regenerate": "Regenerate backup codes",
+      "disable": "Disable 2FA"
+    },
+    "idle": {
+      "title": "Enable two-factor authentication",
+      "description": "Scan the QR code with your authenticator app and confirm with a code to activate 2FA.",
+      "enable": "Enable 2FA"
+    },
+    "scan": {
+      "title": "Step 1 · Scan the QR code",
+      "qrAlt": "QR code for two-factor authentication",
+      "manualEntry": "Or enter this key manually:",
+      "copySecret": "Key copied",
+      "noApp": "No authenticator app yet? Download one:",
+      "step2Label": "Step 2 · Enter the 6-digit code from your app",
+      "codePlaceholder": "000000",
+      "verify": "Verify"
+    },
+    "backup": {
+      "title": "Save your backup codes",
+      "warningTitle": "Store these codes in a safe place",
+      "warningBody": "A backup code lets you sign in when you don't have access to your authenticator app. Each code works only once.",
+      "copy": "Copy",
+      "downloadTxt": "Download as .txt",
+      "confirmSaved": "I have saved my backup codes in a safe place.",
+      "finish": "Finish"
+    },
+    "disableDialog": {
+      "title": "Disable two-factor authentication",
+      "warning": "Disabling 2FA makes your account less secure. Enter a code from your authenticator app or a backup code to confirm.",
+      "codeLabel": "Verification code",
+      "codePlaceholder": "Code or backup code",
+      "cancel": "Cancel",
+      "disable": "Disable"
+    },
+    "regenDialog": {
+      "title": "Regenerate backup codes",
+      "warning": "Regenerating invalidates all your existing backup codes. Enter a code from your authenticator app to confirm.",
+      "codeLabel": "Verification code",
+      "codePlaceholder": "000000",
+      "cancel": "Cancel",
+      "generate": "Regenerate",
+      "copy": "Copy",
+      "download": "Download",
+      "close": "Close"
+    },
+    "downloadFile": {
+      "header": "TalentFlow — two-factor authentication backup codes",
+      "generatedAt": "Generated on {{date}}",
+      "footer": "Keep this file in a safe place. Each code works only once."
+    },
+    "toasts": {
+      "invalidCode": {
+        "title": "Invalid code",
+        "description": "Enter a valid 6-digit code."
+      },
+      "verified": {
+        "title": "Code verified",
+        "description": "Your two-factor authentication is almost ready — now save your backup codes."
+      },
+      "verifyFailed": {
+        "title": "Verification failed"
+      },
+      "disabled": {
+        "title": "Two-factor authentication disabled"
+      },
+      "disableFailed": {
+        "title": "Failed to disable"
+      },
+      "regenerated": {
+        "title": "Backup codes regenerated"
+      },
+      "regenerateFailed": {
+        "title": "Failed to regenerate"
+      },
+      "codesCopied": {
+        "title": "Backup codes copied"
+      },
+      "unknownError": "An unknown error occurred."
+    }
+  },
+  "ipAllowlist": {
+    "title": "IP allowlist",
+    "description": "Restrict access to your organization to trusted IP addresses and network ranges.",
+    "labels": {
+      "myCurrentIp": "My current IP"
+    },
+    "lockoutGuard": {
+      "title": "Heads up: your current IP is not on the list",
+      "bodyWithIp": "Your current IP address ({{ip}}) falls outside all allowed ranges. If you enable the allowlist, you may lock yourself out.",
+      "ipUnknown": "unknown",
+      "addCurrentIp": "Add {{ip}}"
+    },
+    "toggle": {
+      "title": "Enable IP allowlist",
+      "description": "When this is on, only requests from allowed ranges are granted access."
+    },
+    "ranges": {
+      "title": "Allowed ranges",
+      "cidrLabel": "IP address or CIDR range",
+      "cidrPlaceholder": "e.g. 203.0.113.0/24 or 198.51.100.7",
+      "labelLabel": "Label (optional)",
+      "labelPlaceholder": "e.g. The Hague office",
+      "add": "Add",
+      "addCurrentIp": "Add my IP ({{ip}})",
+      "coversYourIp": "Covers your IP",
+      "addedOn": "Added on {{date}}",
+      "empty": "No ranges added yet."
+    },
+    "verify": {
+      "title": "Test an IP address",
+      "description": "Check whether a specific IP address would be granted access under the current allowlist.",
+      "placeholder": "e.g. 198.51.100.7",
+      "button": "Test",
+      "ipPrefix": "IP",
+      "allowed": "is allowed.",
+      "denied": "is denied."
+    },
+    "confirm": {
+      "remove": "Are you sure you want to remove {{cidr}} from the allowlist?",
+      "lockout": "Your current IP ({{ip}}) is not on the list. If you enable the allowlist, you may lock yourself out. Continue anyway?",
+      "ipUnknown": "unknown"
+    },
+    "toasts": {
+      "invalidCidr": {
+        "title": "Invalid CIDR range"
+      },
+      "ipAdded": {
+        "title": "IP range added"
+      },
+      "currentIpAdded": {
+        "title": "Current IP added"
+      },
+      "removed": {
+        "title": "IP range removed"
+      },
+      "allowlistEnabled": {
+        "title": "IP allowlist enabled"
+      },
+      "allowlistDisabled": {
+        "title": "IP allowlist disabled"
+      }
+    }
+  },
+  "passwordPolicy": {
+    "title": "Password policy",
+    "description": "Set requirements for passwords, the 2FA policy and the session timeout for your organization.",
+    "save": "Save",
+    "requirements": {
+      "title": "Password requirements",
+      "minLengthLabel": "Minimum length",
+      "minLengthHint": "The recommended minimum is 12 characters.",
+      "requireUppercase": "Uppercase letter required",
+      "requireLowercase": "Lowercase letter required",
+      "requireNumber": "Number required",
+      "requireSymbol": "Symbol required",
+      "rotationLabel": "Password rotation",
+      "rotationNone": "Never",
+      "rotation60": "Every 60 days",
+      "rotation90": "Every 90 days",
+      "rotation180": "Every 180 days",
+      "rotationHint": "Require users to change their password periodically."
+    },
+    "twofa": {
+      "title": "Two-factor policy",
+      "requiredForLabel": "2FA required for",
+      "none": "No one (optional)",
+      "admins": "Admins only",
+      "all": "All users",
+      "extraRolesLabel": "Additional roles that require 2FA",
+      "graceLabel": "Grace period (days)",
+      "graceHint": "Number of days users have to set up 2FA before their access is restricted."
+    },
+    "session": {
+      "title": "Session",
+      "timeoutLabel": "Idle timeout (minutes)",
+      "timeoutHint": "Users are signed out automatically after this period of inactivity."
+    },
+    "toasts": {
+      "saved": {
+        "title": "Password policy saved"
+      }
+    }
+  }
+}

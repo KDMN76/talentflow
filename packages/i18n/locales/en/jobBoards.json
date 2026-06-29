@@ -1,0 +1,159 @@
+{
+  "hub": {
+    "title": "Job boards",
+    "description": "Connect job boards and distribute your jobs in one go.",
+    "free": "Free",
+    "hero": {
+      "badge": "Live in 5 minutes",
+      "heading": "Post your job to every board at once",
+      "subtitle": "Connect a board, pick a job and publish — we handle distribution and keep the status in sync.",
+      "toJobs": "To jobs",
+      "costPerHire": "Cost per hire"
+    },
+    "stats": {
+      "connectedBoards": "Connected boards",
+      "livePostings": "Live postings",
+      "monthSpend": "Spend this month"
+    },
+    "catalog": {
+      "title": "Available job boards",
+      "subtitle": "Connect a board to start distributing jobs."
+    },
+    "livePostings": {
+      "title": "Live postings",
+      "subtitle": "Your most recent postings across all boards.",
+      "columns": {
+        "job": "Job",
+        "board": "Board",
+        "status": "Status",
+        "applicants": "Applicants",
+        "cost": "Cost",
+        "posted": "Posted"
+      },
+      "empty": {
+        "title": "No postings yet",
+        "description": "Once you post a job to a board, it shows up here."
+      }
+    }
+  },
+  "board": {
+    "connected": "Connected",
+    "notConnected": "Not connected",
+    "error": "Error",
+    "manage": "Manage",
+    "connect": "Connect"
+  },
+  "status": {
+    "queued": "Queued",
+    "posted": "Posted",
+    "rejected": "Rejected",
+    "expired": "Expired",
+    "retracted": "Retracted",
+    "failed": "Failed"
+  },
+  "dialog": {
+    "title": "Posting details",
+    "applicants": "Applicants",
+    "cost": "Cost",
+    "free": "Free",
+    "posted": "Posted",
+    "expires": "Expires",
+    "timeline": "Timeline",
+    "noEvents": "No events yet.",
+    "viewExternal": "View on board",
+    "retract": "Retract",
+    "toasts": {
+      "retracted": "Posting retracted"
+    }
+  },
+  "connect": {
+    "back": "Back",
+    "backToOverview": "Back to overview",
+    "boardNotFound": "This job board doesn't exist or isn't available.",
+    "connected": "Connected",
+    "notConnected": "Not connected",
+    "description": {
+      "connected": "Manage the connection and post a test job to this board.",
+      "disconnected": "Connect this board to start distributing jobs."
+    },
+    "disconnect": "Disconnect",
+    "healthOk": "The connection is healthy — no issues detected.",
+    "stats": {
+      "connectedSince": "Connected since",
+      "lastPoll": "Last check"
+    },
+    "form": {
+      "oauth": {
+        "title": "Connect via OAuth",
+        "description": "Sign in to the board and authorize — we handle the rest.",
+        "benefit1": "No copying or pasting API keys",
+        "benefit2": "Automatically refreshed access",
+        "benefit3": "Post jobs and pull statuses right away",
+        "submit": "Connect via OAuth"
+      },
+      "apiKey": {
+        "title": "Connect with an API key",
+        "description": "Paste the API key you received from the board.",
+        "displayNameLabel": "Display name",
+        "displayNamePlaceholder": "E.g. our account on this board",
+        "keyLabel": "API key",
+        "submit": "Connect"
+      },
+      "xmlFeed": {
+        "title": "Connect via XML feed",
+        "description": "The board pulls your jobs from an XML feed URL.",
+        "feedUrlLabel": "Feed URL",
+        "generate": "Generate",
+        "tip": "Share this URL with the board so they can pull your jobs.",
+        "warning": "The board must configure this feed on their side before postings go live.",
+        "submit": "Connect"
+      },
+      "none": {
+        "description": "This board needs no credentials — you can connect right away.",
+        "submit": "Connect"
+      }
+    },
+    "testPosting": {
+      "title": "Test posting",
+      "description": "Post a single job to this board to test the connection.",
+      "jobLabel": "Job",
+      "jobPlaceholder": "Pick a job",
+      "submit": "Post test",
+      "recentTitle": "Recent postings on {{board}}"
+    },
+    "disconnectDialog": {
+      "title": "Disconnect?",
+      "description": "Are you sure you want to disconnect {{board}}? Active postings stay live, but no new ones can be posted.",
+      "cancel": "Cancel",
+      "confirm": "Disconnect"
+    },
+    "toasts": {
+      "connected": {
+        "title": "Connected",
+        "description": "{{board}} was connected successfully."
+      },
+      "connectError": {
+        "title": "Connection failed",
+        "description": "Check your details and try again."
+      },
+      "disconnected": {
+        "title": "Disconnected",
+        "description": "{{board}} was disconnected."
+      },
+      "disconnectError": {
+        "title": "Failed to disconnect"
+      },
+      "testCreated": {
+        "title": "Test posting created",
+        "description": "\"{{job}}\" is being posted to {{board}}.",
+        "jobFallback": "this job"
+      },
+      "testError": {
+        "title": "Test posting failed"
+      },
+      "feedCopied": {
+        "title": "Feed URL copied"
+      }
+    }
+  }
+}

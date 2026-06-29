@@ -1,0 +1,133 @@
+{
+  "auditEvents": {
+    "header": {
+      "title": "Audit events",
+      "description": "Immutable log of every security and administrative action in your organization."
+    },
+    "realtime": {
+      "on": "Live on",
+      "off": "Live off"
+    },
+    "export": "Export",
+    "exportToast": {
+      "title": "Export started",
+      "description": "Export job {{jobId}} created — about {{rows}} rows."
+    },
+    "entityTypes": {
+      "all": "All entities",
+      "user": "User",
+      "candidate": "Candidate",
+      "role": "Role",
+      "roleAssignment": "Role assignment",
+      "securitySettings": "Security settings",
+      "ssoConfig": "SSO configuration",
+      "scimToken": "SCIM token",
+      "apiKey": "API key"
+    },
+    "filters": {
+      "searchPlaceholder": "Search by action, user or entity…",
+      "allCategories": "All categories",
+      "actionPlaceholder": "Action pattern (e.g. user.*)",
+      "from": "From",
+      "until": "Until",
+      "clear": "Clear filters"
+    },
+    "table": {
+      "wormTrail": "WORM trail",
+      "wormNote": "Write-once, read-many — events cannot be modified or deleted.",
+      "eventsCount": "{{shown}} of {{total}} events",
+      "colTime": "Time",
+      "colAction": "Action",
+      "colEntity": "Entity",
+      "colUser": "User",
+      "colIp": "IP address",
+      "colDetails": "Details",
+      "emptyTitle": "No events found",
+      "emptyDescription": "Adjust your filters or widen the date range.",
+      "loadMore": "Load more"
+    },
+    "detail": {
+      "title": "Event details",
+      "time": "Time",
+      "action": "Action",
+      "actionKey": "Action key",
+      "category": "Category",
+      "entity": "Entity",
+      "entityRef": "Entity reference",
+      "performedBy": "Performed by",
+      "role": "Role",
+      "ip": "IP address",
+      "requestId": "Request ID",
+      "userAgent": "User agent",
+      "diff": "Changes",
+      "metadata": "Metadata",
+      "wormSeal": "WORM seal:"
+    },
+    "diff": {
+      "noChanges": "No field changes recorded.",
+      "field": "Field",
+      "before": "Before",
+      "after": "After"
+    }
+  },
+  "auditTrail": {
+    "back": "Back",
+    "exportPdf": "Export to PDF",
+    "exportToast": {
+      "title": "Export started",
+      "description": "The PDF export is being prepared and will be ready shortly."
+    },
+    "headerEyebrow": "Audit trail · {{entity}}",
+    "headerDescription": "Complete chronological log of everything that happened to this entity.",
+    "entityLabel": {
+      "candidate": "Candidate",
+      "job": "Job",
+      "application": "Application"
+    },
+    "filterByType": "Filter by type",
+    "groups": {
+      "writes": "Changes",
+      "ai": "AI",
+      "consent": "Consent",
+      "communications": "Communications",
+      "access": "Access",
+      "exports": "Exports"
+    },
+    "error": {
+      "title": "Couldn't load the audit trail",
+      "description": "Something went wrong while fetching the events. Please try again.",
+      "retry": "Try again"
+    },
+    "emptyFilter": "No events for the selected filters.",
+    "monthLabel": "{{month}} {{year}}",
+    "months": [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+    ],
+    "events_one": "{{count}} event",
+    "events_other": "{{count}} events",
+    "diff": {
+      "title": "Changes",
+      "field": "Field",
+      "before": "Before",
+      "after": "After",
+      "empty": "empty"
+    },
+    "metadata": "Metadata",
+    "empty": "—",
+    "boolean": {
+      "yes": "Yes",
+      "no": "No"
+    }
+  }
+}

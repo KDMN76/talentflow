@@ -1,0 +1,159 @@
+{
+  "hub": {
+    "title": "Vacaturebanken",
+    "description": "Verbind vacaturebanken en distribueer je vacatures in één keer.",
+    "free": "Gratis",
+    "hero": {
+      "badge": "In 5 minuten online",
+      "heading": "Plaats je vacature op alle banken tegelijk",
+      "subtitle": "Verbind een board, kies een vacature en publiceer — wij regelen de distributie en houden de status bij.",
+      "toJobs": "Naar vacatures",
+      "costPerHire": "Kosten per hire"
+    },
+    "stats": {
+      "connectedBoards": "Verbonden banken",
+      "livePostings": "Live plaatsingen",
+      "monthSpend": "Uitgaven deze maand"
+    },
+    "catalog": {
+      "title": "Beschikbare vacaturebanken",
+      "subtitle": "Verbind een bank om vacatures te kunnen distribueren."
+    },
+    "livePostings": {
+      "title": "Live plaatsingen",
+      "subtitle": "De meest recente plaatsingen over alle banken heen.",
+      "columns": {
+        "job": "Vacature",
+        "board": "Bank",
+        "status": "Status",
+        "applicants": "Sollicitanten",
+        "cost": "Kosten",
+        "posted": "Geplaatst"
+      },
+      "empty": {
+        "title": "Nog geen plaatsingen",
+        "description": "Zodra je een vacature op een bank plaatst, verschijnt die hier."
+      }
+    }
+  },
+  "board": {
+    "connected": "Verbonden",
+    "notConnected": "Niet verbonden",
+    "error": "Fout",
+    "manage": "Beheren",
+    "connect": "Verbinden"
+  },
+  "status": {
+    "queued": "In wachtrij",
+    "posted": "Geplaatst",
+    "rejected": "Afgewezen",
+    "expired": "Verlopen",
+    "retracted": "Ingetrokken",
+    "failed": "Mislukt"
+  },
+  "dialog": {
+    "title": "Plaatsingsdetails",
+    "applicants": "Sollicitanten",
+    "cost": "Kosten",
+    "free": "Gratis",
+    "posted": "Geplaatst",
+    "expires": "Verloopt",
+    "timeline": "Tijdlijn",
+    "noEvents": "Nog geen gebeurtenissen.",
+    "viewExternal": "Bekijk op de bank",
+    "retract": "Intrekken",
+    "toasts": {
+      "retracted": "Plaatsing ingetrokken"
+    }
+  },
+  "connect": {
+    "back": "Terug",
+    "backToOverview": "Terug naar overzicht",
+    "boardNotFound": "Deze vacaturebank bestaat niet of is niet beschikbaar.",
+    "connected": "Verbonden",
+    "notConnected": "Niet verbonden",
+    "description": {
+      "connected": "Beheer de verbinding en plaats een testvacature op deze bank.",
+      "disconnected": "Verbind deze bank om vacatures te kunnen distribueren."
+    },
+    "disconnect": "Verbinding verbreken",
+    "healthOk": "De verbinding is gezond — geen problemen gedetecteerd.",
+    "stats": {
+      "connectedSince": "Verbonden sinds",
+      "lastPoll": "Laatste controle"
+    },
+    "form": {
+      "oauth": {
+        "title": "Verbinden via OAuth",
+        "description": "Log in bij de bank en geef toestemming — wij regelen de rest.",
+        "benefit1": "Geen API-sleutels kopiëren of plakken",
+        "benefit2": "Automatisch vernieuwde toegang",
+        "benefit3": "Direct vacatures plaatsen en statussen ophalen",
+        "submit": "Verbinden via OAuth"
+      },
+      "apiKey": {
+        "title": "Verbinden met een API-sleutel",
+        "description": "Plak de API-sleutel die je van de bank hebt gekregen.",
+        "displayNameLabel": "Weergavenaam",
+        "displayNamePlaceholder": "Bijv. ons account bij deze bank",
+        "keyLabel": "API-sleutel",
+        "submit": "Verbinden"
+      },
+      "xmlFeed": {
+        "title": "Verbinden via XML-feed",
+        "description": "De bank haalt je vacatures op via een XML-feed-URL.",
+        "feedUrlLabel": "Feed-URL",
+        "generate": "Genereer",
+        "tip": "Geef deze URL door aan de bank zodat zij je vacatures kunnen ophalen.",
+        "warning": "De bank moet deze feed eerst aan hun kant configureren voordat plaatsingen live gaan.",
+        "submit": "Verbinden"
+      },
+      "none": {
+        "description": "Deze bank vereist geen inloggegevens — verbinden kan direct.",
+        "submit": "Verbinden"
+      }
+    },
+    "testPosting": {
+      "title": "Testplaatsing",
+      "description": "Plaats één vacature op deze bank om de verbinding te testen.",
+      "jobLabel": "Vacature",
+      "jobPlaceholder": "Kies een vacature",
+      "submit": "Plaats test",
+      "recentTitle": "Recente plaatsingen op {{board}}"
+    },
+    "disconnectDialog": {
+      "title": "Verbinding verbreken?",
+      "description": "Weet je zeker dat je de verbinding met {{board}} wilt verbreken? Lopende plaatsingen blijven actief, maar er kunnen geen nieuwe worden geplaatst.",
+      "cancel": "Annuleren",
+      "confirm": "Verbreken"
+    },
+    "toasts": {
+      "connected": {
+        "title": "Verbonden",
+        "description": "{{board}} is succesvol verbonden."
+      },
+      "connectError": {
+        "title": "Verbinden mislukt",
+        "description": "Controleer je gegevens en probeer het opnieuw."
+      },
+      "disconnected": {
+        "title": "Verbinding verbroken",
+        "description": "{{board}} is losgekoppeld."
+      },
+      "disconnectError": {
+        "title": "Verbinding verbreken mislukt"
+      },
+      "testCreated": {
+        "title": "Testplaatsing aangemaakt",
+        "description": "\"{{job}}\" wordt geplaatst op {{board}}.",
+        "jobFallback": "deze vacature"
+      },
+      "testError": {
+        "title": "Testplaatsing mislukt"
+      },
+      "feedCopied": {
+        "title": "Feed-URL gekopieerd"
+      }
+    }
+  }
+}

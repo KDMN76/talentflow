@@ -1,0 +1,163 @@
+{
+  "webhooks": {
+    "header": {
+      "title": "Webhooks",
+      "description": "Stuur events realtime door naar externe systemen en volg de afleveringen."
+    },
+    "tabs": {
+      "subscriptions": "Abonnementen",
+      "deliveries": "Afleveringen",
+      "test": "Test"
+    },
+    "relative": {
+      "justNow": "Zojuist",
+      "minutesAgo_one": "{{count}} minuut geleden",
+      "minutesAgo_other": "{{count}} minuten geleden",
+      "hoursAgo_one": "{{count}} uur geleden",
+      "hoursAgo_other": "{{count}} uur geleden"
+    },
+    "deliveryStatus": {
+      "succeeded": "Geslaagd",
+      "failed": "Mislukt",
+      "dead": "Opgegeven",
+      "pending": "In wachtrij",
+      "delivering": "Bezig"
+    },
+    "subscriptions": {
+      "count_one": "{{count}} abonnement",
+      "count_other": "{{count}} abonnementen",
+      "new": "Nieuw abonnement",
+      "emptyLine1": "Nog geen webhook-abonnementen. Klik op",
+      "emptyLink": "Nieuw abonnement",
+      "emptyLine2": "om er een aan te maken.",
+      "confirmDelete": "Abonnement \"{{name}}\" verwijderen?",
+      "confirmRotate": "Secret roteren? Het huidige secret wordt direct ongeldig."
+    },
+    "toasts": {
+      "deleted": "Abonnement verwijderd",
+      "updated": "Abonnement bijgewerkt",
+      "created": "Abonnement aangemaakt",
+      "createErrorTitle": "Aanmaken mislukt",
+      "createErrorDescription": "Het abonnement kon niet worden aangemaakt. Probeer het opnieuw.",
+      "retryStarted": "Nieuwe poging gestart"
+    },
+    "deliveries": {
+      "subscriptionLabel": "Abonnement",
+      "statusLabel": "Status",
+      "all": "Alle",
+      "empty": "Nog geen afleveringen.",
+      "columns": {
+        "time": "Tijd",
+        "event": "Event",
+        "subscription": "Abonnement",
+        "status": "Status",
+        "attempt": "Poging",
+        "response": "Respons",
+        "actions": "Acties"
+      }
+    },
+    "test": {
+      "title": "Webhook testen",
+      "description": "Stuur een test-payload naar een URL en controleer de respons en handtekening.",
+      "targetUrlLabel": "Doel-URL",
+      "targetUrlPlaceholder": "https://voorbeeld.com/webhook",
+      "eventTypeLabel": "Eventtype",
+      "payloadLabel": "Payload (JSON)",
+      "invalidJsonTitle": "Ongeldige JSON",
+      "invalidJsonDescription": "De payload is geen geldige JSON. Controleer de inhoud.",
+      "urlMissingTitle": "Vul een doel-URL in",
+      "send": "Versturen",
+      "result": {
+        "statusLabel": "Status:",
+        "httpStatus": "HTTP {{status}}",
+        "noResponse": "Geen respons",
+        "durationMs": "{{duration}} ms",
+        "signatureLabel": "Handtekening: "
+      }
+    },
+    "subscriptionRow": {
+      "toggleDetailsAria": "Details tonen of verbergen",
+      "active": "Actief",
+      "off": "Uit",
+      "failedCount_one": "{{count}} fout",
+      "failedCount_other": "{{count}} fouten",
+      "rotateSecretTitle": "Secret roteren",
+      "lastDelivery": "Laatste aflevering:",
+      "lastFailure": "Laatste fout:",
+      "edit": "Bewerken",
+      "nameLabel": "Naam",
+      "urlLabel": "URL",
+      "descriptionLabel": "Beschrijving",
+      "eventsLabel": "Events",
+      "save": "Opslaan",
+      "cancel": "Annuleren"
+    },
+    "eventSelect": {
+      "allEvents": "Alle events (*)"
+    },
+    "createDialog": {
+      "title": "Nieuw webhook-abonnement",
+      "description": "Geef een naam en URL op en kies de events die je wilt ontvangen.",
+      "nameLabel": "Naam",
+      "namePlaceholder": "Bijv. Productie-integratie",
+      "urlLabel": "URL",
+      "urlPlaceholder": "https://voorbeeld.com/webhook",
+      "descriptionLabel": "Beschrijving",
+      "eventsLabel": "Events",
+      "cancel": "Annuleren",
+      "create": "Aanmaken"
+    },
+    "secretDialog": {
+      "title": "Secret voor \"{{name}}\"",
+      "description": "Bewaar dit secret veilig. Het wordt maar één keer getoond.",
+      "copy": "Kopiëren",
+      "understood": "Begrepen"
+    },
+    "detailDialog": {
+      "title": "Afleveringsdetails",
+      "description": "Volledige request en respons van deze afleverpoging.",
+      "eventLabel": "Event",
+      "statusLabel": "Status",
+      "attemptLabel": "Poging",
+      "durationLabel": "Duur",
+      "errorLabel": "Fout:",
+      "request": "Request",
+      "response": "Respons",
+      "noResponse": "Geen respons-body",
+      "retry": "Opnieuw proberen",
+      "close": "Sluiten"
+    }
+  },
+  "workflows": {
+    "neverRun": "Nog niet uitgevoerd",
+    "card": {
+      "active": "Actief",
+      "inactive": "Inactief",
+      "noAction": "Geen actie",
+      "more_one": "+{{count}} actie",
+      "more_other": "+{{count}} acties",
+      "runCount_one": "{{count}} keer uitgevoerd",
+      "runCount_other": "{{count}} keer uitgevoerd",
+      "last": "Laatst: {{date}}",
+      "deactivate": "Deactiveren",
+      "activate": "Activeren",
+      "delete": "Verwijderen",
+      "toasts": {
+        "deactivatedTitle": "Workflow gedeactiveerd",
+        "activatedTitle": "Workflow geactiveerd",
+        "toggledOff": "\"{{name}}\" is gedeactiveerd.",
+        "toggledOn": "\"{{name}}\" is geactiveerd.",
+        "deletedTitle": "Workflow verwijderd",
+        "deletedDescription": "\"{{name}}\" is verwijderd."
+      }
+    },
+    "deleteDialog": {
+      "title": "Workflow verwijderen?",
+      "descriptionPrefix": "Weet je zeker dat je",
+      "descriptionSuffix": " wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+      "cancel": "Annuleren",
+      "deleting": "Verwijderen…",
+      "delete": "Verwijderen"
+    }
+  }
+}

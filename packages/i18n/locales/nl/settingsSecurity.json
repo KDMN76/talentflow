@@ -1,0 +1,260 @@
+{
+  "backToSecurity": "Terug naar beveiliging",
+  "loading": "Laden…",
+  "overview": {
+    "title": "Beveiliging",
+    "description": "Beheer authenticatie, toegangsbeperkingen en het wachtwoordbeleid voor je organisatie.",
+    "sections": {
+      "sso": {
+        "label": "Single sign-on (SSO)",
+        "description": "Laat gebruikers inloggen via je eigen identity provider.",
+        "active": "{{provider}} actief",
+        "notConfigured": "Niet geconfigureerd",
+        "autoCreateOn": "Automatisch accounts aanmaken staat aan",
+        "autoCreateOff": "Automatisch accounts aanmaken staat uit"
+      },
+      "twofa": {
+        "label": "Tweefactorauthenticatie (2FA)",
+        "description": "Extra verificatiestap met een authenticator-app bij het inloggen.",
+        "enabled": "Ingeschakeld",
+        "disabled": "Uitgeschakeld",
+        "policyPrefix": "Beleid: ",
+        "policyAll": "verplicht voor iedereen",
+        "policyAdmins": "verplicht voor beheerders",
+        "policyNone": "optioneel"
+      },
+      "ipAllowlist": {
+        "label": "IP-allowlist",
+        "description": "Beperk de toegang tot vertrouwde IP-adressen en netwerkbereiken.",
+        "active_one": "Actief · {{count}} bereik",
+        "active_other": "Actief · {{count}} bereiken",
+        "inactiveWithRanges_one": "Inactief · {{count}} bereik geconfigureerd",
+        "inactiveWithRanges_other": "Inactief · {{count}} bereiken geconfigureerd",
+        "noRestriction": "Geen beperking"
+      },
+      "passwordPolicy": {
+        "label": "Wachtwoordbeleid",
+        "description": "Stel eisen aan wachtwoorden, 2FA-beleid en sessie-time-out in.",
+        "minLength_one": "Minimaal {{count}} teken",
+        "minLength_other": "Minimaal {{count}} tekens",
+        "empty": "Niet ingesteld"
+      }
+    },
+    "headerBadges": {
+      "sso": "SSO",
+      "twofaAll": "2FA: iedereen",
+      "twofaAdmins": "2FA: beheerders",
+      "twofaNone": "2FA: optioneel",
+      "ipAllowlist": "IP-allowlist"
+    },
+    "roles": {
+      "label": "Rollen en rechten",
+      "description": "Bepaal welke rollen toegang hebben tot welke onderdelen."
+    },
+    "audit": {
+      "label": "Auditlog",
+      "description": "Bekijk beveiligingsgebeurtenissen en wijzigingen in je organisatie."
+    }
+  },
+  "twofa": {
+    "title": "Tweefactorauthenticatie",
+    "description": "Beveilig je account met een extra verificatiestap bij het inloggen.",
+    "badge": {
+      "enabled": "Ingeschakeld",
+      "disabled": "Uitgeschakeld"
+    },
+    "policyBanner": {
+      "title": "2FA is verplicht voor jouw account",
+      "deadline": "Stel 2FA in vóór {{date}}, anders wordt je toegang beperkt.",
+      "noDeadline": "Stel 2FA zo snel mogelijk in om je toegang te behouden."
+    },
+    "active": {
+      "title": "Tweefactorauthenticatie is actief",
+      "enrolledAt": "Ingeschakeld op {{date}}.",
+      "enrolled": "Ingeschakeld.",
+      "backupRemaining": "{{remaining}} back-upcodes resterend.",
+      "regenerate": "Back-upcodes vernieuwen",
+      "disable": "2FA uitschakelen"
+    },
+    "idle": {
+      "title": "Schakel tweefactorauthenticatie in",
+      "description": "Scan de QR-code met je authenticator-app en bevestig met een code om 2FA te activeren.",
+      "enable": "2FA inschakelen"
+    },
+    "scan": {
+      "title": "Stap 1 · Scan de QR-code",
+      "qrAlt": "QR-code voor tweefactorauthenticatie",
+      "manualEntry": "Of voer deze sleutel handmatig in:",
+      "copySecret": "Sleutel gekopieerd",
+      "noApp": "Nog geen authenticator-app? Download er een:",
+      "step2Label": "Stap 2 · Voer de 6-cijferige code uit je app in",
+      "codePlaceholder": "000000",
+      "verify": "Verifiëren"
+    },
+    "backup": {
+      "title": "Bewaar je back-upcodes",
+      "warningTitle": "Bewaar deze codes op een veilige plek",
+      "warningBody": "Met een back-upcode kun je inloggen als je geen toegang hebt tot je authenticator-app. Elke code werkt eenmalig.",
+      "copy": "Kopiëren",
+      "downloadTxt": "Download als .txt",
+      "confirmSaved": "Ik heb mijn back-upcodes opgeslagen op een veilige plek.",
+      "finish": "Afronden"
+    },
+    "disableDialog": {
+      "title": "Tweefactorauthenticatie uitschakelen",
+      "warning": "Het uitschakelen van 2FA maakt je account minder veilig. Voer een code uit je authenticator-app of een back-upcode in om te bevestigen.",
+      "codeLabel": "Verificatiecode",
+      "codePlaceholder": "Code of back-upcode",
+      "cancel": "Annuleren",
+      "disable": "Uitschakelen"
+    },
+    "regenDialog": {
+      "title": "Back-upcodes vernieuwen",
+      "warning": "Bij het vernieuwen worden al je bestaande back-upcodes ongeldig. Voer een code uit je authenticator-app in om te bevestigen.",
+      "codeLabel": "Verificatiecode",
+      "codePlaceholder": "000000",
+      "cancel": "Annuleren",
+      "generate": "Vernieuwen",
+      "copy": "Kopiëren",
+      "download": "Downloaden",
+      "close": "Sluiten"
+    },
+    "downloadFile": {
+      "header": "TalentFlow — back-upcodes voor tweefactorauthenticatie",
+      "generatedAt": "Gegenereerd op {{date}}",
+      "footer": "Bewaar dit bestand op een veilige plek. Elke code werkt eenmalig."
+    },
+    "toasts": {
+      "invalidCode": {
+        "title": "Ongeldige code",
+        "description": "Voer een geldige 6-cijferige code in."
+      },
+      "verified": {
+        "title": "Code geverifieerd",
+        "description": "Je tweefactorauthenticatie is bijna klaar — bewaar nu je back-upcodes."
+      },
+      "verifyFailed": {
+        "title": "Verificatie mislukt"
+      },
+      "disabled": {
+        "title": "Tweefactorauthenticatie uitgeschakeld"
+      },
+      "disableFailed": {
+        "title": "Uitschakelen mislukt"
+      },
+      "regenerated": {
+        "title": "Back-upcodes vernieuwd"
+      },
+      "regenerateFailed": {
+        "title": "Vernieuwen mislukt"
+      },
+      "codesCopied": {
+        "title": "Back-upcodes gekopieerd"
+      },
+      "unknownError": "Er is een onbekende fout opgetreden."
+    }
+  },
+  "ipAllowlist": {
+    "title": "IP-allowlist",
+    "description": "Beperk de toegang tot je organisatie tot vertrouwde IP-adressen en netwerkbereiken.",
+    "labels": {
+      "myCurrentIp": "Mijn huidige IP"
+    },
+    "lockoutGuard": {
+      "title": "Let op: je huidige IP staat niet in de lijst",
+      "bodyWithIp": "Je huidige IP-adres ({{ip}}) valt buiten alle toegestane bereiken. Als je de allowlist inschakelt, verlies je mogelijk zelf de toegang.",
+      "ipUnknown": "onbekend",
+      "addCurrentIp": "Voeg {{ip}} toe"
+    },
+    "toggle": {
+      "title": "IP-allowlist inschakelen",
+      "description": "Alleen verzoeken vanaf toegestane bereiken krijgen toegang als dit aanstaat."
+    },
+    "ranges": {
+      "title": "Toegestane bereiken",
+      "cidrLabel": "IP-adres of CIDR-bereik",
+      "cidrPlaceholder": "Bijv. 203.0.113.0/24 of 198.51.100.7",
+      "labelLabel": "Label (optioneel)",
+      "labelPlaceholder": "Bijv. Kantoor Den Haag",
+      "add": "Toevoegen",
+      "addCurrentIp": "Voeg mijn IP toe ({{ip}})",
+      "coversYourIp": "Dekt jouw IP",
+      "addedOn": "Toegevoegd op {{date}}",
+      "empty": "Nog geen bereiken toegevoegd."
+    },
+    "verify": {
+      "title": "IP-adres testen",
+      "description": "Controleer of een specifiek IP-adres toegang zou krijgen met de huidige allowlist.",
+      "placeholder": "Bijv. 198.51.100.7",
+      "button": "Testen",
+      "ipPrefix": "IP",
+      "allowed": "krijgt toegang.",
+      "denied": "wordt geweigerd."
+    },
+    "confirm": {
+      "remove": "Weet je zeker dat je {{cidr}} uit de allowlist wilt verwijderen?",
+      "lockout": "Je huidige IP ({{ip}}) staat niet in de lijst. Als je de allowlist inschakelt, sluit je jezelf mogelijk buiten. Toch doorgaan?",
+      "ipUnknown": "onbekend"
+    },
+    "toasts": {
+      "invalidCidr": {
+        "title": "Ongeldig CIDR-bereik"
+      },
+      "ipAdded": {
+        "title": "IP-bereik toegevoegd"
+      },
+      "currentIpAdded": {
+        "title": "Huidig IP toegevoegd"
+      },
+      "removed": {
+        "title": "IP-bereik verwijderd"
+      },
+      "allowlistEnabled": {
+        "title": "IP-allowlist ingeschakeld"
+      },
+      "allowlistDisabled": {
+        "title": "IP-allowlist uitgeschakeld"
+      }
+    }
+  },
+  "passwordPolicy": {
+    "title": "Wachtwoordbeleid",
+    "description": "Stel eisen aan wachtwoorden, het 2FA-beleid en de sessie-time-out voor je organisatie in.",
+    "save": "Opslaan",
+    "requirements": {
+      "title": "Wachtwoordeisen",
+      "minLengthLabel": "Minimale lengte",
+      "minLengthHint": "Het aanbevolen minimum is 12 tekens.",
+      "requireUppercase": "Hoofdletter vereist",
+      "requireLowercase": "Kleine letter vereist",
+      "requireNumber": "Cijfer vereist",
+      "requireSymbol": "Symbool vereist",
+      "rotationLabel": "Wachtwoord vernieuwen",
+      "rotationNone": "Nooit",
+      "rotation60": "Elke 60 dagen",
+      "rotation90": "Elke 90 dagen",
+      "rotation180": "Elke 180 dagen",
+      "rotationHint": "Verplicht gebruikers periodiek hun wachtwoord te wijzigen."
+    },
+    "twofa": {
+      "title": "Tweefactorbeleid",
+      "requiredForLabel": "2FA verplicht voor",
+      "none": "Niemand (optioneel)",
+      "admins": "Alleen beheerders",
+      "all": "Alle gebruikers",
+      "extraRolesLabel": "Extra rollen waarvoor 2FA verplicht is",
+      "graceLabel": "Respijtperiode (dagen)",
+      "graceHint": "Aantal dagen dat gebruikers krijgen om 2FA in te stellen voordat hun toegang wordt beperkt."
+    },
+    "session": {
+      "title": "Sessie",
+      "timeoutLabel": "Time-out bij inactiviteit (minuten)",
+      "timeoutHint": "Gebruikers worden automatisch uitgelogd na deze periode van inactiviteit."
+    },
+    "toasts": {
+      "saved": {
+        "title": "Wachtwoordbeleid opgeslagen"
+      }
+    }
+  }
+}
