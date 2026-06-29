@@ -60,6 +60,20 @@ export function errorHandler(
     return;
   }
 
+  // PostgreSQL "invalid input syntax" (22P02) — bv. een niet-UUID waar een uuid
+  // wordt verwacht. Dat is een client-fout (verkeerd formaat), geen serverfout:
+  // geef 400 i.p.v. een 500 (en geen Sentry-ruis voor verkeerde invoer).
+  if ((err as { code?: string }).code === '22P02') {
+    res.status(400).json({
+      error: {
+        code: 'INVALID_INPUT',
+        message: 'Ongeldige invoer — controleer het formaat (bijv. een ongeldige id).',
+        details: {},
+      },
+    });
+    return;
+  }
+
   logger.error('Unhandled error', {
     error: err.message,
     stack: err.stack,

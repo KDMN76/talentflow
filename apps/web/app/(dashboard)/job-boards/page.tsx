@@ -12,6 +12,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import {
   Briefcase,
   Coins,
@@ -28,6 +29,8 @@ import {
   ExternalLink,
   Activity,
   Inbox,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -65,37 +68,28 @@ const REGION_LABEL: Record<JobBoardRegion, string> = {
   eu: "EU",
 };
 
-const STATUS_PILL: Record<
-  JobPostingStatus,
-  { label: string; className: string }
-> = {
+const STATUS_PILL: Record<JobPostingStatus, { className: string }> = {
   queued: {
-    label: "In wachtrij",
     className:
       "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border-0",
   },
   posted: {
-    label: "Live",
     className:
       "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-0",
   },
   rejected: {
-    label: "Afgewezen",
     className:
       "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-0",
   },
   expired: {
-    label: "Verlopen",
     className:
       "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border-0",
   },
   retracted: {
-    label: "Ingetrokken",
     className:
       "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400 border-0",
   },
   failed: {
-    label: "Mislukt",
     className:
       "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300 border-0",
   },
@@ -153,11 +147,13 @@ function formatDateTime(value: string | null): string {
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function JobBoardsHubPage() {
+  const { t } = useTranslation("jobBoards");
   const { data: catalog, isLoading: catalogLoading } = useJobBoardCatalog();
   const { data: integrations } = useJobBoardIntegrations();
   const { data: postings } = useJobPostings();
 
   const [activePostingId, setActivePostingId] = useState<string | null>(null);
+  const [catalogView, setCatalogView] = useState<"grid" | "list">("grid");
 
   const integrationsByBoard = useMemo(() => {
     const map = new Map<string, JobBoardIntegration>();
@@ -210,8 +206,8 @@ export default function JobBoardsHubPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Vacatureplaatsing"
-        description="Beheer al je vacaturebanken, plaatsingen en kosten op één plek."
+        title={t("hub.title")}
+        description={t("hub.description")}
       />
 
       {/* Hero */}
@@ -225,14 +221,13 @@ export default function JobBoardsHubPage() {
             <div className="max-w-2xl space-y-2">
               <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium backdrop-blur">
                 <Sparkles className="h-3.5 w-3.5" />
-                Nieuw — multi-board distributie
+                {t("hub.hero.badge")}
               </div>
               <h2 className="text-2xl font-bold tracking-tight">
-                Plaats in 5 minuten op 8+ vacaturebanken
+                {t("hub.hero.heading")}
               </h2>
               <p className="text-sm text-white/85">
-                Geen 24–48u vertraging meer. Schrijf één keer, publiceer overal — en
-                volg sollicitaties &amp; kosten realtime per kanaal.
+                {t("hub.hero.subtitle")}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -243,7 +238,7 @@ export default function JobBoardsHubPage() {
                   className="bg-white text-indigo-700 hover:bg-white/90"
                 >
                   <Briefcase className="mr-1.5 h-4 w-4" />
-                  Naar vacatures
+                  {t("hub.hero.toJobs")}
                 </Button>
               </Link>
               <Link href="/analytics/cost-per-hire">
@@ -253,7 +248,7 @@ export default function JobBoardsHubPage() {
                   className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
                 >
                   <Coins className="mr-1.5 h-4 w-4" />
-                  Cost-per-hire
+                  {t("hub.hero.costPerHire")}
                 </Button>
               </Link>
             </div>
@@ -264,19 +259,19 @@ export default function JobBoardsHubPage() {
       {/* Stat cards */}
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
-          label="Verbonden vacaturebanken"
+          label={t("hub.stats.connectedBoards")}
           value={String(connectedCount)}
           icon={<Plug className="h-5 w-5" />}
           gradient="from-indigo-500 to-purple-600"
         />
         <StatCard
-          label="Live plaatsingen"
+          label={t("hub.stats.livePostings")}
           value={String(liveCount)}
           icon={<Activity className="h-5 w-5" />}
           gradient="from-emerald-500 to-teal-600"
         />
         <StatCard
-          label="Bestede budget deze maand"
+          label={t("hub.stats.monthSpend")}
           value={formatEuro(monthSpend)}
           icon={<Coins className="h-5 w-5" />}
           gradient="from-amber-500 to-orange-600"
@@ -288,17 +283,54 @@ export default function JobBoardsHubPage() {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-              Beschikbare vacaturebanken
+              {t("hub.catalog.title")}
             </h3>
             <p className="text-xs text-muted-foreground">
-              Verbind een board om vacatures te kunnen distribueren.
+              {t("hub.catalog.subtitle")}
             </p>
+          </div>
+          <div className="flex gap-1 rounded-lg bg-muted p-1">
+            <button
+              type="button"
+              onClick={() => setCatalogView("grid")}
+              aria-label="Rasterweergave"
+              className={`rounded-md p-1.5 transition-colors ${
+                catalogView === "grid"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setCatalogView("list")}
+              aria-label="Lijstweergave"
+              className={`rounded-md p-1.5 transition-colors ${
+                catalogView === "list"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <List className="h-4 w-4" />
+            </button>
           </div>
         </div>
         {catalogLoading ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {Array.from({ length: 8 }).map((_, i) => (
               <Skeleton key={i} className="h-36 rounded-xl" />
+            ))}
+          </div>
+        ) : catalogView === "list" ? (
+          <div className="space-y-2">
+            {(catalog ?? []).map((board) => (
+              <BoardCard
+                key={board.id}
+                board={board}
+                integration={integrationsByBoard.get(board.id) ?? null}
+                view="list"
+              />
             ))}
           </div>
         ) : (
@@ -308,6 +340,7 @@ export default function JobBoardsHubPage() {
                 key={board.id}
                 board={board}
                 integration={integrationsByBoard.get(board.id) ?? null}
+                view="grid"
               />
             ))}
           </div>
@@ -319,10 +352,10 @@ export default function JobBoardsHubPage() {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-              Live plaatsingen
+              {t("hub.livePostings.title")}
             </h3>
             <p className="text-xs text-muted-foreground">
-              De laatste 12 plaatsingen — klik een rij voor de status-tijdlijn.
+              {t("hub.livePostings.subtitle")}
             </p>
           </div>
         </div>
@@ -334,10 +367,10 @@ export default function JobBoardsHubPage() {
                 <Inbox className="h-5 w-5" />
               </div>
               <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Nog geen plaatsingen
+                {t("hub.livePostings.empty.title")}
               </p>
               <p className="text-xs text-muted-foreground">
-                Open een vacature en gebruik de Distributie-tab om te plaatsen.
+                {t("hub.livePostings.empty.description")}
               </p>
             </CardContent>
           </Card>
@@ -349,22 +382,22 @@ export default function JobBoardsHubPage() {
                   <thead>
                     <tr className="border-b border-border bg-zinc-50/60 dark:bg-zinc-800/40">
                       <th className="py-3 pl-5 pr-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        Vacature
+                        {t("hub.livePostings.columns.job")}
                       </th>
                       <th className="py-3 px-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        Vacaturebank
+                        {t("hub.livePostings.columns.board")}
                       </th>
                       <th className="py-3 px-4 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        Status
+                        {t("hub.livePostings.columns.status")}
                       </th>
                       <th className="py-3 px-4 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        Sollicitaties
+                        {t("hub.livePostings.columns.applicants")}
                       </th>
                       <th className="py-3 px-4 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        Kosten
+                        {t("hub.livePostings.columns.cost")}
                       </th>
                       <th className="py-3 pl-4 pr-5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        Geplaatst
+                        {t("hub.livePostings.columns.posted")}
                       </th>
                     </tr>
                   </thead>
@@ -432,53 +465,114 @@ function StatCard({
 function BoardCard({
   board,
   integration,
+  view = "grid",
 }: {
   board: JobBoardCatalogEntry;
   integration: JobBoardIntegration | null;
+  view?: "grid" | "list";
 }) {
+  const { t } = useTranslation("jobBoards");
   const palette = brandColor(board.id);
   const initials = brandInitials(board.display_name);
   const connected = integration?.status === "connected";
   const errored = integration?.status === "error";
 
+  const badgeClass = connected
+    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+    : errored
+    ? "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300"
+    : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400";
+  const badgeLabel = connected
+    ? t("board.connected")
+    : errored
+    ? t("board.error")
+    : t("board.notConnected");
+  const badge = (
+    <Badge
+      className={`shrink-0 whitespace-nowrap border-0 text-[10px] ${badgeClass}`}
+    >
+      {badgeLabel}
+    </Badge>
+  );
+
+  const iconBox = (
+    <div
+      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${palette.from} ${palette.to} text-sm font-bold ${palette.text} shadow-sm`}
+      aria-hidden
+    >
+      {initials}
+    </div>
+  );
+
+  const meta = (
+    <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+      <MapPin className="h-3 w-3 shrink-0" />
+      {REGION_LABEL[board.region]}
+      <span className="text-zinc-300 dark:text-zinc-600">·</span>
+      <span className="capitalize">{board.auth_type.replace("_", " ")}</span>
+    </div>
+  );
+
+  const actionButton = (
+    <Button
+      size="sm"
+      className={
+        connected
+          ? "w-full bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+          : "w-full border-0 bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700"
+      }
+      variant={connected ? "secondary" : "default"}
+    >
+      {connected ? (
+        <>
+          <Settings2 className="mr-1.5 h-3.5 w-3.5" />
+          {t("board.manage")}
+        </>
+      ) : (
+        <>
+          <Plug className="mr-1.5 h-3.5 w-3.5" />
+          {t("board.connect")}
+        </>
+      )}
+    </Button>
+  );
+
+  // ── Lijstweergave: compacte horizontale rij ──
+  if (view === "list") {
+    return (
+      <Card className="border-0 shadow-sm transition-colors hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30">
+        <CardContent className="flex items-center gap-3 p-3">
+          {iconBox}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+              {board.display_name}
+            </p>
+            {meta}
+          </div>
+          {badge}
+          <Link href={`/job-boards/${board.id}`} className="w-32 shrink-0">
+            {actionButton}
+          </Link>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // ── Rasterweergave: gelijke hoogte, knop onderaan uitgelijnd ──
   return (
-    <Card className="group border-0 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
-      <CardContent className="space-y-4 p-5">
+    <Card className="group flex h-full flex-col border-0 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+      <CardContent className="flex flex-1 flex-col gap-4 p-5">
         <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-3">
-            <div
-              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${palette.from} ${palette.to} text-sm font-bold ${palette.text} shadow-sm`}
-              aria-hidden
-            >
-              {initials}
-            </div>
-            <div>
+          <div className="flex min-w-0 items-center gap-3">
+            {iconBox}
+            <div className="min-w-0">
               <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                 {board.display_name}
               </p>
-              <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                <MapPin className="h-3 w-3" />
-                {REGION_LABEL[board.region]}
-                <span className="text-zinc-300 dark:text-zinc-600">·</span>
-                <span className="capitalize">
-                  {board.auth_type.replace("_", " ")}
-                </span>
-              </div>
+              {meta}
             </div>
           </div>
-          {connected ? (
-            <Badge className="border-0 bg-emerald-100 text-[10px] text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-              Verbonden
-            </Badge>
-          ) : errored ? (
-            <Badge className="border-0 bg-red-100 text-[10px] text-red-700 dark:bg-red-950/40 dark:text-red-300">
-              Fout
-            </Badge>
-          ) : (
-            <Badge className="border-0 bg-zinc-100 text-[10px] text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-              Niet verbonden
-            </Badge>
-          )}
+          {badge}
         </div>
 
         {integration?.last_error && (
@@ -488,28 +582,8 @@ function BoardCard({
           </p>
         )}
 
-        <Link href={`/job-boards/${board.id}`}>
-          <Button
-            size="sm"
-            className={
-              connected
-                ? "w-full bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-                : "w-full border-0 bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700"
-            }
-            variant={connected ? "secondary" : "default"}
-          >
-            {connected ? (
-              <>
-                <Settings2 className="mr-1.5 h-3.5 w-3.5" />
-                Beheren
-              </>
-            ) : (
-              <>
-                <Plug className="mr-1.5 h-3.5 w-3.5" />
-                Verbinden
-              </>
-            )}
-          </Button>
+        <Link href={`/job-boards/${board.id}`} className="mt-auto block">
+          {actionButton}
         </Link>
       </CardContent>
     </Card>
@@ -525,6 +599,7 @@ function PostingRow({
   boardName: string;
   onOpen: () => void;
 }) {
+  const { t } = useTranslation("jobBoards");
   const palette = brandColor(posting.board_id);
   const status = STATUS_PILL[posting.status];
 
@@ -553,7 +628,9 @@ function PostingRow({
         </div>
       </td>
       <td className="py-3.5 px-4">
-        <Badge className={status.className}>{status.label}</Badge>
+        <Badge className={status.className}>
+          {t(`status.${posting.status}`)}
+        </Badge>
       </td>
       <td className="py-3.5 px-4 text-right text-sm font-semibold text-zinc-900 dark:text-zinc-100">
         {posting.applicants_count}
@@ -562,7 +639,7 @@ function PostingRow({
         {posting.cost_amount === null
           ? "—"
           : posting.cost_amount === 0
-            ? "Gratis"
+            ? t("hub.free")
             : formatEuro(posting.cost_amount, posting.cost_currency ?? "EUR")}
       </td>
       <td className="py-3.5 pl-4 pr-5 text-xs text-muted-foreground">
@@ -581,6 +658,7 @@ function PostingDetailDialog({
   boardCatalog: JobBoardCatalogEntry[];
   onClose: () => void;
 }) {
+  const { t } = useTranslation("jobBoards");
   const { data, isLoading } = useJobPosting(postingId ?? undefined);
   const retract = useRetractPosting();
   const { toast } = useToast();
@@ -600,7 +678,7 @@ function PostingDetailDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Activity className="h-5 w-5 text-indigo-600" />
-            Plaatsing-detail
+            {t("dialog.title")}
           </DialogTitle>
         </DialogHeader>
         {isLoading || !data ? (
@@ -620,31 +698,31 @@ function PostingDetailDialog({
                   </p>
                 </div>
                 <Badge className={STATUS_PILL[data.status].className}>
-                  {STATUS_PILL[data.status].label}
+                  {t(`status.${data.status}`)}
                 </Badge>
               </div>
 
               <dl className="mt-3 grid grid-cols-2 gap-y-1.5 text-xs">
-                <dt className="text-muted-foreground">Sollicitaties</dt>
+                <dt className="text-muted-foreground">{t("dialog.applicants")}</dt>
                 <dd className="text-right font-semibold text-zinc-900 dark:text-zinc-100">
                   {data.applicants_count}
                 </dd>
-                <dt className="text-muted-foreground">Kosten</dt>
+                <dt className="text-muted-foreground">{t("dialog.cost")}</dt>
                 <dd className="text-right text-zinc-700 dark:text-zinc-300">
                   {data.cost_amount === null
                     ? "—"
                     : data.cost_amount === 0
-                      ? "Gratis"
+                      ? t("dialog.free")
                       : formatEuro(
                           data.cost_amount,
                           data.cost_currency ?? "EUR"
                         )}
                 </dd>
-                <dt className="text-muted-foreground">Geplaatst</dt>
+                <dt className="text-muted-foreground">{t("dialog.posted")}</dt>
                 <dd className="text-right text-zinc-700 dark:text-zinc-300">
                   {formatDateTime(data.posted_at)}
                 </dd>
-                <dt className="text-muted-foreground">Verloopt</dt>
+                <dt className="text-muted-foreground">{t("dialog.expires")}</dt>
                 <dd className="text-right text-zinc-700 dark:text-zinc-300">
                   {formatDateTime(data.expires_at)}
                 </dd>
@@ -661,12 +739,12 @@ function PostingDetailDialog({
             {/* Status events timeline */}
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Tijdlijn
+                {t("dialog.timeline")}
               </p>
               <ol className="relative space-y-3 border-l border-border pl-4">
                 {data.events.length === 0 && (
                   <li className="text-xs text-muted-foreground">
-                    Geen events nog.
+                    {t("dialog.noEvents")}
                   </li>
                 )}
                 {data.events.map((evt) => (
@@ -697,7 +775,7 @@ function PostingDetailDialog({
                   rel="noreferrer"
                   className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-400"
                 >
-                  Bekijk extern
+                  {t("dialog.viewExternal")}
                   <ExternalLink className="h-3 w-3" />
                 </a>
               )}
@@ -709,14 +787,14 @@ function PostingDetailDialog({
                   disabled={retract.isPending}
                   onClick={async () => {
                     await retract.mutateAsync(data.id);
-                    toast({ title: "Plaatsing ingetrokken" });
+                    toast({ title: t("dialog.toasts.retracted") });
                     onClose();
                   }}
                 >
                   {retract.isPending && (
                     <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                   )}
-                  Intrekken
+                  {t("dialog.retract")}
                 </Button>
               )}
             </div>
