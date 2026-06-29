@@ -135,8 +135,8 @@
     "handle": "Behandelen"
   },
   "sequences": {
-    "title": "Nurture sequences",
-    "description": "Multi-step funnels voor passive sourcing en reactivatie.",
+    "title": "Opvolgreeks",
+    "description": "Geautomatiseerde opvolg-mails voor passive sourcing en reactivatie.",
     "newSequence": "Nieuwe sequence",
     "empty": {
       "title": "Nog geen sequences",

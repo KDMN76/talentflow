@@ -1,11 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import { Menu, Bell, Search, X } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Menu, Bell, Search, X, Settings, LogOut, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
+import { cn, getInitials } from "@/lib/utils";
+import { api } from "@/lib/api";
+import { clearToken } from "@/lib/auth";
+import { useCurrentUser } from "@/hooks/useUsers";
 
 // TODO: vervangen door echte `useNotifications()` hook zodra het backend-
 // endpoint er is. Tot dan: lege lijst — een nieuwe tenant heeft 0 meldingen.
@@ -127,7 +135,97 @@ export function Header({ onMenuClick }: HeaderProps) {
             </div>
           </>
         )}
+        <UserMenu />
       </div>
     </header>
+  );
+}
+
+// ─── Account-menu (rechtsboven): persona + Instellingen + Taal + Uitloggen ────
+
+function UserMenu() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const { data: currentUser } = useCurrentUser();
+  const [open, setOpen] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      // Server-sessie intrekken (refresh-token-rij + httpOnly cookie wissen).
+      await api.post("/auth/logout");
+    } catch {
+      // negeren — client-state wordt hieronder sowieso gewist
+    }
+    clearToken();
+    queryClient.clear();
+    router.push("/login");
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1.5 rounded-full p-0.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+        aria-label="Account-menu"
+      >
+        <Avatar className="h-8 w-8">
+          <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-500 text-white text-xs font-semibold">
+            {getInitials(currentUser?.name ?? "")}
+          </AvatarFallback>
+        </Avatar>
+        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground hidden sm:block" />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-11 z-50 w-64 rounded-xl border border-border bg-white dark:bg-zinc-900 shadow-xl shadow-black/10 overflow-hidden">
+            {/* Persona */}
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+              <Avatar className="h-9 w-9">
+                <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-500 text-white text-sm font-semibold">
+                  {getInitials(currentUser?.name ?? "")}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                  {currentUser?.name ?? "—"}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {currentUser?.email ?? currentUser?.role ?? ""}
+                </p>
+              </div>
+            </div>
+
+            {/* Acties */}
+            <div className="p-1.5">
+              <Link
+                href="/settings"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+              >
+                <Settings className="h-4 w-4 text-muted-foreground" />
+                Instellingen
+              </Link>
+
+              <div className="px-3 py-2">
+                <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
+                  Taal
+                </p>
+                <LanguageSwitcher className="w-full justify-start" />
+              </div>
+
+              <button
+                onClick={handleLogout}
+                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+              >
+                <LogOut className="h-4 w-4" />
+                Uitloggen
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
   );
 }

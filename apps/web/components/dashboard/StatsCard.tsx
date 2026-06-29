@@ -37,11 +37,11 @@ export function StatsCard({
 
   return (
     <Card className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200">
-      <CardContent className="p-6">
+      <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <p className="mt-2 text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+            <p className="mt-1 text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
               {value}
             </p>
             {(description || trend !== undefined) && (
@@ -63,11 +63,11 @@ export function StatsCard({
           </div>
           <div
             className={cn(
-              "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl",
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
               iconBg
             )}
           >
-            <Icon className={cn("h-6 w-6", iconColor)} />
+            <Icon className={cn("h-5 w-5", iconColor)} />
           </div>
         </div>
       </CardContent>

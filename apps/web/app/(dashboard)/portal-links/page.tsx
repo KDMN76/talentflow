@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Globe,
   Plus,
@@ -43,16 +44,16 @@ import {
 } from "@/hooks/usePortalLinks";
 import { formatDate, formatRelativeDate } from "@/lib/utils";
 
-const PERMISSION_LABELS: Record<keyof PortalLinkPermissions, string> = {
-  view_candidates: "Bekijken",
-  view_resumes: "CVs",
-  view_ai_scores: "AI-score",
-  view_contact_info: "Contactgegevens",
-  accept_reject: "Beoordelen",
-  comment: "Reageren",
-  download_cv: "Download",
-  view_pipeline_history: "Geschiedenis",
-};
+const PERMISSION_KEYS: Array<keyof PortalLinkPermissions> = [
+  "view_candidates",
+  "view_resumes",
+  "view_ai_scores",
+  "view_contact_info",
+  "accept_reject",
+  "comment",
+  "download_cv",
+  "view_pipeline_history",
+];
 
 const PERMISSION_COLORS: Record<keyof PortalLinkPermissions, string> = {
   view_candidates: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
@@ -66,6 +67,7 @@ const PERMISSION_COLORS: Record<keyof PortalLinkPermissions, string> = {
 };
 
 export default function PortalLinksPage() {
+  const { t } = useTranslation("miscPortals");
   const { toast } = useToast();
   const { data: portalLinks, isLoading } = usePortalLinks();
   const { data: jobs } = useJobs();
@@ -109,8 +111,8 @@ export default function PortalLinksPage() {
   const handleCreate = async () => {
     if (!selectedJobId) {
       toast({
-        title: "Vacature vereist",
-        description: "Selecteer een vacature voor de portaallink.",
+        title: t("portalList.toasts.jobRequiredTitle"),
+        description: t("portalList.toasts.jobRequiredDescription"),
         variant: "destructive",
       });
       return;
@@ -126,13 +128,13 @@ export default function PortalLinksPage() {
       setCreatedToken(result.token);
       resetForm();
       toast({
-        title: "Portaallink aangemaakt",
-        description: "Deel de unieke link met je klant.",
+        title: t("portalList.toasts.createdTitle"),
+        description: t("portalList.toasts.createdDescription"),
       });
     } catch {
       toast({
-        title: "Fout",
-        description: "Kon portaallink niet aanmaken.",
+        title: t("portalList.toasts.errorTitle"),
+        description: t("portalList.toasts.errorDescription"),
         variant: "destructive",
       });
     }
@@ -140,7 +142,7 @@ export default function PortalLinksPage() {
 
   const handleDelete = async (id: string) => {
     await deletePortalLink.mutateAsync(id);
-    toast({ title: "Portaallink verwijderd" });
+    toast({ title: t("portalList.toasts.deletedTitle") });
   };
 
   const buildUrl = (token: string) => {
@@ -152,8 +154,8 @@ export default function PortalLinksPage() {
     if (typeof navigator !== "undefined") {
       navigator.clipboard.writeText(buildUrl(token));
       toast({
-        title: "Gekopieerd",
-        description: "De portaallink is naar het klembord gekopieerd.",
+        title: t("portalList.toasts.copiedTitle"),
+        description: t("portalList.toasts.copiedDescription"),
       });
     }
   };
@@ -164,17 +166,17 @@ export default function PortalLinksPage() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="max-w-4xl space-y-6 animate-fade-in">
       <PageHeader
-        title="Klantportalen"
-        description="Deel kandidatenlijsten met klanten via een unieke link"
+        title={t("portalList.header.title")}
+        description={t("portalList.header.description")}
         actions={
           <Button
             onClick={() => setIsCreateOpen(true)}
             className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 border-0"
           >
             <Plus className="mr-2 h-4 w-4" />
-            Nieuwe portaallink
+            {t("portalList.header.newLink")}
           </Button>
         }
       />
@@ -196,18 +198,17 @@ export default function PortalLinksPage() {
               <Globe className="h-7 w-7 text-white" />
             </div>
             <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-              Nog geen portaallinks gegenereerd
+              {t("portalList.empty.title")}
             </h3>
             <p className="mt-1.5 text-sm text-muted-foreground text-center max-w-sm">
-              Maak een unieke link aan om kandidatenlijsten met je klant te delen — zonder
-              dat zij een account nodig hebben.
+              {t("portalList.empty.description")}
             </p>
             <Button
               onClick={() => setIsCreateOpen(true)}
               className="mt-5 bg-indigo-600 hover:bg-indigo-700 border-0"
             >
               <Plus className="mr-2 h-4 w-4" />
-              Nieuwe portaallink
+              {t("portalList.empty.newLink")}
             </Button>
           </CardContent>
         </Card>
@@ -227,18 +228,18 @@ export default function PortalLinksPage() {
                     <div className="min-w-0 flex-1 space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">
-                          {link.client_name || "Naamloze klant"}
+                          {link.client_name || t("portalList.card.unnamedClient")}
                         </h3>
                         {link.expires_at &&
                           new Date(link.expires_at) < new Date() && (
                             <Badge className="bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400 border-0 text-[10px] px-1.5 py-0">
-                              Verlopen
+                              {t("portalList.card.expired")}
                             </Badge>
                           )}
                       </div>
                       <p className="text-sm text-muted-foreground">
                         <Link2 className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
-                        {link.job_title || "Vacature"}
+                        {link.job_title || t("portalList.card.jobFallback")}
                       </p>
                       <div className="flex flex-wrap gap-1.5">
                         {enabledPerms.map((p) => (
@@ -247,7 +248,7 @@ export default function PortalLinksPage() {
                             variant="secondary"
                             className={`text-[10px] px-1.5 py-0 border-0 ${PERMISSION_COLORS[p]}`}
                           >
-                            {PERMISSION_LABELS[p]}
+                            {t(`portalList.permissionLabels.${p}`)}
                           </Badge>
                         ))}
                       </div>
@@ -255,14 +256,20 @@ export default function PortalLinksPage() {
                         <span className="inline-flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
                           {link.expires_at
-                            ? `Verloopt ${formatDate(link.expires_at)}`
-                            : "Geen verloopdatum"}
+                            ? t("portalList.card.expiresOn", {
+                                date: formatDate(link.expires_at),
+                              })
+                            : t("portalList.card.noExpiry")}
                         </span>
                         <span className="inline-flex items-center gap-1">
                           <Eye className="h-3 w-3" />
-                          {link.view_count} keer bekeken
+                          {t("portalList.card.viewCount", {
+                            count: link.view_count,
+                          })}
                           {link.last_viewed_at &&
-                            `, laatst ${formatRelativeDate(link.last_viewed_at)}`}
+                            t("portalList.card.lastViewed", {
+                              date: formatRelativeDate(link.last_viewed_at),
+                            })}
                         </span>
                       </div>
                     </div>
@@ -271,10 +278,10 @@ export default function PortalLinksPage() {
                         size="sm"
                         variant="outline"
                         onClick={() => handleCopy(link.token)}
-                        title="Link kopiëren"
+                        title={t("portalList.card.copyTitle")}
                       >
                         <Copy className="mr-1.5 h-3.5 w-3.5" />
-                        Kopieer link
+                        {t("portalList.card.copyLink")}
                       </Button>
                       <Button
                         size="sm"
@@ -298,14 +305,16 @@ export default function PortalLinksPage() {
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Nieuwe portaallink</DialogTitle>
+            <DialogTitle>{t("portalList.createDialog.title")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>Vacature</Label>
+              <Label>{t("portalList.createDialog.jobLabel")}</Label>
               <Select value={selectedJobId} onValueChange={setSelectedJobId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecteer een vacature" />
+                  <SelectValue
+                    placeholder={t("portalList.createDialog.jobPlaceholder")}
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {jobs?.map((job) => (
@@ -318,19 +327,21 @@ export default function PortalLinksPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="client-name">Klantnaam</Label>
+              <Label htmlFor="client-name">
+                {t("portalList.createDialog.clientNameLabel")}
+              </Label>
               <Input
                 id="client-name"
-                placeholder="Bijv. Acme Corporation"
+                placeholder={t("portalList.createDialog.clientNamePlaceholder")}
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Permissies</Label>
+              <Label>{t("portalList.createDialog.permissionsLabel")}</Label>
               <div className="grid grid-cols-1 gap-1.5">
-                {(Object.keys(PERMISSION_LABELS) as Array<keyof PortalLinkPermissions>).map(
+                {PERMISSION_KEYS.map(
                   (key) => (
                     <label
                       key={key}
@@ -348,11 +359,11 @@ export default function PortalLinksPage() {
                         disabled={key === "view_candidates"}
                       />
                       <span className="text-sm text-zinc-700 dark:text-zinc-300">
-                        {PERMISSION_LABELS[key]}
+                        {t(`portalList.permissionLabels.${key}`)}
                       </span>
                       {key === "view_candidates" && (
                         <span className="ml-auto text-[10px] text-muted-foreground">
-                          Standaard
+                          {t("portalList.createDialog.defaultBadge")}
                         </span>
                       )}
                     </label>
@@ -362,7 +373,9 @@ export default function PortalLinksPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="expires-at">Verloopdatum (optioneel)</Label>
+              <Label htmlFor="expires-at">
+                {t("portalList.createDialog.expiresLabel")}
+              </Label>
               <Input
                 id="expires-at"
                 type="date"
@@ -373,7 +386,9 @@ export default function PortalLinksPage() {
           </div>
           <DialogFooter className="gap-2">
             <DialogClose asChild>
-              <Button variant="outline">Annuleren</Button>
+              <Button variant="outline">
+                {t("portalList.createDialog.cancel")}
+              </Button>
             </DialogClose>
             <Button
               onClick={handleCreate}
@@ -383,7 +398,7 @@ export default function PortalLinksPage() {
               {createPortalLink.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Aanmaken
+              {t("portalList.createDialog.create")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -398,17 +413,17 @@ export default function PortalLinksPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Check className="h-5 w-5 text-emerald-600" />
-              Portaallink aangemaakt
+              {t("portalList.createdDialog.title")}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="rounded-lg border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-800 px-4 py-3">
               <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
-                Deel deze unieke link met je klant. Zij hebben geen account nodig.
+                {t("portalList.createdDialog.intro")}
               </p>
             </div>
             <div className="space-y-2">
-              <Label>Portaallink</Label>
+              <Label>{t("portalList.createdDialog.linkLabel")}</Label>
               <div className="flex gap-2">
                 <Input
                   readOnly
@@ -419,7 +434,7 @@ export default function PortalLinksPage() {
                   size="icon"
                   variant="outline"
                   onClick={() => createdToken && handleCopy(createdToken)}
-                  title="Kopieer link"
+                  title={t("portalList.createdDialog.copyTitle")}
                 >
                   <Copy className="h-4 w-4" />
                 </Button>
@@ -432,7 +447,7 @@ export default function PortalLinksPage() {
                 className="bg-indigo-600 hover:bg-indigo-700 border-0"
                 onClick={() => setCreatedToken(null)}
               >
-                Sluiten
+                {t("portalList.createdDialog.close")}
               </Button>
             </DialogClose>
           </DialogFooter>

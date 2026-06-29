@@ -135,8 +135,8 @@
     "handle": "Handle"
   },
   "sequences": {
-    "title": "Nurture sequences",
-    "description": "Multi-step funnels for passive sourcing and reactivation.",
+    "title": "Follow-up sequences",
+    "description": "Automated follow-up emails for passive sourcing and reactivation.",
     "newSequence": "New sequence",
     "empty": {
       "title": "No sequences yet",
