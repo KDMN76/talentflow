@@ -407,10 +407,11 @@ groen), en een volledige `next build`.
 
 ### Invite-only flow netjes bouwen (registratie staat nu hardcoded dicht)
 - **Priority**: P2
-- **Status**: Open
+- **Status**: ✅ Resolved (2026-06-23)
 - **Source**: Kaan
 - **Date added**: 2026-05-17
 - **Context**: 2026-05-15 hotfix zette publieke registratie dicht via env-var `DISABLE_PUBLIC_REGISTRATION`. Permanent: admin nodigt user uit per email met magic-link (verloopt na 7 dagen), user kiest wachtwoord, koppelt aan bestaande tenant. Per LAUNCH_PLAN.md Sprint 0 expliciet binnen scope, maar nog niet uitgevoerd.
+- **✅ Opgelost (2026-06-23)**: token-flow gebouwd — nieuwe tabel `user_invite_tokens` (migratie 038), `inviteUser` geeft een single-use gehashte invite-token i.p.v. een plaintext temp-wachtwoord, `acceptInvite` (auth.service) zet het wachtwoord ÉN `is_active=true`, nieuwe web-pagina `/accept-invite`. Re-invite voor nog-inactieve users toegestaan. LET OP: de mails versturen pas écht als `RESEND_API_KEY` in prod gevuld is (zie 6.2 / Sectie 5.1).
 
 ### Wachtwoord-reset flow afmaken
 - **Priority**: P2
@@ -666,7 +667,8 @@ Uit de multi-agent go-live-audit. De 🔴-blokkers zijn deze sessie gefixt (zie 
 - **Priority**: P2
 - **Status**: Open
 - **Type**: [TASK]
-- **Context**: Nog te doen vóór monetisatie: billing/Stripe (geen betaalpad — cross-ref Sectie 3), wachtwoord-reset afmaken (stub → token-flow, cross-ref Sectie 2), rate-limit op `/auth/login`, `/health` echte DB+Redis-check i.p.v. liveness-only, externe uptime-monitor, en de mock-features die in prod succes faken (Sourcing Agent mock-kandidaten, Voice belt niet echt, job-board posten faket, Hiring-Manager swipe slikt schrijf-fouten in, WhatsApp template mock-approve). CI `deploy.yml` is stale/stuk (verkeerde domeinen + dode git-pull). Verifieer `ANTHROPIC_API_KEY` + `RESEND_API_KEY` in prod.
+- **Context**: Nog te doen vóór monetisatie: billing/Stripe (geen betaalpad — cross-ref Sectie 3), wachtwoord-reset afmaken (stub → token-flow, cross-ref Sectie 2), rate-limit op `/auth/login`, `/health` echte DB+Redis-check i.p.v. liveness-only, externe uptime-monitor, en de mock-features die in prod succes faken (Sourcing Agent mock-kandidaten, Voice belt niet echt, job-board posten faket, Hiring-Manager swipe slikt schrijf-fouten in, WhatsApp template mock-approve).
+- **Update 2026-06-29**: `ANTHROPIC_API_KEY` + `RESEND_API_KEY` geverifieerd in prod — **beide leeg**. Gevolg: AI-features geven 500 (CV-parsing e.d.), invite/reset-mails worden niet verzonden. Resend bewust uitgesteld (kdmn.nl-afzender = €20/mnd voor een 2e domein; gebruik de gratis kdmnprojecten.com bij activeren). De stale/kapotte CI `deploy.yml` is achterhaald — er is nu een werkend git-pull-deploypad via een SSH deploy-key (zie het infra-blok onderaan deze sectie).
 
 ### Opgelost deze sessie (2026-06-23) — 🔴 go-live-blokkers
 - **Tenant-isolatie**: expliciete `tenant_id`-filters toegevoegd aan ~33 lekkende queries in `billing/invoicing`, `commissions`, `accounting` (incl. functionele bug in `pickPrimaryIntegration`), `forecasting`, `skills` en `pipeline.createStage` — cross-tenant lezen/schrijven van financiële + kandidaatdata gedicht (RLS blijft inert onder de owner-rol; non-owner-cutover blijft aparte L-taak in Sectie 2).
@@ -674,3 +676,9 @@ Uit de multi-agent go-live-audit. De 🔴-blokkers zijn deze sessie gefixt (zie 
 - **Logout**: `Sidebar.handleLogout` roept nu `/auth/logout` + wist React-Query-cache → server-sessie wordt echt ingetrokken (fixt de "automatisch weer ingelogd"-bug).
 - **Invite-flow**: migratie `038_user_invite_tokens.sql` + token-flow (`inviteUser` → `acceptInvite` zet wachtwoord + `is_active=true`) + `/accept-invite`-pagina; geen plaintext-wachtwoord meer; re-invite voor inactieve users toegestaan.
 - **Sentry**: compose env-naam `SENTRY_DSN` → `SENTRY_DSN_API` (api + api-worker) zodat API-errors echt gereporteerd worden zodra de DSN gevuld is.
+
+### Opgelost 2026-06-28/29 — infra, backups & deploy-pad
+- **Offsite backups LIVE** ✅: nachtelijke Postgres-dump → Cloudflare R2 (`infra/backup.sh`) + wekelijkse `infra/restore-test.sh`, allebei **groen getest** (cron op de VPS: 03:00 backup, zondag 04:00 restore-test; 30-dagen retentie in R2). Optionele MinIO→R2-mirror voor geüploade CV's als scaffold toegevoegd (`BACKUP_MINIO_ENABLED`). Dekt deels 4.17 ("backup/herstel-strategie").
+- **backup-scripts gefixt** ✅: lazen het hele compose-`.env` via bash `source` → brak op `RESEND_FROM` (spatie/`<>`); lezen nu alleen de benodigde vars veilig uit.
+- **Deploy-pad gerepareerd** ✅: VPS-PAT was dood → SSH **deploy-key** opgezet, git-remote op SSH, `git pull` werkt weer en de VPS is in sync met GitHub. `npm run migrate` faalde in prod (geen `tsx` in de prod-image) → `migrate:prod` (= `node dist/db/migrate.js`) toegevoegd + `infra/DEPLOY_KDMN.md` bijgewerkt.
+- **Nog open (Kaan's kant)**: Sentry-DSN invullen (env-naam-fix staat al live), Resend-key (zie 5.1/6.2), optioneel een faal-alert-webhook voor backups + Hetzner "Backups" aanzetten voor full-system DR.
