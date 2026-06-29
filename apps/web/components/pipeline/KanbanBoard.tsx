@@ -44,9 +44,10 @@ const cursorCollision: CollisionDetection = (args) => {
   if (pointerCollisions.length > 0) return pointerCollisions;
   return rectIntersection(args);
 };
-import { Search, Calendar } from "lucide-react";
+import { Search, Calendar, LayoutGrid, List } from "lucide-react";
 import { KanbanColumn } from "./KanbanColumn";
 import { KanbanCardOverlay } from "./KanbanCard";
+import { PipelineListView } from "./PipelineListView";
 import { useMoveApplication } from "@/hooks/usePipeline";
 import { useToast } from "@/components/ui/use-toast";
 import { Input } from "@/components/ui/input";
@@ -66,6 +67,7 @@ export function KanbanBoard({ stages, applications, jobId }: KanbanBoardProps) {
   const [overStageId, setOverStageId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [showAbsoluteDate, setShowAbsoluteDate] = useState(false);
+  const [view, setView] = useState<"board" | "list">("board");
 
   const { toast } = useToast();
   const moveApplication = useMoveApplication();
@@ -178,36 +180,71 @@ export function KanbanBoard({ stages, applications, jobId }: KanbanBoardProps) {
           <Calendar className="mr-1.5 h-4 w-4" />
           {t("filters.absoluteDate")}
         </Button>
+        <div className="ml-auto flex gap-1 rounded-lg bg-muted p-1">
+          <button
+            type="button"
+            onClick={() => setView("board")}
+            aria-label={t("view.board")}
+            className={`rounded-md p-1.5 transition-colors ${
+              view === "board"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setView("list")}
+            aria-label={t("view.list")}
+            className={`rounded-md p-1.5 transition-colors ${
+              view === "list"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <List className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={cursorCollision}
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
-      >
-        <div className="flex gap-5 overflow-x-auto pb-4">
-          {stages.map((stage) => (
-            <KanbanColumn
-              key={stage.id}
-              stage={stage}
-              applications={getApplicationsForStage(stage.id)}
-              isOver={overStageId === stage.id}
-              showAbsoluteDate={showAbsoluteDate}
-            />
-          ))}
-        </div>
+      {view === "list" ? (
+        <PipelineListView
+          applications={visibleApplications}
+          stages={stages}
+          jobId={jobId}
+          showAbsoluteDate={showAbsoluteDate}
+        />
+      ) : (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={cursorCollision}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="flex gap-5 overflow-x-auto pb-4">
+            {stages.map((stage) => (
+              <KanbanColumn
+                key={stage.id}
+                stage={stage}
+                applications={getApplicationsForStage(stage.id)}
+                isOver={overStageId === stage.id}
+                showAbsoluteDate={showAbsoluteDate}
+              />
+            ))}
+          </div>
 
-        <DragOverlay dropAnimation={null} modifiers={[snapToCursor]}>
-          {activeApplication ? (
-            <KanbanCardOverlay
-              application={activeApplication}
-              showAbsoluteDate={showAbsoluteDate}
-            />
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+          <DragOverlay dropAnimation={null} modifiers={[snapToCursor]}>
+            {activeApplication ? (
+              <KanbanCardOverlay
+                application={activeApplication}
+                showAbsoluteDate={showAbsoluteDate}
+              />
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      )}
     </div>
   );
 }

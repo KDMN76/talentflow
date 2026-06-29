@@ -27,5 +27,18 @@
   "filters": {
     "searchPlaceholder": "Zoek kandidaat op naam of e-mail…",
     "absoluteDate": "Exacte datum"
+  },
+  "view": {
+    "board": "Bordweergave",
+    "list": "Lijstweergave"
+  },
+  "list": {
+    "empty": "Geen sollicitanten gevonden.",
+    "columns": {
+      "candidate": "Kandidaat",
+      "stage": "Fase",
+      "score": "Score",
+      "applied": "Gesolliciteerd"
+    }
   }
 }

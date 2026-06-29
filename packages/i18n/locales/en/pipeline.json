@@ -27,5 +27,18 @@
   "filters": {
     "searchPlaceholder": "Search candidate by name or email…",
     "absoluteDate": "Exact date"
+  },
+  "view": {
+    "board": "Board view",
+    "list": "List view"
+  },
+  "list": {
+    "empty": "No applicants found.",
+    "columns": {
+      "candidate": "Candidate",
+      "stage": "Stage",
+      "score": "Score",
+      "applied": "Applied"
+    }
   }
 }
