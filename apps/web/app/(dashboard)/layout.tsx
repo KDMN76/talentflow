@@ -36,7 +36,7 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-zinc-50 dark:bg-zinc-950">
+    <div className="flex h-screen overflow-hidden bg-white dark:bg-zinc-950">
       {/* Desktop Sidebar */}
       <div className="hidden lg:flex lg:shrink-0">
         <Sidebar />

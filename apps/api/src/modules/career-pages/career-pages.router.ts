@@ -17,4 +17,9 @@ router.get('/:id', requireAuth, tenantMiddleware, careerPagesController.get);
 router.patch('/:id', requireAuth, tenantMiddleware, careerPagesController.update);
 router.delete('/:id', requireAuth, tenantMiddleware, careerPagesController.remove);
 
+// Builder: blocks opslaan + publiceren/depubliceren.
+router.patch('/:id/blocks', requireAuth, tenantMiddleware, careerPagesController.updateBlocks);
+router.post('/:id/publish', requireAuth, tenantMiddleware, careerPagesController.publish);
+router.post('/:id/unpublish', requireAuth, tenantMiddleware, careerPagesController.unpublish);
+
 export default router;

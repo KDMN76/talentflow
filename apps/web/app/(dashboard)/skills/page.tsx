@@ -184,6 +184,10 @@ function TrendingTab() {
             <div className="p-4">
               <Skeleton className="h-32 w-full" />
             </div>
+          ) : !trending || trending.length === 0 ? (
+            <p className="py-12 text-center text-sm text-muted-foreground">
+              {t("skills.trending.noTrending")}
+            </p>
           ) : (
             <div className="divide-y divide-border">
               <div className="grid grid-cols-12 gap-2 px-4 py-2 text-[11px] uppercase tracking-wider text-muted-foreground font-semibold bg-muted/30">

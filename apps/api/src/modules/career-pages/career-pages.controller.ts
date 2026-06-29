@@ -34,6 +34,18 @@ const updateSchema = z.object({
   language: z.string().max(10).optional(),
 });
 
+const blocksSchema = z.object({
+  blocks: z.array(
+    z
+      .object({
+        id: z.string(),
+        type: z.string(),
+        config: z.unknown().optional(),
+      })
+      .catchall(z.unknown())
+  ),
+});
+
 const applicationSchema = z.object({
   candidate: z.object({
     name: z.string().min(1).max(200),
@@ -124,6 +136,58 @@ export async function remove(
       req.params.id
     );
     res.json({ message: 'Career page verwijderd' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function updateBlocks(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { blocks } = blocksSchema.parse(req.body);
+    const result = await careerPagesService.updateCareerPageBlocks(
+      req.user!.tenantId,
+      req.params.id,
+      blocks
+    );
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function publish(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const page = await careerPagesService.setCareerPagePublished(
+      req.user!.tenantId,
+      req.params.id,
+      true
+    );
+    res.json(page);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function unpublish(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const page = await careerPagesService.setCareerPagePublished(
+      req.user!.tenantId,
+      req.params.id,
+      false
+    );
+    res.json(page);
   } catch (err) {
     next(err);
   }

@@ -42,12 +42,18 @@ export interface PublicCareerPageJob {
 }
 
 export interface PublicCareerPage {
-  id: string;
-  slug: string;
-  template: string;
-  language: string;
-  config: CareerPageConfig;
-  active: boolean;
+  // Wordt gewrapt in `career_page` zodat het matcht met de web-frontend
+  // (PublicCareerPageData = { career_page, jobs, company_name }).
+  career_page: {
+    id: string;
+    tenant_id: string;
+    slug: string;
+    template: string;
+    language: string;
+    config: CareerPageConfig;
+    active: boolean;
+  };
+  company_name: string;
   jobs: PublicCareerPageJob[];
 }
 
@@ -74,18 +80,22 @@ export interface SubmitApplicationResult {
 function buildMockCareerPage(slug: string): PublicCareerPage {
   const now = new Date().toISOString();
   return {
-    id: crypto.randomUUID(),
-    slug,
-    template: 'modern',
-    language: 'nl',
-    active: true,
-    config: {
-      header_text: 'Werken bij ons',
-      intro_text: 'Ontdek onze openstaande vacatures en solliciteer direct.',
-      primary_color: '#6366f1',
-      font_family: 'Inter, sans-serif',
+    career_page: {
+      id: crypto.randomUUID(),
+      tenant_id: crypto.randomUUID(),
+      slug,
+      template: 'modern',
       language: 'nl',
+      active: true,
+      config: {
+        header_text: 'Werken bij ons',
+        intro_text: 'Ontdek onze openstaande vacatures en solliciteer direct.',
+        primary_color: '#6366f1',
+        font_family: 'Inter, sans-serif',
+        language: 'nl',
+      },
     },
+    company_name: 'Ons bedrijf',
     jobs: [
       {
         id: crypto.randomUUID(),
@@ -174,7 +184,12 @@ export async function getCareerPage(
         throw new AppError(404, 'CAREER_PAGE_NOT_FOUND', 'Career page niet gevonden');
       }
 
-      return page;
+      // Builder-blocks worden in config.blocks bewaard; geef ze top-level mee
+      // zodat de builder (page.blocks) hydrateert.
+      return {
+        ...page,
+        blocks: Array.isArray(page.config?.blocks) ? page.config.blocks : [],
+      };
     });
   } catch (err) {
     if (err instanceof AppError) {
@@ -328,6 +343,56 @@ export async function updateCareerPage(
   }
 }
 
+export async function updateCareerPageBlocks(
+  tenantId: string,
+  id: string,
+  blocks: unknown[]
+): Promise<{ blocks: unknown[] }> {
+  return withTenant(tenantId, async (client) => {
+    const { rows: [existing] } = await client.query(
+      `SELECT id FROM career_pages WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL`,
+      [id, tenantId]
+    );
+    if (!existing) {
+      throw new AppError(404, 'CAREER_PAGE_NOT_FOUND', 'Career page niet gevonden');
+    }
+    // Builder-blocks bewaren we in config.blocks (geen aparte kolom nodig).
+    await client.query(
+      `UPDATE career_pages
+          SET config = jsonb_set(COALESCE(config, '{}'::jsonb), '{blocks}', $1::jsonb)
+        WHERE id = $2 AND tenant_id = $3 AND deleted_at IS NULL`,
+      [JSON.stringify(blocks), id, tenantId]
+    );
+    return { blocks };
+  });
+}
+
+export async function setCareerPagePublished(
+  tenantId: string,
+  id: string,
+  published: boolean
+): Promise<CareerPage> {
+  return withTenant(tenantId, async (client) => {
+    // De publieke render gate't op `active`; we houden `published` synchroon.
+    const { rows: [page] } = await client.query(
+      `UPDATE career_pages
+          SET active = $1,
+              published = $1,
+              published_at = CASE WHEN $1 THEN now() ELSE published_at END
+        WHERE id = $2 AND tenant_id = $3 AND deleted_at IS NULL
+        RETURNING *`,
+      [published, id, tenantId]
+    );
+    if (!page) {
+      throw new AppError(404, 'CAREER_PAGE_NOT_FOUND', 'Career page niet gevonden');
+    }
+    return {
+      ...page,
+      blocks: Array.isArray(page.config?.blocks) ? page.config.blocks : [],
+    };
+  });
+}
+
 export async function deleteCareerPage(
   tenantId: string,
   id: string
@@ -391,13 +456,23 @@ export async function getPublicCareerPage(slug: string): Promise<PublicCareerPag
         // ignore
       }
 
+      // Bedrijfsnaam voor de publieke header/footer.
+      const { rows: [tenant] } = await client.query(
+        `SELECT name FROM tenants WHERE id = $1`,
+        [page.tenant_id]
+      );
+
       return {
-        id: page.id,
-        slug: page.slug,
-        template: page.template,
-        language: page.language,
-        config: page.config ?? {},
-        active: page.active,
+        career_page: {
+          id: page.id,
+          tenant_id: page.tenant_id,
+          slug: page.slug,
+          template: page.template,
+          language: page.language,
+          config: page.config ?? {},
+          active: page.active,
+        },
+        company_name: (tenant?.name as string) ?? page.slug,
         jobs,
       };
     });

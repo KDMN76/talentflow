@@ -987,6 +987,36 @@ function CreateDealDialog({
     onClose();
   };
 
+  // Een deal vereist een klant (organization_id is NOT NULL). Zonder klanten is
+  // het formulier een doodlopend pad (knop blijft uit) — toon i.p.v. dat een
+  // duidelijke uitleg + verwijzing naar de Organisaties-tab.
+  if (organizations.length === 0) {
+    return (
+      <div className="space-y-4">
+        <DialogHeader>
+          <DialogTitle>{t("deals.dialog.title")}</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col items-center justify-center gap-3 py-8 text-center">
+          <Building2 className="h-10 w-10 text-muted-foreground/30" />
+          <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+            {t("deals.dialog.noOrgsTitle", { defaultValue: "Nog geen klanten" })}
+          </p>
+          <p className="text-sm text-muted-foreground max-w-xs">
+            {t("deals.dialog.noOrgsHint", {
+              defaultValue:
+                "Een deal hoort bij een klant. Maak eerst een klant aan op het tabblad 'Organisaties' hierboven, dan kun je hier een deal koppelen.",
+            })}
+          </p>
+        </div>
+        <DialogFooter>
+          <Button type="button" onClick={onClose}>
+            {t("actions.close", { defaultValue: "Sluiten" })}
+          </Button>
+        </DialogFooter>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={submit} className="space-y-4">
       <DialogHeader>

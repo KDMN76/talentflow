@@ -19,9 +19,8 @@ import { useCandidates } from "@/hooks/useCandidates";
 import { cn, getInitials, getScoreColor, formatRelativeDate } from "@/lib/utils";
 import Link from "next/link";
 
-// Filter keys: "Alle"/"Handmatig" are internal UI keys (translated at render
-// time), the rest are literal source values from the API (not translated).
-const SOURCE_FILTERS = ["Alle", "LinkedIn", "Indeed", "Referral", "Behance", "Handmatig"];
+// Bron-waarden die we onder één "Handmatig"-chip groeperen (internal UI key).
+const MANUAL_SOURCES = ["Manual", "manual_import"];
 
 export default function CandidatesPage() {
   const { t } = useTranslation("candidates");
@@ -42,9 +41,22 @@ export default function CandidatesPage() {
 
   const filtered = candidates?.filter((c) => {
     if (sourceFilter === "Alle") return true;
-    if (sourceFilter === "Handmatig") return c.source === "Manual" || c.source === "manual_import";
+    if (sourceFilter === "Handmatig") return MANUAL_SOURCES.includes(c.source ?? "");
     return (c.source ?? "").toLowerCase() === sourceFilter.toLowerCase();
   });
+
+  // Bron-filterchips dynamisch uit de echte data — zo matchen ze altijd de
+  // werkelijke `source`-waarden. Voorkomt dode chips (bv. "Behance" → 0
+  // resultaten) én ontbrekende bronnen (bv. "Career Fair"/"Website").
+  const availableSources = Array.from(
+    new Set((candidates ?? []).map((c) => c.source).filter(Boolean) as string[])
+  );
+  const hasManual = availableSources.some((s) => MANUAL_SOURCES.includes(s));
+  const sourceChips = [
+    "Alle",
+    ...availableSources.filter((s) => !MANUAL_SOURCES.includes(s)).sort(),
+    ...(hasManual ? ["Handmatig"] : []),
+  ];
 
   const allSelected = !!filtered && filtered.length > 0 && filtered.every((c) => selectedIds.includes(c.id));
 
@@ -142,7 +154,7 @@ export default function CandidatesPage() {
 
       {/* Source filter chips */}
       <div className="flex flex-wrap gap-2">
-        {SOURCE_FILTERS.map((source) => (
+        {sourceChips.map((source) => (
           <button
             key={source}
             onClick={() => setSourceFilter(source)}
