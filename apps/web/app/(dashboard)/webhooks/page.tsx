@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import {
   Webhook as WebhookIcon,
   Plus,
@@ -61,43 +63,39 @@ import {
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-function formatRelative(iso: string | null | undefined): string {
+function formatRelative(iso: string | null | undefined, t: TFunction): string {
   if (!iso) return "—";
   const d = new Date(iso);
   const diff = Date.now() - d.getTime();
-  if (diff < 60_000) return "zojuist";
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} min geleden`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} u geleden`;
+  if (diff < 60_000) return t("webhooks.relative.justNow");
+  if (diff < 3_600_000) return t("webhooks.relative.minutesAgo", { count: Math.floor(diff / 60_000) });
+  if (diff < 86_400_000) return t("webhooks.relative.hoursAgo", { count: Math.floor(diff / 3_600_000) });
   return d.toLocaleString("nl-NL", { dateStyle: "short", timeStyle: "short" });
 }
 
 function StatusBadge({ status }: { status: DeliveryStatus }) {
+  const { t } = useTranslation("miscDev");
   const config: Record<
     DeliveryStatus,
-    { label: string; className: string; icon: React.ComponentType<{ className?: string }> }
+    { className: string; icon: React.ComponentType<{ className?: string }> }
   > = {
     succeeded: {
-      label: "Succes",
       className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400",
       icon: CheckCircle2,
     },
     failed: {
-      label: "Mislukt",
       className: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400",
       icon: XCircle,
     },
     dead: {
-      label: "Dood",
       className: "bg-zinc-900 text-zinc-100 dark:bg-zinc-100 dark:text-zinc-900",
       icon: Skull,
     },
     pending: {
-      label: "Wachten",
       className: "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
       icon: Clock,
     },
     delivering: {
-      label: "Bezig",
       className: "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400",
       icon: Loader2,
     },
@@ -107,7 +105,7 @@ function StatusBadge({ status }: { status: DeliveryStatus }) {
   return (
     <Badge className={`${c.className} gap-1`}>
       <Icon className={`h-3 w-3 ${status === "delivering" ? "animate-spin" : ""}`} />
-      {c.label}
+      {t(`webhooks.deliveryStatus.${status}`)}
     </Badge>
   );
 }
@@ -115,6 +113,7 @@ function StatusBadge({ status }: { status: DeliveryStatus }) {
 // ── Page ────────────────────────────────────────────────────────────────────
 
 export default function WebhooksPage() {
+  const { t } = useTranslation("miscDev");
   const { toast } = useToast();
 
   // Subscriptions
@@ -171,26 +170,26 @@ export default function WebhooksPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Webhooks"
-        description="Stuur recruitment-events naar externe systemen via outbound HTTP."
+        title={t("webhooks.header.title")}
+        description={t("webhooks.header.description")}
       />
 
       <Tabs defaultValue="subscriptions" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="subscriptions">Abonnementen</TabsTrigger>
-          <TabsTrigger value="deliveries">Event-log</TabsTrigger>
-          <TabsTrigger value="test">Test-tool</TabsTrigger>
+          <TabsTrigger value="subscriptions">{t("webhooks.tabs.subscriptions")}</TabsTrigger>
+          <TabsTrigger value="deliveries">{t("webhooks.tabs.deliveries")}</TabsTrigger>
+          <TabsTrigger value="test">{t("webhooks.tabs.test")}</TabsTrigger>
         </TabsList>
 
         {/* ── Subscriptions ───────────────────────────────────────────────── */}
         <TabsContent value="subscriptions" className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              {subscriptions.length} abonnement{subscriptions.length === 1 ? "" : "en"}
+              {t("webhooks.subscriptions.count", { count: subscriptions.length })}
             </p>
             <Button onClick={() => setCreateOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Nieuw abonnement
+              {t("webhooks.subscriptions.new")}
             </Button>
           </div>
 
@@ -200,7 +199,7 @@ export default function WebhooksPage() {
             <Card>
               <CardContent className="py-12 text-center text-muted-foreground">
                 <WebhookIcon className="mx-auto h-10 w-10 mb-3 opacity-40" />
-                Geen webhook-abonnementen. Klik op &ldquo;Nieuw abonnement&rdquo; om te beginnen.
+                {t("webhooks.subscriptions.emptyLine1")} &ldquo;{t("webhooks.subscriptions.emptyLink")}&rdquo; {t("webhooks.subscriptions.emptyLine2")}
               </CardContent>
             </Card>
           ) : (
@@ -213,18 +212,18 @@ export default function WebhooksPage() {
                     await toggleSub.mutateAsync(sub.id);
                   }}
                   onDelete={async () => {
-                    if (!confirm(`Weet je zeker dat je "${sub.name}" wilt verwijderen?`)) return;
+                    if (!confirm(t("webhooks.subscriptions.confirmDelete", { name: sub.name }))) return;
                     await deleteSub.mutateAsync(sub.id);
-                    toast({ title: "Webhook verwijderd" });
+                    toast({ title: t("webhooks.toasts.deleted") });
                   }}
                   onRotate={async () => {
-                    if (!confirm("Secret roteren? Bestaande integraties moeten opnieuw geconfigureerd worden.")) return;
+                    if (!confirm(t("webhooks.subscriptions.confirmRotate"))) return;
                     const result = await rotateSecret.mutateAsync(sub.id);
                     setCreatedSecret({ name: sub.name, secret: result.secret });
                   }}
                   onUpdate={async (patch) => {
                     await updateSub.mutateAsync({ id: sub.id, patch });
-                    toast({ title: "Webhook bijgewerkt" });
+                    toast({ title: t("webhooks.toasts.updated") });
                   }}
                   eventTypes={eventTypes}
                 />
@@ -243,11 +242,11 @@ export default function WebhooksPage() {
                 if (result.secret) {
                   setCreatedSecret({ name: result.name, secret: result.secret });
                 }
-                toast({ title: "Webhook aangemaakt" });
+                toast({ title: t("webhooks.toasts.created") });
               } catch {
                 toast({
-                  title: "Fout",
-                  description: "Kon webhook niet aanmaken",
+                  title: t("webhooks.toasts.createErrorTitle"),
+                  description: t("webhooks.toasts.createErrorDescription"),
                   variant: "destructive",
                 });
               }
@@ -264,14 +263,14 @@ export default function WebhooksPage() {
         <TabsContent value="deliveries" className="space-y-4">
           <div className="flex flex-wrap gap-3 items-end">
             <div className="space-y-1">
-              <Label htmlFor="filter-sub">Abonnement</Label>
+              <Label htmlFor="filter-sub">{t("webhooks.deliveries.subscriptionLabel")}</Label>
               <select
                 id="filter-sub"
                 value={filterSub}
                 onChange={(e) => setFilterSub(e.target.value)}
                 className="h-10 rounded-md border bg-transparent px-3 text-sm"
               >
-                <option value="">Alle</option>
+                <option value="">{t("webhooks.deliveries.all")}</option>
                 {subscriptions.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
@@ -280,18 +279,18 @@ export default function WebhooksPage() {
               </select>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="filter-status">Status</Label>
+              <Label htmlFor="filter-status">{t("webhooks.deliveries.statusLabel")}</Label>
               <select
                 id="filter-status"
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value as DeliveryStatus | "")}
                 className="h-10 rounded-md border bg-transparent px-3 text-sm"
               >
-                <option value="">Alle</option>
-                <option value="succeeded">Succes</option>
-                <option value="failed">Mislukt</option>
-                <option value="pending">Wachten</option>
-                <option value="dead">Dood</option>
+                <option value="">{t("webhooks.deliveries.all")}</option>
+                <option value="succeeded">{t("webhooks.deliveryStatus.succeeded")}</option>
+                <option value="failed">{t("webhooks.deliveryStatus.failed")}</option>
+                <option value="pending">{t("webhooks.deliveryStatus.pending")}</option>
+                <option value="dead">{t("webhooks.deliveryStatus.dead")}</option>
               </select>
             </div>
           </div>
@@ -301,7 +300,7 @@ export default function WebhooksPage() {
           ) : deliveries.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center text-muted-foreground">
-                Geen deliveries gevonden voor deze filters.
+                {t("webhooks.deliveries.empty")}
               </CardContent>
             </Card>
           ) : (
@@ -309,13 +308,13 @@ export default function WebhooksPage() {
               <table className="w-full text-sm">
                 <thead className="bg-muted/50 text-xs uppercase">
                   <tr>
-                    <th className="px-4 py-3 text-left font-medium">Tijd</th>
-                    <th className="px-4 py-3 text-left font-medium">Event</th>
-                    <th className="px-4 py-3 text-left font-medium">Abonnement</th>
-                    <th className="px-4 py-3 text-left font-medium">Status</th>
-                    <th className="px-4 py-3 text-left font-medium">Poging</th>
-                    <th className="px-4 py-3 text-left font-medium">Resp</th>
-                    <th className="px-4 py-3 text-right font-medium">Acties</th>
+                    <th className="px-4 py-3 text-left font-medium">{t("webhooks.deliveries.columns.time")}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t("webhooks.deliveries.columns.event")}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t("webhooks.deliveries.columns.subscription")}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t("webhooks.deliveries.columns.status")}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t("webhooks.deliveries.columns.attempt")}</th>
+                    <th className="px-4 py-3 text-left font-medium">{t("webhooks.deliveries.columns.response")}</th>
+                    <th className="px-4 py-3 text-right font-medium">{t("webhooks.deliveries.columns.actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -323,7 +322,7 @@ export default function WebhooksPage() {
                     const sub = subscriptions.find((s) => s.id === d.subscription_id);
                     return (
                       <tr key={d.id} className="border-t hover:bg-muted/30">
-                        <td className="px-4 py-3 whitespace-nowrap">{formatRelative(d.created_at)}</td>
+                        <td className="px-4 py-3 whitespace-nowrap">{formatRelative(d.created_at, t)}</td>
                         <td className="px-4 py-3 font-mono text-xs">{d.event_type}</td>
                         <td className="px-4 py-3">{sub?.name ?? d.subscription_id.slice(0, 8)}</td>
                         <td className="px-4 py-3">
@@ -356,7 +355,7 @@ export default function WebhooksPage() {
                                 variant="ghost"
                                 onClick={async () => {
                                   await retryDelivery.mutateAsync(d.id);
-                                  toast({ title: "Retry gestart" });
+                                  toast({ title: t("webhooks.toasts.retryStarted") });
                                 }}
                               >
                                 <RotateCcw className="h-3.5 w-3.5" />
@@ -377,7 +376,7 @@ export default function WebhooksPage() {
             onClose={() => setDetailId(null)}
             onRetry={async (id) => {
               await retryDelivery.mutateAsync(id);
-              toast({ title: "Retry gestart" });
+              toast({ title: t("webhooks.toasts.retryStarted") });
             }}
           />
         </TabsContent>
@@ -386,40 +385,39 @@ export default function WebhooksPage() {
         <TabsContent value="test" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Test-event versturen</CardTitle>
+              <CardTitle>{t("webhooks.test.title")}</CardTitle>
               <CardDescription>
-                Stuur een eenmalig test-event naar een willekeurige URL — geen abonnement nodig.
-                Handig om je integratie te debuggen.
+                {t("webhooks.test.description")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-1">
-                <Label htmlFor="test-url">Doel-URL</Label>
+                <Label htmlFor="test-url">{t("webhooks.test.targetUrlLabel")}</Label>
                 <Input
                   id="test-url"
                   type="url"
-                  placeholder="https://api.example.com/webhooks/talentflow"
+                  placeholder={t("webhooks.test.targetUrlPlaceholder")}
                   value={testUrl}
                   onChange={(e) => setTestUrl(e.target.value)}
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="test-event">Event-type</Label>
+                <Label htmlFor="test-event">{t("webhooks.test.eventTypeLabel")}</Label>
                 <select
                   id="test-event"
                   value={testEvent}
                   onChange={(e) => setTestEvent(e.target.value)}
                   className="h-10 rounded-md border bg-transparent px-3 text-sm w-full"
                 >
-                  {(eventTypes.length > 0 ? eventTypes : ["candidate.created"]).map((t) => (
-                    <option key={t} value={t}>
-                      {t}
+                  {(eventTypes.length > 0 ? eventTypes : ["candidate.created"]).map((evt) => (
+                    <option key={evt} value={evt}>
+                      {evt}
                     </option>
                   ))}
                 </select>
               </div>
               <div className="space-y-1">
-                <Label htmlFor="test-payload">Payload (JSON)</Label>
+                <Label htmlFor="test-payload">{t("webhooks.test.payloadLabel")}</Label>
                 <textarea
                   id="test-payload"
                   rows={8}
@@ -435,15 +433,15 @@ export default function WebhooksPage() {
                     payload = JSON.parse(testPayload);
                   } catch {
                     toast({
-                      title: "Ongeldige JSON",
-                      description: "Controleer de payload-syntax",
+                      title: t("webhooks.test.invalidJsonTitle"),
+                      description: t("webhooks.test.invalidJsonDescription"),
                       variant: "destructive",
                     });
                     return;
                   }
                   if (!testUrl) {
                     toast({
-                      title: "URL ontbreekt",
+                      title: t("webhooks.test.urlMissingTitle"),
                       variant: "destructive",
                     });
                     return;
@@ -462,13 +460,13 @@ export default function WebhooksPage() {
                 ) : (
                   <Send className="h-4 w-4 mr-2" />
                 )}
-                Verzend test-event
+                {t("webhooks.test.send")}
               </Button>
 
               {testResult && (
                 <div className="rounded-lg border bg-muted/30 p-4 space-y-2 text-sm">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium">Status:</span>
+                    <span className="font-medium">{t("webhooks.test.result.statusLabel")}</span>
                     {testResult.status ? (
                       <Badge
                         className={
@@ -477,13 +475,13 @@ export default function WebhooksPage() {
                             : "bg-red-100 text-red-700"
                         }
                       >
-                        HTTP {testResult.status}
+                        {t("webhooks.test.result.httpStatus", { status: testResult.status })}
                       </Badge>
                     ) : (
-                      <Badge className="bg-red-100 text-red-700">Geen response</Badge>
+                      <Badge className="bg-red-100 text-red-700">{t("webhooks.test.result.noResponse")}</Badge>
                     )}
                     <span className="text-muted-foreground">
-                      ({testResult.duration_ms}ms)
+                      {t("webhooks.test.result.durationMs", { duration: testResult.duration_ms })}
                     </span>
                   </div>
                   {testResult.error && (
@@ -493,7 +491,7 @@ export default function WebhooksPage() {
                     </div>
                   )}
                   <div className="text-xs">
-                    <span className="font-medium">Signature: </span>
+                    <span className="font-medium">{t("webhooks.test.result.signatureLabel")}</span>
                     <code className="break-all">{testResult.signature}</code>
                   </div>
                   {testResult.response_body && (
@@ -528,6 +526,7 @@ function SubscriptionRow({
   onUpdate: (patch: Partial<Pick<WebhookType, "name" | "url" | "events" | "description">>) => Promise<void>;
   eventTypes: string[];
 }) {
+  const { t } = useTranslation("miscDev");
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(sub.name);
@@ -545,7 +544,7 @@ function SubscriptionRow({
             type="button"
             onClick={() => setExpanded((v) => !v)}
             className="mt-1 text-muted-foreground"
-            aria-label="Toggle details"
+            aria-label={t("webhooks.subscriptionRow.toggleDetailsAria")}
           >
             {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </button>
@@ -553,14 +552,14 @@ function SubscriptionRow({
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="font-semibold truncate">{sub.name}</h3>
               {sub.active ? (
-                <Badge className="bg-emerald-100 text-emerald-700">Actief</Badge>
+                <Badge className="bg-emerald-100 text-emerald-700">{t("webhooks.subscriptionRow.active")}</Badge>
               ) : (
-                <Badge variant="secondary">Uit</Badge>
+                <Badge variant="secondary">{t("webhooks.subscriptionRow.off")}</Badge>
               )}
               {failing && (
                 <Badge className="bg-amber-100 text-amber-700 gap-1">
                   <AlertTriangle className="h-3 w-3" />
-                  {sub.failure_count} mislukt
+                  {t("webhooks.subscriptionRow.failedCount", { count: sub.failure_count })}
                 </Badge>
               )}
             </div>
@@ -580,7 +579,7 @@ function SubscriptionRow({
             <Button size="sm" variant="ghost" onClick={onToggle}>
               <Power className="h-4 w-4" />
             </Button>
-            <Button size="sm" variant="ghost" onClick={onRotate} title="Roteer secret">
+            <Button size="sm" variant="ghost" onClick={onRotate} title={t("webhooks.subscriptionRow.rotateSecretTitle")}>
               <KeyRound className="h-4 w-4" />
             </Button>
             <Button size="sm" variant="ghost" onClick={onDelete}>
@@ -593,34 +592,34 @@ function SubscriptionRow({
           <div className="mt-4 pt-4 border-t space-y-3 text-sm">
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div>
-                <span className="text-muted-foreground">Laatste delivery:</span>{" "}
-                {formatRelative(sub.last_delivered_at)}
+                <span className="text-muted-foreground">{t("webhooks.subscriptionRow.lastDelivery")}</span>{" "}
+                {formatRelative(sub.last_delivered_at, t)}
               </div>
               <div>
-                <span className="text-muted-foreground">Laatste failure:</span>{" "}
-                {formatRelative(sub.last_failure_at)}
+                <span className="text-muted-foreground">{t("webhooks.subscriptionRow.lastFailure")}</span>{" "}
+                {formatRelative(sub.last_failure_at, t)}
               </div>
             </div>
             {!editing ? (
               <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
-                Bewerken
+                {t("webhooks.subscriptionRow.edit")}
               </Button>
             ) : (
               <div className="space-y-2 rounded-md border p-3 bg-muted/30">
                 <div className="space-y-1">
-                  <Label>Naam</Label>
+                  <Label>{t("webhooks.subscriptionRow.nameLabel")}</Label>
                   <Input value={name} onChange={(e) => setName(e.target.value)} />
                 </div>
                 <div className="space-y-1">
-                  <Label>URL</Label>
+                  <Label>{t("webhooks.subscriptionRow.urlLabel")}</Label>
                   <Input value={url} onChange={(e) => setUrl(e.target.value)} />
                 </div>
                 <div className="space-y-1">
-                  <Label>Beschrijving</Label>
+                  <Label>{t("webhooks.subscriptionRow.descriptionLabel")}</Label>
                   <Input value={description} onChange={(e) => setDescription(e.target.value)} />
                 </div>
                 <div className="space-y-1">
-                  <Label>Events</Label>
+                  <Label>{t("webhooks.subscriptionRow.eventsLabel")}</Label>
                   <EventMultiSelect
                     available={eventTypes}
                     selected={events}
@@ -635,10 +634,10 @@ function SubscriptionRow({
                       setEditing(false);
                     }}
                   >
-                    Opslaan
+                    {t("webhooks.subscriptionRow.save")}
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
-                    Annuleer
+                    {t("webhooks.subscriptionRow.cancel")}
                   </Button>
                 </div>
               </div>
@@ -659,6 +658,7 @@ function EventMultiSelect({
   selected: string[];
   onChange: (next: string[]) => void;
 }) {
+  const { t } = useTranslation("miscDev");
   const list = available.length > 0 ? available : selected;
   return (
     <div className="rounded-md border p-2 bg-background max-h-44 overflow-y-auto space-y-1">
@@ -684,7 +684,7 @@ function EventMultiSelect({
             else onChange(selected.filter((v) => v !== "*"));
           }}
         />
-        <span className="font-mono">* (alle events)</span>
+        <span className="font-mono">{t("webhooks.eventSelect.allEvents")}</span>
       </label>
     </div>
   );
@@ -706,6 +706,7 @@ function CreateSubscriptionDialog({
     events: string[];
   }) => Promise<void>;
 }) {
+  const { t } = useTranslation("miscDev");
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [description, setDescription] = useState("");
@@ -716,38 +717,37 @@ function CreateSubscriptionDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Nieuw webhook-abonnement</DialogTitle>
+          <DialogTitle>{t("webhooks.createDialog.title")}</DialogTitle>
           <DialogDescription>
-            Configureer een endpoint dat events ontvangt. Het secret wordt na aanmaak één keer
-            getoond — bewaar het op een veilige plek.
+            {t("webhooks.createDialog.description")}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1">
-            <Label>Naam</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Slack notificaties" />
+            <Label>{t("webhooks.createDialog.nameLabel")}</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("webhooks.createDialog.namePlaceholder")} />
           </div>
           <div className="space-y-1">
-            <Label>URL</Label>
+            <Label>{t("webhooks.createDialog.urlLabel")}</Label>
             <Input
               type="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://api.example.com/webhooks/talentflow"
+              placeholder={t("webhooks.createDialog.urlPlaceholder")}
             />
           </div>
           <div className="space-y-1">
-            <Label>Beschrijving (optioneel)</Label>
+            <Label>{t("webhooks.createDialog.descriptionLabel")}</Label>
             <Input value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
           <div className="space-y-1">
-            <Label>Events</Label>
+            <Label>{t("webhooks.createDialog.eventsLabel")}</Label>
             <EventMultiSelect available={eventTypes} selected={events} onChange={setEvents} />
           </div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Annuleer
+            {t("webhooks.createDialog.cancel")}
           </Button>
           <Button
             onClick={async () => {
@@ -766,7 +766,7 @@ function CreateSubscriptionDialog({
             disabled={submitting || !name || !url || events.length === 0}
           >
             {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-            Aanmaken
+            {t("webhooks.createDialog.create")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -781,14 +781,14 @@ function SecretDisplayDialog({
   value: { name: string; secret: string } | null;
   onClose: () => void;
 }) {
+  const { t } = useTranslation("miscDev");
   return (
     <Dialog open={!!value} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Secret voor &ldquo;{value?.name}&rdquo;</DialogTitle>
+          <DialogTitle>{t("webhooks.secretDialog.title", { name: value?.name ?? "" })}</DialogTitle>
           <DialogDescription>
-            Dit secret wordt slechts één keer getoond. Bewaar het veilig — je gebruikt het om de
-            HMAC-signature van inkomende webhooks te valideren.
+            {t("webhooks.secretDialog.description")}
           </DialogDescription>
         </DialogHeader>
         <div className="rounded-md border bg-muted/30 p-3 font-mono text-sm break-all">
@@ -802,9 +802,9 @@ function SecretDisplayDialog({
             }}
           >
             <Copy className="h-4 w-4 mr-2" />
-            Kopieer
+            {t("webhooks.secretDialog.copy")}
           </Button>
-          <Button onClick={onClose}>Begrepen</Button>
+          <Button onClick={onClose}>{t("webhooks.secretDialog.understood")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -820,6 +820,7 @@ function DeliveryDetailDialog({
   onClose: () => void;
   onRetry: (id: string) => Promise<void>;
 }) {
+  const { t } = useTranslation("miscDev");
   const { data, isLoading } = useDeliveryDetails(id);
   const [showReqBody, setShowReqBody] = useState(true);
   const [showResBody, setShowResBody] = useState(true);
@@ -828,9 +829,9 @@ function DeliveryDetailDialog({
     <Dialog open={!!id} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Delivery details</DialogTitle>
+          <DialogTitle>{t("webhooks.detailDialog.title")}</DialogTitle>
           <DialogDescription>
-            Volledige request en response voor deze delivery-poging.
+            {t("webhooks.detailDialog.description")}
           </DialogDescription>
         </DialogHeader>
         {isLoading || !data ? (
@@ -839,28 +840,28 @@ function DeliveryDetailDialog({
           <div className="space-y-4 text-sm">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Event</Label>
+                <Label>{t("webhooks.detailDialog.eventLabel")}</Label>
                 <p className="font-mono text-xs">{data.event_type}</p>
               </div>
               <div>
-                <Label>Status</Label>
+                <Label>{t("webhooks.detailDialog.statusLabel")}</Label>
                 <div>
                   <StatusBadge status={data.status} />
                 </div>
               </div>
               <div>
-                <Label>Poging</Label>
+                <Label>{t("webhooks.detailDialog.attemptLabel")}</Label>
                 <p>{data.attempt}/5</p>
               </div>
               <div>
-                <Label>Duur</Label>
+                <Label>{t("webhooks.detailDialog.durationLabel")}</Label>
                 <p>{data.duration_ms ? `${data.duration_ms}ms` : "—"}</p>
               </div>
             </div>
 
             {data.error_message && (
               <div className="rounded-md border border-red-200 bg-red-50 dark:bg-red-950/20 p-3 text-red-700 dark:text-red-400">
-                <strong>Error:</strong> {data.error_message}
+                <strong>{t("webhooks.detailDialog.errorLabel")}</strong> {data.error_message}
               </div>
             )}
 
@@ -871,7 +872,7 @@ function DeliveryDetailDialog({
                 className="flex items-center gap-2 font-medium"
               >
                 {showReqBody ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                Request → {data.request_url}
+                {t("webhooks.detailDialog.request")} {data.request_url}
               </button>
               {showReqBody && (
                 <>
@@ -896,7 +897,7 @@ function DeliveryDetailDialog({
                 className="flex items-center gap-2 font-medium"
               >
                 {showResBody ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                Response {data.response_status ? `← ${data.response_status}` : ""}
+                {t("webhooks.detailDialog.response")} {data.response_status ? `← ${data.response_status}` : ""}
               </button>
               {showResBody && (
                 <>
@@ -910,7 +911,7 @@ function DeliveryDetailDialog({
                       {data.response_body}
                     </pre>
                   ) : (
-                    <p className="text-xs text-muted-foreground">Nog geen response</p>
+                    <p className="text-xs text-muted-foreground">{t("webhooks.detailDialog.noResponse")}</p>
                   )}
                 </>
               )}
@@ -926,11 +927,11 @@ function DeliveryDetailDialog({
               }}
             >
               <RotateCcw className="h-4 w-4 mr-2" />
-              Opnieuw proberen
+              {t("webhooks.detailDialog.retry")}
             </Button>
           )}
           <Button variant="ghost" onClick={onClose}>
-            Sluiten
+            {t("webhooks.detailDialog.close")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -34,6 +35,7 @@ import {
 import { cn } from "@/lib/utils";
 
 export default function IpAllowlistPage() {
+  const { t } = useTranslation("settingsSecurity");
   const { toast } = useToast();
   const { data: settings, isLoading } = useSecuritySettings();
   const { data: currentIp } = useCurrentIp();
@@ -65,7 +67,7 @@ export default function IpAllowlistPage() {
     if (!newCidr) return;
     if (cidrError) {
       toast({
-        title: "Ongeldig CIDR",
+        title: t("ipAllowlist.toasts.invalidCidr.title"),
         description: cidrError,
         variant: "destructive",
       });
@@ -79,36 +81,38 @@ export default function IpAllowlistPage() {
     });
     setNewCidr("");
     setNewLabel("");
-    toast({ title: "IP toegevoegd" });
+    toast({ title: t("ipAllowlist.toasts.ipAdded.title") });
   };
 
   const handleAddCurrent = async () => {
     if (!currentIp) return;
     await addEntry.mutateAsync({
       cidr: `${currentIp}/32`,
-      label: "Mijn huidige IP",
+      label: t("ipAllowlist.labels.myCurrentIp"),
     });
-    toast({ title: "Huidig IP toegevoegd" });
+    toast({ title: t("ipAllowlist.toasts.currentIpAdded.title") });
   };
 
   const handleRemove = async (cidr: string) => {
-    if (!confirm(`${cidr} verwijderen uit de allowlist?`)) return;
+    if (!confirm(t("ipAllowlist.confirm.remove", { cidr }))) return;
     await removeEntry.mutateAsync(cidr);
-    toast({ title: "Verwijderd" });
+    toast({ title: t("ipAllowlist.toasts.removed.title") });
   };
 
   const handleToggle = async (next: boolean) => {
     if (next && !currentIpCovered) {
       const ok = confirm(
-        `Waarschuwing: jouw huidige IP (${
-          currentIp ?? "?"
-        }) zit niet in de allowlist. Als je nu activeert, sluit je jezelf buiten.\n\nDoorgaan?`
+        t("ipAllowlist.confirm.lockout", {
+          ip: currentIp ?? t("ipAllowlist.confirm.ipUnknown"),
+        })
       );
       if (!ok) return;
     }
     await updateMutation.mutateAsync({ ip_allowlist_enabled: next });
     toast({
-      title: next ? "Allowlist geactiveerd" : "Allowlist gedeactiveerd",
+      title: next
+        ? t("ipAllowlist.toasts.allowlistEnabled.title")
+        : t("ipAllowlist.toasts.allowlistDisabled.title"),
     });
   };
 
@@ -125,16 +129,16 @@ export default function IpAllowlistPage() {
         className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-3 w-3" />
-        Terug naar Security
+        {t("backToSecurity")}
       </Link>
 
       <PageHeader
-        title="IP-allowlist"
-        description="Beperk toegang tot TalentFlow tot specifieke IP-adressen of CIDR-ranges (bv. kantoor, VPN, VPS)."
+        title={t("ipAllowlist.title")}
+        description={t("ipAllowlist.description")}
       />
 
       {isLoading && (
-        <div className="text-sm text-muted-foreground">Laden…</div>
+        <div className="text-sm text-muted-foreground">{t("loading")}</div>
       )}
 
       {/* Self-lockout guard */}
@@ -143,12 +147,12 @@ export default function IpAllowlistPage() {
           <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
           <div className="flex-1 text-xs space-y-1.5">
             <p className="font-medium text-amber-800 dark:text-amber-300">
-              Pas op — je sluit jezelf buiten
+              {t("ipAllowlist.lockoutGuard.title")}
             </p>
             <p className="text-amber-700 dark:text-amber-400">
-              Jouw huidige IP-adres ({currentIp ?? "onbekend"}) staat niet in
-              de allowlist. Activeer de allowlist niet zonder je eigen IP toe te
-              voegen.
+              {t("ipAllowlist.lockoutGuard.bodyWithIp", {
+                ip: currentIp ?? t("ipAllowlist.lockoutGuard.ipUnknown"),
+              })}
             </p>
             {currentIp && (
               <Button
@@ -159,7 +163,7 @@ export default function IpAllowlistPage() {
                 className="border-amber-300 text-amber-800 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-950/30"
               >
                 <Zap className="mr-1.5 h-3.5 w-3.5" />
-                Voeg mijn huidige IP toe ({currentIp})
+                {t("ipAllowlist.lockoutGuard.addCurrentIp", { ip: currentIp })}
               </Button>
             )}
           </div>
@@ -171,11 +175,10 @@ export default function IpAllowlistPage() {
           <div className="space-y-0.5">
             <p className="text-sm font-semibold flex items-center gap-2">
               <Network className="h-4 w-4 text-indigo-600" />
-              Beperk toegang tot toegestane IP-adressen
+              {t("ipAllowlist.toggle.title")}
             </p>
             <p className="text-xs text-muted-foreground">
-              Wanneer aan, worden requests buiten de allowlist geweigerd met een
-              403 — ook voor SSO-flows.
+              {t("ipAllowlist.toggle.description")}
             </p>
           </div>
           <Switch
@@ -188,14 +191,14 @@ export default function IpAllowlistPage() {
 
       <Card className="border-0 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-base">CIDR-ranges</CardTitle>
+          <CardTitle className="text-base">{t("ipAllowlist.ranges.title")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2">
             <div className="space-y-1">
-              <Label className="text-xs">CIDR of IP</Label>
+              <Label className="text-xs">{t("ipAllowlist.ranges.cidrLabel")}</Label>
               <Input
-                placeholder="10.0.0.0/24"
+                placeholder={t("ipAllowlist.ranges.cidrPlaceholder")}
                 value={newCidr}
                 onChange={(e) => setNewCidr(e.target.value)}
                 className={cn(cidrError && "border-destructive")}
@@ -205,9 +208,9 @@ export default function IpAllowlistPage() {
               )}
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Label (optioneel)</Label>
+              <Label className="text-xs">{t("ipAllowlist.ranges.labelLabel")}</Label>
               <Input
-                placeholder="Bv. Kantoor Amsterdam"
+                placeholder={t("ipAllowlist.ranges.labelPlaceholder")}
                 value={newLabel}
                 onChange={(e) => setNewLabel(e.target.value)}
               />
@@ -223,7 +226,7 @@ export default function IpAllowlistPage() {
                 ) : (
                   <Plus className="mr-2 h-4 w-4" />
                 )}
-                Toevoegen
+                {t("ipAllowlist.ranges.add")}
               </Button>
             </div>
           </div>
@@ -236,7 +239,7 @@ export default function IpAllowlistPage() {
               disabled={addEntry.isPending}
             >
               <Zap className="mr-1.5 h-3.5 w-3.5" />
-              Voeg mijn huidige IP toe ({currentIp})
+              {t("ipAllowlist.ranges.addCurrentIp", { ip: currentIp })}
             </Button>
           )}
 
@@ -258,13 +261,14 @@ export default function IpAllowlistPage() {
                       {currentIp && simpleCidrMatch(currentIp, e.cidr) && (
                         <Badge className="text-[10px] gap-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-0">
                           <CheckCircle2 className="h-3 w-3" />
-                          Dekt jouw IP
+                          {t("ipAllowlist.ranges.coversYourIp")}
                         </Badge>
                       )}
                     </div>
                     <p className="text-[10px] text-muted-foreground mt-0.5">
-                      Toegevoegd op{" "}
-                      {new Date(e.added_at).toLocaleDateString("nl-NL")}
+                      {t("ipAllowlist.ranges.addedOn", {
+                        date: new Date(e.added_at).toLocaleDateString("nl-NL"),
+                      })}
                     </p>
                   </div>
                   <Button
@@ -280,7 +284,7 @@ export default function IpAllowlistPage() {
               ))
             ) : (
               <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                Nog geen IP-ranges in de allowlist.
+                {t("ipAllowlist.ranges.empty")}
               </div>
             )}
           </div>
@@ -289,16 +293,15 @@ export default function IpAllowlistPage() {
 
       <Card className="border-0 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-base">IP-verificatie</CardTitle>
+          <CardTitle className="text-base">{t("ipAllowlist.verify.title")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-xs text-muted-foreground">
-            Test of een specifiek IP-adres door de allowlist toegelaten zou
-            worden.
+            {t("ipAllowlist.verify.description")}
           </p>
           <div className="flex gap-2 flex-wrap">
             <Input
-              placeholder="bv. 91.98.232.104"
+              placeholder={t("ipAllowlist.verify.placeholder")}
               value={verifyInput}
               onChange={(e) => setVerifyInput(e.target.value)}
               className="max-w-xs"
@@ -313,7 +316,7 @@ export default function IpAllowlistPage() {
               ) : (
                 <Search className="mr-2 h-4 w-4" />
               )}
-              Verifieer
+              {t("ipAllowlist.verify.button")}
             </Button>
           </div>
           {verifyResult && (
@@ -330,10 +333,11 @@ export default function IpAllowlistPage() {
               ) : (
                 <XCircle className="h-4 w-4" />
               )}
-              IP <code className="font-mono">{verifyResult.ip}</code>{" "}
+              {t("ipAllowlist.verify.ipPrefix")}
+              <code className="font-mono">{verifyResult.ip}</code>{" "}
               {verifyResult.matches
-                ? "wordt toegelaten."
-                : "wordt geweigerd."}
+                ? t("ipAllowlist.verify.allowed")
+                : t("ipAllowlist.verify.denied")}
             </div>
           )}
         </CardContent>

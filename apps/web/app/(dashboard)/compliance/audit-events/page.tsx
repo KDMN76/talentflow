@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Activity,
   Clock,
@@ -48,15 +49,15 @@ import {
 import { cn } from "@/lib/utils";
 
 const ENTITY_TYPES = [
-  { value: "all", label: "Alle entity-types" },
-  { value: "user", label: "Gebruiker" },
-  { value: "candidate", label: "Kandidaat" },
-  { value: "role", label: "Rol" },
-  { value: "role_assignment", label: "Rol-toewijzing" },
-  { value: "security_settings", label: "Security-config" },
-  { value: "sso_config", label: "SSO-config" },
-  { value: "scim_token", label: "SCIM-token" },
-  { value: "api_key", label: "API-sleutel" },
+  { value: "all", labelKey: "auditEvents.entityTypes.all" },
+  { value: "user", labelKey: "auditEvents.entityTypes.user" },
+  { value: "candidate", labelKey: "auditEvents.entityTypes.candidate" },
+  { value: "role", labelKey: "auditEvents.entityTypes.role" },
+  { value: "role_assignment", labelKey: "auditEvents.entityTypes.roleAssignment" },
+  { value: "security_settings", labelKey: "auditEvents.entityTypes.securitySettings" },
+  { value: "sso_config", labelKey: "auditEvents.entityTypes.ssoConfig" },
+  { value: "scim_token", labelKey: "auditEvents.entityTypes.scimToken" },
+  { value: "api_key", labelKey: "auditEvents.entityTypes.apiKey" },
 ];
 
 function diffKeys(a: Record<string, unknown> | null, b: Record<string, unknown> | null): string[] {
@@ -70,11 +71,12 @@ function DiffViewer({
   before: Record<string, unknown> | null;
   after: Record<string, unknown> | null;
 }) {
+  const { t } = useTranslation("miscHome");
   const keys = diffKeys(before, after);
   if (keys.length === 0) {
     return (
       <p className="text-xs italic text-muted-foreground">
-        Geen waarde-wijzigingen.
+        {t("auditEvents.diff.noChanges")}
       </p>
     );
   }
@@ -83,9 +85,9 @@ function DiffViewer({
       <table className="w-full text-xs">
         <thead className="bg-muted/40">
           <tr>
-            <th className="px-2 py-1.5 text-left font-semibold">Veld</th>
-            <th className="px-2 py-1.5 text-left font-semibold">Voor</th>
-            <th className="px-2 py-1.5 text-left font-semibold">Na</th>
+            <th className="px-2 py-1.5 text-left font-semibold">{t("auditEvents.diff.field")}</th>
+            <th className="px-2 py-1.5 text-left font-semibold">{t("auditEvents.diff.before")}</th>
+            <th className="px-2 py-1.5 text-left font-semibold">{t("auditEvents.diff.after")}</th>
           </tr>
         </thead>
         <tbody>
@@ -120,6 +122,7 @@ function DiffViewer({
 }
 
 export default function AuditEventsPage() {
+  const { t } = useTranslation("miscHome");
   const { toast } = useToast();
   const { data: actionsList } = useAuditActions();
 
@@ -175,8 +178,11 @@ export default function AuditEventsPage() {
       format: "csv",
     });
     toast({
-      title: "Export wordt voorbereid",
-      description: `Job ${result.job_id} aangemaakt voor ~${result.estimated_rows} events. Je krijgt mail met de download-link zodra het klaar is.`,
+      title: t("auditEvents.exportToast.title"),
+      description: t("auditEvents.exportToast.description", {
+        jobId: result.job_id,
+        rows: result.estimated_rows,
+      }),
     });
   };
 
@@ -195,8 +201,8 @@ export default function AuditEventsPage() {
   return (
     <div className="space-y-5 animate-fade-in">
       <PageHeader
-        title="WORM Audit-trail"
-        description="Onveranderbaar log van alle security-, admin- en data-events. AVG art. 30-conform, met cryptografische integriteits-zegel per event."
+        title={t("auditEvents.header.title")}
+        description={t("auditEvents.header.description")}
         actions={
           <div className="flex items-center gap-2">
             <Button
@@ -214,7 +220,9 @@ export default function AuditEventsPage() {
               ) : (
                 <Play className="mr-1.5 h-3.5 w-3.5" />
               )}
-              Realtime {realtime ? "aan (30s)" : "uit"}
+              {realtime
+                ? t("auditEvents.realtime.on")
+                : t("auditEvents.realtime.off")}
             </Button>
             <Button
               variant="outline"
@@ -227,7 +235,7 @@ export default function AuditEventsPage() {
               ) : (
                 <Download className="mr-1.5 h-3.5 w-3.5" />
               )}
-              Exporteren
+              {t("auditEvents.export")}
             </Button>
           </div>
         }
@@ -242,7 +250,7 @@ export default function AuditEventsPage() {
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Zoek in actie, entity, gebruiker…"
+                placeholder={t("auditEvents.filters.searchPlaceholder")}
                 className="pl-9"
               />
             </div>
@@ -253,7 +261,7 @@ export default function AuditEventsPage() {
               <SelectContent>
                 {ENTITY_TYPES.map((e) => (
                   <SelectItem key={e.value} value={e.value}>
-                    {e.label}
+                    {t(e.labelKey)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -265,10 +273,10 @@ export default function AuditEventsPage() {
               }
             >
               <SelectTrigger>
-                <SelectValue placeholder="Alle categorieën" />
+                <SelectValue placeholder={t("auditEvents.filters.allCategories")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Alle categorieën</SelectItem>
+                <SelectItem value="all">{t("auditEvents.filters.allCategories")}</SelectItem>
                 {(Object.keys(EXT_AUDIT_CATEGORY_LABELS) as ExtAuditCategory[]).map(
                   (c) => (
                     <SelectItem key={c} value={c}>
@@ -283,7 +291,7 @@ export default function AuditEventsPage() {
                 list="action-list"
                 value={actionPattern}
                 onChange={(e) => setActionPattern(e.target.value)}
-                placeholder="Action (bv. user.login.*)"
+                placeholder={t("auditEvents.filters.actionPlaceholder")}
                 className="font-mono text-xs"
               />
               <datalist id="action-list">
@@ -293,7 +301,7 @@ export default function AuditEventsPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground">Vanaf</Label>
+              <Label className="text-[10px] text-muted-foreground">{t("auditEvents.filters.from")}</Label>
               <Input
                 type="date"
                 value={from}
@@ -301,7 +309,7 @@ export default function AuditEventsPage() {
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground">Tot en met</Label>
+              <Label className="text-[10px] text-muted-foreground">{t("auditEvents.filters.until")}</Label>
               <Input
                 type="date"
                 value={to}
@@ -312,7 +320,7 @@ export default function AuditEventsPage() {
               {filtersActive && (
                 <Button variant="outline" size="sm" onClick={resetFilters}>
                   <X className="mr-1.5 h-3.5 w-3.5" />
-                  Filters wissen
+                  {t("auditEvents.filters.clear")}
                 </Button>
               )}
             </div>
@@ -324,24 +332,27 @@ export default function AuditEventsPage() {
       <div className="rounded-xl border border-border bg-card overflow-hidden">
         <div className="border-b border-border bg-muted/30 px-4 py-2 flex items-center gap-2 text-xs">
           <Shield className="h-3.5 w-3.5 text-indigo-600" />
-          <span className="font-semibold">WORM-trail</span>
+          <span className="font-semibold">{t("auditEvents.table.wormTrail")}</span>
           <span className="text-muted-foreground">
-            — events zijn onveranderbaar en bewaard volgens AVG art. 30.
+            {t("auditEvents.table.wormNote")}
           </span>
           <span className="ml-auto text-muted-foreground">
-            {events.length} / {total} events
+            {t("auditEvents.table.eventsCount", {
+              shown: events.length,
+              total,
+            })}
           </span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-zinc-50 dark:bg-zinc-900/40 text-[11px] uppercase tracking-wider text-muted-foreground">
               <tr>
-                <th className="px-3 py-2 text-left font-semibold w-44">Tijdstip</th>
-                <th className="px-3 py-2 text-left font-semibold">Actie</th>
-                <th className="px-3 py-2 text-left font-semibold">Entiteit</th>
-                <th className="px-3 py-2 text-left font-semibold">Gebruiker</th>
-                <th className="px-3 py-2 text-left font-semibold">IP</th>
-                <th className="px-3 py-2 text-right font-semibold w-24">Details</th>
+                <th className="px-3 py-2 text-left font-semibold w-44">{t("auditEvents.table.colTime")}</th>
+                <th className="px-3 py-2 text-left font-semibold">{t("auditEvents.table.colAction")}</th>
+                <th className="px-3 py-2 text-left font-semibold">{t("auditEvents.table.colEntity")}</th>
+                <th className="px-3 py-2 text-left font-semibold">{t("auditEvents.table.colUser")}</th>
+                <th className="px-3 py-2 text-left font-semibold">{t("auditEvents.table.colIp")}</th>
+                <th className="px-3 py-2 text-right font-semibold w-24">{t("auditEvents.table.colDetails")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -356,9 +367,9 @@ export default function AuditEventsPage() {
                   <td colSpan={6} className="px-3 py-12">
                     <div className="flex flex-col items-center text-center">
                       <FileSearch className="h-10 w-10 text-zinc-300 mb-3" />
-                      <p className="font-semibold">Geen events gevonden</p>
+                      <p className="font-semibold">{t("auditEvents.table.emptyTitle")}</p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Pas je filters aan om meer events te tonen.
+                        {t("auditEvents.table.emptyDescription")}
                       </p>
                     </div>
                   </td>
@@ -438,7 +449,7 @@ export default function AuditEventsPage() {
               {isFetchingNextPage ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
-              Meer laden
+              {t("auditEvents.table.loadMore")}
             </Button>
           </div>
         )}
@@ -450,38 +461,38 @@ export default function AuditEventsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Activity className="h-5 w-5 text-indigo-600" />
-              Event-detail
+              {t("auditEvents.detail.title")}
             </DialogTitle>
           </DialogHeader>
           {detail && (
             <div className="space-y-4 py-2">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Field label="Tijdstip" value={new Date(detail.occurred_at).toLocaleString("nl-NL")} />
-                <Field label="Actie" value={detail.label} mono />
-                <Field label="Action-key" value={detail.action} mono />
+                <Field label={t("auditEvents.detail.time")} value={new Date(detail.occurred_at).toLocaleString("nl-NL")} />
+                <Field label={t("auditEvents.detail.action")} value={detail.label} mono />
+                <Field label={t("auditEvents.detail.actionKey")} value={detail.action} mono />
                 <Field
-                  label="Categorie"
+                  label={t("auditEvents.detail.category")}
                   value={EXT_AUDIT_CATEGORY_LABELS[detail.category]}
                 />
-                <Field label="Entiteit" value={detail.entity_label ?? "—"} />
+                <Field label={t("auditEvents.detail.entity")} value={detail.entity_label ?? "—"} />
                 <Field
-                  label="Entity ref"
+                  label={t("auditEvents.detail.entityRef")}
                   value={`${detail.entity_type}/${detail.entity_id}`}
                   mono
                 />
                 <Field
-                  label="Uitgevoerd door"
+                  label={t("auditEvents.detail.performedBy")}
                   value={`${detail.actor_name}${detail.actor_email ? ` (${detail.actor_email})` : ""}`}
                 />
-                <Field label="Rol" value={detail.actor_role ?? "—"} />
-                <Field label="IP" value={detail.ip_address ?? "—"} mono />
-                <Field label="Request-ID" value={detail.request_id} mono />
+                <Field label={t("auditEvents.detail.role")} value={detail.actor_role ?? "—"} />
+                <Field label={t("auditEvents.detail.ip")} value={detail.ip_address ?? "—"} mono />
+                <Field label={t("auditEvents.detail.requestId")} value={detail.request_id} mono />
               </div>
 
               {detail.user_agent && (
                 <div>
                   <Label className="text-[10px] uppercase text-muted-foreground">
-                    User-agent
+                    {t("auditEvents.detail.userAgent")}
                   </Label>
                   <pre className="text-[11px] font-mono bg-zinc-50 dark:bg-zinc-900/50 rounded px-2 py-1.5 overflow-x-auto">
                     {detail.user_agent}
@@ -491,7 +502,7 @@ export default function AuditEventsPage() {
 
               <div>
                 <Label className="text-[10px] uppercase text-muted-foreground flex items-center gap-1">
-                  Diff
+                  {t("auditEvents.detail.diff")}
                 </Label>
                 <DiffViewer before={detail.before} after={detail.after} />
               </div>
@@ -499,7 +510,7 @@ export default function AuditEventsPage() {
               {detail.metadata && Object.keys(detail.metadata).length > 0 && (
                 <div>
                   <Label className="text-[10px] uppercase text-muted-foreground">
-                    Metadata
+                    {t("auditEvents.detail.metadata")}
                   </Label>
                   <pre className="text-[11px] font-mono bg-zinc-50 dark:bg-zinc-900/50 rounded px-2 py-1.5 overflow-x-auto">
                     {JSON.stringify(detail.metadata, null, 2)}
@@ -510,7 +521,7 @@ export default function AuditEventsPage() {
               <div className="rounded-md border border-border bg-muted/30 px-3 py-2 flex items-center gap-2">
                 <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="text-[11px] text-muted-foreground">
-                  WORM-zegel:{" "}
+                  {t("auditEvents.detail.wormSeal")}{" "}
                   <code className="font-mono text-[11px]">{detail.worm_hash}</code>
                 </span>
               </div>

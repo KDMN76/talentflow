@@ -14,6 +14,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
   Bot,
@@ -90,6 +91,7 @@ const CHANNELS: OutreachChannel[] = [
 ];
 
 export default function SequenceBuilderPage() {
+  const { t } = useTranslation("outreach");
   const params = useParams();
   const seqId = params?.id as string;
   const { data, isLoading } = useSequence(seqId);
@@ -138,7 +140,7 @@ export default function SequenceBuilderPage() {
       sequenceId: sequence.id,
       orderedIds: reordered.map((s) => s.id),
     });
-    toast({ title: "Volgorde aangepast" });
+    toast({ title: t("builder.toasts.reordered") });
   };
 
   const handleAddStep = async () => {
@@ -152,7 +154,7 @@ export default function SequenceBuilderPage() {
       template_body: "Hi {first_name},\n\nKorte vraag — ben je open voor een rol?\n\nGroet,\n{recruiter_name}",
       stop_on_reply: true,
     });
-    toast({ title: "Stap toegevoegd" });
+    toast({ title: t("builder.toasts.stepAdded") });
     setEditStep(created);
   };
 
@@ -163,12 +165,12 @@ export default function SequenceBuilderPage() {
         className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-3 w-3" />
-        Terug naar sequences
+        {t("builder.backToSequences")}
       </Link>
 
       <PageHeader
         title={sequence.name}
-        description={sequence.description ?? "Geen beschrijving"}
+        description={sequence.description ?? t("builder.noDescription")}
         actions={<AiDisclosureBadge />}
       />
 
@@ -178,13 +180,13 @@ export default function SequenceBuilderPage() {
           {steps.length === 0 ? (
             <Card className="border-0 shadow-sm">
               <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
-                <p className="text-sm font-medium">Nog geen stappen</p>
+                <p className="text-sm font-medium">{t("builder.steps.empty.title")}</p>
                 <p className="text-xs text-muted-foreground">
-                  Voeg de eerste stap toe om de funnel te starten.
+                  {t("builder.steps.empty.description")}
                 </p>
                 <Button onClick={handleAddStep} className="mt-2">
                   <Plus className="mr-1.5 h-4 w-4" />
-                  Stap toevoegen
+                  {t("builder.steps.addStep")}
                 </Button>
               </CardContent>
             </Card>
@@ -223,7 +225,7 @@ export default function SequenceBuilderPage() {
             ) : (
               <Plus className="mr-1.5 h-4 w-4" />
             )}
-            Stap toevoegen
+            {t("builder.steps.addStep")}
           </Button>
         </section>
 
@@ -233,32 +235,32 @@ export default function SequenceBuilderPage() {
             <CardContent className="space-y-3 p-5">
               <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
                 <Calendar className="h-3.5 w-3.5" />
-                Enrollments
+                {t("builder.enrollments.title")}
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <Stat label="Totaal" value={stats.total} />
+                <Stat label={t("builder.enrollments.total")} value={stats.total} />
                 <Stat
-                  label="Actief"
+                  label={t("builder.enrollments.active")}
                   value={stats.active}
                   color="text-emerald-600"
                 />
                 <Stat
-                  label="Pauze"
+                  label={t("builder.enrollments.paused")}
                   value={stats.paused}
                   color="text-amber-600"
                 />
                 <Stat
-                  label="Reageerde"
+                  label={t("builder.enrollments.replied")}
                   value={stats.replied}
                   color="text-indigo-600"
                 />
                 <Stat
-                  label="Voltooid"
+                  label={t("builder.enrollments.completed")}
                   value={stats.completed}
                   color="text-zinc-500"
                 />
                 <Stat
-                  label="Gestopt"
+                  label={t("builder.enrollments.stopped")}
                   value={stats.stopped}
                   color="text-red-500"
                 />
@@ -269,11 +271,11 @@ export default function SequenceBuilderPage() {
             <CardContent className="space-y-2 p-5">
               <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
                 <Bot className="h-3.5 w-3.5" />
-                Reply-rate per stap
+                {t("builder.replyRate.title")}
               </div>
               {steps.length === 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  Nog geen data — voeg stappen toe.
+                  {t("builder.replyRate.noData")}
                 </p>
               ) : (
                 <ul className="space-y-1.5">
@@ -289,7 +291,7 @@ export default function SequenceBuilderPage() {
                         className="flex items-center justify-between gap-2 text-[11px]"
                       >
                         <span className="text-zinc-700 dark:text-zinc-300">
-                          Stap {i + 1}
+                          {t("builder.replyRate.step", { number: i + 1 })}
                         </span>
                         <div className="flex flex-1 items-center gap-2">
                           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
@@ -351,6 +353,7 @@ function SortableStepCard({
   sequenceId: string;
   onEdit: () => void;
 }) {
+  const { t } = useTranslation("outreach");
   const {
     attributes,
     listeners,
@@ -381,7 +384,7 @@ function SortableStepCard({
             className="cursor-grab pt-1 text-zinc-400 hover:text-zinc-700 active:cursor-grabbing"
             {...attributes}
             {...listeners}
-            aria-label="Verplaats stap"
+            aria-label={t("builder.stepCard.moveAria")}
           >
             <GripVertical className="h-4 w-4" />
           </button>
@@ -396,12 +399,12 @@ function SortableStepCard({
               </span>
               <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
                 <Clock className="h-3 w-3" />
-                Wacht {step.delay_days} dagen
+                {t("builder.stepCard.waitDays", { count: step.delay_days })}
               </span>
               {step.ai_personalize && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">
                   <Bot className="h-3 w-3" />
-                  AI-personaliseert
+                  {t("builder.stepCard.aiPersonalizes")}
                 </span>
               )}
             </div>
@@ -427,7 +430,7 @@ function SortableStepCard({
                     });
                   }}
                 />
-                Stop bij reply
+                {t("builder.stepCard.stopOnReply")}
               </label>
               <div className="flex gap-1">
                 <Button
@@ -436,7 +439,7 @@ function SortableStepCard({
                   className="h-7 text-[11px]"
                   onClick={onEdit}
                 >
-                  Bewerken
+                  {t("builder.stepCard.edit")}
                 </Button>
                 <Button
                   size="sm"
@@ -444,7 +447,7 @@ function SortableStepCard({
                   className="h-7 text-[11px] text-muted-foreground hover:text-red-600"
                   onClick={async () => {
                     await remove.mutateAsync({ sequenceId, stepId: step.id });
-                    toast({ title: "Stap verwijderd" });
+                    toast({ title: t("builder.toasts.stepDeleted") });
                   }}
                 >
                   <Trash2 className="h-3 w-3" />
@@ -467,6 +470,7 @@ function StepEditDialog({
   sequenceId: string;
   onClose: () => void;
 }) {
+  const { t } = useTranslation("outreach");
   const update = useUpdateStep();
   const { toast } = useToast();
 
@@ -488,11 +492,13 @@ function StepEditDialog({
     >
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Stap {step.step_order} bewerken</DialogTitle>
+          <DialogTitle>
+            {t("builder.editDialog.title", { order: step.step_order })}
+          </DialogTitle>
         </DialogHeader>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <Label htmlFor="step-channel">Kanaal</Label>
+            <Label htmlFor="step-channel">{t("builder.editDialog.channelLabel")}</Label>
             <Select
               value={draft.channel}
               onValueChange={(v) =>
@@ -512,7 +518,7 @@ function StepEditDialog({
             </Select>
           </div>
           <div>
-            <Label htmlFor="step-delay">Wachttijd (dagen)</Label>
+            <Label htmlFor="step-delay">{t("builder.editDialog.delayLabel")}</Label>
             <Input
               id="step-delay"
               type="number"
@@ -524,18 +530,18 @@ function StepEditDialog({
             />
           </div>
           <div className="sm:col-span-2">
-            <Label htmlFor="step-subject">Onderwerp</Label>
+            <Label htmlFor="step-subject">{t("builder.editDialog.subjectLabel")}</Label>
             <Input
               id="step-subject"
               value={draft.template_subject ?? ""}
               onChange={(e) =>
                 setDraft({ ...draft, template_subject: e.target.value })
               }
-              placeholder="Bijv. 'Korte vraag van TalentFlow'"
+              placeholder={t("builder.editDialog.subjectPlaceholder")}
             />
           </div>
           <div className="sm:col-span-2">
-            <Label htmlFor="step-body">Template body</Label>
+            <Label htmlFor="step-body">{t("builder.editDialog.bodyLabel")}</Label>
             <Textarea
               id="step-body"
               rows={6}
@@ -545,8 +551,11 @@ function StepEditDialog({
               }
             />
             <p className="mt-1 text-[11px] text-muted-foreground">
-              Variabelen: {"{first_name}"}, {"{recruiter_name}"},{" "}
-              {"{personalized_opener}"}
+              {t("builder.editDialog.variablesHint", {
+                firstName: "{first_name}",
+                recruiterName: "{recruiter_name}",
+                personalizedOpener: "{personalized_opener}",
+              })}
             </p>
           </div>
           <label className="flex items-center gap-2 text-xs text-zinc-700 dark:text-zinc-300">
@@ -556,7 +565,7 @@ function StepEditDialog({
                 setDraft({ ...draft, ai_personalize: val })
               }
             />
-            AI personaliseert
+            {t("builder.editDialog.aiPersonalizes")}
           </label>
           <label className="flex items-center gap-2 text-xs text-zinc-700 dark:text-zinc-300">
             <Switch
@@ -565,13 +574,13 @@ function StepEditDialog({
                 setDraft({ ...draft, stop_on_reply: val })
               }
             />
-            Stop bij reply
+            {t("builder.editDialog.stopOnReply")}
           </label>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             <X className="mr-1.5 h-3.5 w-3.5" />
-            Annuleren
+            {t("builder.editDialog.cancel")}
           </Button>
           <Button
             disabled={update.isPending}
@@ -588,14 +597,14 @@ function StepEditDialog({
                   stop_on_reply: draft.stop_on_reply,
                 },
               });
-              toast({ title: "Stap bijgewerkt" });
+              toast({ title: t("builder.toasts.stepUpdated") });
               onClose();
             }}
           >
             {update.isPending && (
               <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
             )}
-            Opslaan
+            {t("builder.editDialog.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -10,6 +10,7 @@
  */
 
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ArrowDown,
   ArrowUp,
@@ -69,6 +70,7 @@ function brandInitials(name: string): string {
 const BAR_COLORS = ["#6366f1", "#8b5cf6", "#06b6d4", "#10b981", "#f59e0b", "#ec4899", "#3b82f6", "#22c55e"];
 
 export default function CostPerHirePage() {
+  const { t } = useTranslation("analytics");
   const [jobFilter, setJobFilter] = useState<string>("all");
   const [sortKey, setSortKey] = useState<SortKey>("cost_per_hire");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -142,8 +144,8 @@ export default function CostPerHirePage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Cost-per-Hire"
-        description="Kosten en aannames per vacaturebank — vind je goedkoopste kanaal."
+        title={t("costPerHire.header.title")}
+        description={t("costPerHire.header.description")}
       />
 
       {/* Filter */}
@@ -151,14 +153,14 @@ export default function CostPerHirePage() {
         <CardContent className="flex flex-wrap items-end gap-3 p-4">
           <div className="space-y-1.5">
             <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
-              Vacature
+              {t("costPerHire.filter.jobLabel")}
             </Label>
             <Select value={jobFilter} onValueChange={setJobFilter}>
               <SelectTrigger className="h-9 w-[260px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Alle vacatures</SelectItem>
+                <SelectItem value="all">{t("costPerHire.filter.allJobs")}</SelectItem>
                 {(jobs ?? []).map((j) => (
                   <SelectItem key={j.id} value={j.id}>
                     {j.title}
@@ -169,8 +171,7 @@ export default function CostPerHirePage() {
             </Select>
           </div>
           <p className="ml-auto text-xs text-muted-foreground">
-            {(rows ?? []).length} vacaturebank
-            {(rows ?? []).length === 1 ? "" : "en"} met activiteit
+            {t("costPerHire.filter.boardCount", { count: (rows ?? []).length })}
           </p>
         </CardContent>
       </Card>
@@ -178,25 +179,25 @@ export default function CostPerHirePage() {
       {/* KPIs */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
-          label="Totaal besteed"
+          label={t("costPerHire.kpi.totalSpend")}
           value={formatEuro(totalSpend)}
           icon={<Coins className="h-5 w-5" />}
           gradient="from-amber-500 to-orange-600"
         />
         <KpiCard
-          label="Totaal aangenomen"
+          label={t("costPerHire.kpi.totalHires")}
           value={String(totalHires)}
           icon={<UserCheck className="h-5 w-5" />}
           gradient="from-emerald-500 to-teal-600"
         />
         <KpiCard
-          label="Blended CPH"
+          label={t("costPerHire.kpi.blendedCph")}
           value={blendedCph !== null ? formatEuro(blendedCph) : "—"}
           icon={<TrendingDown className="h-5 w-5" />}
           gradient="from-indigo-500 to-purple-600"
         />
         <KpiCard
-          label="Goedkoopste kanaal"
+          label={t("costPerHire.kpi.cheapestChannel")}
           value={cheapest ? `${cheapest.board}` : "—"}
           subValue={cheapest ? formatEuro(cheapest.cph) : undefined}
           icon={<Trophy className="h-5 w-5" />}
@@ -212,10 +213,10 @@ export default function CostPerHirePage() {
               <Inbox className="h-6 w-6" />
             </div>
             <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Plaats vacatures om kostencijfers te zien
+              {t("costPerHire.empty.title")}
             </p>
             <p className="text-xs text-muted-foreground">
-              Zodra plaatsingen leiden tot aannames, verschijnt hier je CPH-overzicht.
+              {t("costPerHire.empty.description")}
             </p>
           </CardContent>
         </Card>
@@ -225,7 +226,7 @@ export default function CostPerHirePage() {
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-semibold">
-                CPH per vacaturebank
+                {t("costPerHire.chart.title")}
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-2">
@@ -233,8 +234,7 @@ export default function CostPerHirePage() {
                 <Skeleton className="h-72 rounded-lg" />
               ) : chartData.length === 0 ? (
                 <p className="py-10 text-center text-xs text-muted-foreground">
-                  Nog geen aannames per kanaal — CPH wordt zichtbaar zodra de
-                  eerste hires zijn geregistreerd.
+                  {t("costPerHire.chart.empty")}
                 </p>
               ) : (
                 <ResponsiveContainer width="100%" height={Math.max(220, chartData.length * 44)}>
@@ -260,7 +260,7 @@ export default function CostPerHirePage() {
                       tickLine={false}
                     />
                     <Tooltip
-                      formatter={(v) => [formatEuro(Number(v)), "Cost-per-hire"]}
+                      formatter={(v) => [formatEuro(Number(v)), t("costPerHire.chart.tooltip")]}
                       contentStyle={{
                         borderRadius: "8px",
                         border: "1px solid #e4e4e7",
@@ -286,7 +286,7 @@ export default function CostPerHirePage() {
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-semibold">
-                Detailtabel
+                {t("costPerHire.table.title")}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -300,7 +300,7 @@ export default function CostPerHirePage() {
                         onClick={() => toggleSort("board")}
                         align="left"
                       >
-                        Vacaturebank
+                        {t("costPerHire.table.columns.board")}
                       </SortableTh>
                       <SortableTh
                         active={sortKey === "postings"}
@@ -308,7 +308,7 @@ export default function CostPerHirePage() {
                         onClick={() => toggleSort("postings")}
                         align="right"
                       >
-                        Plaatsingen
+                        {t("costPerHire.table.columns.postings")}
                       </SortableTh>
                       <SortableTh
                         active={sortKey === "hires"}
@@ -316,7 +316,7 @@ export default function CostPerHirePage() {
                         onClick={() => toggleSort("hires")}
                         align="right"
                       >
-                        Aannames
+                        {t("costPerHire.table.columns.hires")}
                       </SortableTh>
                       <SortableTh
                         active={sortKey === "total_cost"}
@@ -324,7 +324,7 @@ export default function CostPerHirePage() {
                         onClick={() => toggleSort("total_cost")}
                         align="right"
                       >
-                        Totaal kosten
+                        {t("costPerHire.table.columns.totalCost")}
                       </SortableTh>
                       <SortableTh
                         active={sortKey === "cost_per_hire"}
@@ -332,7 +332,7 @@ export default function CostPerHirePage() {
                         onClick={() => toggleSort("cost_per_hire")}
                         align="right"
                       >
-                        CPH
+                        {t("costPerHire.table.columns.cph")}
                       </SortableTh>
                     </tr>
                   </thead>
@@ -374,7 +374,7 @@ export default function CostPerHirePage() {
                             <td className="py-3 pl-4 pr-5 text-right">
                               {row.cost_per_hire === null ? (
                                 <span className="text-xs text-muted-foreground">
-                                  geen aannames
+                                  {t("costPerHire.table.noHires")}
                                 </span>
                               ) : (
                                 <span className="font-semibold text-zinc-900 dark:text-zinc-100">

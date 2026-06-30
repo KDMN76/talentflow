@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
   Brain,
@@ -57,6 +58,7 @@ const MIN_HIRES = 20;
 const MIN_REJECTS = 20;
 
 export default function TalentFitSettingsPage() {
+  const { t } = useTranslation("settingsAdvanced");
   const { toast } = useToast();
   const { data: model, isLoading, isError, error } = useTalentFitModel();
   const train = useTrainTalentFit();
@@ -69,15 +71,14 @@ export default function TalentFitSettingsPage() {
     try {
       await train.mutateAsync();
       toast({
-        title: "Talent Fit Model getraind",
-        description: "Het model is opnieuw getraind met je laatste data.",
+        title: t("talentFit.toast.trained.title"),
+        description: t("talentFit.toast.trained.description"),
       });
     } catch {
       toast({
         variant: "destructive",
-        title: "Training mislukt",
-        description:
-          "Het model kon niet opnieuw getraind worden. Probeer het opnieuw of bekijk de logs.",
+        title: t("talentFit.toast.trainFailed.title"),
+        description: t("talentFit.toast.trainFailed.description"),
       });
     }
   };
@@ -88,15 +89,15 @@ export default function TalentFitSettingsPage() {
       <div className="flex items-center gap-1 text-xs text-muted-foreground">
         <Link href="/settings" className="hover:text-foreground inline-flex items-center gap-1">
           <ArrowLeft className="h-3 w-3" />
-          Instellingen
+          {t("talentFit.breadcrumb")}
         </Link>
         <ChevronRight className="h-3 w-3" />
-        <span className="text-foreground">Talent Fit Model</span>
+        <span className="text-foreground">{t("talentFit.breadcrumbCurrent")}</span>
       </div>
 
       <PageHeader
-        title="Talent Fit Model"
-        description="Een per-bureau model dat leert van je historische hires en rejects om kandidaten te rangschikken op fit-score."
+        title={t("talentFit.header.title")}
+        description={t("talentFit.header.description")}
         actions={
           isAdmin && model?.has_active_model ? (
             <Button

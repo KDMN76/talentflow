@@ -9,6 +9,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import {
   AlertCircle,
   ArrowLeft,
@@ -44,6 +45,7 @@ import {
 import { useJob } from "@/hooks/useJobs";
 
 export default function BriefDetailPage() {
+  const { t } = useTranslation("sourcing");
   const params = useParams();
   const briefId = params?.id as string;
   const router = useRouter();
@@ -74,13 +76,13 @@ export default function BriefDetailPage() {
           className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-3 w-3" />
-          Terug naar Sourcing Agent
+          {t("briefDetail.back")}
         </Link>
         <Card className="border-0 shadow-sm">
           <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
             <AlertCircle className="h-5 w-5 text-rose-500" />
             <p className="text-sm font-medium">
-              {isError ? "Kon brief niet laden — probeer opnieuw." : "Brief niet gevonden."}
+              {isError ? t("briefDetail.error.loadFailed") : t("briefDetail.error.notFound")}
             </p>
           </CardContent>
         </Card>
@@ -91,8 +93,8 @@ export default function BriefDetailPage() {
   const handleStart = async () => {
     const run = await startRun.mutateAsync({ briefId, trigger: "manual" });
     toast({
-      title: "Run gestart",
-      description: "De agent gaat nu kandidaten zoeken.",
+      title: t("briefDetail.toasts.runStarted.title"),
+      description: t("briefDetail.toasts.runStarted.description"),
     });
     router.push(`/sourcing-agent/runs/${run.id}`);
   };
@@ -104,12 +106,15 @@ export default function BriefDetailPage() {
         className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-3 w-3" />
-        Terug naar Sourcing Agent
+        {t("briefDetail.back")}
       </Link>
 
       <PageHeader
         title={job?.title ?? brief.job_id}
-        description={`Brief — ${brief.search_locations.join(" · ")} · doel ${brief.target_count} kandidaten`}
+        description={t("briefDetail.header.description", {
+          locations: brief.search_locations.join(" · "),
+          count: brief.target_count,
+        })}
         actions={
           <div className="flex items-center gap-2">
             <AiDisclosureBadge />
@@ -128,14 +133,13 @@ export default function BriefDetailPage() {
                       ) : (
                         <Play className="mr-1.5 h-4 w-4" />
                       )}
-                      Start nieuwe run
+                      {t("briefDetail.startRun")}
                     </Button>
                   </span>
                 </TooltipTrigger>
                 {activeRun && (
                   <TooltipContent side="bottom" className="max-w-xs text-xs">
-                    Er loopt al een run voor deze brief. Wacht tot deze is
-                    afgerond of annuleer hem eerst.
+                    {t("briefDetail.activeRunTooltip")}
                   </TooltipContent>
                 )}
               </Tooltip>
@@ -159,22 +163,24 @@ export default function BriefDetailPage() {
             <MapPin className="h-3.5 w-3.5" />
             {brief.search_locations.join(", ")}
             <span>·</span>
-            Aangemaakt {formatRelativeNL(brief.created_at)}
+            {t("briefDetail.createdAt", {
+              relative: formatRelativeNL(brief.created_at),
+            })}
             <span>·</span>
             {brief.active ? (
               <Badge className="border-0 bg-emerald-100 text-[10px] text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-                Actief
+                {t("briefDetail.active")}
               </Badge>
             ) : (
               <Badge className="border-0 bg-zinc-100 text-[10px] text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-                Gearchiveerd
+                {t("briefDetail.archived")}
               </Badge>
             )}
           </div>
 
           <div>
             <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Brief
+              {t("briefDetail.briefLabel")}
             </p>
             <p className="whitespace-pre-line text-sm text-zinc-700 dark:text-zinc-300">
               {brief.brief_text}
@@ -182,22 +188,40 @@ export default function BriefDetailPage() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-3">
-            <ChipBlock title="Must-have" items={brief.must_have} color="indigo" />
             <ChipBlock
-              title="Nice to have"
+              title={t("briefDetail.chips.mustHave")}
+              items={brief.must_have}
+              color="indigo"
+            />
+            <ChipBlock
+              title={t("briefDetail.chips.niceToHave")}
               items={brief.nice_to_have}
               color="zinc"
             />
-            <ChipBlock title="Uitsluitingen" items={brief.exclusions} color="red" />
+            <ChipBlock
+              title={t("briefDetail.chips.exclusions")}
+              items={brief.exclusions}
+              color="red"
+            />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-3">
-            <Stat label="Doelaantal" value={String(brief.target_count)} />
             <Stat
-              label="Talen"
+              label={t("briefDetail.stats.targetCount")}
+              value={String(brief.target_count)}
+            />
+            <Stat
+              label={t("briefDetail.stats.languages")}
               value={brief.language_preferences.join(", ").toUpperCase()}
             />
-            <Stat label="Status" value={brief.active ? "Actief" : "Gearchiveerd"} />
+            <Stat
+              label={t("briefDetail.stats.status")}
+              value={
+                brief.active
+                  ? t("briefDetail.statusValue.active")
+                  : t("briefDetail.statusValue.archived")
+              }
+            />
           </div>
         </CardContent>
       </Card>
@@ -205,7 +229,7 @@ export default function BriefDetailPage() {
       {/* Recent runs */}
       <section className="space-y-2">
         <h3 className="px-1 text-base font-semibold text-zinc-900 dark:text-zinc-100">
-          Recente runs
+          {t("briefDetail.recentRuns")}
         </h3>
         {(runs ?? []).length === 0 ? (
           <Card className="border-0 shadow-sm">
@@ -213,9 +237,9 @@ export default function BriefDetailPage() {
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500">
                 <Sparkles className="h-5 w-5" />
               </div>
-              <p className="text-sm font-medium">Nog geen runs</p>
+              <p className="text-sm font-medium">{t("briefDetail.noRuns.title")}</p>
               <p className="text-xs text-muted-foreground">
-                Klik op "Start nieuwe run" om de agent op pad te sturen.
+                {t("briefDetail.noRuns.description")}
               </p>
             </CardContent>
           </Card>
@@ -246,8 +270,10 @@ export default function BriefDetailPage() {
                                 {pill.label}
                               </Badge>
                               <span className="text-xs text-muted-foreground">
-                                iter {run.expansion_iteration} · trigger{" "}
-                                {run.trigger}
+                                {t("briefDetail.runRow.meta", {
+                                  iteration: run.expansion_iteration,
+                                  trigger: run.trigger,
+                                })}
                               </span>
                             </div>
                             <p className="mt-0.5 text-[11px] text-muted-foreground">
@@ -266,10 +292,12 @@ export default function BriefDetailPage() {
                             <span className="font-semibold">
                               {run.candidates_found}
                             </span>{" "}
-                            gevonden
+                            {t("briefDetail.runRow.found")}
                           </span>
                           <span className="text-emerald-600">
-                            {run.candidates_approved} goedgekeurd
+                            {t("briefDetail.runRow.approved", {
+                              count: run.candidates_approved,
+                            })}
                           </span>
                         </div>
                       </Link>

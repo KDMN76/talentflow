@@ -19,6 +19,7 @@
 
 import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -48,15 +49,6 @@ import type {
   AuditTrailEvent,
 } from "@/lib/mockData";
 
-const AUDIT_GROUP_LABELS: Record<AuditActionGroup, string> = {
-  writes: "Wijzigingen",
-  ai: "AI-acties",
-  consent: "Toestemmingen",
-  communications: "Communicatie",
-  access: "Toegang & inzage",
-  exports: "Exports",
-};
-
 const ALL_GROUPS: AuditActionGroup[] = [
   "writes",
   "ai",
@@ -84,13 +76,8 @@ const GROUP_TONE: Record<AuditActionGroup, string> = {
   exports: "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/30 dark:text-amber-300",
 };
 
-const ENTITY_LABEL: Record<AuditEntityType, string> = {
-  candidate: "Kandidaat",
-  job: "Vacature",
-  application: "Sollicitatie",
-};
-
 export default function AuditTrailViewerPage() {
+  const { t } = useTranslation("miscHome");
   const params = useParams();
   const { toast } = useToast();
 
@@ -166,9 +153,8 @@ export default function AuditTrailViewerPage() {
 
   const handleExport = () => {
     toast({
-      title: "PDF-export gestart",
-      description:
-        "Je audit-trail wordt voorbereid en binnen enkele minuten naar je e-mail verstuurd.",
+      title: t("auditTrail.exportToast.title"),
+      description: t("auditTrail.exportToast.description"),
     });
     // TODO: integreer met POST /compliance/audit/:type/:id/export.pdf
     // Voor nu: placeholder — backend-implementatie volgt later in Sprint Q2.3.
@@ -189,7 +175,7 @@ export default function AuditTrailViewerPage() {
           className="-ml-2 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Terug
+          {t("auditTrail.back")}
         </Link>
         <Button
           variant="outline"
@@ -199,21 +185,21 @@ export default function AuditTrailViewerPage() {
           className="h-8 gap-1.5"
         >
           <Download className="h-3.5 w-3.5" />
-          Export naar PDF
+          {t("auditTrail.exportPdf")}
         </Button>
       </div>
 
       <header>
         <p className="text-[11px] font-medium uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-          WORM Audit-trail · {ENTITY_LABEL[entityType]}
+          {t("auditTrail.headerEyebrow", {
+            entity: t(`auditTrail.entityLabel.${entityType}`),
+          })}
         </p>
         <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
           {entityLabel}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Volledig chronologisch overzicht van alle wijzigingen, AI-acties,
-          toestemmingen en communicatie. Write-once: events zijn onveranderlijk
-          en gehasht voor tamper-detectie.
+          {t("auditTrail.headerDescription")}
         </p>
       </header>
 
@@ -222,7 +208,7 @@ export default function AuditTrailViewerPage() {
         <CardContent className="p-4">
           <div className="mb-3 flex items-center gap-2 text-xs font-medium text-zinc-700 dark:text-zinc-300">
             <Filter className="h-3.5 w-3.5" />
-            Filter op type
+            {t("auditTrail.filterByType")}
           </div>
           <div className="flex flex-wrap gap-2">
             {ALL_GROUPS.map((g) => {
@@ -242,7 +228,7 @@ export default function AuditTrailViewerPage() {
                   aria-pressed={active}
                 >
                   <Icon className="h-3 w-3" />
-                  {AUDIT_GROUP_LABELS[g]}
+                  {t(`auditTrail.groups.${g}`)}
                   <span className="font-semibold">({groupCounts[g] ?? 0})</span>
                 </button>
               );
@@ -264,13 +250,13 @@ export default function AuditTrailViewerPage() {
           <CardContent className="flex items-center gap-3 p-4">
             <AlertCircle className="h-5 w-5 text-red-500" />
             <div className="flex-1 text-sm">
-              <p className="font-medium">Audit-trail kon niet geladen worden</p>
+              <p className="font-medium">{t("auditTrail.error.title")}</p>
               <p className="text-xs text-muted-foreground">
-                Probeer het opnieuw of controleer of de backend bereikbaar is.
+                {t("auditTrail.error.description")}
               </p>
             </div>
             <Button variant="outline" size="sm" onClick={() => refetch()}>
-              Opnieuw
+              {t("auditTrail.error.retry")}
             </Button>
           </CardContent>
         </Card>
@@ -278,7 +264,7 @@ export default function AuditTrailViewerPage() {
       {!isLoading && !isError && filtered.length === 0 && (
         <Card className="border-0 shadow-sm">
           <CardContent className="p-8 text-center text-sm text-muted-foreground">
-            Geen events voor deze filter-selectie.
+            {t("auditTrail.emptyFilter")}
           </CardContent>
         </Card>
       )}
@@ -303,11 +289,18 @@ export default function AuditTrailViewerPage() {
                         <ChevronDown className="h-4 w-4 text-muted-foreground" />
                       )}
                       <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                        {bucket.label}
+                        {t("auditTrail.monthLabel", {
+                          month:
+                            (
+                              t("auditTrail.months", {
+                                returnObjects: true,
+                              }) as string[]
+                            )[bucket.monthIndex] ?? String(bucket.monthIndex + 1),
+                          year: bucket.year,
+                        })}
                       </h3>
                       <Badge variant="secondary" className="text-[10px]">
-                        {bucket.events.length}{" "}
-                        {bucket.events.length === 1 ? "event" : "events"}
+                        {t("auditTrail.events", { count: bucket.events.length })}
                       </Badge>
                     </div>
                   </button>
@@ -412,23 +405,24 @@ function EventRow({
 }
 
 function DiffViewer({ diff }: { diff: NonNullable<AuditTrailEvent["diff"]> }) {
+  const { t } = useTranslation("miscHome");
   return (
     <div>
       <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-        Wijzigingen
+        {t("auditTrail.diff.title")}
       </p>
       <div className="overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-800">
         <table className="w-full text-xs">
           <thead className="bg-white text-[10px] uppercase tracking-wider text-zinc-500 dark:bg-zinc-900">
             <tr>
               <th className="border-b border-zinc-200 px-3 py-1.5 text-left font-medium dark:border-zinc-800">
-                Veld
+                {t("auditTrail.diff.field")}
               </th>
               <th className="border-b border-r border-zinc-200 px-3 py-1.5 text-left font-medium dark:border-zinc-800">
-                Voor
+                {t("auditTrail.diff.before")}
               </th>
               <th className="border-b border-zinc-200 px-3 py-1.5 text-left font-medium dark:border-zinc-800">
-                Na
+                {t("auditTrail.diff.after")}
               </th>
             </tr>
           </thead>
@@ -463,10 +457,11 @@ function DiffCell({
   value: string | number | boolean | null;
   tone: "before" | "after";
 }) {
+  const { t } = useTranslation("miscHome");
   if (value === null || value === undefined || value === "") {
     return (
       <span className="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-[10px] text-zinc-400 dark:bg-zinc-800">
-        ∅ leeg
+        {t("auditTrail.diff.empty")}
       </span>
     );
   }
@@ -488,10 +483,11 @@ function MetadataViewer({
   metadata: Record<string, string | number | boolean | null>;
   hasDiff: boolean;
 }) {
+  const { t } = useTranslation("miscHome");
   return (
     <div className={hasDiff ? "mt-3" : ""}>
       <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-        Metadata
+        {t("auditTrail.metadata")}
       </p>
       <dl className="grid grid-cols-1 gap-x-6 gap-y-1.5 text-xs sm:grid-cols-2">
         {Object.entries(metadata).map(([k, v]) => (
@@ -499,11 +495,11 @@ function MetadataViewer({
             <dt className="font-mono text-[10px] text-zinc-500">{k}</dt>
             <dd className="break-words text-[12px] text-zinc-800 dark:text-zinc-200">
               {v === null || v === undefined
-                ? "—"
+                ? t("auditTrail.empty")
                 : typeof v === "boolean"
                 ? v
-                  ? "ja"
-                  : "nee"
+                  ? t("auditTrail.boolean.yes")
+                  : t("auditTrail.boolean.no")
                 : String(v)}
             </dd>
           </div>
@@ -519,24 +515,10 @@ function MetadataViewer({
 
 interface MonthBucket {
   key: string; // "2026-05"
-  label: string; // "Mei 2026"
+  monthIndex: number; // 0-based month index for label lookup
+  year: string; // "2026"
   events: AuditTrailEvent[];
 }
-
-const MONTH_LABELS_NL = [
-  "Januari",
-  "Februari",
-  "Maart",
-  "April",
-  "Mei",
-  "Juni",
-  "Juli",
-  "Augustus",
-  "September",
-  "Oktober",
-  "November",
-  "December",
-];
 
 function groupByMonth(events: AuditTrailEvent[]): MonthBucket[] {
   const map = new Map<string, AuditTrailEvent[]>();
@@ -554,7 +536,8 @@ function groupByMonth(events: AuditTrailEvent[]): MonthBucket[] {
       const idx = Number(month) - 1;
       return {
         key,
-        label: `${MONTH_LABELS_NL[idx] ?? month} ${year}`,
+        monthIndex: idx,
+        year,
         events: list,
       };
     });

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -54,6 +55,7 @@ import {
 import { cn } from "@/lib/utils";
 
 export default function RolesListPage() {
+  const { t } = useTranslation("settingsAccess");
   const router = useRouter();
   const { toast } = useToast();
   const { data: roles, isLoading } = useRoles();
@@ -81,8 +83,8 @@ export default function RolesListPage() {
   const handleCreate = async () => {
     if (!form.key || !form.label) {
       toast({
-        title: "Velden ontbreken",
-        description: "Key en label zijn verplicht.",
+        title: t("rolesList.toasts.fieldsMissing.title"),
+        description: t("rolesList.toasts.fieldsMissing.description"),
         variant: "destructive",
       });
       return;
@@ -95,13 +97,16 @@ export default function RolesListPage() {
         inherits_from_role_id: form.inherits_from_role_id,
         permissions,
       });
-      toast({ title: "Rol aangemaakt" });
+      toast({ title: t("rolesList.toasts.created.title") });
       setCreateOpen(false);
       resetForm();
     } catch (err) {
       toast({
-        title: "Aanmaken mislukt",
-        description: err instanceof Error ? err.message : "Onbekende fout.",
+        title: t("rolesList.toasts.createError.title"),
+        description:
+          err instanceof Error
+            ? err.message
+            : t("rolesList.toasts.createError.fallback"),
         variant: "destructive",
       });
     }
@@ -110,29 +115,34 @@ export default function RolesListPage() {
   const handleDelete = async (role: Role) => {
     if (role.is_system) {
       toast({
-        title: "Niet toegestaan",
-        description: "System-rollen kunnen niet verwijderd worden.",
+        title: t("rolesList.toasts.notAllowed.title"),
+        description: t("rolesList.toasts.notAllowed.description"),
         variant: "destructive",
       });
       return;
     }
     if (
       !confirm(
-        `Rol "${role.label}" verwijderen? ${
-          role.user_count > 0
-            ? `Let op: ${role.user_count} gebruiker(s) hebben deze rol.`
-            : ""
-        }`
+        t("rolesList.confirmDelete", {
+          label: role.label,
+          warning:
+            role.user_count > 0
+              ? t("rolesList.confirmDeleteWarning", { count: role.user_count })
+              : "",
+        })
       )
     )
       return;
     try {
       await deleteMutation.mutateAsync(role.id);
-      toast({ title: "Rol verwijderd" });
+      toast({ title: t("rolesList.toasts.deleted.title") });
     } catch (err) {
       toast({
-        title: "Verwijderen mislukt",
-        description: err instanceof Error ? err.message : "Onbekende fout.",
+        title: t("rolesList.toasts.deleteError.title"),
+        description:
+          err instanceof Error
+            ? err.message
+            : t("rolesList.toasts.deleteError.fallback"),
         variant: "destructive",
       });
     }
@@ -145,12 +155,12 @@ export default function RolesListPage() {
         className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-3 w-3" />
-        Terug naar Security
+        {t("rolesList.backToSecurity")}
       </Link>
 
       <PageHeader
-        title="Rollen & rechten"
-        description="Beheer system-rollen en maak custom rollen voor specifieke workflows of compliance-eisen."
+        title={t("rolesList.title")}
+        description={t("rolesList.description")}
         actions={
           <Button
             onClick={() => {
@@ -160,15 +170,15 @@ export default function RolesListPage() {
             className="bg-indigo-600 hover:bg-indigo-700 border-0"
           >
             <Plus className="mr-2 h-4 w-4" />
-            Nieuwe rol
+            {t("rolesList.newRole")}
           </Button>
         }
       />
 
       <Tabs defaultValue="lijst">
         <TabsList>
-          <TabsTrigger value="lijst">Rollen</TabsTrigger>
-          <TabsTrigger value="matrix">Permission-overzicht</TabsTrigger>
+          <TabsTrigger value="lijst">{t("rolesList.tabs.list")}</TabsTrigger>
+          <TabsTrigger value="matrix">{t("rolesList.tabs.matrix")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="lijst" className="mt-6">
@@ -176,7 +186,7 @@ export default function RolesListPage() {
             <CardContent className="p-0">
               {isLoading ? (
                 <div className="p-8 text-center text-sm text-muted-foreground">
-                  Laden…
+                  {t("rolesList.loading")}
                 </div>
               ) : (
                 <div className="divide-y divide-border">
@@ -196,11 +206,11 @@ export default function RolesListPage() {
                             </p>
                             {r.is_system ? (
                               <Badge className="text-[10px] bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border-0">
-                                System
+                                {t("rolesList.badge.system")}
                               </Badge>
                             ) : (
                               <Badge className="text-[10px] bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border-0">
-                                Custom
+                                {t("rolesList.badge.custom")}
                               </Badge>
                             )}
                             <code className="text-[10px] font-mono text-muted-foreground">
@@ -215,17 +225,24 @@ export default function RolesListPage() {
                           <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground mt-1">
                             <span className="inline-flex items-center gap-1">
                               <Users className="h-3 w-3" />
-                              {r.user_count} gebruiker(s)
+                              {t("rolesList.userCount", {
+                                count: r.user_count,
+                              })}
                             </span>
                             <span>
-                              {r.permissions.length} resource(s) gegrant
+                              {t("rolesList.resourcesGranted", {
+                                count: r.permissions.length,
+                              })}
                             </span>
                             {r.inherits_from_role_id && (
                               <span>
-                                erft van{" "}
-                                {roles.find(
-                                  (x) => x.id === r.inherits_from_role_id
-                                )?.label ?? "?"}
+                                {t("rolesList.inheritsFrom", {
+                                  label:
+                                    roles.find(
+                                      (x) => x.id === r.inherits_from_role_id
+                                    )?.label ??
+                                    t("rolesList.inheritsFromUnknown"),
+                                })}
                               </span>
                             )}
                           </div>
@@ -240,12 +257,12 @@ export default function RolesListPage() {
                           {r.is_system ? (
                             <>
                               <Eye className="mr-1.5 h-3.5 w-3.5" />
-                              Bekijken
+                              {t("rolesList.view")}
                             </>
                           ) : (
                             <>
                               <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                              Bewerken
+                              {t("rolesList.edit")}
                             </>
                           )}
                         </Button>
@@ -273,15 +290,19 @@ export default function RolesListPage() {
           <Card className="border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="text-base">
-                Permission-overzicht (alle rollen)
+                {t("rolesList.matrix.title")}
               </CardTitle>
             </CardHeader>
             <CardContent className="overflow-x-auto p-0">
               <table className="w-full text-xs">
                 <thead className="bg-zinc-50 dark:bg-zinc-900/40 text-[10px] uppercase tracking-wider text-muted-foreground sticky top-0">
                   <tr>
-                    <th className="px-3 py-2 text-left font-semibold">Resource</th>
-                    <th className="px-3 py-2 text-left font-semibold">Actie</th>
+                    <th className="px-3 py-2 text-left font-semibold">
+                      {t("rolesList.matrix.resource")}
+                    </th>
+                    <th className="px-3 py-2 text-left font-semibold">
+                      {t("rolesList.matrix.action")}
+                    </th>
                     {roles?.map((r) => (
                       <th
                         key={r.id}
@@ -358,16 +379,16 @@ export default function RolesListPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5 text-indigo-600" />
-              Nieuwe rol — stap {step} van 2
+              {t("rolesList.wizard.title", { step })}
             </DialogTitle>
           </DialogHeader>
 
           {step === 1 && (
             <div className="space-y-4 py-2">
               <div className="space-y-2">
-                <Label>Key (technische naam)</Label>
+                <Label>{t("rolesList.wizard.keyLabel")}</Label>
                 <Input
-                  placeholder="bv. compliance_officer"
+                  placeholder={t("rolesList.wizard.keyPlaceholder")}
                   value={form.key}
                   onChange={(e) =>
                     setForm((f) => ({
@@ -380,22 +401,22 @@ export default function RolesListPage() {
                   className="font-mono text-sm"
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  Lowercase, underscores. Niet meer te wijzigen na aanmaken.
+                  {t("rolesList.wizard.keyHint")}
                 </p>
               </div>
               <div className="space-y-2">
-                <Label>Label</Label>
+                <Label>{t("rolesList.wizard.labelLabel")}</Label>
                 <Input
-                  placeholder="bv. Compliance Officer"
+                  placeholder={t("rolesList.wizard.labelPlaceholder")}
                   value={form.label}
                   onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Beschrijving</Label>
+                <Label>{t("rolesList.wizard.descriptionLabel")}</Label>
                 <Textarea
                   rows={3}
-                  placeholder="Wat doet deze rol? Wie krijgt 'm?"
+                  placeholder={t("rolesList.wizard.descriptionPlaceholder")}
                   value={form.description}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, description: e.target.value }))
@@ -403,7 +424,7 @@ export default function RolesListPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Erft van (optioneel)</Label>
+                <Label>{t("rolesList.wizard.inheritsLabel")}</Label>
                 <Select
                   value={form.inherits_from_role_id ?? ""}
                   onValueChange={(v) =>
@@ -414,7 +435,9 @@ export default function RolesListPage() {
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Geen — start vanaf 0" />
+                    <SelectValue
+                      placeholder={t("rolesList.wizard.inheritsPlaceholder")}
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {(roles ?? [])
@@ -427,8 +450,7 @@ export default function RolesListPage() {
                   </SelectContent>
                 </Select>
                 <p className="text-[11px] text-muted-foreground">
-                  Geërfde rechten worden niet hier opgeslagen, maar ze
-                  verschijnen wel als geactiveerd in de matrix.
+                  {t("rolesList.wizard.inheritsHint")}
                 </p>
               </div>
             </div>
@@ -437,9 +459,7 @@ export default function RolesListPage() {
           {step === 2 && (
             <div className="py-2 space-y-3">
               <p className="text-xs text-muted-foreground">
-                Vink de rechten aan die deze rol direct krijgt. Geërfde rechten
-                worden in lichtere kleur weergegeven en kunnen alleen op de
-                parent-rol gewijzigd worden.
+                {t("rolesList.wizard.step2Hint")}
               </p>
               <PermissionMatrixEditor
                 value={permissions}
@@ -462,7 +482,9 @@ export default function RolesListPage() {
                 }
               }}
             >
-              {step === 1 ? "Annuleren" : "Vorige"}
+              {step === 1
+                ? t("rolesList.wizard.cancel")
+                : t("rolesList.wizard.previous")}
             </Button>
             {step === 1 ? (
               <Button
@@ -470,7 +492,7 @@ export default function RolesListPage() {
                 disabled={!form.key || !form.label}
                 className={cn("bg-indigo-600 hover:bg-indigo-700 border-0")}
               >
-                Volgende
+                {t("rolesList.wizard.next")}
               </Button>
             ) : (
               <Button
@@ -481,7 +503,7 @@ export default function RolesListPage() {
                 {createMutation.isPending && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                Rol aanmaken
+                {t("rolesList.wizard.createRole")}
               </Button>
             )}
           </DialogFooter>

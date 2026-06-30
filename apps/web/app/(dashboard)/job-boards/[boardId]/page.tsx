@@ -12,6 +12,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import {
   AlertCircle,
   ArrowLeft,
@@ -97,6 +98,7 @@ export default function JobBoardConnectPage() {
   const params = useParams<{ boardId: string }>();
   const boardId = params.boardId;
   const { toast } = useToast();
+  const { t } = useTranslation("jobBoards");
 
   const { data: catalog, isLoading: catalogLoading } = useJobBoardCatalog();
   const { data: integrations } = useJobBoardIntegrations();
@@ -146,12 +148,12 @@ export default function JobBoardConnectPage() {
         <Link href="/job-boards">
           <Button variant="ghost" size="sm" className="-ml-2">
             <ArrowLeft className="mr-1 h-4 w-4" />
-            Terug
+            {t("connect.back")}
           </Button>
         </Link>
         <Card className="border-0 shadow-sm">
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Vacaturebank niet gevonden.
+            {t("connect.boardNotFound")}
           </CardContent>
         </Card>
       </div>
@@ -164,13 +166,15 @@ export default function JobBoardConnectPage() {
     try {
       await connect.mutateAsync({ boardId, payload });
       toast({
-        title: "Verbinding gemaakt",
-        description: `${board.display_name} is nu actief.`,
+        title: t("connect.toasts.connected.title"),
+        description: t("connect.toasts.connected.description", {
+          board: board.display_name,
+        }),
       });
     } catch {
       toast({
-        title: "Verbinden mislukt",
-        description: "Probeer het opnieuw of controleer de gegevens.",
+        title: t("connect.toasts.connectError.title"),
+        description: t("connect.toasts.connectError.description"),
         variant: "destructive",
       });
     }
@@ -180,13 +184,15 @@ export default function JobBoardConnectPage() {
     try {
       await disconnect.mutateAsync(boardId);
       toast({
-        title: "Verbinding losgekoppeld",
-        description: `${board.display_name} is uitgeschakeld.`,
+        title: t("connect.toasts.disconnected.title"),
+        description: t("connect.toasts.disconnected.description", {
+          board: board.display_name,
+        }),
       });
       setConfirmDisconnect(false);
     } catch {
       toast({
-        title: "Loskoppelen mislukt",
+        title: t("connect.toasts.disconnectError.title"),
         variant: "destructive",
       });
     }
@@ -202,11 +208,17 @@ export default function JobBoardConnectPage() {
         board_ids: [boardId],
       });
       toast({
-        title: "Test-plaatsing aangemaakt",
-        description: `${job?.title ?? "Vacature"} staat in de wachtrij voor ${board.display_name}.`,
+        title: t("connect.toasts.testCreated.title"),
+        description: t("connect.toasts.testCreated.description", {
+          job: job?.title ?? t("connect.toasts.testCreated.jobFallback"),
+          board: board.display_name,
+        }),
       });
     } catch {
-      toast({ title: "Plaatsen mislukt", variant: "destructive" });
+      toast({
+        title: t("connect.toasts.testError.title"),
+        variant: "destructive",
+      });
     }
   };
 
@@ -219,15 +231,15 @@ export default function JobBoardConnectPage() {
         className="-ml-2"
       >
         <ArrowLeft className="mr-1 h-4 w-4" />
-        Terug naar overzicht
+        {t("connect.backToOverview")}
       </Button>
 
       <PageHeader
         title={board.display_name}
         description={
           connected
-            ? "Beheer deze koppeling, bekijk status en test plaatsingen."
-            : "Verbind deze vacaturebank om vacatures direct te kunnen distribueren."
+            ? t("connect.description.connected")
+            : t("connect.description.disconnected")
         }
       />
 
@@ -257,11 +269,11 @@ export default function JobBoardConnectPage() {
           {connected ? (
             <Badge className="border-0 bg-emerald-100 px-3 py-1 text-xs text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
               <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
-              Verbonden
+              {t("connect.connected")}
             </Badge>
           ) : (
             <Badge className="border-0 bg-zinc-100 px-3 py-1 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-              Niet verbonden
+              {t("connect.notConnected")}
             </Badge>
           )}
         </CardContent>
@@ -286,12 +298,12 @@ export default function JobBoardConnectPage() {
           <CardContent className="space-y-5 p-6">
             <div className="grid gap-4 sm:grid-cols-2">
               <Stat
-                label="Verbonden sinds"
+                label={t("connect.stats.connectedSince")}
                 value={formatDateTime(integration?.connected_at ?? null)}
                 icon={<CheckCircle2 className="h-4 w-4 text-emerald-500" />}
               />
               <Stat
-                label="Laatste poll"
+                label={t("connect.stats.lastPoll")}
                 value={formatDateTime(integration?.last_polled_at ?? null)}
                 icon={<Clock className="h-4 w-4 text-indigo-500" />}
               />
@@ -305,7 +317,7 @@ export default function JobBoardConnectPage() {
             ) : (
               <div className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/20 dark:text-emerald-300">
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
-                <span>Koppeling werkt — geen recente fouten gerapporteerd.</span>
+                <span>{t("connect.healthOk")}</span>
               </div>
             )}
 
@@ -316,7 +328,7 @@ export default function JobBoardConnectPage() {
                 className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
               >
                 <Trash2 className="mr-1.5 h-4 w-4" />
-                Loskoppelen
+                {t("connect.disconnect")}
               </Button>
             </div>
           </CardContent>
@@ -329,22 +341,22 @@ export default function JobBoardConnectPage() {
           <CardContent className="space-y-4 p-6">
             <div>
               <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                Test-plaatsing
+                {t("connect.testPosting.title")}
               </p>
               <p className="text-xs text-muted-foreground">
-                Plaats één vacature op deze board om de koppeling te valideren.
+                {t("connect.testPosting.description")}
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
               <div className="flex-1 space-y-1.5">
-                <Label htmlFor="test-job">Vacature</Label>
+                <Label htmlFor="test-job">{t("connect.testPosting.jobLabel")}</Label>
                 <Select
                   value={selectedJobId}
                   onValueChange={setSelectedJobId}
                   disabled={!jobs || jobs.length === 0}
                 >
                   <SelectTrigger id="test-job">
-                    <SelectValue placeholder="Kies een open vacature..." />
+                    <SelectValue placeholder={t("connect.testPosting.jobPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
                     {(jobs ?? []).map((j) => (
@@ -366,14 +378,16 @@ export default function JobBoardConnectPage() {
                 ) : (
                   <Send className="mr-1.5 h-4 w-4" />
                 )}
-                Plaatsen
+                {t("connect.testPosting.submit")}
               </Button>
             </div>
 
             {ownPostings.length > 0 && (
               <div className="border-t border-border pt-4">
                 <p className="mb-2 text-xs font-medium text-muted-foreground">
-                  Recente plaatsingen op {board.display_name}
+                  {t("connect.testPosting.recentTitle", {
+                    board: board.display_name,
+                  })}
                 </p>
                 <ul className="space-y-1.5">
                   {ownPostings.slice(0, 5).map((p) => (
@@ -402,15 +416,19 @@ export default function JobBoardConnectPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Verbinding loskoppelen?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("connect.disconnectDialog.title")}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Lopende plaatsingen op {board.display_name} blijven actief tot ze
-              verlopen, maar er kunnen geen nieuwe plaatsingen meer worden
-              gedaan tot je opnieuw verbindt.
+              {t("connect.disconnectDialog.description", {
+                board: board.display_name,
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogCancel>
+              {t("connect.disconnectDialog.cancel")}
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDisconnect}
               disabled={disconnect.isPending}
@@ -419,7 +437,7 @@ export default function JobBoardConnectPage() {
               {disconnect.isPending && (
                 <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
               )}
-              Loskoppelen
+              {t("connect.disconnectDialog.confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -477,6 +495,7 @@ function ConnectionForm(props: ConnectionFormProps) {
     onConnect,
   } = props;
   const { toast } = useToast();
+  const { t } = useTranslation("jobBoards");
 
   if (authType === "oauth2") {
     return (
@@ -484,26 +503,25 @@ function ConnectionForm(props: ConnectionFormProps) {
         <CardContent className="space-y-5 p-6">
           <div>
             <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-              Verbinden via OAuth
+              {t("connect.form.oauth.title")}
             </p>
             <p className="text-xs text-muted-foreground">
-              Je wordt doorgestuurd naar de provider om toestemming te geven.
-              Wij slaan alleen tokens op die nodig zijn om vacatures te plaatsen.
+              {t("connect.form.oauth.description")}
             </p>
           </div>
           <div className="rounded-lg border border-indigo-100 bg-indigo-50/50 p-4 text-xs dark:border-indigo-900/40 dark:bg-indigo-950/20">
             <ul className="space-y-1 text-indigo-800 dark:text-indigo-300">
               <li className="flex items-start gap-1.5">
                 <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                Lees-/schrijfrechten beperkt tot vacatureplaatsing.
+                {t("connect.form.oauth.benefit1")}
               </li>
               <li className="flex items-start gap-1.5">
                 <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                Tokens worden versleuteld opgeslagen.
+                {t("connect.form.oauth.benefit2")}
               </li>
               <li className="flex items-start gap-1.5">
                 <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                Eén klik om weer los te koppelen.
+                {t("connect.form.oauth.benefit3")}
               </li>
             </ul>
           </div>
@@ -517,7 +535,7 @@ function ConnectionForm(props: ConnectionFormProps) {
             ) : (
               <Plug className="mr-1.5 h-4 w-4" />
             )}
-            Start OAuth
+            {t("connect.form.oauth.submit")}
           </Button>
         </CardContent>
       </Card>
@@ -530,23 +548,25 @@ function ConnectionForm(props: ConnectionFormProps) {
         <CardContent className="space-y-5 p-6">
           <div>
             <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-              Verbinden via API-key
+              {t("connect.form.apiKey.title")}
             </p>
             <p className="text-xs text-muted-foreground">
-              Plak je partner-API-key. Sleutels worden server-side versleuteld.
+              {t("connect.form.apiKey.description")}
             </p>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="api-display-name">Account-naam (intern)</Label>
+            <Label htmlFor="api-display-name">
+              {t("connect.form.apiKey.displayNameLabel")}
+            </Label>
             <Input
               id="api-display-name"
               value={apiDisplayName}
               onChange={(e) => setApiDisplayName(e.target.value)}
-              placeholder="Bv. TalentFlow Demo BV"
+              placeholder={t("connect.form.apiKey.displayNamePlaceholder")}
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="api-key">API-key</Label>
+            <Label htmlFor="api-key">{t("connect.form.apiKey.keyLabel")}</Label>
             <div className="relative">
               <KeyRound className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -571,7 +591,7 @@ function ConnectionForm(props: ConnectionFormProps) {
             ) : (
               <Plug className="mr-1.5 h-4 w-4" />
             )}
-            Verbinden
+            {t("connect.form.apiKey.submit")}
           </Button>
         </CardContent>
       </Card>
@@ -584,17 +604,15 @@ function ConnectionForm(props: ConnectionFormProps) {
         <CardContent className="space-y-5 p-6">
           <div>
             <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-              Verbinden via XML-feed
+              {t("connect.form.xmlFeed.title")}
             </p>
             <p className="text-xs text-muted-foreground">
-              Genereer een unieke feed-URL en geef die door aan de provider.
-              Vacatures worden automatisch gesynchroniseerd zodra de provider
-              de feed indexeert.
+              {t("connect.form.xmlFeed.description")}
             </p>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="feed-url">Feed-URL</Label>
+            <Label htmlFor="feed-url">{t("connect.form.xmlFeed.feedUrlLabel")}</Label>
             <div className="flex gap-2">
               <Input
                 id="feed-url"
@@ -611,7 +629,7 @@ function ConnectionForm(props: ConnectionFormProps) {
                 className="shrink-0"
               >
                 <LinkIcon className="mr-1.5 h-3.5 w-3.5" />
-                Genereer
+                {t("connect.form.xmlFeed.generate")}
               </Button>
               <Button
                 type="button"
@@ -621,7 +639,7 @@ function ConnectionForm(props: ConnectionFormProps) {
                   await navigator.clipboard?.writeText(
                     feedUrl || generatedFeedUrl
                   );
-                  toast({ title: "Feed-URL gekopieerd" });
+                  toast({ title: t("connect.toasts.feedCopied.title") });
                 }}
                 className="shrink-0"
               >
@@ -629,16 +647,14 @@ function ConnectionForm(props: ConnectionFormProps) {
               </Button>
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Tip: gebruik de gegenereerde URL als startpunt en deel hem met de
-              provider via hun back-office.
+              {t("connect.form.xmlFeed.tip")}
             </p>
           </div>
 
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-300">
             <p className="flex items-start gap-1.5">
               <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              Sommige providers verifiëren feeds asynchroon — verwacht een
-              vertraging van 4–24u tot vacatures zichtbaar zijn.
+              {t("connect.form.xmlFeed.warning")}
             </p>
           </div>
 
@@ -652,7 +668,7 @@ function ConnectionForm(props: ConnectionFormProps) {
             ) : (
               <Plug className="mr-1.5 h-4 w-4" />
             )}
-            Verbinden
+            {t("connect.form.xmlFeed.submit")}
           </Button>
         </CardContent>
       </Card>
@@ -664,7 +680,7 @@ function ConnectionForm(props: ConnectionFormProps) {
     <Card className="border-0 shadow-sm">
       <CardContent className="space-y-4 p-6">
         <p className="text-sm text-zinc-700 dark:text-zinc-300">
-          Geen authenticatie nodig — klik om te activeren.
+          {t("connect.form.none.description")}
         </p>
         <Button
           onClick={() => onConnect({})}
@@ -676,7 +692,7 @@ function ConnectionForm(props: ConnectionFormProps) {
           ) : (
             <Settings2 className="mr-1.5 h-4 w-4" />
           )}
-          Activeren
+          {t("connect.form.none.submit")}
         </Button>
       </CardContent>
     </Card>

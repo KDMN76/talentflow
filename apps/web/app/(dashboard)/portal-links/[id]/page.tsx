@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams, useRouter } from "next/navigation";
 import {
   Activity,
@@ -71,6 +72,7 @@ function formatDateTime(iso: string | null): string {
 }
 
 export default function PortalLinkDetailPage() {
+  const { t } = useTranslation("miscPortals");
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { toast } = useToast();
@@ -100,13 +102,16 @@ export default function PortalLinkDetailPage() {
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard?.writeText(text);
-    toast({ title: `${label} gekopieerd` });
+    toast({ title: t("portalDetail.toasts.copied", { label }) });
   };
 
   const handlePermissionsChange = (next: PortalLinkPermissions) => {
     update.mutate(
       { permissions: next },
-      { onSuccess: () => toast({ title: "Permissies bijgewerkt" }) }
+      {
+        onSuccess: () =>
+          toast({ title: t("portalDetail.toasts.permissionsUpdated") }),
+      }
     );
   };
 
@@ -114,14 +119,20 @@ export default function PortalLinkDetailPage() {
     if (value === (portal.notification_email ?? "")) return;
     update.mutate(
       { notification_email: value || null },
-      { onSuccess: () => toast({ title: "Notificatie-email bijgewerkt" }) }
+      {
+        onSuccess: () =>
+          toast({ title: t("portalDetail.toasts.notifyEmailUpdated") }),
+      }
     );
   };
 
   const handleFrequencyChange = (freq: PortalNotificationFrequency) => {
     update.mutate(
       { notification_frequency: freq },
-      { onSuccess: () => toast({ title: "Frequentie bijgewerkt" }) }
+      {
+        onSuccess: () =>
+          toast({ title: t("portalDetail.toasts.frequencyUpdated") }),
+      }
     );
   };
 
@@ -133,14 +144,16 @@ export default function PortalLinkDetailPage() {
         onSuccess: (res) => {
           if (res.verified) {
             toast({
-              title: "Domein geverifieerd",
-              description: `${portal.custom_domain} is nu actief.`,
+              title: t("portalDetail.toasts.domainVerifiedTitle"),
+              description: t("portalDetail.toasts.domainVerifiedDescription", {
+                domain: portal.custom_domain,
+              }),
             });
           } else {
             toast({
               variant: "destructive",
-              title: "DNS niet gevonden",
-              description: "Voeg het TXT-record toe en wacht tot DNS gepropageerd is.",
+              title: t("portalDetail.toasts.dnsNotFoundTitle"),
+              description: t("portalDetail.toasts.dnsNotFoundDescription"),
             });
           }
         },
@@ -152,8 +165,8 @@ export default function PortalLinkDetailPage() {
     rotate.mutate(undefined, {
       onSuccess: () => {
         toast({
-          title: "Token vernieuwd",
-          description: "De oude link werkt niet meer.",
+          title: t("portalDetail.toasts.tokenRotatedTitle"),
+          description: t("portalDetail.toasts.tokenRotatedDescription"),
         });
         setShowRotateConfirm(false);
       },
@@ -169,7 +182,7 @@ export default function PortalLinkDetailPage() {
         className="-ml-2"
       >
         <ArrowLeft className="mr-1 h-4 w-4" />
-        Terug naar klantportalen
+        {t("portalDetail.back")}
       </Button>
 
       {/* Header */}
@@ -177,28 +190,33 @@ export default function PortalLinkDetailPage() {
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div className="space-y-1 min-w-0">
             <CardTitle className="text-xl">
-              {portal.client_name ?? "Onbekende klant"}
+              {portal.client_name ?? t("portalDetail.unknownClient")}
             </CardTitle>
             <CardDescription>
-              Vacature: <span className="font-medium">{portal.job_title ?? "—"}</span>
+              {t("portalDetail.jobLabel")}{" "}
+              <span className="font-medium">
+                {portal.job_title ?? t("portalDetail.jobFallback")}
+              </span>
             </CardDescription>
             <div className="flex flex-wrap items-center gap-2 pt-2">
               {portal.is_active ? (
                 <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300">
-                  Actief
+                  {t("portalDetail.active")}
                 </Badge>
               ) : (
-                <Badge variant="secondary">Uitgeschakeld</Badge>
+                <Badge variant="secondary">{t("portalDetail.disabled")}</Badge>
               )}
               {portal.custom_domain && (
                 <Badge variant="outline">
                   <Globe className="mr-1 h-3 w-3" />
-                  Custom domain
+                  {t("portalDetail.customDomain")}
                 </Badge>
               )}
               <span className="text-xs text-muted-foreground">
-                Laatste activiteit: {formatDateTime(portal.last_activity_at)} ·{" "}
-                {portal.view_count} weergaven
+                {t("portalDetail.lastActivity", {
+                  date: formatDateTime(portal.last_activity_at),
+                  count: portal.view_count,
+                })}
               </span>
             </div>
           </div>
@@ -208,15 +226,17 @@ export default function PortalLinkDetailPage() {
               size="sm"
               onClick={() => window.open(portalUrl, "_blank", "noreferrer")}
             >
-              Open portaal
+              {t("portalDetail.openPortal")}
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleCopy(portalUrl, "Portaal-URL")}
+              onClick={() =>
+                handleCopy(portalUrl, t("portalDetail.toasts.portalUrlLabel"))
+              }
             >
               <Copy className="mr-1 h-3.5 w-3.5" />
-              Kopieer URL
+              {t("portalDetail.copyUrl")}
             </Button>
           </div>
         </CardHeader>
@@ -226,19 +246,20 @@ export default function PortalLinkDetailPage() {
         <TabsList>
           <TabsTrigger value="settings">
             <SettingsIcon className="mr-1 h-3.5 w-3.5" />
-            Instellingen
+            {t("portalDetail.tabs.settings")}
           </TabsTrigger>
           <TabsTrigger value="activity">
             <Activity className="mr-1 h-3.5 w-3.5" />
-            Activiteit{activity && activity.length > 0 ? ` (${activity.length})` : ""}
+            {t("portalDetail.tabs.activity")}
+            {activity && activity.length > 0 ? ` (${activity.length})` : ""}
           </TabsTrigger>
           <TabsTrigger value="domain">
             <Globe className="mr-1 h-3.5 w-3.5" />
-            Custom domain
+            {t("portalDetail.tabs.domain")}
           </TabsTrigger>
           <TabsTrigger value="token">
             <KeyRound className="mr-1 h-3.5 w-3.5" />
-            Token
+            {t("portalDetail.tabs.token")}
           </TabsTrigger>
         </TabsList>
 
@@ -246,9 +267,11 @@ export default function PortalLinkDetailPage() {
         <TabsContent value="settings" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Permissies</CardTitle>
+              <CardTitle className="text-base">
+                {t("portalDetail.permissions.title")}
+              </CardTitle>
               <CardDescription>
-                Wat de klant in het portaal mag zien en doen.
+                {t("portalDetail.permissions.description")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -262,24 +285,28 @@ export default function PortalLinkDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Notificaties</CardTitle>
+              <CardTitle className="text-base">
+                {t("portalDetail.notifications.title")}
+              </CardTitle>
               <CardDescription>
-                Waar en hoe vaak we de klant alerteren.
+                {t("portalDetail.notifications.description")}
               </CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="notify-email">E-mailadres</Label>
+                <Label htmlFor="notify-email">
+                  {t("portalDetail.notifications.emailLabel")}
+                </Label>
                 <Input
                   id="notify-email"
                   type="email"
                   defaultValue={portal.notification_email ?? ""}
-                  placeholder="hr@klant.nl"
+                  placeholder={t("portalDetail.notifications.emailPlaceholder")}
                   onBlur={(e) => handleNotifyEmailBlur(e.target.value.trim())}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Frequentie</Label>
+                <Label>{t("portalDetail.notifications.frequencyLabel")}</Label>
                 <Select
                   value={portal.notification_frequency}
                   onValueChange={(v) =>
@@ -290,10 +317,18 @@ export default function PortalLinkDetailPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="realtime">Direct (per kandidaat)</SelectItem>
-                    <SelectItem value="daily">Dagelijks (samengevat)</SelectItem>
-                    <SelectItem value="weekly">Wekelijks (samengevat)</SelectItem>
-                    <SelectItem value="off">Uit</SelectItem>
+                    <SelectItem value="realtime">
+                      {t("portalDetail.notifications.frequency.realtime")}
+                    </SelectItem>
+                    <SelectItem value="daily">
+                      {t("portalDetail.notifications.frequency.daily")}
+                    </SelectItem>
+                    <SelectItem value="weekly">
+                      {t("portalDetail.notifications.frequency.weekly")}
+                    </SelectItem>
+                    <SelectItem value="off">
+                      {t("portalDetail.notifications.frequency.off")}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -305,9 +340,11 @@ export default function PortalLinkDetailPage() {
         <TabsContent value="activity">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Klant-activiteit</CardTitle>
+              <CardTitle className="text-base">
+                {t("portalDetail.activity.title")}
+              </CardTitle>
               <CardDescription>
-                Wat de klant in het portaal heeft gedaan, chronologisch.
+                {t("portalDetail.activity.description")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -320,18 +357,22 @@ export default function PortalLinkDetailPage() {
         <TabsContent value="domain" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Custom domain</CardTitle>
+              <CardTitle className="text-base">
+                {t("portalDetail.domain.title")}
+              </CardTitle>
               <CardDescription>
-                Laat klanten je portaal openen op hun eigen subdomein.
+                {t("portalDetail.domain.description")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="custom-domain">Domein</Label>
+                <Label htmlFor="custom-domain">
+                  {t("portalDetail.domain.domainLabel")}
+                </Label>
                 <div className="flex gap-2">
                   <Input
                     id="custom-domain"
-                    placeholder="hiring.klant.nl"
+                    placeholder={t("portalDetail.domain.domainPlaceholder")}
                     defaultValue={portal.custom_domain ?? ""}
                     onBlur={(e) => {
                       const next = e.target.value.trim() || null;
@@ -340,7 +381,9 @@ export default function PortalLinkDetailPage() {
                         { custom_domain: next },
                         {
                           onSuccess: () =>
-                            toast({ title: "Domein opgeslagen — start verificatie" }),
+                            toast({
+                              title: t("portalDetail.toasts.domainSaved"),
+                            }),
                         }
                       );
                     }}
@@ -356,50 +399,61 @@ export default function PortalLinkDetailPage() {
                     ) : (
                       <Check className="mr-1 h-4 w-4" />
                     )}
-                    Verifieer
+                    {t("portalDetail.domain.verify")}
                   </Button>
                 </div>
               </div>
 
               <div className="rounded-lg border border-border bg-zinc-50 p-4 text-sm dark:bg-zinc-900/40">
                 <div className="mb-2 flex items-center gap-2 font-medium">
-                  Status:
+                  {t("portalDetail.domain.statusLabel")}
                   {portal.custom_domain_status === "verified" ? (
                     <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-                      Geverifieerd
+                      {t("portalDetail.domain.status.verified")}
                     </Badge>
                   ) : portal.custom_domain_status === "pending" ? (
                     <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-                      Wacht op DNS
+                      {t("portalDetail.domain.status.pending")}
                     </Badge>
                   ) : portal.custom_domain_status === "failed" ? (
-                    <Badge variant="destructive">Mislukt</Badge>
+                    <Badge variant="destructive">
+                      {t("portalDetail.domain.status.failed")}
+                    </Badge>
                   ) : (
-                    <Badge variant="secondary">Geen</Badge>
+                    <Badge variant="secondary">
+                      {t("portalDetail.domain.status.none")}
+                    </Badge>
                   )}
                 </div>
                 {portal.custom_domain_txt_record && (
                   <div className="space-y-2">
                     <p className="text-xs text-muted-foreground">
-                      Voeg het volgende DNS-record toe bij je domeinprovider:
+                      {t("portalDetail.domain.dnsIntro")}
                     </p>
                     <div className="grid grid-cols-1 gap-1 rounded bg-card p-3 font-mono text-xs sm:grid-cols-3">
                       <div>
-                        <span className="text-muted-foreground">Type:</span> TXT
+                        <span className="text-muted-foreground">
+                          {t("portalDetail.domain.dnsType")}
+                        </span>{" "}
+                        TXT
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Naam:</span>{" "}
+                        <span className="text-muted-foreground">
+                          {t("portalDetail.domain.dnsName")}
+                        </span>{" "}
                         _talentflow-verify
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Waarde:</span>{" "}
+                        <span className="text-muted-foreground">
+                          {t("portalDetail.domain.dnsValue")}
+                        </span>{" "}
                         <button
                           type="button"
                           className="hover:underline"
                           onClick={() =>
                             handleCopy(
                               portal.custom_domain_txt_record!,
-                              "TXT-record"
+                              t("portalDetail.toasts.txtRecordLabel")
                             )
                           }
                         >
@@ -408,7 +462,7 @@ export default function PortalLinkDetailPage() {
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Plus een CNAME-record voor je domein →{" "}
+                      {t("portalDetail.domain.cnameNote")}{" "}
                       <span className="font-mono">portals.talentflow.app</span>.
                     </p>
                   </div>
@@ -422,21 +476,24 @@ export default function PortalLinkDetailPage() {
         <TabsContent value="token">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Token</CardTitle>
+              <CardTitle className="text-base">
+                {t("portalDetail.token.title")}
+              </CardTitle>
               <CardDescription>
-                De geheime sleutel in de portaal-URL. Vernieuwen invalideert de oude
-                link onmiddellijk.
+                {t("portalDetail.token.description")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label>Huidige URL</Label>
+                <Label>{t("portalDetail.token.currentUrlLabel")}</Label>
                 <div className="flex gap-2">
                   <Input value={portalUrl} readOnly className="font-mono text-xs" />
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => handleCopy(portalUrl, "URL")}
+                    onClick={() =>
+                      handleCopy(portalUrl, t("portalDetail.toasts.urlLabel"))
+                    }
                   >
                     <Copy className="h-4 w-4" />
                   </Button>
@@ -447,10 +504,11 @@ export default function PortalLinkDetailPage() {
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                   <div>
-                    <div className="font-medium">Waarschuwing</div>
+                    <div className="font-medium">
+                      {t("portalDetail.token.warningTitle")}
+                    </div>
                     <p className="text-xs">
-                      Vernieuwen breekt direct alle bestaande bookmarks en
-                      mail-links. Stuur de klant een nieuwe link na rotatie.
+                      {t("portalDetail.token.warningBody")}
                     </p>
                   </div>
                 </div>
@@ -462,7 +520,7 @@ export default function PortalLinkDetailPage() {
                 disabled={rotate.isPending}
               >
                 <RefreshCcw className="mr-2 h-4 w-4" />
-                Token vernieuwen
+                {t("portalDetail.token.rotate")}
               </Button>
             </CardContent>
           </Card>
@@ -473,10 +531,9 @@ export default function PortalLinkDetailPage() {
       <Dialog open={showRotateConfirm} onOpenChange={setShowRotateConfirm}>
         <DialogContent className="sm:max-w-[420px]">
           <DialogHeader>
-            <DialogTitle>Token vernieuwen?</DialogTitle>
+            <DialogTitle>{t("portalDetail.rotateDialog.title")}</DialogTitle>
             <DialogDescription>
-              De huidige link werkt direct niet meer. Stuur de klant na bevestiging
-              de nieuwe URL.
+              {t("portalDetail.rotateDialog.description")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -485,7 +542,7 @@ export default function PortalLinkDetailPage() {
               onClick={() => setShowRotateConfirm(false)}
               disabled={rotate.isPending}
             >
-              Annuleren
+              {t("portalDetail.rotateDialog.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -497,7 +554,7 @@ export default function PortalLinkDetailPage() {
               ) : (
                 <Save className="mr-2 h-4 w-4" />
               )}
-              Vernieuwen
+              {t("portalDetail.rotateDialog.confirm")}
             </Button>
           </DialogFooter>
         </DialogContent>

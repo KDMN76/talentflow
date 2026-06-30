@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ArrowLeft, Loader2, Save, Lock } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +26,7 @@ import {
 import type { PasswordPolicy } from "@/lib/types/security";
 
 export default function PasswordPolicyPage() {
+  const { t } = useTranslation("settingsSecurity");
   const { toast } = useToast();
   const { data: settings, isLoading } = useSecuritySettings();
   const { data: roles } = useRoles();
@@ -63,7 +65,7 @@ export default function PasswordPolicyPage() {
       two_factor_grace_period_days: grace,
       session_idle_timeout_minutes: sessionTimeout,
     });
-    toast({ title: "Beleid opgeslagen" });
+    toast({ title: t("passwordPolicy.toasts.saved.title") });
   };
 
   const toggleRequiredRole = (id: string) => {
@@ -79,28 +81,28 @@ export default function PasswordPolicyPage() {
         className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-3 w-3" />
-        Terug naar Security
+        {t("backToSecurity")}
       </Link>
 
       <PageHeader
-        title="Wachtwoord- en sessie-beleid"
-        description="Stel minimum-eisen voor wachtwoorden in en bepaal wie 2FA verplicht moet gebruiken."
+        title={t("passwordPolicy.title")}
+        description={t("passwordPolicy.description")}
       />
 
       {isLoading && (
-        <div className="text-sm text-muted-foreground">Laden…</div>
+        <div className="text-sm text-muted-foreground">{t("loading")}</div>
       )}
 
       <Card className="border-0 shadow-sm">
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Lock className="h-4 w-4 text-indigo-600" />
-            Wachtwoord-eisen
+            {t("passwordPolicy.requirements.title")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Minimale lengte</Label>
+            <Label>{t("passwordPolicy.requirements.minLengthLabel")}</Label>
             <Input
               type="number"
               min={6}
@@ -115,17 +117,29 @@ export default function PasswordPolicyPage() {
               className="max-w-[120px]"
             />
             <p className="text-[11px] text-muted-foreground">
-              NIST SP 800-63B raadt minimaal 8 aan. 12+ aanbevolen voor admin-accounts.
+              {t("passwordPolicy.requirements.minLengthHint")}
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {(
               [
-                { key: "require_uppercase", label: "Hoofdletter vereist (A–Z)" },
-                { key: "require_lowercase", label: "Kleine letter vereist (a–z)" },
-                { key: "require_number", label: "Cijfer vereist (0–9)" },
-                { key: "require_symbol", label: "Speciaal teken vereist (!@#…)" },
+                {
+                  key: "require_uppercase",
+                  label: t("passwordPolicy.requirements.requireUppercase"),
+                },
+                {
+                  key: "require_lowercase",
+                  label: t("passwordPolicy.requirements.requireLowercase"),
+                },
+                {
+                  key: "require_number",
+                  label: t("passwordPolicy.requirements.requireNumber"),
+                },
+                {
+                  key: "require_symbol",
+                  label: t("passwordPolicy.requirements.requireSymbol"),
+                },
               ] as const
             ).map((row) => (
               <div
@@ -144,7 +158,7 @@ export default function PasswordPolicyPage() {
           </div>
 
           <div className="space-y-2">
-            <Label>Wachtwoord-rotatie</Label>
+            <Label>{t("passwordPolicy.requirements.rotationLabel")}</Label>
             <Select
               value={policy.rotation_days?.toString() ?? "0"}
               onValueChange={(v) =>
@@ -158,15 +172,22 @@ export default function PasswordPolicyPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="0">Geen rotatie</SelectItem>
-                <SelectItem value="60">Elke 60 dagen</SelectItem>
-                <SelectItem value="90">Elke 90 dagen</SelectItem>
-                <SelectItem value="180">Elke 180 dagen</SelectItem>
+                <SelectItem value="0">
+                  {t("passwordPolicy.requirements.rotationNone")}
+                </SelectItem>
+                <SelectItem value="60">
+                  {t("passwordPolicy.requirements.rotation60")}
+                </SelectItem>
+                <SelectItem value="90">
+                  {t("passwordPolicy.requirements.rotation90")}
+                </SelectItem>
+                <SelectItem value="180">
+                  {t("passwordPolicy.requirements.rotation180")}
+                </SelectItem>
               </SelectContent>
             </Select>
             <p className="text-[11px] text-muted-foreground">
-              Modern advies (NIST 2017): rotatie alleen na compromise. Beleid is
-              optioneel beschikbaar voor compliance-eisen (bv. ISO 27001-A.9.4.3).
+              {t("passwordPolicy.requirements.rotationHint")}
             </p>
           </div>
         </CardContent>
@@ -174,11 +195,11 @@ export default function PasswordPolicyPage() {
 
       <Card className="border-0 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-base">2FA-beleid</CardTitle>
+          <CardTitle className="text-base">{t("passwordPolicy.twofa.title")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Verplicht voor</Label>
+            <Label>{t("passwordPolicy.twofa.requiredForLabel")}</Label>
             <Select
               value={twoFaPolicy}
               onValueChange={(v) =>
@@ -189,16 +210,22 @@ export default function PasswordPolicyPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Niet verplicht</SelectItem>
-                <SelectItem value="admins">Alleen voor admins</SelectItem>
-                <SelectItem value="all">Voor iedereen</SelectItem>
+                <SelectItem value="none">
+                  {t("passwordPolicy.twofa.none")}
+                </SelectItem>
+                <SelectItem value="admins">
+                  {t("passwordPolicy.twofa.admins")}
+                </SelectItem>
+                <SelectItem value="all">
+                  {t("passwordPolicy.twofa.all")}
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {(roles?.length ?? 0) > 0 && (
             <div className="space-y-2">
-              <Label>Extra rollen waarvoor 2FA verplicht is</Label>
+              <Label>{t("passwordPolicy.twofa.extraRolesLabel")}</Label>
               <div className="flex flex-wrap gap-1.5">
                 {roles!.map((r) => (
                   <button
@@ -219,7 +246,7 @@ export default function PasswordPolicyPage() {
           )}
 
           <div className="space-y-2">
-            <Label>Grace-period voor enrollment (dagen)</Label>
+            <Label>{t("passwordPolicy.twofa.graceLabel")}</Label>
             <Input
               type="number"
               min={0}
@@ -229,8 +256,7 @@ export default function PasswordPolicyPage() {
               className="max-w-[120px]"
             />
             <p className="text-[11px] text-muted-foreground">
-              Tijd die gebruikers krijgen om 2FA in te schakelen voordat ze
-              uitgesloten worden van inloggen.
+              {t("passwordPolicy.twofa.graceHint")}
             </p>
           </div>
         </CardContent>
@@ -238,11 +264,11 @@ export default function PasswordPolicyPage() {
 
       <Card className="border-0 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-base">Sessie</CardTitle>
+          <CardTitle className="text-base">{t("passwordPolicy.session.title")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            <Label>Inactiviteits-timeout (minuten)</Label>
+            <Label>{t("passwordPolicy.session.timeoutLabel")}</Label>
             <Input
               type="number"
               min={5}
@@ -254,8 +280,7 @@ export default function PasswordPolicyPage() {
               className="max-w-[120px]"
             />
             <p className="text-[11px] text-muted-foreground">
-              Na deze periode van inactiviteit wordt de sessie afgesloten en
-              moet de gebruiker opnieuw inloggen.
+              {t("passwordPolicy.session.timeoutHint")}
             </p>
           </div>
         </CardContent>
@@ -272,7 +297,7 @@ export default function PasswordPolicyPage() {
           ) : (
             <Save className="mr-2 h-4 w-4" />
           )}
-          Beleid opslaan
+          {t("passwordPolicy.save")}
         </Button>
       </div>
     </div>

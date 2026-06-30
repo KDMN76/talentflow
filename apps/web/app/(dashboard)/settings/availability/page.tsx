@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -44,14 +45,14 @@ import type {
   Weekday,
 } from "@/lib/types/interviews";
 
-const WEEKDAYS: Array<{ value: Weekday; label: string; short: string }> = [
-  { value: "monday", label: "Maandag", short: "Ma" },
-  { value: "tuesday", label: "Dinsdag", short: "Di" },
-  { value: "wednesday", label: "Woensdag", short: "Wo" },
-  { value: "thursday", label: "Donderdag", short: "Do" },
-  { value: "friday", label: "Vrijdag", short: "Vr" },
-  { value: "saturday", label: "Zaterdag", short: "Za" },
-  { value: "sunday", label: "Zondag", short: "Zo" },
+const WEEKDAYS: Array<{ value: Weekday; short: string }> = [
+  { value: "monday", short: "Ma" },
+  { value: "tuesday", short: "Di" },
+  { value: "wednesday", short: "Wo" },
+  { value: "thursday", short: "Do" },
+  { value: "friday", short: "Vr" },
+  { value: "saturday", short: "Za" },
+  { value: "sunday", short: "Zo" },
 ];
 
 const TIMEZONES = [
@@ -65,6 +66,7 @@ const TIMEZONES = [
 ];
 
 export default function AvailabilitySettingsPage() {
+  const { t } = useTranslation("settingsAdvanced");
   const { data: currentUser, isLoading: userLoading } = useCurrentUser();
   const userId = currentUser?.id ?? null;
   const { toast } = useToast();
@@ -124,8 +126,11 @@ export default function AvailabilitySettingsPage() {
   const handleSave = async () => {
     await save.mutateAsync({ timezone, recurring_hours: hours });
     toast({
-      title: "Beschikbaarheid opgeslagen",
-      description: `${hours.length} blokken · ${timezone}`,
+      title: t("availability.toast.saved.title"),
+      description: t("availability.toast.saved.description", {
+        count: hours.length,
+        timezone,
+      }),
     });
   };
 
@@ -138,7 +143,7 @@ export default function AvailabilitySettingsPage() {
     };
     await addOverride.mutateAsync(ov);
     toast({
-      title: "Datum geblokkeerd",
+      title: t("availability.toast.blocked.title"),
       description: `${overrideDate}${overrideReason ? ` — ${overrideReason}` : ""}`,
     });
     setOverrideDate("");
@@ -162,11 +167,11 @@ export default function AvailabilitySettingsPage() {
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-zinc-900"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          Terug naar instellingen
+          {t("availability.backToSettings")}
         </Link>
         <Card>
           <CardContent className="py-12 text-center text-sm text-destructive">
-            Kon beschikbaarheid niet laden — probeer opnieuw.
+            {t("availability.loadError")}
           </CardContent>
         </Card>
       </div>
@@ -185,10 +190,11 @@ export default function AvailabilitySettingsPage() {
 
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">Beschikbaarheid</h1>
+          <h1 className="text-xl font-bold tracking-tight">
+            {t("availability.title")}
+          </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Geef aan wanneer je standaard beschikbaar bent voor interviews. De
-            scheduler gebruikt deze tijden om slots voor te stellen.
+            {t("availability.description")}
           </p>
         </div>
         <Button
@@ -201,7 +207,7 @@ export default function AvailabilitySettingsPage() {
           ) : (
             <Save className="h-4 w-4 mr-2" />
           )}
-          Opslaan
+          {t("availability.save")}
         </Button>
       </div>
 
@@ -210,10 +216,10 @@ export default function AvailabilitySettingsPage() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Clock className="h-4 w-4 text-indigo-500" />
-            Tijdzone
+            {t("availability.timezone.title")}
           </CardTitle>
           <CardDescription>
-            Tijden worden opgeslagen in deze tijdzone.
+            {t("availability.timezone.description")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -237,11 +243,10 @@ export default function AvailabilitySettingsPage() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Calendar className="h-4 w-4 text-purple-500" />
-            Wekelijks schema
+            {t("availability.weeklySchedule.title")}
           </CardTitle>
           <CardDescription>
-            Voeg per dag één of meerdere tijdblokken toe (bv. ochtend en
-            middag).
+            {t("availability.weeklySchedule.description")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -251,7 +256,9 @@ export default function AvailabilitySettingsPage() {
               className="rounded-lg border border-border p-3"
             >
               <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-semibold">{day.label}</p>
+                <p className="text-sm font-semibold">
+                  {t(`availability.weekdays.${day.value}`)}
+                </p>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -259,12 +266,12 @@ export default function AvailabilitySettingsPage() {
                   className="h-7"
                 >
                   <Plus className="h-3 w-3 mr-1" />
-                  Voeg toe
+                  {t("availability.weeklySchedule.addBlock")}
                 </Button>
               </div>
               {blocksForDay(day.value).length === 0 ? (
                 <p className="text-xs text-muted-foreground italic">
-                  Niet beschikbaar
+                  {t("availability.weeklySchedule.notAvailable")}
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -280,7 +287,9 @@ export default function AvailabilitySettingsPage() {
                         }
                         className="w-28"
                       />
-                      <span className="text-xs text-muted-foreground">tot</span>
+                      <span className="text-xs text-muted-foreground">
+                        {t("availability.weeklySchedule.until")}
+                      </span>
                       <Input
                         type="time"
                         value={block.end}
@@ -313,16 +322,18 @@ export default function AvailabilitySettingsPage() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Calendar className="h-4 w-4 text-amber-500" />
-            Specifieke datum-uitzonderingen
+            {t("availability.overrides.title")}
           </CardTitle>
           <CardDescription>
-            Blokkeer individuele dagen (vakantie, ziek, externe afspraken).
+            {t("availability.overrides.description")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="space-y-1.5">
-              <Label htmlFor="ov-date">Datum</Label>
+              <Label htmlFor="ov-date">
+                {t("availability.overrides.dateLabel")}
+              </Label>
               <Input
                 id="ov-date"
                 type="date"
@@ -331,12 +342,14 @@ export default function AvailabilitySettingsPage() {
               />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="ov-reason">Reden (optioneel)</Label>
+              <Label htmlFor="ov-reason">
+                {t("availability.overrides.reasonLabel")}
+              </Label>
               <Input
                 id="ov-reason"
                 value={overrideReason}
                 onChange={(e) => setOverrideReason(e.target.value)}
-                placeholder="bv. Vakantie, conferentie..."
+                placeholder={t("availability.overrides.reasonPlaceholder")}
               />
             </div>
           </div>
@@ -350,13 +363,13 @@ export default function AvailabilitySettingsPage() {
             ) : (
               <Plus className="h-3.5 w-3.5 mr-1.5" />
             )}
-            Datum blokkeren
+            {t("availability.overrides.blockDate")}
           </Button>
 
           {(data?.overrides?.length ?? 0) > 0 && (
             <div className="space-y-1.5 pt-3 border-t border-border">
               <p className="text-xs uppercase tracking-wide font-semibold text-muted-foreground">
-                Geblokkeerde data
+                {t("availability.overrides.blockedHeading")}
               </p>
               {data!.overrides
                 .filter((o) => !o.available)

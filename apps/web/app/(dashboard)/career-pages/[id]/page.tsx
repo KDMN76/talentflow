@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
   Save,
@@ -64,12 +65,13 @@ function LivePreview({
   config: CareerPageConfig;
   template: CareerPageTemplate;
 }) {
+  const { t } = useTranslation("careerPages");
   const primary = config.primary_color ?? "#6366f1";
   const fontFamily = config.font_family ?? "Inter";
-  const header = config.header_text || "Werk bij ons";
+  const header = config.header_text || t("editor.preview.defaultHeader");
   const intro =
     config.intro_text ||
-    "Ontdek vacatures die bij je passen en solliciteer in één klik.";
+    t("editor.preview.defaultIntro");
 
   const heroStyles: Record<CareerPageTemplate, React.CSSProperties> = {
     modern: {
@@ -147,7 +149,7 @@ function LivePreview({
           ) : null}
           {template === "tech" && (
             <p className="font-mono text-xs text-emerald-400 mb-2">
-              $ careers --hire
+              {t("editor.preview.techPrompt")}
             </p>
           )}
           <h1
@@ -179,8 +181,16 @@ function LivePreview({
       {/* Sample jobs */}
       <div className="space-y-2 p-4 bg-zinc-50/50 dark:bg-zinc-900/50">
         {[
-          { title: "Senior Developer", loc: "Amsterdam", type: "Fulltime" },
-          { title: "Sales Consultant", loc: "Den Haag", type: "Fulltime" },
+          {
+            title: t("editor.preview.sampleJob1Title"),
+            loc: t("editor.preview.sampleJob1Location"),
+            type: t("editor.preview.sampleJobType"),
+          },
+          {
+            title: t("editor.preview.sampleJob2Title"),
+            loc: t("editor.preview.sampleJob2Location"),
+            type: t("editor.preview.sampleJobType"),
+          },
         ].map((job) => (
           <div
             key={job.title}
@@ -199,7 +209,7 @@ function LivePreview({
               className="rounded-md px-3 py-1.5 text-xs font-semibold text-white shadow-sm"
               style={{ backgroundColor: primary }}
             >
-              Solliciteer
+              {t("editor.preview.apply")}
             </button>
           </div>
         ))}
@@ -217,6 +227,7 @@ export default function CareerPageEditorPage() {
   const { toast } = useToast();
   const { data: page, isLoading, isError } = useCareerPage(id);
   const updatePage = useUpdateCareerPage();
+  const { t } = useTranslation("careerPages");
 
   // Local editable state
   const [headerText, setHeaderText] = useState("");
@@ -260,13 +271,13 @@ export default function CareerPageEditorPage() {
         },
       });
       toast({
-        title: "Wijzigingen opgeslagen",
-        description: `/${page.slug} is bijgewerkt.`,
+        title: t("editor.toasts.saved.title"),
+        description: t("editor.toasts.saved.description", { slug: page.slug }),
       });
     } catch {
       toast({
-        title: "Fout bij opslaan",
-        description: "Kon de wijzigingen niet opslaan. Probeer het opnieuw.",
+        title: t("editor.toasts.saveError.title"),
+        description: t("editor.toasts.saveError.description"),
         variant: "destructive",
       });
     }
@@ -291,10 +302,10 @@ export default function CareerPageEditorPage() {
           <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
         </div>
         <p className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-          Career page niet gevonden
+          {t("editor.notFound.title")}
         </p>
         <Button variant="outline" className="mt-4" onClick={() => router.push("/career-pages")}>
-          Terug naar overzicht
+          {t("editor.notFound.back")}
         </Button>
       </div>
     );
@@ -321,7 +332,7 @@ export default function CareerPageEditorPage() {
           >
             <Link href="/career-pages">
               <ArrowLeft className="h-4 w-4" />
-              Career pages
+              {t("editor.header.backLink")}
             </Link>
           </Button>
           <div className="flex items-center gap-3">
@@ -333,11 +344,11 @@ export default function CareerPageEditorPage() {
             </span>
             {page.active ? (
               <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
-                Live
+                {t("editor.header.live")}
               </span>
             ) : (
               <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                Offline
+                {t("editor.header.offline")}
               </span>
             )}
           </div>
@@ -347,7 +358,7 @@ export default function CareerPageEditorPage() {
               <span className="font-semibold text-zinc-900 dark:text-zinc-100">
                 {page.visit_count.toLocaleString("nl-NL")}
               </span>{" "}
-              bezoeken
+              {t("editor.header.visits")}
             </div>
             <span className="text-zinc-300 dark:text-zinc-700">·</span>
             <div className="flex items-center gap-1.5">
@@ -355,7 +366,7 @@ export default function CareerPageEditorPage() {
               <span className="font-semibold text-zinc-900 dark:text-zinc-100">
                 {page.application_count}
               </span>{" "}
-              sollicitaties
+              {t("editor.header.applications")}
             </div>
           </div>
         </div>
@@ -368,13 +379,13 @@ export default function CareerPageEditorPage() {
               rel="noreferrer"
             >
               <ExternalLink className="h-4 w-4" />
-              Open publiek
+              {t("editor.header.openPublic")}
             </a>
           </Button>
           <Button asChild variant="outline" className="gap-1.5">
             <Link href={`/career-pages/${page.id}/builder`}>
               <LayoutTemplate className="h-4 w-4" />
-              Pagina bouwen
+              {t("editor.header.buildPage")}
             </Link>
           </Button>
           <Button
@@ -383,7 +394,7 @@ export default function CareerPageEditorPage() {
             className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 border-0 gap-2"
           >
             <Save className="h-4 w-4" />
-            {updatePage.isPending ? "Opslaan…" : "Opslaan"}
+            {updatePage.isPending ? t("editor.header.saving") : t("editor.header.save")}
           </Button>
         </div>
       </div>
@@ -394,37 +405,37 @@ export default function CareerPageEditorPage() {
           <Card className="border-0 shadow-sm">
             <CardContent className="p-5 space-y-4">
               <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                Inhoud
+                {t("editor.content.title")}
               </h2>
 
               <div className="space-y-2">
-                <Label htmlFor="hdr">Koptekst</Label>
+                <Label htmlFor="hdr">{t("editor.content.headerLabel")}</Label>
                 <Input
                   id="hdr"
                   value={headerText}
                   onChange={(e) => setHeaderText(e.target.value)}
-                  placeholder="Werk bij ons"
+                  placeholder={t("editor.content.headerPlaceholder")}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="intro">Introductietekst</Label>
+                <Label htmlFor="intro">{t("editor.content.introLabel")}</Label>
                 <textarea
                   id="intro"
                   value={introText}
                   onChange={(e) => setIntroText(e.target.value)}
-                  placeholder="Korte introductie over je bedrijf en cultuur…"
+                  placeholder={t("editor.content.introPlaceholder")}
                   className="w-full min-h-[100px] rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 resize-none"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="logo">Logo URL</Label>
+                <Label htmlFor="logo">{t("editor.content.logoLabel")}</Label>
                 <Input
                   id="logo"
                   value={logoUrl}
                   onChange={(e) => setLogoUrl(e.target.value)}
-                  placeholder="https://…/logo.png"
+                  placeholder={t("editor.content.logoPlaceholder")}
                 />
               </div>
             </CardContent>
@@ -433,11 +444,11 @@ export default function CareerPageEditorPage() {
           <Card className="border-0 shadow-sm">
             <CardContent className="p-5 space-y-4">
               <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                Stijl
+                {t("editor.style.title")}
               </h2>
 
               <div className="space-y-2">
-                <Label htmlFor="color">Hoofdkleur</Label>
+                <Label htmlFor="color">{t("editor.style.colorLabel")}</Label>
                 <div className="flex items-center gap-3">
                   <input
                     id="color"
@@ -455,7 +466,7 @@ export default function CareerPageEditorPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="font">Lettertype</Label>
+                <Label htmlFor="font">{t("editor.style.fontLabel")}</Label>
                 <Select value={fontFamily} onValueChange={setFontFamily}>
                   <SelectTrigger id="font">
                     <SelectValue />
@@ -472,7 +483,7 @@ export default function CareerPageEditorPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label htmlFor="tpl">Template</Label>
+                  <Label htmlFor="tpl">{t("editor.style.templateLabel")}</Label>
                   <Select
                     value={template}
                     onValueChange={(v) =>
@@ -493,7 +504,7 @@ export default function CareerPageEditorPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="lang">Taal</Label>
+                  <Label htmlFor="lang">{t("editor.style.languageLabel")}</Label>
                   <Select
                     value={language}
                     onValueChange={(v) =>
@@ -519,23 +530,23 @@ export default function CareerPageEditorPage() {
           <Card className="border-0 shadow-sm">
             <CardContent className="p-5 space-y-4">
               <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                Custom domein
+                {t("editor.domain.title")}
               </h2>
               <div className="space-y-2">
-                <Label htmlFor="domain">Domeinnaam</Label>
+                <Label htmlFor="domain">{t("editor.domain.nameLabel")}</Label>
                 <div className="relative">
                   <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                   <Input
                     id="domain"
                     value={customDomain}
                     onChange={(e) => setCustomDomain(e.target.value)}
-                    placeholder="werken.bedrijf.nl"
+                    placeholder={t("editor.domain.namePlaceholder")}
                     className="pl-9"
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Wijs een CNAME naar <code className="font-mono">careers.talentflow.app</code>{" "}
-                  om dit domein te activeren.
+                  {t("editor.domain.helpBefore")} <code className="font-mono">careers.talentflow.app</code>{" "}
+                  {t("editor.domain.helpAfter")}
                 </p>
               </div>
             </CardContent>
@@ -546,10 +557,10 @@ export default function CareerPageEditorPage() {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-              Live preview
+              {t("editor.livePreview.title")}
             </h2>
             <span className="text-xs text-muted-foreground">
-              Update terwijl je typt
+              {t("editor.livePreview.subtitle")}
             </span>
           </div>
           <div className="lg:sticky lg:top-4">

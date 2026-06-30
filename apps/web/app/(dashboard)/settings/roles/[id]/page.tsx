@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -42,6 +43,7 @@ import type { PermissionGrant } from "@/lib/types/security";
 import { getInitials } from "@/lib/utils";
 
 export default function RoleDetailPage() {
+  const { t } = useTranslation("settingsAccess");
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const { toast } = useToast();
@@ -82,11 +84,14 @@ export default function RoleDetailPage() {
         inherits_from_role_id: inheritsId,
         permissions,
       });
-      toast({ title: "Rol bijgewerkt" });
+      toast({ title: t("roleDetail.toasts.updated.title") });
     } catch (err) {
       toast({
-        title: "Opslaan mislukt",
-        description: err instanceof Error ? err.message : "Onbekende fout.",
+        title: t("roleDetail.toasts.updateError.title"),
+        description:
+          err instanceof Error
+            ? err.message
+            : t("roleDetail.toasts.updateError.fallback"),
         variant: "destructive",
       });
     }
@@ -94,29 +99,34 @@ export default function RoleDetailPage() {
 
   const handleDelete = async () => {
     if (!role) return;
-    if (!confirm(`Rol "${role.label}" verwijderen?`)) return;
+    if (!confirm(t("roleDetail.confirmDelete", { label: role.label }))) return;
     try {
       await deleteMutation.mutateAsync(role.id);
-      toast({ title: "Rol verwijderd" });
+      toast({ title: t("roleDetail.toasts.deleted.title") });
       router.push("/settings/roles");
     } catch (err) {
       toast({
-        title: "Verwijderen mislukt",
-        description: err instanceof Error ? err.message : "Onbekende fout.",
+        title: t("roleDetail.toasts.deleteError.title"),
+        description:
+          err instanceof Error
+            ? err.message
+            : t("roleDetail.toasts.deleteError.fallback"),
         variant: "destructive",
       });
     }
   };
 
   const handleUnassign = async (assignmentId: string) => {
-    if (!confirm("Rol-toewijzing verwijderen?")) return;
+    if (!confirm(t("roleDetail.confirmUnassign"))) return;
     await unassignMutation.mutateAsync(assignmentId);
-    toast({ title: "Toewijzing verwijderd" });
+    toast({ title: t("roleDetail.toasts.unassigned.title") });
   };
 
   if (isLoading || !role) {
     return (
-      <div className="text-sm text-muted-foreground">Laden…</div>
+      <div className="text-sm text-muted-foreground">
+        {t("roleDetail.loading")}
+      </div>
     );
   }
 
@@ -127,26 +137,26 @@ export default function RoleDetailPage() {
         className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-3 w-3" />
-        Terug naar Rollen
+        {t("roleDetail.backToRoles")}
       </Link>
 
       <PageHeader
         title={role.label}
         description={
           role.is_system
-            ? "System-rol — alleen-lezen weergave."
-            : "Custom rol — bewerk label, beschrijving, inheritance en rechten."
+            ? t("roleDetail.descriptionSystem")
+            : t("roleDetail.descriptionCustom")
         }
         actions={
           <div className="flex items-center gap-2">
             {role.is_system ? (
               <Badge className="text-[10px] bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border-0 gap-1">
                 <Lock className="h-3 w-3" />
-                System
+                {t("roleDetail.badge.system")}
               </Badge>
             ) : (
               <Badge className="text-[10px] bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border-0">
-                Custom
+                {t("roleDetail.badge.custom")}
               </Badge>
             )}
             <code className="text-[10px] font-mono text-muted-foreground">
@@ -158,10 +168,16 @@ export default function RoleDetailPage() {
 
       <Tabs defaultValue="config">
         <TabsList>
-          <TabsTrigger value="config">Configuratie</TabsTrigger>
-          <TabsTrigger value="permissions">Rechten</TabsTrigger>
+          <TabsTrigger value="config">
+            {t("roleDetail.tabs.config")}
+          </TabsTrigger>
+          <TabsTrigger value="permissions">
+            {t("roleDetail.tabs.permissions")}
+          </TabsTrigger>
           <TabsTrigger value="users">
-            Toegewezen gebruikers ({assignments?.length ?? 0})
+            {t("roleDetail.tabs.users", {
+              count: assignments?.length ?? 0,
+            })}
           </TabsTrigger>
         </TabsList>
 
@@ -169,7 +185,7 @@ export default function RoleDetailPage() {
           <Card className="border-0 shadow-sm">
             <CardContent className="space-y-4 p-5">
               <div className="space-y-2">
-                <Label>Label</Label>
+                <Label>{t("roleDetail.labelLabel")}</Label>
                 <Input
                   disabled={isReadOnly}
                   value={label}
@@ -177,7 +193,7 @@ export default function RoleDetailPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Beschrijving</Label>
+                <Label>{t("roleDetail.descriptionLabel")}</Label>
                 <Textarea
                   rows={3}
                   disabled={isReadOnly}
@@ -186,14 +202,16 @@ export default function RoleDetailPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Erft van</Label>
+                <Label>{t("roleDetail.inheritsLabel")}</Label>
                 <Select
                   disabled={isReadOnly}
                   value={inheritsId ?? ""}
                   onValueChange={(v) => setInheritsId(v || null)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Geen" />
+                    <SelectValue
+                      placeholder={t("roleDetail.inheritsPlaceholder")}
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {(allRoles ?? [])
@@ -218,7 +236,7 @@ export default function RoleDetailPage() {
                 className="text-destructive border-destructive/50 hover:bg-destructive/10"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Verwijderen
+                {t("roleDetail.delete")}
               </Button>
               <Button
                 onClick={handleSave}
@@ -230,7 +248,7 @@ export default function RoleDetailPage() {
                 ) : (
                   <Save className="mr-2 h-4 w-4" />
                 )}
-                Wijzigingen opslaan
+                {t("roleDetail.saveChanges")}
               </Button>
             </div>
           )}
@@ -239,7 +257,9 @@ export default function RoleDetailPage() {
         <TabsContent value="permissions" className="mt-6 space-y-4">
           <Card className="border-0 shadow-sm">
             <CardHeader>
-              <CardTitle className="text-base">Permission-matrix</CardTitle>
+              <CardTitle className="text-base">
+                {t("roleDetail.permissionMatrixTitle")}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <PermissionMatrixEditor
@@ -263,7 +283,7 @@ export default function RoleDetailPage() {
                 ) : (
                   <Save className="mr-2 h-4 w-4" />
                 )}
-                Rechten opslaan
+                {t("roleDetail.savePermissions")}
               </Button>
             </div>
           )}
@@ -276,7 +296,7 @@ export default function RoleDetailPage() {
                 <div className="px-5 py-12 text-center">
                   <Users className="mx-auto h-10 w-10 text-zinc-300 mb-2" />
                   <p className="text-sm text-muted-foreground">
-                    Nog geen gebruikers met deze rol.
+                    {t("roleDetail.noUsersTitle")}
                   </p>
                 </div>
               ) : (
@@ -302,8 +322,11 @@ export default function RoleDetailPage() {
                       <div className="flex items-center gap-3">
                         {a.expires_at && (
                           <span className="text-[11px] text-muted-foreground">
-                            verloopt{" "}
-                            {new Date(a.expires_at).toLocaleDateString("nl-NL")}
+                            {t("roleDetail.expiresOn", {
+                              date: new Date(
+                                a.expires_at
+                              ).toLocaleDateString("nl-NL"),
+                            })}
                           </span>
                         )}
                         <Button
@@ -314,7 +337,7 @@ export default function RoleDetailPage() {
                           className="text-destructive border-destructive/50 hover:bg-destructive/10"
                         >
                           <X className="h-3.5 w-3.5 mr-1.5" />
-                          Verwijder toewijzing
+                          {t("roleDetail.removeAssignment")}
                         </Button>
                       </div>
                     </div>

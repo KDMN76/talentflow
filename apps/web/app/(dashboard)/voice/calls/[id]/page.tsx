@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -45,6 +46,7 @@ import { useCurrentUser } from "@/hooks/useUsers";
 import { getInitials } from "@/lib/utils";
 
 export default function CallDetailPage() {
+  const { t } = useTranslation("miscPortals");
   const params = useParams();
   const router = useRouter();
   const id = params?.id as string;
@@ -107,14 +109,18 @@ export default function CallDetailPage() {
           onClick={() => router.back()}
           className="text-muted-foreground hover:text-foreground -ml-2"
         >
-          <ArrowLeft className="mr-2 h-4 w-4" /> Terug
+          <ArrowLeft className="mr-2 h-4 w-4" /> {t("voiceCall.back")}
         </Button>
         <Card className="border-0 shadow-sm">
           <CardContent className="py-12 text-center text-sm">
             {isError ? (
-              <span className="text-destructive">Kon gesprek niet laden — probeer opnieuw.</span>
+              <span className="text-destructive">
+                {t("voiceCall.error.loadFailed")}
+              </span>
             ) : (
-              <span className="text-muted-foreground">Gesprek niet gevonden.</span>
+              <span className="text-muted-foreground">
+                {t("voiceCall.error.notFound")}
+              </span>
             )}
           </CardContent>
         </Card>
@@ -128,9 +134,12 @@ export default function CallDetailPage() {
       await navigator.clipboard.writeText(call.transcription_text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2_000);
-      toast({ title: "Transcriptie gekopieerd" });
+      toast({ title: t("voiceCall.toasts.transcriptionCopied") });
     } catch {
-      toast({ title: "Kopiëren mislukt", variant: "destructive" });
+      toast({
+        title: t("voiceCall.toasts.copyFailed"),
+        variant: "destructive",
+      });
     }
   };
 
@@ -144,7 +153,7 @@ export default function CallDetailPage() {
         onClick={() => router.back()}
         className="text-muted-foreground hover:text-foreground -ml-2"
       >
-        <ArrowLeft className="mr-2 h-4 w-4" /> Terug
+        <ArrowLeft className="mr-2 h-4 w-4" /> {t("voiceCall.back")}
       </Button>
 
       {/* Header card */}
@@ -161,12 +170,14 @@ export default function CallDetailPage() {
                 href={`/candidates/${call.candidate_id}`}
                 className="text-lg font-bold text-zinc-900 hover:text-indigo-600 dark:text-zinc-100"
               >
-                {call.candidate_name ?? "Onbekende kandidaat"}
+                {call.candidate_name ?? t("voiceCall.header.unknownCandidate")}
               </Link>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <span className="inline-flex items-center gap-1">
                   <DirIcon className="h-3 w-3" />
-                  {call.direction === "inbound" ? "Inkomend" : "Uitgaand"}
+                  {call.direction === "inbound"
+                    ? t("voiceCall.header.inbound")
+                    : t("voiceCall.header.outbound")}
                 </span>
                 <span>·</span>
                 <span className="font-mono">{call.from_number}</span>
@@ -174,14 +185,17 @@ export default function CallDetailPage() {
                 <span className="font-mono">{call.to_number}</span>
                 {call.voicemail && (
                   <span className="inline-flex items-center gap-1 text-purple-600">
-                    <Voicemail className="h-3 w-3" /> Voicemail
+                    <Voicemail className="h-3 w-3" />{" "}
+                    {t("voiceCall.header.voicemail")}
                   </span>
                 )}
               </div>
               {currentUser?.name && (
                 <div className="mt-2 flex items-center gap-2 text-xs">
                   <User className="h-3 w-3 text-muted-foreground" />
-                  <span className="text-muted-foreground">Recruiter:</span>
+                  <span className="text-muted-foreground">
+                    {t("voiceCall.header.recruiterLabel")}
+                  </span>
                   <span className="font-medium text-zinc-700 dark:text-zinc-300">
                     {currentUser.name}
                   </span>
@@ -201,7 +215,7 @@ export default function CallDetailPage() {
                       dateStyle: "short",
                       timeStyle: "short",
                     })
-                  : "—"}
+                  : t("voiceCall.header.noDate")}
               </p>
             </div>
           </div>
@@ -212,31 +226,31 @@ export default function CallDetailPage() {
       <Card className="border-0 shadow-sm">
         <CardContent className="p-5">
           <h3 className="mb-3 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-            Tijdlijn
+            {t("voiceCall.timeline.title")}
           </h3>
           <ol className="space-y-2 text-xs">
             <TimelineRow
               icon={<Phone className="h-3.5 w-3.5" />}
-              label="Gestart"
+              label={t("voiceCall.timeline.started")}
               ts={call.started_at}
               done
             />
             <TimelineRow
               icon={<PhoneIncoming className="h-3.5 w-3.5" />}
-              label="Beantwoord"
+              label={t("voiceCall.timeline.answered")}
               ts={call.answered_at}
               done={!!call.answered_at}
             />
             <TimelineRow
               icon={<Phone className="h-3.5 w-3.5" />}
-              label="Afgerond"
+              label={t("voiceCall.timeline.ended")}
               ts={call.ended_at}
               done={!!call.ended_at}
             />
             {call.recording_url && (
               <TimelineRow
                 icon={<Mic className="h-3.5 w-3.5" />}
-                label="Opname beschikbaar"
+                label={t("voiceCall.timeline.recordingAvailable")}
                 ts={call.ended_at}
                 done
               />
@@ -250,11 +264,12 @@ export default function CallDetailPage() {
         <Card className="border-0 shadow-sm">
           <CardContent className="p-5">
             <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-              <Mic className="h-4 w-4 text-purple-500" /> Opname
+              <Mic className="h-4 w-4 text-purple-500" />{" "}
+              {t("voiceCall.recording.title")}
             </h3>
             <audio controls className="w-full" preload="metadata">
               <source src={call.recording_url} />
-              Audio wordt niet ondersteund door je browser.
+              {t("voiceCall.recording.unsupported")}
             </audio>
           </CardContent>
         </Card>
@@ -265,7 +280,8 @@ export default function CallDetailPage() {
         <CardContent className="p-5">
           <div className="mb-3 flex items-center justify-between gap-2">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-              <Mic className="h-4 w-4 text-indigo-500" /> Transcriptie
+              <Mic className="h-4 w-4 text-indigo-500" />{" "}
+              {t("voiceCall.transcription.title")}
             </h3>
             <div className="flex gap-1.5">
               {!call.transcription_text && call.transcription_status !== "pending" && (
@@ -274,12 +290,15 @@ export default function CallDetailPage() {
                   variant="outline"
                   onClick={() =>
                     requestTranscription.mutate(call.id, {
-                      onSuccess: () => toast({ title: "Transcriptie aangevraagd" }),
+                      onSuccess: () =>
+                        toast({
+                          title: t("voiceCall.toasts.transcriptionRequested"),
+                        }),
                     })
                   }
                   className="h-7 text-xs"
                 >
-                  Genereer
+                  {t("voiceCall.transcription.generate")}
                 </Button>
               )}
               {call.transcription_text && (
@@ -291,11 +310,13 @@ export default function CallDetailPage() {
                 >
                   {copied ? (
                     <>
-                      <Check className="h-3 w-3" /> Gekopieerd
+                      <Check className="h-3 w-3" />{" "}
+                      {t("voiceCall.transcription.copied")}
                     </>
                   ) : (
                     <>
-                      <Copy className="h-3 w-3" /> Kopiëren
+                      <Copy className="h-3 w-3" />{" "}
+                      {t("voiceCall.transcription.copy")}
                     </>
                   )}
                 </Button>
@@ -304,7 +325,7 @@ export default function CallDetailPage() {
           </div>
           {call.transcription_status === "pending" ? (
             <p className="rounded-md bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
-              Transcriptie wordt gegenereerd — duurt meestal &lt; 1 minuut.
+              {t("voiceCall.transcription.pending")}
             </p>
           ) : call.transcription_text ? (
             <p className="whitespace-pre-wrap rounded-md bg-zinc-50 p-4 text-sm leading-relaxed text-zinc-800 dark:bg-zinc-800/40 dark:text-zinc-200">
@@ -312,7 +333,7 @@ export default function CallDetailPage() {
             </p>
           ) : (
             <p className="text-xs text-muted-foreground">
-              Geen transcriptie beschikbaar.
+              {t("voiceCall.transcription.none")}
             </p>
           )}
         </CardContent>
@@ -323,21 +344,21 @@ export default function CallDetailPage() {
         <CardContent className="p-5">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-              Notities
+              {t("voiceCall.notes.title")}
             </h3>
             <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
               <Save className="h-3 w-3" />
               {notes === savedNotes
-                ? "Opgeslagen"
+                ? t("voiceCall.notes.saved")
                 : saveNotes.isPending
-                ? "Opslaan…"
-                : "Wordt opgeslagen…"}
+                ? t("voiceCall.notes.saving")
+                : t("voiceCall.notes.willSave")}
             </span>
           </div>
           <Textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Schrijf hier je notities — wordt automatisch opgeslagen."
+            placeholder={t("voiceCall.notes.placeholder")}
             className="min-h-[140px]"
           />
         </CardContent>

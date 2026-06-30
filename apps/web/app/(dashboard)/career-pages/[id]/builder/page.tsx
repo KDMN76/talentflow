@@ -18,6 +18,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
   AlertCircle,
@@ -77,39 +78,43 @@ import type { Locale, PublicBranding, PublicJob } from "@/components/career-publ
 
 const AUTOSAVE_DEBOUNCE_MS = 1500;
 
-// Synthetic fixtures for the canvas-preview. These never leave the builder.
-const PREVIEW_JOBS: PublicJob[] = [
-  {
-    id: "preview-1",
-    title: "Senior Developer",
-    department: "Engineering",
-    location: "Amsterdam",
-    description: "Bouw mee aan ons platform.",
-    employment_type: "fulltime",
-    salary_min: 65000,
-    salary_max: 90000,
-    salary_currency: "EUR",
-    remote: false,
-  },
-  {
-    id: "preview-2",
-    title: "Recruitment Consultant",
-    department: "Sales",
-    location: "Den Haag",
-    description: "Help klanten talent vinden.",
-    employment_type: "fulltime",
-    salary_min: 45000,
-    salary_max: 60000,
-    salary_currency: "EUR",
-    remote: true,
-  },
-];
-
 export default function CareerPageBuilderPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? "";
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useTranslation("careerPages");
+
+  // Synthetic fixtures for the canvas-preview. These never leave the builder.
+  const previewJobs = useMemo<PublicJob[]>(
+    () => [
+      {
+        id: "preview-1",
+        title: t("builder.preview.job1Title"),
+        department: "Engineering",
+        location: "Amsterdam",
+        description: t("builder.preview.job1Description"),
+        employment_type: "fulltime",
+        salary_min: 65000,
+        salary_max: 90000,
+        salary_currency: "EUR",
+        remote: false,
+      },
+      {
+        id: "preview-2",
+        title: t("builder.preview.job2Title"),
+        department: "Sales",
+        location: "Den Haag",
+        description: t("builder.preview.job2Description"),
+        employment_type: "fulltime",
+        salary_min: 45000,
+        salary_max: 60000,
+        salary_currency: "EUR",
+        remote: true,
+      },
+    ],
+    [t]
+  );
 
   const { data: page, isLoading, isError } = useCareerPageWithBlocks(id);
   const { saveBlocks, isPending: isSaving } = useUpdateBuilderBlocks(id);
@@ -154,8 +159,8 @@ export default function CareerPageBuilderPage() {
       setLastSavedAt(Date.now());
     } catch {
       toast({
-        title: "Opslaan mislukt",
-        description: "Kon de wijzigingen niet opslaan. Probeer het opnieuw.",
+        title: t("builder.toasts.saveError.title"),
+        description: t("builder.toasts.saveError.description"),
         variant: "destructive",
       });
     }
@@ -211,7 +216,7 @@ export default function CareerPageBuilderPage() {
     markDirty(() => preset.build());
     setSelectedId(null);
     setPendingTemplate(null);
-    toast({ title: `Template '${preset.label}' toegepast` });
+    toast({ title: t("builder.toasts.templateApplied.title", { label: preset.label }) });
   };
 
   // ── Preview branding ──────────────────────────────────────────────────────
@@ -255,13 +260,13 @@ export default function CareerPageBuilderPage() {
         <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
           <AlertCircle className="h-6 w-6 text-red-600" />
         </div>
-        <p className="text-base font-semibold">Career page niet gevonden</p>
+        <p className="text-base font-semibold">{t("builder.notFound.title")}</p>
         <Button
           variant="outline"
           className="mt-4"
           onClick={() => router.push("/career-pages")}
         >
-          Terug naar overzicht
+          {t("builder.notFound.back")}
         </Button>
       </div>
     );
@@ -281,12 +286,12 @@ export default function CareerPageBuilderPage() {
         >
           <Link href={`/career-pages/${id}`}>
             <ArrowLeft className="h-4 w-4" />
-            Terug
+            {t("builder.header.back")}
           </Link>
         </Button>
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-            Builder · /{page.slug}
+            {t("builder.header.title", { slug: page.slug })}
           </p>
           <SaveStatus
             isSaving={isSaving}
@@ -302,7 +307,7 @@ export default function CareerPageBuilderPage() {
           onValueChange={(v) => setPendingTemplate(v as BuilderTemplate)}
         >
           <SelectTrigger className="h-9 w-[180px]">
-            <SelectValue placeholder="Template kiezen" />
+            <SelectValue placeholder={t("builder.header.templatePlaceholder")} />
           </SelectTrigger>
           <SelectContent>
             {TEMPLATE_PRESETS.map((p) => (
@@ -314,8 +319,8 @@ export default function CareerPageBuilderPage() {
         </Select>
 
         {/* Public preview */}
-        <Button asChild variant="outline" size="icon" className="h-9 w-9" title="Bekijk publiek">
-          <a href={`/careers/${page.slug}`} target="_blank" rel="noreferrer" aria-label="Bekijk publiek">
+        <Button asChild variant="outline" size="icon" className="h-9 w-9" title={t("builder.header.viewPublic")}>
+          <a href={`/careers/${page.slug}`} target="_blank" rel="noreferrer" aria-label={t("builder.header.viewPublic")}>
             <Globe className="h-4 w-4" />
           </a>
         </Button>
@@ -330,7 +335,7 @@ export default function CareerPageBuilderPage() {
           className="gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
         >
           <Save className="h-4 w-4" />
-          {isSaving ? "Opslaan…" : "Sla op"}
+          {isSaving ? t("builder.header.saving") : t("builder.header.save")}
         </Button>
       </div>
 
@@ -360,7 +365,7 @@ export default function CareerPageBuilderPage() {
                       onSelect={() => setSelectedId(block.id)}
                       onDelete={() => handleDeleteBlock(block.id)}
                       branding={branding}
-                      jobs={PREVIEW_JOBS}
+                      jobs={previewJobs}
                       locale={previewLocale}
                       slug={page.slug}
                       careerPageId={page.id}
@@ -393,21 +398,19 @@ export default function CareerPageBuilderPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Template toepassen?</AlertDialogTitle>
+            <AlertDialogTitle>{t("builder.templateDialog.title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Dit vervangt alle huidige blokken op de pagina door de inhoud van
-              het gekozen template. Deze actie kan niet ongedaan gemaakt worden
-              tenzij je daarna opnieuw bewerkt.
+              {t("builder.templateDialog.description")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setPendingTemplate(null)}>
-              Annuleren
+              {t("builder.templateDialog.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => pendingTemplate && applyTemplate(pendingTemplate)}
             >
-              Vervang blokken
+              {t("builder.templateDialog.confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -427,11 +430,12 @@ function SaveStatus({
   dirty: boolean;
   lastSavedAt: number | null;
 }) {
+  const { t } = useTranslation("careerPages");
   if (isSaving) {
     return (
       <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
         <Loader2 className="h-3 w-3 animate-spin" />
-        Bezig met opslaan…
+        {t("builder.status.saving")}
       </span>
     );
   }
@@ -439,7 +443,7 @@ function SaveStatus({
     return (
       <span className="flex items-center gap-1 text-[11px] font-medium text-amber-600">
         <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500" />
-        Niet-opgeslagen wijzigingen
+        {t("builder.status.unsaved")}
       </span>
     );
   }
@@ -447,13 +451,13 @@ function SaveStatus({
     return (
       <span className="flex items-center gap-1 text-[11px] text-emerald-600">
         <Check className="h-3 w-3" />
-        Opgeslagen
+        {t("builder.status.saved")}
       </span>
     );
   }
   return (
     <span className="text-[11px] text-muted-foreground">
-      Klaar om te bouwen
+      {t("builder.status.ready")}
     </span>
   );
 }
@@ -461,13 +465,14 @@ function SaveStatus({
 // ─── Empty state ─────────────────────────────────────────────────────────────
 
 function EmptyCanvas({ onPickTemplate }: { onPickTemplate: () => void }) {
+  const { t } = useTranslation("careerPages");
   return (
     <div className="mx-auto flex max-w-md flex-col items-center justify-center rounded-2xl border-2 border-dashed border-zinc-300 bg-white/60 p-12 text-center">
       <p className="text-base font-semibold text-zinc-900">
-        Nog geen blokken
+        {t("builder.empty.title")}
       </p>
       <p className="mt-1 text-sm text-muted-foreground">
-        Voeg blokken toe vanuit het palet links — of start met een template.
+        {t("builder.empty.description")}
       </p>
       <Button
         variant="outline"
@@ -475,7 +480,7 @@ function EmptyCanvas({ onPickTemplate }: { onPickTemplate: () => void }) {
         className="mt-4"
         onClick={onPickTemplate}
       >
-        Begin met template
+        {t("builder.empty.startTemplate")}
       </Button>
     </div>
   );

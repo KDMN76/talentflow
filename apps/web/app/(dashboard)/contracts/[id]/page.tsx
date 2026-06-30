@@ -11,6 +11,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -67,106 +68,76 @@ import {
 } from "@/hooks/useBackOffice";
 import type {
   ContractStatus,
-  ContractType,
   TimesheetStatus,
   InvoiceStatus,
   CommissionRecordStatus,
 } from "@/lib/types/backOffice";
 
-const STATUS_PILL: Record<ContractStatus, { label: string; cls: string }> = {
+const STATUS_PILL: Record<ContractStatus, { cls: string }> = {
   draft: {
-    label: "Concept",
     cls: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border-0",
   },
   active: {
-    label: "Actief",
     cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-0",
   },
   ended: {
-    label: "Beëindigd",
     cls: "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400 border-0",
   },
   terminated: {
-    label: "Vroegtijdig beëindigd",
     cls: "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300 border-0",
   },
   renewed: {
-    label: "Verlengd",
     cls: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border-0",
   },
 };
 
-const TYPE_LABEL: Record<ContractType, string> = {
-  temp: "Uitzend",
-  contract: "Detachering",
-  permanent: "Vast",
-  freelance: "Freelance",
-};
-
-const TS_STATUS_PILL: Record<TimesheetStatus, { label: string; cls: string }> = {
+const TS_STATUS_PILL: Record<TimesheetStatus, { cls: string }> = {
   draft: {
-    label: "Concept",
     cls: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border-0",
   },
   submitted: {
-    label: "Ingediend",
     cls: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border-0",
   },
   approved: {
-    label: "Goedgekeurd",
     cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-0",
   },
   rejected: {
-    label: "Afgekeurd",
     cls: "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300 border-0",
   },
   disputed: {
-    label: "Bezwaar",
     cls: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-0",
   },
 };
 
-const INV_STATUS_PILL: Record<InvoiceStatus, { label: string; cls: string }> = {
+const INV_STATUS_PILL: Record<InvoiceStatus, { cls: string }> = {
   draft: {
-    label: "Concept",
     cls: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border-0",
   },
   sent: {
-    label: "Verzonden",
     cls: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border-0",
   },
   paid: {
-    label: "Betaald",
     cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-0",
   },
   overdue: {
-    label: "Te laat",
     cls: "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300 border-0",
   },
   void: {
-    label: "Geannuleerd",
     cls: "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400 border-0",
   },
 };
 
-const COMM_STATUS_PILL: Record<
-  CommissionRecordStatus,
-  { label: string; cls: string }
-> = {
+const COMM_STATUS_PILL: Record<CommissionRecordStatus, { cls: string }> = {
   pending: {
-    label: "Wachtend",
     cls: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border-0",
   },
   approved: {
-    label: "Goedgekeurd",
     cls: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border-0",
   },
   paid: {
-    label: "Uitbetaald",
     cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-0",
   },
   disputed: {
-    label: "Bezwaar",
     cls: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-0",
   },
 };
@@ -188,6 +159,7 @@ function formatMoney(amount: number, currency = "EUR"): string {
 }
 
 export default function ContractDetailPage() {
+  const { t } = useTranslation("contracts");
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const id = params.id;
@@ -236,12 +208,12 @@ export default function ContractDetailPage() {
         <Link href="/contracts">
           <Button variant="ghost" size="sm" className="-ml-2">
             <ArrowLeft className="mr-1 h-4 w-4" />
-            Terug
+            {t("detail.backShort")}
           </Button>
         </Link>
         <Card className="border-0 shadow-sm">
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Contract niet gevonden.
+            {t("detail.notFound")}
           </CardContent>
         </Card>
       </div>
@@ -261,14 +233,19 @@ export default function ContractDetailPage() {
         reason: extendReason,
       });
       toast({
-        title: "Contract verlengd",
-        description: `Nieuwe einddatum: ${formatDate(newEndDate)}.`,
+        title: t("detail.toasts.extended.title"),
+        description: t("detail.toasts.extended.description", {
+          date: formatDate(newEndDate),
+        }),
       });
       setExtendOpen(false);
       setNewEndDate("");
       setExtendReason("");
     } catch {
-      toast({ title: "Verlengen mislukt", variant: "destructive" });
+      toast({
+        title: t("detail.toasts.extendError.title"),
+        variant: "destructive",
+      });
     }
   };
 
@@ -281,14 +258,17 @@ export default function ContractDetailPage() {
         effective_date: terminateDate || undefined,
       });
       toast({
-        title: "Contract beëindigd",
-        description: "Status bijgewerkt naar beëindigd.",
+        title: t("detail.toasts.terminated.title"),
+        description: t("detail.toasts.terminated.description"),
       });
       setTerminateOpen(false);
       setTerminateReason("");
       setTerminateDate("");
     } catch {
-      toast({ title: "Beëindigen mislukt", variant: "destructive" });
+      toast({
+        title: t("detail.toasts.terminateError.title"),
+        variant: "destructive",
+      });
     }
   };
 
@@ -301,13 +281,18 @@ export default function ContractDetailPage() {
         period_end: invoicePeriodEnd,
       });
       toast({
-        title: "Factuur aangemaakt",
-        description: `${inv.invoice_number} staat klaar als concept.`,
+        title: t("detail.toasts.invoiceCreated.title"),
+        description: t("detail.toasts.invoiceCreated.description", {
+          number: inv.invoice_number,
+        }),
       });
       setInvoiceOpen(false);
       router.push(`/invoices/${inv.id}`);
     } catch {
-      toast({ title: "Factuur maken mislukt", variant: "destructive" });
+      toast({
+        title: t("detail.toasts.invoiceError.title"),
+        variant: "destructive",
+      });
     }
   };
 
@@ -320,17 +305,26 @@ export default function ContractDetailPage() {
         className="-ml-2"
       >
         <ArrowLeft className="mr-1 h-4 w-4" />
-        Terug naar contracten
+        {t("detail.back")}
       </Button>
 
       <PageHeader
-        title={contract.candidate_name ?? "Contract"}
-        description={`${TYPE_LABEL[contract.contract_type]} bij ${contract.client_name ?? "—"}${
-          contract.job_title ? ` — ${contract.job_title}` : ""
-        }`}
+        title={contract.candidate_name ?? t("detail.fallbackTitle")}
+        description={
+          contract.job_title
+            ? t("detail.descriptionAtJob", {
+                type: t(`type.${contract.contract_type}`),
+                client: contract.client_name ?? t("detail.noClient"),
+                job: contract.job_title,
+              })
+            : t("detail.descriptionAt", {
+                type: t(`type.${contract.contract_type}`),
+                client: contract.client_name ?? t("detail.noClient"),
+              })
+        }
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Badge className={status.cls}>{status.label}</Badge>
+            <Badge className={status.cls}>{t(`status.${contract.status}`)}</Badge>
             {!isClosed && (
               <>
                 <Button
@@ -339,7 +333,7 @@ export default function ContractDetailPage() {
                   onClick={() => setExtendOpen(true)}
                 >
                   <Calendar className="mr-1.5 h-3.5 w-3.5" />
-                  Verlengen
+                  {t("detail.actions.extend")}
                 </Button>
                 <Button
                   variant="outline"
@@ -348,7 +342,7 @@ export default function ContractDetailPage() {
                   className="border-destructive/40 text-destructive hover:bg-destructive/10"
                 >
                   <StopCircle className="mr-1.5 h-3.5 w-3.5" />
-                  Beëindigen
+                  {t("detail.actions.terminate")}
                 </Button>
                 <Button
                   size="sm"
@@ -356,7 +350,7 @@ export default function ContractDetailPage() {
                   className="border-0 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
                 >
                   <Receipt className="mr-1.5 h-3.5 w-3.5" />
-                  Genereer factuur
+                  {t("detail.actions.generateInvoice")}
                 </Button>
               </>
             )}
@@ -368,12 +362,12 @@ export default function ContractDetailPage() {
       <div className="grid gap-3 sm:grid-cols-4">
         <KpiCard
           icon={<Clock className="h-4 w-4" />}
-          label="Uren/wk"
+          label={t("detail.kpi.weeklyHours")}
           value={contract.weekly_hours?.toString() ?? "—"}
         />
         <KpiCard
           icon={<Euro className="h-4 w-4" />}
-          label="Tarief klant"
+          label={t("detail.kpi.rateClient")}
           value={
             contract.hourly_rate_client != null
               ? `${formatMoney(contract.hourly_rate_client, contract.currency)}/u`
@@ -382,7 +376,7 @@ export default function ContractDetailPage() {
         />
         <KpiCard
           icon={<TrendingUp className="h-4 w-4" />}
-          label="Marge"
+          label={t("detail.kpi.margin")}
           value={
             contract.margin_percent != null
               ? `${contract.margin_percent.toFixed(1)}%`
@@ -396,7 +390,7 @@ export default function ContractDetailPage() {
         />
         <KpiCard
           icon={<FileText className="h-4 w-4" />}
-          label="Te keuren"
+          label={t("detail.kpi.toApprove")}
           value={submittedTimesheets.toString()}
           accent={submittedTimesheets > 0 ? "amber" : "zinc"}
         />
@@ -404,14 +398,14 @@ export default function ContractDetailPage() {
 
       <Tabs defaultValue="overview">
         <TabsList>
-          <TabsTrigger value="overview">Overzicht</TabsTrigger>
+          <TabsTrigger value="overview">{t("detail.tabs.overview")}</TabsTrigger>
           <TabsTrigger value="timesheets">
-            Timesheets ({timesheets?.length ?? 0})
+            {t("detail.tabs.timesheets", { count: timesheets?.length ?? 0 })}
           </TabsTrigger>
           <TabsTrigger value="invoices">
-            Facturen ({invoices?.length ?? 0})
+            {t("detail.tabs.invoices", { count: invoices?.length ?? 0 })}
           </TabsTrigger>
-          <TabsTrigger value="commission">Commissie</TabsTrigger>
+          <TabsTrigger value="commission">{t("detail.tabs.commission")}</TabsTrigger>
         </TabsList>
 
         {/* OVERVIEW */}
@@ -419,47 +413,47 @@ export default function ContractDetailPage() {
           <Card className="border-0 shadow-sm">
             <CardContent className="space-y-5 p-6">
               <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                Contractgegevens
+                {t("detail.overview.title")}
               </h3>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field
                   icon={<User className="h-3.5 w-3.5" />}
-                  label="Kandidaat"
+                  label={t("detail.overview.candidate")}
                   value={contract.candidate_name ?? "—"}
                 />
                 <Field
                   icon={<Building2 className="h-3.5 w-3.5" />}
-                  label="Klant"
+                  label={t("detail.overview.client")}
                   value={contract.client_name ?? "—"}
                 />
                 <Field
                   icon={<Briefcase className="h-3.5 w-3.5" />}
-                  label="Vacature"
+                  label={t("detail.overview.job")}
                   value={contract.job_title ?? "—"}
                 />
                 <Field
                   icon={<FileText className="h-3.5 w-3.5" />}
-                  label="Type"
-                  value={TYPE_LABEL[contract.contract_type]}
+                  label={t("detail.overview.type")}
+                  value={t(`type.${contract.contract_type}`)}
                 />
                 <Field
                   icon={<Calendar className="h-3.5 w-3.5" />}
-                  label="Startdatum"
+                  label={t("detail.overview.startDate")}
                   value={formatDate(contract.start_date)}
                 />
                 <Field
                   icon={<Calendar className="h-3.5 w-3.5" />}
-                  label="Einddatum"
+                  label={t("detail.overview.endDate")}
                   value={formatDate(contract.end_date)}
                 />
                 <Field
                   icon={<Clock className="h-3.5 w-3.5" />}
-                  label="Uren per week"
+                  label={t("detail.overview.weeklyHours")}
                   value={contract.weekly_hours?.toString() ?? "—"}
                 />
                 <Field
                   icon={<Euro className="h-3.5 w-3.5" />}
-                  label="Tarief kandidaat"
+                  label={t("detail.overview.rateCandidate")}
                   value={
                     contract.hourly_rate_candidate != null
                       ? `${formatMoney(contract.hourly_rate_candidate, contract.currency)}/u`
@@ -468,7 +462,7 @@ export default function ContractDetailPage() {
                 />
                 <Field
                   icon={<Euro className="h-3.5 w-3.5" />}
-                  label="Tarief klant"
+                  label={t("detail.overview.rateClient")}
                   value={
                     contract.hourly_rate_client != null
                       ? `${formatMoney(contract.hourly_rate_client, contract.currency)}/u`
@@ -477,7 +471,7 @@ export default function ContractDetailPage() {
                 />
                 <Field
                   icon={<TrendingUp className="h-3.5 w-3.5" />}
-                  label="Marge %"
+                  label={t("detail.overview.marginPercent")}
                   value={
                     contract.margin_percent != null
                       ? `${contract.margin_percent.toFixed(1)}%`
@@ -486,7 +480,7 @@ export default function ContractDetailPage() {
                 />
                 <Field
                   icon={<ShieldCheck className="h-3.5 w-3.5" />}
-                  label="CAO"
+                  label={t("detail.overview.cao")}
                   value={contract.cao ?? "—"}
                 />
                 <Field
@@ -499,20 +493,20 @@ export default function ContractDetailPage() {
                       <ShieldCheck className="h-3.5 w-3.5" />
                     )
                   }
-                  label="Wtza compliant"
+                  label={t("detail.overview.wtzaCompliant")}
                   value={
                     contract.wtza_compliant === true
-                      ? "Ja"
+                      ? t("detail.overview.wtzaYes")
                       : contract.wtza_compliant === false
-                      ? "Nee"
-                      : "n.v.t."
+                      ? t("detail.overview.wtzaNo")
+                      : t("detail.overview.wtzaNa")
                   }
                 />
               </div>
 
               {contract.termination_reason && (
                 <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900 dark:bg-red-950/20 dark:text-red-300">
-                  <p className="font-semibold">Beëindigingsreden</p>
+                  <p className="font-semibold">{t("detail.overview.terminationReason")}</p>
                   <p className="mt-0.5">{contract.termination_reason}</p>
                 </div>
               )}
@@ -523,11 +517,11 @@ export default function ContractDetailPage() {
           <Card className="border-0 shadow-sm">
             <CardContent className="p-6">
               <h3 className="mb-4 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                Verlengingen
+                {t("detail.extensions.title")}
               </h3>
               {!extensions || extensions.length === 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  Geen verlengingen voor dit contract.
+                  {t("detail.extensions.empty")}
                 </p>
               ) : (
                 <ol className="space-y-3 border-l border-border pl-5">
@@ -537,13 +531,17 @@ export default function ContractDetailPage() {
                         <Calendar className="h-2.5 w-2.5 text-indigo-600 dark:text-indigo-400" />
                       </span>
                       <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                        Tot {formatDate(e.new_end_date)}
+                        {t("detail.extensions.until", {
+                          date: formatDate(e.new_end_date),
+                        })}
                         <span className="ml-2 text-xs font-normal text-muted-foreground">
-                          (was {formatDate(e.previous_end_date)})
+                          {t("detail.extensions.was", {
+                            date: formatDate(e.previous_end_date),
+                          })}
                         </span>
                       </p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
-                        {e.reason ?? "Geen reden vastgelegd"} ·{" "}
+                        {e.reason ?? t("detail.extensions.noReason")} ·{" "}
                         {formatDate(e.signed_at)}
                       </p>
                     </li>
@@ -560,17 +558,17 @@ export default function ContractDetailPage() {
             <CardContent className="p-0">
               {!timesheets || timesheets.length === 0 ? (
                 <div className="px-4 py-12 text-center text-sm text-muted-foreground">
-                  Geen timesheets voor dit contract.
+                  {t("detail.timesheets.empty")}
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="border-b border-border bg-zinc-50/50 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground dark:bg-zinc-900/40">
                       <tr>
-                        <th className="px-4 py-3">Week</th>
-                        <th className="px-4 py-3">Status</th>
-                        <th className="px-4 py-3 text-right">Uren</th>
-                        <th className="px-4 py-3 text-right">Overuren</th>
+                        <th className="px-4 py-3">{t("detail.timesheets.columns.week")}</th>
+                        <th className="px-4 py-3">{t("detail.timesheets.columns.status")}</th>
+                        <th className="px-4 py-3 text-right">{t("detail.timesheets.columns.hours")}</th>
+                        <th className="px-4 py-3 text-right">{t("detail.timesheets.columns.overtime")}</th>
                         <th className="w-10 px-2 py-3"></th>
                       </tr>
                     </thead>
@@ -579,28 +577,28 @@ export default function ContractDetailPage() {
                         .sort((a, b) =>
                           a.week_start < b.week_start ? 1 : -1
                         )
-                        .map((t) => {
-                          const pill = TS_STATUS_PILL[t.status];
+                        .map((ts) => {
+                          const pill = TS_STATUS_PILL[ts.status];
                           return (
                             <tr
-                              key={t.id}
+                              key={ts.id}
                               onClick={() =>
-                                router.push(`/timesheets?focus=${t.id}`)
+                                router.push(`/timesheets?focus=${ts.id}`)
                               }
                               className="cursor-pointer border-b border-border/60 transition hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20"
                             >
                               <td className="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-100">
-                                {formatDate(t.week_start)} — {formatDate(t.week_end)}
+                                {formatDate(ts.week_start)} — {formatDate(ts.week_end)}
                               </td>
                               <td className="px-4 py-3">
-                                <Badge className={pill.cls}>{pill.label}</Badge>
+                                <Badge className={pill.cls}>{t(`timesheetStatus.${ts.status}`)}</Badge>
                               </td>
                               <td className="px-4 py-3 text-right tabular-nums">
-                                {t.total_hours.toFixed(1)}u
+                                {ts.total_hours.toFixed(1)}u
                               </td>
                               <td className="px-4 py-3 text-right tabular-nums text-amber-600 dark:text-amber-400">
-                                {t.total_overtime_hours > 0
-                                  ? `+${t.total_overtime_hours.toFixed(1)}u`
+                                {ts.total_overtime_hours > 0
+                                  ? `+${ts.total_overtime_hours.toFixed(1)}u`
                                   : "—"}
                               </td>
                               <td className="px-2 py-3">
@@ -623,17 +621,17 @@ export default function ContractDetailPage() {
             <CardContent className="p-0">
               {!invoices || invoices.length === 0 ? (
                 <div className="px-4 py-12 text-center text-sm text-muted-foreground">
-                  Nog geen facturen voor dit contract.
+                  {t("detail.invoices.empty")}
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="border-b border-border bg-zinc-50/50 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground dark:bg-zinc-900/40">
                       <tr>
-                        <th className="px-4 py-3">Nummer</th>
-                        <th className="px-4 py-3">Status</th>
-                        <th className="px-4 py-3">Periode</th>
-                        <th className="px-4 py-3 text-right">Bedrag</th>
+                        <th className="px-4 py-3">{t("detail.invoices.columns.number")}</th>
+                        <th className="px-4 py-3">{t("detail.invoices.columns.status")}</th>
+                        <th className="px-4 py-3">{t("detail.invoices.columns.period")}</th>
+                        <th className="px-4 py-3 text-right">{t("detail.invoices.columns.amount")}</th>
                         <th className="w-10 px-2 py-3"></th>
                       </tr>
                     </thead>
@@ -650,7 +648,7 @@ export default function ContractDetailPage() {
                               {i.invoice_number}
                             </td>
                             <td className="px-4 py-3">
-                              <Badge className={pill.cls}>{pill.label}</Badge>
+                              <Badge className={pill.cls}>{t(`invoiceStatus.${i.status}`)}</Badge>
                             </td>
                             <td className="px-4 py-3 text-xs text-muted-foreground">
                               {formatDate(i.period_start)} —{" "}
@@ -678,11 +676,11 @@ export default function ContractDetailPage() {
           <Card className="border-0 shadow-sm">
             <CardContent className="space-y-3 p-6">
               <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                Toegewezen aan
+                {t("detail.commission.assignedTitle")}
               </h3>
               {!assignments || assignments.length === 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  Geen recruiter-toewijzingen voor dit contract.
+                  {t("detail.commission.assignedEmpty")}
                 </p>
               ) : (
                 <ul className="divide-y divide-border">
@@ -700,7 +698,7 @@ export default function ContractDetailPage() {
                         </p>
                       </div>
                       <Badge variant="outline" className="text-xs">
-                        {a.share_percent}% aandeel
+                        {t("detail.commission.share", { percent: a.share_percent })}
                       </Badge>
                     </li>
                   ))}
@@ -712,11 +710,11 @@ export default function ContractDetailPage() {
           <Card className="border-0 shadow-sm">
             <CardContent className="space-y-3 p-6">
               <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                Commissie-records
+                {t("detail.commission.recordsTitle")}
               </h3>
               {!records || records.length === 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  Nog geen commissie geboekt.
+                  {t("detail.commission.recordsEmpty")}
                 </p>
               ) : (
                 <ul className="divide-y divide-border">
@@ -732,11 +730,13 @@ export default function ContractDetailPage() {
                             <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
                               {r.recruiter_name}
                             </p>
-                            <Badge className={pill.cls}>{pill.label}</Badge>
+                            <Badge className={pill.cls}>{t(`commissionStatus.${r.status}`)}</Badge>
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            Periode {formatDate(r.period_start)} —{" "}
-                            {formatDate(r.period_end)}
+                            {t("detail.commission.period", {
+                              start: formatDate(r.period_start),
+                              end: formatDate(r.period_end),
+                            })}
                           </p>
                         </div>
                         <div className="text-right">
@@ -744,7 +744,9 @@ export default function ContractDetailPage() {
                             {formatMoney(r.commission_amount)}
                           </p>
                           <p className="text-[11px] text-muted-foreground">
-                            van {formatMoney(r.base_amount)}
+                            {t("detail.commission.of", {
+                              amount: formatMoney(r.base_amount),
+                            })}
                           </p>
                         </div>
                       </li>
@@ -761,15 +763,14 @@ export default function ContractDetailPage() {
       <Dialog open={extendOpen} onOpenChange={setExtendOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Contract verlengen</DialogTitle>
+            <DialogTitle>{t("detail.extendDialog.title")}</DialogTitle>
             <DialogDescription>
-              Stel een nieuwe einddatum in. De vorige einddatum wordt
-              vastgelegd in de extension-history.
+              {t("detail.extendDialog.description")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label htmlFor="ext-date">Nieuwe einddatum</Label>
+              <Label htmlFor="ext-date">{t("detail.extendDialog.newEndDate")}</Label>
               <Input
                 id="ext-date"
                 type="date"
@@ -778,19 +779,19 @@ export default function ContractDetailPage() {
               />
             </div>
             <div>
-              <Label htmlFor="ext-reason">Reden</Label>
+              <Label htmlFor="ext-reason">{t("detail.extendDialog.reason")}</Label>
               <Textarea
                 id="ext-reason"
                 rows={3}
                 value={extendReason}
                 onChange={(e) => setExtendReason(e.target.value)}
-                placeholder="Bv. project uitgebreid met fase 2"
+                placeholder={t("detail.extendDialog.reasonPlaceholder")}
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setExtendOpen(false)}>
-              Annuleren
+              {t("detail.extendDialog.cancel")}
             </Button>
             <Button
               onClick={handleExtend}
@@ -799,7 +800,7 @@ export default function ContractDetailPage() {
               {extendMut.isPending && (
                 <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
               )}
-              Verleng contract
+              {t("detail.extendDialog.confirm")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -811,16 +812,15 @@ export default function ContractDetailPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-destructive" />
-              Contract beëindigen
+              {t("detail.terminateDialog.title")}
             </DialogTitle>
             <DialogDescription>
-              Het contract wordt op de aangegeven datum beëindigd. De reden
-              wordt vastgelegd in de audit-trail.
+              {t("detail.terminateDialog.description")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label htmlFor="term-date">Effectieve datum (optioneel)</Label>
+              <Label htmlFor="term-date">{t("detail.terminateDialog.effectiveDate")}</Label>
               <Input
                 id="term-date"
                 type="date"
@@ -828,23 +828,23 @@ export default function ContractDetailPage() {
                 onChange={(e) => setTerminateDate(e.target.value)}
               />
               <p className="mt-1 text-[11px] text-muted-foreground">
-                Leeg = vandaag.
+                {t("detail.terminateDialog.effectiveDateHint")}
               </p>
             </div>
             <div>
-              <Label htmlFor="term-reason">Reden</Label>
+              <Label htmlFor="term-reason">{t("detail.terminateDialog.reason")}</Label>
               <Textarea
                 id="term-reason"
                 rows={3}
                 value={terminateReason}
                 onChange={(e) => setTerminateReason(e.target.value)}
-                placeholder="Bv. vroege beëindiging op verzoek van klant"
+                placeholder={t("detail.terminateDialog.reasonPlaceholder")}
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setTerminateOpen(false)}>
-              Annuleren
+              {t("detail.terminateDialog.cancel")}
             </Button>
             <Button
               onClick={handleTerminate}
@@ -854,7 +854,7 @@ export default function ContractDetailPage() {
               {terminateMut.isPending && (
                 <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
               )}
-              Beëindig
+              {t("detail.terminateDialog.confirm")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -866,16 +866,15 @@ export default function ContractDetailPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Coins className="h-5 w-5 text-indigo-500" />
-              Factuur genereren
+              {t("detail.invoiceDialog.title")}
             </DialogTitle>
             <DialogDescription>
-              Genereer een conceptfactuur op basis van goedgekeurde timesheets
-              binnen de gekozen periode.
+              {t("detail.invoiceDialog.description")}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <Label htmlFor="inv-start">Periode start</Label>
+              <Label htmlFor="inv-start">{t("detail.invoiceDialog.periodStart")}</Label>
               <Input
                 id="inv-start"
                 type="date"
@@ -884,7 +883,7 @@ export default function ContractDetailPage() {
               />
             </div>
             <div>
-              <Label htmlFor="inv-end">Periode eind</Label>
+              <Label htmlFor="inv-end">{t("detail.invoiceDialog.periodEnd")}</Label>
               <Input
                 id="inv-end"
                 type="date"
@@ -895,7 +894,7 @@ export default function ContractDetailPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setInvoiceOpen(false)}>
-              Annuleren
+              {t("detail.invoiceDialog.cancel")}
             </Button>
             <Button
               onClick={handleCreateInvoice}
@@ -909,7 +908,7 @@ export default function ContractDetailPage() {
               {createInvoice.isPending && (
                 <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
               )}
-              Genereer factuur
+              {t("detail.invoiceDialog.confirm")}
             </Button>
           </DialogFooter>
         </DialogContent>

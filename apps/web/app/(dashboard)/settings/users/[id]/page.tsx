@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams } from "next/navigation";
 import { ArrowLeft, Loader2, Plus, ShieldCheck, X } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -29,6 +30,7 @@ import { useTenantUsers } from "@/hooks/useUsers";
 import { getInitials } from "@/lib/utils";
 
 export default function UserDetailPage() {
+  const { t } = useTranslation("settingsAccess");
   const params = useParams<{ id: string }>();
   const userId = params?.id;
   const { toast } = useToast();
@@ -49,11 +51,11 @@ export default function UserDetailPage() {
   const member = found ?? {
     id: userId ?? "?",
     name: membersLoading
-      ? "Bezig met laden..."
+      ? t("userDetail.member.loading")
       : membersError
-        ? "Kon gebruiker niet laden"
-        : "Niet gevonden",
-    email: "—",
+        ? t("userDetail.member.loadError")
+        : t("userDetail.member.notFound"),
+    email: t("userDetail.member.noEmail"),
     role: "viewer",
   };
 
@@ -61,8 +63,8 @@ export default function UserDetailPage() {
     if (!userId || !selectedRole) return;
     if ((userRoles ?? []).some((a) => a.role_id === selectedRole)) {
       toast({
-        title: "Al toegewezen",
-        description: "Deze rol heeft de gebruiker al.",
+        title: t("userDetail.toasts.alreadyAssigned.title"),
+        description: t("userDetail.toasts.alreadyAssigned.description"),
         variant: "destructive",
       });
       return;
@@ -74,13 +76,13 @@ export default function UserDetailPage() {
     });
     setSelectedRole("");
     setExpiresAt("");
-    toast({ title: "Rol toegewezen" });
+    toast({ title: t("userDetail.toasts.assigned.title") });
   };
 
   const handleUnassign = async (id: string) => {
-    if (!confirm("Rol verwijderen?")) return;
+    if (!confirm(t("userDetail.confirmUnassign"))) return;
     await unassignMutation.mutateAsync(id);
-    toast({ title: "Rol verwijderd" });
+    toast({ title: t("userDetail.toasts.unassigned.title") });
   };
 
   return (
@@ -90,7 +92,7 @@ export default function UserDetailPage() {
         className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-3 w-3" />
-        Terug naar Instellingen
+        {t("userDetail.backToSettings")}
       </Link>
 
       <PageHeader title={member.name} description={member.email} />
@@ -113,18 +115,22 @@ export default function UserDetailPage() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-indigo-600" />
-            Rollen
+            {t("userDetail.rolesTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Current roles as chips */}
           <div className="space-y-2">
-            <Label className="text-xs">Huidige rollen</Label>
+            <Label className="text-xs">
+              {t("userDetail.currentRolesLabel")}
+            </Label>
             {isLoading ? (
-              <p className="text-sm text-muted-foreground">Laden…</p>
+              <p className="text-sm text-muted-foreground">
+                {t("userDetail.loading")}
+              </p>
             ) : !userRoles?.length ? (
               <p className="text-sm text-muted-foreground">
-                Nog geen rollen toegewezen.
+                {t("userDetail.noRolesAssigned")}
               </p>
             ) : (
               <div className="flex flex-wrap gap-2">
@@ -137,15 +143,18 @@ export default function UserDetailPage() {
                     {a.role_label}
                     {a.expires_at && (
                       <span className="text-[10px] text-muted-foreground">
-                        verloopt{" "}
-                        {new Date(a.expires_at).toLocaleDateString("nl-NL")}
+                        {t("userDetail.expiresOn", {
+                          date: new Date(
+                            a.expires_at
+                          ).toLocaleDateString("nl-NL"),
+                        })}
                       </span>
                     )}
                     <button
                       type="button"
                       onClick={() => handleUnassign(a.id)}
                       className="ml-1 text-muted-foreground hover:text-destructive"
-                      title="Verwijderen"
+                      title={t("userDetail.removeTitle")}
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -158,10 +167,10 @@ export default function UserDetailPage() {
           {/* Assign new */}
           <div className="grid grid-cols-1 sm:grid-cols-[1fr_180px_auto] gap-2 pt-3 border-t border-border">
             <div className="space-y-1">
-              <Label className="text-xs">Rol toevoegen</Label>
+              <Label className="text-xs">{t("userDetail.addRoleLabel")}</Label>
               <Select value={selectedRole} onValueChange={setSelectedRole}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Kies rol…" />
+                  <SelectValue placeholder={t("userDetail.rolePlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
                   {(roles ?? []).map((r) => (
@@ -169,7 +178,7 @@ export default function UserDetailPage() {
                       {r.label}
                       {r.is_system && (
                         <span className="text-[10px] text-muted-foreground ml-2">
-                          (system)
+                          {t("userDetail.systemSuffix")}
                         </span>
                       )}
                     </SelectItem>
@@ -178,7 +187,9 @@ export default function UserDetailPage() {
               </Select>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Verloopt op (optioneel)</Label>
+              <Label className="text-xs">
+                {t("userDetail.expiresAtLabel")}
+              </Label>
               <Input
                 type="date"
                 value={expiresAt}
@@ -196,7 +207,7 @@ export default function UserDetailPage() {
                 ) : (
                   <Plus className="mr-2 h-4 w-4" />
                 )}
-                Toewijzen
+                {t("userDetail.assign")}
               </Button>
             </div>
           </div>

@@ -12,6 +12,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import {
   AlertCircle,
   ArrowLeft,
@@ -64,6 +65,7 @@ import { useJob } from "@/hooks/useJobs";
 import type { AgentFinding } from "@/lib/types/sourcing";
 
 export default function RunDetailPage() {
+  const { t } = useTranslation("sourcing");
   const params = useParams();
   const runId = params?.id as string;
 
@@ -101,13 +103,13 @@ export default function RunDetailPage() {
           className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-3 w-3" />
-          Terug naar Sourcing Agent
+          {t("runDetail.back")}
         </Link>
         <Card className="border-0 shadow-sm">
           <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
             <AlertCircle className="h-5 w-5 text-rose-500" />
             <p className="text-sm font-medium">
-              {isError ? "Kon run niet laden — probeer opnieuw." : "Run niet gevonden."}
+              {isError ? t("runDetail.error.loadFailed") : t("runDetail.error.notFound")}
             </p>
           </CardContent>
         </Card>
@@ -126,15 +128,15 @@ export default function RunDetailPage() {
         className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-3 w-3" />
-        Terug naar Sourcing Agent
+        {t("runDetail.back")}
       </Link>
 
       <PageHeader
-        title={`Run ${run.id}`}
+        title={t("runDetail.header.title", { id: run.id })}
         description={
           brief && job
-            ? `Brief: ${job.title}`
-            : `Brief ${run.brief_id}`
+            ? t("runDetail.header.briefWithTitle", { title: job.title })
+            : t("runDetail.header.briefFallback", { briefId: run.brief_id })
         }
         actions={
           <div className="flex items-center gap-2">
@@ -146,7 +148,7 @@ export default function RunDetailPage() {
                 disabled={cancelRun.isPending}
                 onClick={async () => {
                   await cancelRun.mutateAsync(runId);
-                  toast({ title: "Run geannuleerd" });
+                  toast({ title: t("runDetail.toasts.runCancelled") });
                 }}
                 className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
               >
@@ -154,7 +156,7 @@ export default function RunDetailPage() {
                   <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                 )}
                 <X className="mr-1.5 h-3.5 w-3.5" />
-                Cancel run
+                {t("runDetail.cancelRun")}
               </Button>
             )}
           </div>
@@ -184,25 +186,30 @@ export default function RunDetailPage() {
             </Link>
           )}
           <span className="text-xs text-muted-foreground">
-            Gestart {formatRelativeNL(run.started_at ?? run.created_at)}
+            {t("runDetail.startedAt", {
+              relative: formatRelativeNL(run.started_at ?? run.created_at),
+            })}
           </span>
           {run.finished_at && (
             <span className="text-xs text-muted-foreground">
-              Afgerond {formatRelativeNL(run.finished_at)}
+              {t("runDetail.finishedAt", {
+                relative: formatRelativeNL(run.finished_at),
+              })}
             </span>
           )}
           <span className="text-xs text-muted-foreground">
-            iter {run.expansion_iteration}
+            {t("runDetail.iteration", { count: run.expansion_iteration })}
           </span>
           <div className="ml-auto flex items-center gap-4 text-xs">
             <span>
-              <span className="font-semibold">{run.candidates_found}</span> gevonden
+              <span className="font-semibold">{run.candidates_found}</span>{" "}
+              {t("runDetail.stats.found")}
             </span>
             <span className="text-emerald-600">
-              {run.candidates_approved} goedgekeurd
+              {t("runDetail.stats.approved", { count: run.candidates_approved })}
             </span>
             <span className="text-red-500">
-              {run.candidates_rejected} afgewezen
+              {t("runDetail.stats.rejected", { count: run.candidates_rejected })}
             </span>
           </div>
         </CardContent>
@@ -222,7 +229,7 @@ export default function RunDetailPage() {
         {/* Reasoning log */}
         <section className="space-y-2">
           <h3 className="px-1 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-            Redenering
+            {t("runDetail.reasoning.title")}
           </h3>
           <Card className="border-0 shadow-sm">
             <CardContent className="p-5">
@@ -235,11 +242,15 @@ export default function RunDetailPage() {
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="px-1 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-              Kandidaten ({(findings ?? []).length})
+              {t("runDetail.candidates.title", {
+                count: (findings ?? []).length,
+              })}
             </h3>
             {selectedIds.length > 0 && (
               <div className="flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-300">
-                {selectedIds.length} geselecteerd
+                {t("runDetail.candidates.selectedCount", {
+                  count: selectedIds.length,
+                })}
                 <Button
                   size="sm"
                   variant="ghost"
@@ -247,13 +258,15 @@ export default function RunDetailPage() {
                   onClick={async () => {
                     await bulkApprove.mutateAsync({ ids: selectedIds });
                     toast({
-                      title: `${selectedIds.length} kandidaten goedgekeurd`,
+                      title: t("runDetail.toasts.bulkApproved", {
+                        count: selectedIds.length,
+                      }),
                     });
                     setSelected({});
                   }}
                   disabled={bulkApprove.isPending}
                 >
-                  Goedkeuren
+                  {t("runDetail.candidates.approve")}
                 </Button>
                 <Button
                   size="sm"
@@ -261,7 +274,7 @@ export default function RunDetailPage() {
                   className="h-6 px-2 text-[11px] hover:bg-red-100 hover:text-red-700"
                   onClick={() => setBulkRejectOpen(true)}
                 >
-                  Afwijzen
+                  {t("runDetail.candidates.reject")}
                 </Button>
               </div>
             )}
@@ -269,9 +282,11 @@ export default function RunDetailPage() {
           {!findings || findings.length === 0 ? (
             <Card className="border-0 shadow-sm">
               <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
-                <p className="text-sm font-medium">Nog geen findings</p>
+                <p className="text-sm font-medium">
+                  {t("runDetail.findings.empty.title")}
+                </p>
                 <p className="text-xs text-muted-foreground">
-                  De agent is bezig — kandidaten verschijnen zodra ze gescoord zijn.
+                  {t("runDetail.findings.empty.description")}
                 </p>
               </CardContent>
             </Card>
@@ -300,22 +315,24 @@ export default function RunDetailPage() {
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{selectedIds.length} kandidaten afwijzen</DialogTitle>
+            <DialogTitle>
+              {t("runDetail.bulkReject.title", { count: selectedIds.length })}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-2">
             <p className="text-xs text-muted-foreground">
-              Geef een reden — deze wordt opgeslagen in het audit-spoor.
+              {t("runDetail.bulkReject.description")}
             </p>
             <Textarea
               rows={3}
-              placeholder="Bijv. 'Te ver weg', 'Onvoldoende ervaring met Snowflake'..."
+              placeholder={t("runDetail.bulkReject.placeholder")}
               value={bulkRejectReason}
               onChange={(e) => setBulkRejectReason(e.target.value)}
             />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setBulkRejectOpen(false)}>
-              Annuleren
+              {t("runDetail.bulkReject.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -326,7 +343,9 @@ export default function RunDetailPage() {
                   reason: bulkRejectReason.trim(),
                 });
                 toast({
-                  title: `${selectedIds.length} kandidaten afgewezen`,
+                  title: t("runDetail.toasts.bulkRejected", {
+                    count: selectedIds.length,
+                  }),
                 });
                 setSelected({});
                 setBulkRejectReason("");
@@ -336,7 +355,7 @@ export default function RunDetailPage() {
               {bulkReject.isPending && (
                 <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
               )}
-              Afwijzen
+              {t("runDetail.bulkReject.reject")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -350,10 +369,11 @@ function ReasoningTimeline({
 }: {
   run: import("@/lib/types/sourcing").AgentRun;
 }) {
+  const { t } = useTranslation("sourcing");
   if (run.reasoning_log.length === 0) {
     return (
       <p className="text-xs text-muted-foreground">
-        Nog geen redenering — de agent staat nog in de wachtrij.
+        {t("runDetail.reasoning.empty")}
       </p>
     );
   }
@@ -380,7 +400,7 @@ function ReasoningTimeline({
             <span className="h-2 w-2 animate-pulse rounded-full bg-indigo-500" />
           </span>
           <p className="text-xs italic text-muted-foreground">
-            Agent denkt nog na...
+            {t("runDetail.reasoning.thinking")}
           </p>
         </li>
       )}
@@ -397,6 +417,7 @@ function FindingCard({
   selected: boolean;
   onToggleSelect: (v: boolean) => void;
 }) {
+  const { t } = useTranslation("sourcing");
   const [expanded, setExpanded] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
@@ -415,7 +436,7 @@ function FindingCard({
             type="button"
             onClick={() => onToggleSelect(!selected)}
             className="mt-1 text-zinc-400 hover:text-indigo-600"
-            aria-label="Selecteer kandidaat"
+            aria-label={t("runDetail.findingCard.selectAria")}
           >
             {selected ? (
               <CheckSquare className="h-4 w-4 text-indigo-600" />
@@ -433,10 +454,16 @@ function FindingCard({
                   {finding.full_name}
                 </p>
                 <p className="truncate text-xs text-muted-foreground">
-                  {finding.current_title} · {finding.current_company}
+                  {t("runDetail.findingCard.title", {
+                    title: finding.current_title,
+                    company: finding.current_company,
+                  })}
                 </p>
                 <p className="text-[11px] text-muted-foreground">
-                  {finding.location} · bron: {finding.external_source}
+                  {t("runDetail.findingCard.locationSource", {
+                    location: finding.location,
+                    source: finding.external_source,
+                  })}
                 </p>
               </div>
               <MatchScoreGauge score={finding.match_score} />
@@ -455,7 +482,7 @@ function FindingCard({
             ) : (
               <ChevronRight className="h-3 w-3" />
             )}
-            AI-redenering
+            {t("runDetail.findingCard.aiReasoning")}
           </button>
           <p
             className={
@@ -490,7 +517,7 @@ function FindingCard({
                 className="inline-flex items-center gap-0.5 text-muted-foreground hover:text-indigo-600"
               >
                 <ExternalLink className="h-3 w-3" />
-                Bron
+                {t("runDetail.findingCard.source")}
               </a>
             )}
           </div>
@@ -503,11 +530,11 @@ function FindingCard({
                 disabled={approve.isPending}
                 onClick={async () => {
                   await approve.mutateAsync({ id: finding.id });
-                  toast({ title: "Goedgekeurd" });
+                  toast({ title: t("runDetail.toasts.approved") });
                 }}
               >
                 <CheckCircle2 className="mr-1 h-3 w-3 text-emerald-500" />
-                Goedkeuren
+                {t("runDetail.findingCard.approve")}
               </Button>
               <Button
                 size="sm"
@@ -516,7 +543,7 @@ function FindingCard({
                 onClick={() => setRejectOpen(true)}
               >
                 <X className="mr-1 h-3 w-3" />
-                Afwijzen
+                {t("runDetail.findingCard.reject")}
               </Button>
             </div>
           )}
@@ -530,17 +557,19 @@ function FindingCard({
         >
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Kandidaat afwijzen</DialogTitle>
+              <DialogTitle>
+                {t("runDetail.findingCard.rejectDialog.title")}
+              </DialogTitle>
             </DialogHeader>
             <Textarea
               rows={3}
-              placeholder="Geef een reden..."
+              placeholder={t("runDetail.findingCard.rejectDialog.placeholder")}
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
             />
             <DialogFooter>
               <Button variant="outline" onClick={() => setRejectOpen(false)}>
-                Annuleren
+                {t("runDetail.findingCard.rejectDialog.cancel")}
               </Button>
               <Button
                 variant="destructive"
@@ -550,7 +579,7 @@ function FindingCard({
                     id: finding.id,
                     reason: rejectReason.trim(),
                   });
-                  toast({ title: "Afgewezen" });
+                  toast({ title: t("runDetail.toasts.rejected") });
                   setRejectReason("");
                   setRejectOpen(false);
                 }}
@@ -558,7 +587,7 @@ function FindingCard({
                 {reject.isPending && (
                   <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                 )}
-                Afwijzen
+                {t("runDetail.findingCard.rejectDialog.reject")}
               </Button>
             </DialogFooter>
           </DialogContent>

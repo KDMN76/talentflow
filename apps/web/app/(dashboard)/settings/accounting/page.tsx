@@ -9,6 +9,7 @@
  */
 
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   AlertCircle,
   CheckCircle2,
@@ -67,6 +68,7 @@ function formatDateTime(value: string | null): string {
 }
 
 export default function AccountingSettingsPage() {
+  const { t } = useTranslation("settingsAdvanced");
   const { toast } = useToast();
   const { data: catalog, isLoading } = useAccountingCatalog();
   const { data: integrations } = useAccountingIntegrations();
@@ -95,12 +97,15 @@ export default function AccountingSettingsPage() {
     try {
       await disconnect.mutateAsync(disconnectFor);
       toast({
-        title: "Verbinding losgekoppeld",
-        description: "Synchronisatie is gestopt.",
+        title: t("accounting.toast.disconnected.title"),
+        description: t("accounting.toast.disconnected.description"),
       });
       setDisconnectFor(null);
     } catch {
-      toast({ title: "Loskoppelen mislukt", variant: "destructive" });
+      toast({
+        title: t("accounting.toast.disconnectFailed.title"),
+        variant: "destructive",
+      });
     }
   };
 
@@ -111,20 +116,23 @@ export default function AccountingSettingsPage() {
     try {
       await connect.mutateAsync({ provider, payload });
       toast({
-        title: "Boekhouding gekoppeld",
-        description: "Synchronisatie staat aan.",
+        title: t("accounting.toast.connected.title"),
+        description: t("accounting.toast.connected.description"),
       });
       setConnectFor(null);
     } catch {
-      toast({ title: "Verbinden mislukt", variant: "destructive" });
+      toast({
+        title: t("accounting.toast.connectFailed.title"),
+        variant: "destructive",
+      });
     }
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Boekhoudkoppelingen"
-        description="Koppel je boekhoudpakket om verkoopfacturen automatisch te synchroniseren."
+        title={t("accounting.header.title")}
+        description={t("accounting.header.description")}
       />
 
       {isLoading ? (
@@ -153,15 +161,15 @@ export default function AccountingSettingsPage() {
                     </div>
                     {connected ? (
                       <Badge className="border-0 bg-emerald-100 px-2 py-0.5 text-[10px] uppercase tracking-wider text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-                        Verbonden
+                        {t("accounting.status.connected")}
                       </Badge>
                     ) : errored ? (
                       <Badge className="border-0 bg-red-100 px-2 py-0.5 text-[10px] uppercase tracking-wider text-red-700 dark:bg-red-950/40 dark:text-red-300">
-                        Fout
+                        {t("accounting.status.error")}
                       </Badge>
                     ) : (
                       <Badge className="border-0 bg-zinc-100 px-2 py-0.5 text-[10px] uppercase tracking-wider text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-                        Niet verbonden
+                        {t("accounting.status.notConnected")}
                       </Badge>
                     )}
                   </div>
@@ -179,12 +187,16 @@ export default function AccountingSettingsPage() {
                     <div className="space-y-2 rounded-lg bg-zinc-50/60 p-3 text-xs dark:bg-zinc-900/40">
                       <div className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">
                         <Clock className="h-3 w-3" />
-                        Laatste sync: {formatDateTime(integration.last_synced_at)}
+                        {t("accounting.card.lastSync", {
+                          date: formatDateTime(integration.last_synced_at),
+                        })}
                       </div>
                       {integration.default_revenue_account && (
                         <div className="text-zinc-500">
-                          Grootboek: {integration.default_revenue_account} ·
-                          BTW: {integration.default_vat_code ?? "—"}
+                          {t("accounting.card.ledger", {
+                            account: integration.default_revenue_account,
+                            vat: integration.default_vat_code ?? "—",
+                          })}
                         </div>
                       )}
                       {integration.last_error && (
@@ -196,7 +208,7 @@ export default function AccountingSettingsPage() {
                       {!integration.last_error && (
                         <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
                           <ShieldCheck className="h-3 w-3" />
-                          Werkt — geen recente fouten.
+                          {t("accounting.card.working")}
                         </div>
                       )}
                     </div>
@@ -211,7 +223,7 @@ export default function AccountingSettingsPage() {
                         className="w-full border-destructive/40 text-destructive hover:bg-destructive/10"
                       >
                         <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                        Loskoppelen
+                        {t("accounting.actions.disconnect")}
                       </Button>
                     ) : (
                       <Button
@@ -220,7 +232,7 @@ export default function AccountingSettingsPage() {
                         className="w-full border-0 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
                       >
                         <Plug className="mr-1.5 h-3.5 w-3.5" />
-                        Verbinden
+                        {t("accounting.actions.connect")}
                       </Button>
                     )}
                   </div>
@@ -258,14 +270,17 @@ export default function AccountingSettingsPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Verbinding loskoppelen?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("accounting.disconnectDialog.title")}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Reeds gesynchroniseerde facturen blijven in je boekhouding staan,
-              maar nieuwe facturen worden niet langer automatisch geboekt.
+              {t("accounting.disconnectDialog.description")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogCancel>
+              {t("accounting.disconnectDialog.cancel")}
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDisconnect}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
@@ -273,7 +288,7 @@ export default function AccountingSettingsPage() {
               {disconnect.isPending && (
                 <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
               )}
-              Loskoppelen
+              {t("accounting.disconnectDialog.confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -292,6 +307,7 @@ interface ConnectFormProps {
 }
 
 function ConnectForm({ entry, onConnect, isPending }: ConnectFormProps) {
+  const { t } = useTranslation("settingsAdvanced");
   const [revenueAccount, setRevenueAccount] = useState("8000");
   const [vatCode, setVatCode] = useState("VH-21");
   const [apiKey, setApiKey] = useState("");
@@ -301,18 +317,22 @@ function ConnectForm({ entry, onConnect, isPending }: ConnectFormProps) {
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{entry.display_name} verbinden</DialogTitle>
+        <DialogTitle>
+          {t("accounting.connectForm.title", { provider: entry.display_name })}
+        </DialogTitle>
         <DialogDescription>
           {isApiKey
-            ? "Plak de API-key uit je boekhoud-omgeving. Sleutels worden server-side versleuteld opgeslagen."
-            : "Je wordt doorgestuurd naar de provider om toegang te verlenen. We slaan alleen tokens op die nodig zijn voor de sync."}
+            ? t("accounting.connectForm.descriptionApiKey")
+            : t("accounting.connectForm.descriptionOAuth")}
         </DialogDescription>
       </DialogHeader>
 
       <div className="space-y-4">
         {isApiKey && (
           <div>
-            <Label htmlFor="api-key">API-key</Label>
+            <Label htmlFor="api-key">
+              {t("accounting.connectForm.apiKeyLabel")}
+            </Label>
             <div className="relative">
               <KeyRound className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -329,7 +349,9 @@ function ConnectForm({ entry, onConnect, isPending }: ConnectFormProps) {
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <Label htmlFor="rev-acct">Grootboekrekening (omzet)</Label>
+            <Label htmlFor="rev-acct">
+              {t("accounting.connectForm.revenueAccountLabel")}
+            </Label>
             <Input
               id="rev-acct"
               value={revenueAccount}
@@ -338,7 +360,9 @@ function ConnectForm({ entry, onConnect, isPending }: ConnectFormProps) {
             />
           </div>
           <div>
-            <Label htmlFor="vat-code">BTW-code</Label>
+            <Label htmlFor="vat-code">
+              {t("accounting.connectForm.vatCodeLabel")}
+            </Label>
             <Input
               id="vat-code"
               value={vatCode}
@@ -353,11 +377,11 @@ function ConnectForm({ entry, onConnect, isPending }: ConnectFormProps) {
             <ul className="space-y-1 text-indigo-800 dark:text-indigo-300">
               <li className="flex items-start gap-1.5">
                 <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                Lees-/schrijfrechten beperkt tot verkoopadministratie.
+                {t("accounting.connectForm.oauthScope1")}
               </li>
               <li className="flex items-start gap-1.5">
                 <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                Tokens versleuteld; één klik om los te koppelen.
+                {t("accounting.connectForm.oauthScope2")}
               </li>
             </ul>
           </div>
@@ -382,7 +406,9 @@ function ConnectForm({ entry, onConnect, isPending }: ConnectFormProps) {
           ) : (
             <Plug className="mr-1.5 h-4 w-4" />
           )}
-          {isApiKey ? "Verbinden" : "Start OAuth"}
+          {isApiKey
+            ? t("accounting.connectForm.submitApiKey")
+            : t("accounting.connectForm.submitOAuth")}
         </Button>
       </DialogFooter>
     </>

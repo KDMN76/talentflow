@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -59,6 +60,7 @@ const APP_LINKS = [
 ];
 
 export default function TwoFactorPage() {
+  const { t } = useTranslation("settingsSecurity");
   const { toast } = useToast();
   const { data: status, isLoading } = useTwoFactorStatus();
   const setupMutation = useSetup2fa();
@@ -104,8 +106,8 @@ export default function TwoFactorPage() {
   const handleVerify = async () => {
     if (!/^\d{6}$/.test(verifyCode)) {
       toast({
-        title: "Ongeldige code",
-        description: "Voer 6 cijfers in van je authenticator-app.",
+        title: t("twofa.toasts.invalidCode.title"),
+        description: t("twofa.toasts.invalidCode.description"),
         variant: "destructive",
       });
       return;
@@ -113,11 +115,15 @@ export default function TwoFactorPage() {
     try {
       await verifyMutation.mutateAsync({ code: verifyCode });
       setStep("backup");
-      toast({ title: "2FA geverifieerd", description: "Bewaar nu je backup-codes." });
+      toast({
+        title: t("twofa.toasts.verified.title"),
+        description: t("twofa.toasts.verified.description"),
+      });
     } catch (err) {
       toast({
-        title: "Verificatie mislukt",
-        description: err instanceof Error ? err.message : "Onbekende fout.",
+        title: t("twofa.toasts.verifyFailed.title"),
+        description:
+          err instanceof Error ? err.message : t("twofa.toasts.unknownError"),
         variant: "destructive",
       });
     }
@@ -135,11 +141,12 @@ export default function TwoFactorPage() {
       await disableMutation.mutateAsync({ code: disableCode });
       setDisableOpen(false);
       setDisableCode("");
-      toast({ title: "2FA uitgeschakeld" });
+      toast({ title: t("twofa.toasts.disabled.title") });
     } catch (err) {
       toast({
-        title: "Uitschakelen mislukt",
-        description: err instanceof Error ? err.message : "Onbekende fout.",
+        title: t("twofa.toasts.disableFailed.title"),
+        description:
+          err instanceof Error ? err.message : t("twofa.toasts.unknownError"),
         variant: "destructive",
       });
     }
@@ -150,11 +157,12 @@ export default function TwoFactorPage() {
       const r = await regenerateMutation.mutateAsync({ code: regenCode });
       setNewCodes(r.backup_codes);
       setRegenCode("");
-      toast({ title: "Nieuwe backup-codes gegenereerd" });
+      toast({ title: t("twofa.toasts.regenerated.title") });
     } catch (err) {
       toast({
-        title: "Mislukt",
-        description: err instanceof Error ? err.message : "Onbekende fout.",
+        title: t("twofa.toasts.regenerateFailed.title"),
+        description:
+          err instanceof Error ? err.message : t("twofa.toasts.unknownError"),
         variant: "destructive",
       });
     }
@@ -162,13 +170,15 @@ export default function TwoFactorPage() {
 
   const handleCopyCodes = (codes: string[]) => {
     navigator.clipboard.writeText(codes.join("\n"));
-    toast({ title: "Codes gekopieerd" });
+    toast({ title: t("twofa.toasts.codesCopied.title") });
   };
 
   const handleDownloadCodes = (codes: string[]) => {
     const blob = new Blob(
       [
-        `TalentFlow — 2FA backup-codes\nGegenereerd: ${new Date().toLocaleString("nl-NL")}\n\n${codes.join("\n")}\n\nBewaar dit bestand veilig. Elke code is eenmalig bruikbaar.`,
+        `${t("twofa.downloadFile.header")}\n${t("twofa.downloadFile.generatedAt", {
+          date: new Date().toLocaleString("nl-NL"),
+        })}\n\n${codes.join("\n")}\n\n${t("twofa.downloadFile.footer")}`,
       ],
       { type: "text/plain;charset=utf-8" }
     );
@@ -188,14 +198,16 @@ export default function TwoFactorPage() {
         <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
         <div className="space-y-1">
           <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
-            2FA is verplicht voor jouw rol
+            {t("twofa.policyBanner.title")}
           </p>
           <p className="text-xs text-amber-700 dark:text-amber-400">
             {status.policy_grace_period_ends_at
-              ? `Schakel 2FA in vóór ${new Date(
-                  status.policy_grace_period_ends_at
-                ).toLocaleString("nl-NL")} — daarna kun je niet meer inloggen zonder.`
-              : "Schakel 2FA in om toegang te behouden."}
+              ? t("twofa.policyBanner.deadline", {
+                  date: new Date(
+                    status.policy_grace_period_ends_at
+                  ).toLocaleString("nl-NL"),
+                })
+              : t("twofa.policyBanner.noDeadline")}
           </p>
         </div>
       </div>
@@ -208,21 +220,21 @@ export default function TwoFactorPage() {
         className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-3 w-3" />
-        Terug naar Security
+        {t("backToSecurity")}
       </Link>
 
       <PageHeader
-        title="Twee-factor-authenticatie"
-        description="Voeg een tweede beveiligingslaag toe aan je account met een TOTP-app."
+        title={t("twofa.title")}
+        description={t("twofa.description")}
         actions={
           status?.enabled ? (
             <Badge className="gap-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-0">
               <CheckCircle2 className="h-3 w-3" />
-              Ingeschakeld
+              {t("twofa.badge.enabled")}
             </Badge>
           ) : (
             <Badge className="gap-1 bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border-0">
-              Niet ingeschakeld
+              {t("twofa.badge.disabled")}
             </Badge>
           )
         }
@@ -231,7 +243,7 @@ export default function TwoFactorPage() {
       {policyBanner}
 
       {isLoading && (
-        <div className="text-sm text-muted-foreground">Laden…</div>
+        <div className="text-sm text-muted-foreground">{t("loading")}</div>
       )}
 
       {/* INGESCHAKELD STATE */}
@@ -243,21 +255,25 @@ export default function TwoFactorPage() {
                 <ShieldCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold">2FA is actief</p>
+                <p className="text-sm font-semibold">{t("twofa.active.title")}</p>
                 <p className="text-xs text-muted-foreground">
                   {status.enrolled_at
-                    ? `Ingeschakeld op ${new Date(
-                        status.enrolled_at
-                      ).toLocaleString("nl-NL")}.`
-                    : "Ingeschakeld."}{" "}
-                  Backup-codes resterend: {status.backup_codes_remaining} / 10.
+                    ? t("twofa.active.enrolledAt", {
+                        date: new Date(status.enrolled_at).toLocaleString(
+                          "nl-NL"
+                        ),
+                      })
+                    : t("twofa.active.enrolled")}{" "}
+                  {t("twofa.active.backupRemaining", {
+                    remaining: status.backup_codes_remaining,
+                  })}
                 </p>
               </div>
             </div>
             <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
               <Button variant="outline" onClick={() => setRegenOpen(true)}>
                 <RefreshCw className="mr-2 h-4 w-4" />
-                Backup-codes opnieuw genereren
+                {t("twofa.active.regenerate")}
               </Button>
               <Button
                 variant="outline"
@@ -265,7 +281,7 @@ export default function TwoFactorPage() {
                 className="text-destructive border-destructive/50 hover:bg-destructive/10"
               >
                 <ShieldOff className="mr-2 h-4 w-4" />
-                2FA uitschakelen
+                {t("twofa.active.disable")}
               </Button>
             </div>
           </CardContent>
@@ -282,11 +298,10 @@ export default function TwoFactorPage() {
               </div>
               <div className="flex-1 space-y-1">
                 <p className="text-sm font-semibold">
-                  Schakel 2FA in voor extra beveiliging
+                  {t("twofa.idle.title")}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Je gebruikt elke 30 seconden een 6-cijferige code uit een
-                  authenticator-app naast je wachtwoord.
+                  {t("twofa.idle.description")}
                 </p>
               </div>
             </div>
@@ -300,7 +315,7 @@ export default function TwoFactorPage() {
               ) : (
                 <ShieldCheck className="mr-2 h-4 w-4" />
               )}
-              Schakel 2FA in
+              {t("twofa.idle.enable")}
             </Button>
           </CardContent>
         </Card>
@@ -311,7 +326,7 @@ export default function TwoFactorPage() {
         <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle className="text-base">
-              Stap 1 — Scan QR met je authenticator-app
+              {t("twofa.scan.title")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -320,7 +335,7 @@ export default function TwoFactorPage() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={setupData.qr_code_data_url}
-                  alt="2FA QR-code"
+                  alt={t("twofa.scan.qrAlt")}
                   width={200}
                   height={200}
                   className="block"
@@ -329,7 +344,7 @@ export default function TwoFactorPage() {
               <div className="flex-1 space-y-3">
                 <div>
                   <p className="text-xs font-medium mb-1">
-                    Geen QR-scanner? Voer handmatig in:
+                    {t("twofa.scan.manualEntry")}
                   </p>
                   <div className="flex gap-2">
                     <Input
@@ -342,7 +357,7 @@ export default function TwoFactorPage() {
                       variant="outline"
                       onClick={() => {
                         navigator.clipboard.writeText(setupData.secret);
-                        toast({ title: "Secret gekopieerd" });
+                        toast({ title: t("twofa.scan.copySecret") });
                       }}
                     >
                       <Copy className="h-4 w-4" />
@@ -350,7 +365,9 @@ export default function TwoFactorPage() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs font-medium mb-2">Geen app? Download:</p>
+                  <p className="text-xs font-medium mb-2">
+                    {t("twofa.scan.noApp")}
+                  </p>
                   <div className="flex flex-wrap gap-1.5">
                     {APP_LINKS.map((a) => (
                       <span
@@ -383,15 +400,13 @@ export default function TwoFactorPage() {
             </div>
 
             <div className="pt-3 border-t border-border space-y-2">
-              <Label>
-                Stap 2 — Voer de 6-cijferige code uit je app in
-              </Label>
+              <Label>{t("twofa.scan.step2Label")}</Label>
               <div className="flex gap-2">
                 <Input
                   inputMode="numeric"
                   maxLength={6}
                   pattern="[0-9]{6}"
-                  placeholder="123456"
+                  placeholder={t("twofa.scan.codePlaceholder")}
                   className="font-mono text-lg text-center tracking-widest max-w-[180px]"
                   value={verifyCode}
                   onChange={(e) =>
@@ -406,7 +421,7 @@ export default function TwoFactorPage() {
                   {verifyMutation.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  Verifiëren
+                  {t("twofa.scan.verify")}
                 </Button>
               </div>
             </div>
@@ -419,20 +434,15 @@ export default function TwoFactorPage() {
         <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle className="text-base">
-              Stap 3 — Bewaar je backup-codes
+              {t("twofa.backup.title")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 px-4 py-3 flex gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
               <div className="text-xs text-amber-800 dark:text-amber-300 space-y-0.5">
-                <p className="font-medium">
-                  Bewaar deze codes nu — ze zijn hierna niet meer zichtbaar.
-                </p>
-                <p>
-                  Elke code is eenmalig bruikbaar als alternatief voor je
-                  TOTP-app (bv. wanneer je je telefoon kwijt bent).
-                </p>
+                <p className="font-medium">{t("twofa.backup.warningTitle")}</p>
+                <p>{t("twofa.backup.warningBody")}</p>
               </div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
@@ -451,14 +461,14 @@ export default function TwoFactorPage() {
                 onClick={() => handleCopyCodes(setupData.backup_codes)}
               >
                 <Copy className="mr-2 h-4 w-4" />
-                Kopieer
+                {t("twofa.backup.copy")}
               </Button>
               <Button
                 variant="outline"
                 onClick={() => handleDownloadCodes(setupData.backup_codes)}
               >
                 <Download className="mr-2 h-4 w-4" />
-                Download als .txt
+                {t("twofa.backup.downloadTxt")}
               </Button>
             </div>
 
@@ -469,9 +479,7 @@ export default function TwoFactorPage() {
                 checked={savedConfirmed}
                 onChange={(e) => setSavedConfirmed(e.target.checked)}
               />
-              <span className="text-sm">
-                Ik heb deze codes veilig opgeslagen.
-              </span>
+              <span className="text-sm">{t("twofa.backup.confirmSaved")}</span>
             </label>
             <Button
               onClick={handleFinish}
@@ -479,7 +487,7 @@ export default function TwoFactorPage() {
               className="bg-emerald-600 hover:bg-emerald-700 border-0"
             >
               <CheckCircle2 className="mr-2 h-4 w-4" />
-              2FA-setup afronden
+              {t("twofa.backup.finish")}
             </Button>
           </CardContent>
         </Card>
@@ -489,16 +497,15 @@ export default function TwoFactorPage() {
       <Dialog open={disableOpen} onOpenChange={setDisableOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>2FA uitschakelen</DialogTitle>
+            <DialogTitle>{t("twofa.disableDialog.title")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
-              Hierdoor kun je weer inloggen met alleen wachtwoord. We raden
-              aan dit alleen tijdelijk te doen.
+              {t("twofa.disableDialog.warning")}
             </div>
-            <Label>2FA-code (TOTP of backup-code)</Label>
+            <Label>{t("twofa.disableDialog.codeLabel")}</Label>
             <Input
-              placeholder="123456 of XXXXX-XXXXX"
+              placeholder={t("twofa.disableDialog.codePlaceholder")}
               value={disableCode}
               onChange={(e) => setDisableCode(e.target.value)}
               className="font-mono"
@@ -506,7 +513,7 @@ export default function TwoFactorPage() {
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setDisableOpen(false)}>
-              Annuleren
+              {t("twofa.disableDialog.cancel")}
             </Button>
             <Button
               onClick={handleDisable}
@@ -516,7 +523,7 @@ export default function TwoFactorPage() {
               {disableMutation.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Uitschakelen
+              {t("twofa.disableDialog.disable")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -532,19 +539,19 @@ export default function TwoFactorPage() {
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Backup-codes opnieuw genereren</DialogTitle>
+            <DialogTitle>{t("twofa.regenDialog.title")}</DialogTitle>
           </DialogHeader>
           {!newCodes ? (
             <>
               <div className="space-y-3 py-2">
                 <p className="text-xs text-muted-foreground">
-                  Oude codes worden ongeldig zodra je dit bevestigt.
+                  {t("twofa.regenDialog.warning")}
                 </p>
-                <Label>2FA-code</Label>
+                <Label>{t("twofa.regenDialog.codeLabel")}</Label>
                 <Input
                   inputMode="numeric"
                   maxLength={6}
-                  placeholder="123456"
+                  placeholder={t("twofa.regenDialog.codePlaceholder")}
                   value={regenCode}
                   onChange={(e) =>
                     setRegenCode(e.target.value.replace(/\D/g, "").slice(0, 6))
@@ -554,7 +561,7 @@ export default function TwoFactorPage() {
               </div>
               <DialogFooter className="gap-2">
                 <Button variant="outline" onClick={() => setRegenOpen(false)}>
-                  Annuleren
+                  {t("twofa.regenDialog.cancel")}
                 </Button>
                 <Button
                   onClick={handleRegenerate}
@@ -564,7 +571,7 @@ export default function TwoFactorPage() {
                   {regenerateMutation.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  Genereren
+                  {t("twofa.regenDialog.generate")}
                 </Button>
               </DialogFooter>
             </>
@@ -591,7 +598,7 @@ export default function TwoFactorPage() {
                     onClick={() => handleCopyCodes(newCodes)}
                   >
                     <Copy className="mr-1.5 h-3.5 w-3.5" />
-                    Kopieer
+                    {t("twofa.regenDialog.copy")}
                   </Button>
                   <Button
                     variant="outline"
@@ -599,12 +606,14 @@ export default function TwoFactorPage() {
                     onClick={() => handleDownloadCodes(newCodes)}
                   >
                     <Download className="mr-1.5 h-3.5 w-3.5" />
-                    Download
+                    {t("twofa.regenDialog.download")}
                   </Button>
                 </div>
               </div>
               <DialogFooter>
-                <Button onClick={() => setRegenOpen(false)}>Sluiten</Button>
+                <Button onClick={() => setRegenOpen(false)}>
+                  {t("twofa.regenDialog.close")}
+                </Button>
               </DialogFooter>
             </>
           )}

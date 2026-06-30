@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ExternalLink, Info, Loader2, Scale } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -24,11 +25,11 @@ import { cn } from "@/lib/utils";
 import type { TenantPaySettings } from "@/lib/types/skills";
 
 const CURRENCIES = [
-  { value: "EUR", label: "Euro (EUR)" },
-  { value: "GBP", label: "Britse pond (GBP)" },
-  { value: "USD", label: "US dollar (USD)" },
-  { value: "CHF", label: "Zwitserse frank (CHF)" },
-];
+  { value: "EUR", labelKey: "eur" },
+  { value: "GBP", labelKey: "gbp" },
+  { value: "USD", labelKey: "usd" },
+  { value: "CHF", labelKey: "chf" },
+] as const;
 
 interface ToggleRowProps {
   title: string;
@@ -78,6 +79,7 @@ function ToggleRow({ title, description, checked, onChange, disabled }: ToggleRo
 }
 
 export default function PayTransparencySettingsPage() {
+  const { t } = useTranslation("settingsAdvanced");
   const { data, isLoading } = usePaySettings();
   const updateSettings = useUpdatePaySettings();
   const { toast } = useToast();
@@ -105,14 +107,14 @@ export default function PayTransparencySettingsPage() {
         allow_anonymous_benchmark: draft.allow_anonymous_benchmark,
       });
       toast({
-        title: "Instellingen opgeslagen",
-        description: "Pay-transparency-beleid is bijgewerkt.",
+        title: t("payTransparency.toast.saved.title"),
+        description: t("payTransparency.toast.saved.description"),
       });
     } catch {
       toast({
         variant: "destructive",
-        title: "Fout",
-        description: "Kon instellingen niet opslaan.",
+        title: t("payTransparency.toast.error.title"),
+        description: t("payTransparency.toast.error.description"),
       });
     }
   };
@@ -120,8 +122,8 @@ export default function PayTransparencySettingsPage() {
   return (
     <div className="max-w-3xl space-y-6 animate-fade-in">
       <PageHeader
-        title="Pay Transparency"
-        description="Beleidsinstellingen rond salarisbandbreedtes en EU-rapportageplicht."
+        title={t("payTransparency.header.title")}
+        description={t("payTransparency.header.description")}
       />
 
       {/* EU Directive info */}
@@ -129,27 +131,19 @@ export default function PayTransparencySettingsPage() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2 text-indigo-700 dark:text-indigo-300">
             <Info className="h-4 w-4" />
-            EU Pay Transparency Directive 2023/970
+            {t("payTransparency.directive.title")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">
-          <p>
-            Werkgevers met 100+ medewerkers moeten vanaf 7 juni 2027 de
-            gender-pay-gap rapporteren. Werkgevers met 250+ medewerkers
-            rapporteren elk jaar; bij 100-249 medewerkers elke drie jaar.
-          </p>
-          <p>
-            Vacatures moeten een initieel salaris of bandbreedte vermelden, en
-            werkgevers mogen kandidaten niet vragen naar hun huidige salaris.
-            TalentFlow handhaaft dit aan de bron via de instellingen hieronder.
-          </p>
+          <p>{t("payTransparency.directive.paragraph1")}</p>
+          <p>{t("payTransparency.directive.paragraph2")}</p>
           <a
             href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32023L0970"
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
           >
-            Lees de volledige richtlijn
+            {t("payTransparency.directive.readMore")}
             <ExternalLink className="h-3 w-3" />
           </a>
         </CardContent>
@@ -160,10 +154,10 @@ export default function PayTransparencySettingsPage() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Scale className="h-4 w-4 text-indigo-500" />
-            Beleidsinstellingen
+            {t("payTransparency.policy.title")}
           </CardTitle>
           <CardDescription>
-            Deze instellingen gelden voor alle vacatures en sollicitatieformulieren binnen je tenant.
+            {t("payTransparency.policy.description")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -172,24 +166,30 @@ export default function PayTransparencySettingsPage() {
           ) : (
             <>
               <ToggleRow
-                title="Verplicht salarisbandbreedte bij vacatures"
-                description="Vacatures kunnen niet gepubliceerd worden zonder ingevulde min/max-salaris. Voldoet aan EU 2023/970 art. 5."
+                title={t("payTransparency.policy.enforceSalaryRange.title")}
+                description={t(
+                  "payTransparency.policy.enforceSalaryRange.description"
+                )}
                 checked={draft.enforce_salary_range}
                 onChange={(v) =>
                   setDraft({ ...draft, enforce_salary_range: v })
                 }
               />
               <ToggleRow
-                title="Verbied vragen naar huidig salaris"
-                description="Verwijdert het 'huidig salaris'-veld uit publieke sollicitatieformulieren. Voldoet aan EU 2023/970 art. 5(2)."
+                title={t("payTransparency.policy.forbidCurrentSalary.title")}
+                description={t(
+                  "payTransparency.policy.forbidCurrentSalary.description"
+                )}
                 checked={draft.forbid_current_salary_question}
                 onChange={(v) =>
                   setDraft({ ...draft, forbid_current_salary_question: v })
                 }
               />
               <ToggleRow
-                title="Toestemming anonieme benchmark"
-                description="Sta toe dat geanonimiseerde, geaggregeerde gegevens worden meegenomen in de TalentFlow-marktbenchmark. Geen persoonsgegevens worden gedeeld; k-anonymity ≥ 5."
+                title={t("payTransparency.policy.anonymousBenchmark.title")}
+                description={t(
+                  "payTransparency.policy.anonymousBenchmark.description"
+                )}
                 checked={draft.allow_anonymous_benchmark}
                 onChange={(v) =>
                   setDraft({ ...draft, allow_anonymous_benchmark: v })
@@ -199,7 +199,7 @@ export default function PayTransparencySettingsPage() {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 pt-2">
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium">
-                    Reporting threshold (medewerkers)
+                    {t("payTransparency.policy.reportingThreshold.label")}
                   </Label>
                   <Input
                     type="number"
@@ -214,12 +214,12 @@ export default function PayTransparencySettingsPage() {
                     }
                   />
                   <p className="text-[11px] text-muted-foreground">
-                    Vanaf dit aantal medewerkers genereer je periodieke pay-equity rapporten. EU-default: 100.
+                    {t("payTransparency.policy.reportingThreshold.help")}
                   </p>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium">
-                    Standaard currency
+                    {t("payTransparency.policy.defaultCurrency.label")}
                   </Label>
                   <Select
                     value={draft.default_currency}
@@ -233,13 +233,13 @@ export default function PayTransparencySettingsPage() {
                     <SelectContent>
                       {CURRENCIES.map((c) => (
                         <SelectItem key={c.value} value={c.value}>
-                          {c.label}
+                          {t(`payTransparency.currencies.${c.labelKey}`)}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                   <p className="text-[11px] text-muted-foreground">
-                    Wordt gebruikt voor nieuwe vacatures en pay-equity rapporten.
+                    {t("payTransparency.policy.defaultCurrency.help")}
                   </p>
                 </div>
               </div>
@@ -253,7 +253,7 @@ export default function PayTransparencySettingsPage() {
                   {updateSettings.isPending && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  Opslaan
+                  {t("payTransparency.policy.save")}
                 </Button>
               </div>
             </>

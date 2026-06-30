@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Loader2, Palette, Save, Sparkles, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +26,7 @@ const HEX_COLOR_PATTERN = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 interface FormState extends TenantBranding {}
 
 export default function BrandingSettingsPage() {
+  const { t } = useTranslation("settingsCore");
   const { data, isLoading } = useTenantBranding();
   const update = useUpdateTenantBranding();
   const { toast } = useToast();
@@ -52,27 +54,30 @@ export default function BrandingSettingsPage() {
     if (!HEX_COLOR_PATTERN.test(form.primary_color)) {
       toast({
         variant: "destructive",
-        title: "Ongeldige kleur",
-        description: "Primary color moet een hex-code zijn (bv. #6366f1).",
+        title: t("branding.toasts.invalidPrimary.title"),
+        description: t("branding.toasts.invalidPrimary.description"),
       });
       return;
     }
     if (!HEX_COLOR_PATTERN.test(form.accent_color)) {
       toast({
         variant: "destructive",
-        title: "Ongeldige kleur",
-        description: "Accent color moet een hex-code zijn.",
+        title: t("branding.toasts.invalidAccent.title"),
+        description: t("branding.toasts.invalidAccent.description"),
       });
       return;
     }
     update.mutate(form, {
       onSuccess: () =>
-        toast({ title: "Branding bijgewerkt", description: "Wijzigingen zijn opgeslagen." }),
+        toast({
+          title: t("branding.toasts.updated.title"),
+          description: t("branding.toasts.updated.description"),
+        }),
       onError: () =>
         toast({
           variant: "destructive",
-          title: "Opslaan mislukt",
-          description: "Controleer je verbinding en probeer opnieuw.",
+          title: t("branding.toasts.saveError.title"),
+          description: t("branding.toasts.saveError.description"),
         }),
     });
   };
@@ -81,11 +86,10 @@ export default function BrandingSettingsPage() {
     <div className="space-y-6 p-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-          Branding
+          {t("branding.title")}
         </h1>
         <p className="text-sm text-muted-foreground">
-          White-label voor klantportaal en outbound emails. Klanten zien jouw merk —
-          niet TalentFlow.
+          {t("branding.description")}
         </p>
       </div>
 
@@ -96,19 +100,19 @@ export default function BrandingSettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Upload className="h-4 w-4 text-indigo-500" />
-                Logo & favicon
+                {t("branding.logo.title")}
               </CardTitle>
               <CardDescription>
-                Plak een publieke URL — upload-flow volgt in een latere release.
+                {t("branding.logo.description")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="logo_url">Logo URL</Label>
+                <Label htmlFor="logo_url">{t("branding.logo.logoUrlLabel")}</Label>
                 <Input
                   id="logo_url"
                   type="url"
-                  placeholder="https://example.com/logo.png"
+                  placeholder={t("branding.logo.logoUrlPlaceholder")}
                   value={form.logo_url ?? ""}
                   onChange={(e) =>
                     setField("logo_url", e.target.value.trim() || null)
@@ -116,11 +120,11 @@ export default function BrandingSettingsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="favicon_url">Favicon URL</Label>
+                <Label htmlFor="favicon_url">{t("branding.logo.faviconUrlLabel")}</Label>
                 <Input
                   id="favicon_url"
                   type="url"
-                  placeholder="https://example.com/favicon.ico"
+                  placeholder={t("branding.logo.faviconUrlPlaceholder")}
                   value={form.favicon_url ?? ""}
                   onChange={(e) =>
                     setField("favicon_url", e.target.value.trim() || null)
@@ -134,22 +138,22 @@ export default function BrandingSettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Palette className="h-4 w-4 text-purple-500" />
-                Kleuren
+                {t("branding.colors.title")}
               </CardTitle>
               <CardDescription>
-                Hex-codes — gebruikt in portaal én email-templates.
+                {t("branding.colors.description")}
               </CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="primary_color">Primaire kleur</Label>
+                <Label htmlFor="primary_color">{t("branding.colors.primaryLabel")}</Label>
                 <div className="flex gap-2">
                   <input
                     type="color"
                     value={form.primary_color}
                     onChange={(e) => setField("primary_color", e.target.value)}
                     className="h-10 w-14 cursor-pointer rounded border border-border"
-                    aria-label="Primaire kleur"
+                    aria-label={t("branding.colors.primaryAria")}
                   />
                   <Input
                     id="primary_color"

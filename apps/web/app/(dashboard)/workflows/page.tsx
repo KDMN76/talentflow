@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import {
   GitBranch,
   Plus,
@@ -73,8 +75,8 @@ import { Variable } from "lucide-react";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function formatDate(iso: string | null): string {
-  if (!iso) return "Nooit";
+function formatDate(iso: string | null, t: TFunction): string {
+  if (!iso) return t("workflows.neverRun");
   const d = new Date(iso);
   return d.toLocaleDateString("nl-NL", {
     day: "numeric",
@@ -109,6 +111,7 @@ interface WorkflowCardProps {
 }
 
 function WorkflowCard({ workflow }: WorkflowCardProps) {
+  const { t } = useTranslation("miscDev");
   const toggleWorkflow = useToggleWorkflow();
   const deleteWorkflow = useDeleteWorkflow();
   const { toast } = useToast();
@@ -118,8 +121,12 @@ function WorkflowCard({ workflow }: WorkflowCardProps) {
     toggleWorkflow.mutate(workflow.id, {
       onSuccess: () => {
         toast({
-          title: workflow.active ? "Workflow gedeactiveerd" : "Workflow geactiveerd",
-          description: `"${workflow.name}" is nu ${workflow.active ? "uitgeschakeld" : "ingeschakeld"}.`,
+          title: workflow.active
+            ? t("workflows.card.toasts.deactivatedTitle")
+            : t("workflows.card.toasts.activatedTitle"),
+          description: workflow.active
+            ? t("workflows.card.toasts.toggledOff", { name: workflow.name })
+            : t("workflows.card.toasts.toggledOn", { name: workflow.name }),
         });
       },
     });
@@ -129,8 +136,8 @@ function WorkflowCard({ workflow }: WorkflowCardProps) {
     deleteWorkflow.mutate(workflow.id, {
       onSuccess: () => {
         toast({
-          title: "Workflow verwijderd",
-          description: `"${workflow.name}" is verwijderd.`,
+          title: t("workflows.card.toasts.deletedTitle"),
+          description: t("workflows.card.toasts.deletedDescription", { name: workflow.name }),
         });
         setConfirmDelete(false);
       },
@@ -156,11 +163,11 @@ function WorkflowCard({ workflow }: WorkflowCardProps) {
             </span>
             {workflow.active ? (
               <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
-                Actief
+                {t("workflows.card.active")}
               </span>
             ) : (
               <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                Inactief
+                {t("workflows.card.inactive")}
               </span>
             )}
           </div>
@@ -184,12 +191,12 @@ function WorkflowCard({ workflow }: WorkflowCardProps) {
               </div>
             ) : (
               <span className="text-xs text-muted-foreground italic">
-                Geen actie geconfigureerd
+                {t("workflows.card.noAction")}
               </span>
             )}
             {workflow.actions.length > 1 && (
               <span className="text-xs text-muted-foreground">
-                +{workflow.actions.length - 1} meer
+                {t("workflows.card.more", { count: workflow.actions.length - 1 })}
               </span>
             )}
           </div>
@@ -199,13 +206,13 @@ function WorkflowCard({ workflow }: WorkflowCardProps) {
             <div className="flex items-center gap-1">
               <Play className="h-3 w-3" />
               <span>
-                {workflow.run_count} keer uitgevoerd
+                {t("workflows.card.runCount", { count: workflow.run_count })}
               </span>
             </div>
             <span className="text-zinc-300 dark:text-zinc-700">·</span>
             <div className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
-              <span>Laatste: {formatDate(workflow.last_run_at)}</span>
+              <span>{t("workflows.card.last", { date: formatDate(workflow.last_run_at, t) })}</span>
             </div>
           </div>
         </div>
@@ -224,7 +231,7 @@ function WorkflowCard({ workflow }: WorkflowCardProps) {
             }
           >
             <Power className="h-3.5 w-3.5" />
-            {workflow.active ? "Deactiveren" : "Activeren"}
+            {workflow.active ? t("workflows.card.deactivate") : t("workflows.card.activate")}
           </Button>
           <Button
             variant="ghost"
@@ -233,7 +240,7 @@ function WorkflowCard({ workflow }: WorkflowCardProps) {
             className="h-8 gap-1.5 text-xs text-destructive hover:text-destructive hover:bg-red-50 dark:hover:bg-red-950/30"
           >
             <Trash2 className="h-3.5 w-3.5" />
-            Verwijderen
+            {t("workflows.card.delete")}
           </Button>
         </div>
       </div>
@@ -245,13 +252,12 @@ function WorkflowCard({ workflow }: WorkflowCardProps) {
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-950/40 mb-2">
               <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
             </div>
-            <DialogTitle>Workflow verwijderen</DialogTitle>
+            <DialogTitle>{t("workflows.deleteDialog.title")}</DialogTitle>
             <DialogDescription>
-              Weet je zeker dat je{" "}
+              {t("workflows.deleteDialog.descriptionPrefix")}{" "}
               <span className="font-semibold text-zinc-900 dark:text-zinc-100">
                 &quot;{workflow.name}&quot;
-              </span>{" "}
-              wilt verwijderen? Dit kan niet ongedaan worden gemaakt.
+              </span>{t("workflows.deleteDialog.descriptionSuffix")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-2">
@@ -260,14 +266,14 @@ function WorkflowCard({ workflow }: WorkflowCardProps) {
               onClick={() => setConfirmDelete(false)}
               disabled={deleteWorkflow.isPending}
             >
-              Annuleren
+              {t("workflows.deleteDialog.cancel")}
             </Button>
             <Button
               variant="destructive"
               onClick={handleDelete}
               disabled={deleteWorkflow.isPending}
             >
-              {deleteWorkflow.isPending ? "Verwijderen…" : "Verwijderen"}
+              {deleteWorkflow.isPending ? t("workflows.deleteDialog.deleting") : t("workflows.deleteDialog.delete")}
             </Button>
           </DialogFooter>
         </DialogContent>

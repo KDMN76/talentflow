@@ -14,6 +14,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -88,6 +89,7 @@ import type {
 } from "@/lib/types/reports";
 
 export default function ReportBuilderPage() {
+  const { t } = useTranslation("reportsPage");
   const params = useParams<{ id: string }>();
   const id = params?.id ?? "";
   const router = useRouter();
@@ -145,9 +147,9 @@ export default function ReportBuilderPage() {
     try {
       await updateReport.mutateAsync({ id, name, config });
       setDirty(false);
-      toast({ title: "Rapport opgeslagen" });
+      toast({ title: t("builder.toasts.saved") });
     } catch {
-      toast({ title: "Opslaan mislukt", variant: "destructive" });
+      toast({ title: t("builder.toasts.saveError"), variant: "destructive" });
     }
   };
 
@@ -161,7 +163,7 @@ export default function ReportBuilderPage() {
       setResults(map);
       setRanAt(res.ran_at);
     } catch {
-      toast({ title: "Uitvoeren mislukt", variant: "destructive" });
+      toast({ title: t("builder.toasts.runError"), variant: "destructive" });
     }
   };
 
@@ -222,7 +224,7 @@ export default function ReportBuilderPage() {
     setSelectedId(null);
     setTemplateModalOpen(false);
     setPendingTemplate(null);
-    toast({ title: `Template '${tpl.name}' toegepast` });
+    toast({ title: t("builder.toasts.templateApplied", { name: tpl.name }) });
   };
 
   // ── Drag-drop ─────────────────────────────────────────────────────────────
@@ -252,7 +254,7 @@ export default function ReportBuilderPage() {
       setEmbedUrl(res.url);
       setEmbedDialogOpen(true);
     } catch {
-      toast({ title: "Embed-link aanmaken mislukt", variant: "destructive" });
+      toast({ title: t("builder.toasts.embedError"), variant: "destructive" });
     }
   };
 
@@ -260,9 +262,9 @@ export default function ReportBuilderPage() {
     try {
       await revokeEmbed.mutateAsync(id);
       setEmbedDialogOpen(false);
-      toast({ title: "Embed-link ingetrokken" });
+      toast({ title: t("builder.toasts.revoked") });
     } catch {
-      toast({ title: "Intrekken mislukt", variant: "destructive" });
+      toast({ title: t("builder.toasts.revokeError"), variant: "destructive" });
     }
   };
 
@@ -294,9 +296,9 @@ export default function ReportBuilderPage() {
         <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
           <AlertCircle className="h-6 w-6 text-red-600" />
         </div>
-        <p className="text-base font-semibold">Rapport niet gevonden</p>
+        <p className="text-base font-semibold">{t("builder.loadError.title")}</p>
         <Button variant="outline" className="mt-4" onClick={() => router.push("/reports")}>
-          Terug naar overzicht
+          {t("builder.loadError.back")}
         </Button>
       </div>
     );
@@ -309,7 +311,7 @@ export default function ReportBuilderPage() {
         <Button asChild variant="ghost" size="sm" className="gap-1.5">
           <Link href="/reports">
             <ArrowLeft className="h-4 w-4" />
-            Terug
+            {t("builder.header.back")}
           </Link>
         </Button>
         <div className="min-w-0 flex-1 max-w-md">
@@ -320,7 +322,7 @@ export default function ReportBuilderPage() {
               setDirty(true);
             }}
             className="h-9 border-transparent bg-transparent text-base font-semibold hover:border-zinc-200 focus:border-zinc-300 focus:bg-white dark:hover:border-zinc-700 dark:focus:bg-zinc-900"
-            placeholder="Naam van het rapport…"
+            placeholder={t("builder.header.namePlaceholder")}
           />
           <SaveStatus
             isSaving={updateReport.isPending}
@@ -348,7 +350,7 @@ export default function ReportBuilderPage() {
           ) : (
             <Play className="h-4 w-4" />
           )}
-          Run
+          {t("builder.header.run")}
         </Button>
 
         <Button
@@ -357,18 +359,20 @@ export default function ReportBuilderPage() {
           className="gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
         >
           <Save className="h-4 w-4" />
-          {updateReport.isPending ? "Opslaan…" : "Sla op"}
+          {updateReport.isPending
+            ? t("builder.header.saving")
+            : t("builder.header.save")}
         </Button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="gap-2">
               <LinkIcon className="h-4 w-4" />
-              Embed
+              {t("builder.header.embed")}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64">
-            <DropdownMenuLabel>Embed-link</DropdownMenuLabel>
+            <DropdownMenuLabel>{t("builder.embedMenu.label")}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {report.embed_enabled && report.embed_token ? (
               <>
@@ -383,20 +387,20 @@ export default function ReportBuilderPage() {
                   }}
                 >
                   <Copy className="mr-2 h-3.5 w-3.5" />
-                  Toon link
+                  {t("builder.embedMenu.showLink")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={handleRevokeEmbed}
                   className="text-red-600"
                 >
                   <Trash2 className="mr-2 h-3.5 w-3.5" />
-                  Trek link in
+                  {t("builder.embedMenu.revoke")}
                 </DropdownMenuItem>
               </>
             ) : (
               <DropdownMenuItem onClick={handleGenerateEmbed}>
                 <LinkIcon className="mr-2 h-3.5 w-3.5" />
-                Genereer publieke link
+                {t("builder.embedMenu.generate")}
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>
@@ -471,9 +475,9 @@ export default function ReportBuilderPage() {
       <AlertDialog open={embedDialogOpen} onOpenChange={setEmbedDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Publieke embed-link</AlertDialogTitle>
+            <AlertDialogTitle>{t("builder.embedDialog.title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Iedereen met deze link kan dit rapport read-only bekijken.
+              {t("builder.embedDialog.description")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {embedUrl && (
@@ -487,21 +491,21 @@ export default function ReportBuilderPage() {
                 onClick={() => {
                   if (typeof navigator !== "undefined" && navigator.clipboard) {
                     navigator.clipboard.writeText(embedUrl);
-                    toast({ title: "Gekopieerd" });
+                    toast({ title: t("builder.toasts.copied") });
                   }
                 }}
               >
-                Kopieer
+                {t("builder.embedDialog.copy")}
               </Button>
             </div>
           )}
           <AlertDialogFooter>
-            <AlertDialogCancel>Sluit</AlertDialogCancel>
+            <AlertDialogCancel>{t("builder.embedDialog.close")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-red-600 hover:bg-red-700"
               onClick={handleRevokeEmbed}
             >
-              Trek link in
+              {t("builder.embedDialog.revoke")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -521,11 +525,12 @@ function SaveStatus({
   dirty: boolean;
   ranAt: string | null;
 }) {
+  const { t } = useTranslation("reportsPage");
   if (isSaving) {
     return (
       <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
         <Loader2 className="h-3 w-3 animate-spin" />
-        Bezig met opslaan…
+        {t("builder.saveStatus.saving")}
       </span>
     );
   }
@@ -533,7 +538,7 @@ function SaveStatus({
     return (
       <span className="flex items-center gap-1 text-[11px] font-medium text-amber-600">
         <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500" />
-        Niet-opgeslagen wijzigingen
+        {t("builder.saveStatus.unsaved")}
       </span>
     );
   }
@@ -542,13 +547,13 @@ function SaveStatus({
     return (
       <span className="flex items-center gap-1 text-[11px] text-emerald-600">
         <Check className="h-3 w-3" />
-        Laatst uitgevoerd: {ts}
+        {t("builder.saveStatus.lastRun", { date: ts })}
       </span>
     );
   }
   return (
     <span className="text-[11px] text-muted-foreground">
-      Klaar om te bouwen
+      {t("builder.saveStatus.ready")}
     </span>
   );
 }
@@ -556,16 +561,17 @@ function SaveStatus({
 // ─── Empty state ─────────────────────────────────────────────────────────────
 
 function EmptyCanvas({ onPickTemplate }: { onPickTemplate: () => void }) {
+  const { t } = useTranslation("reportsPage");
   return (
     <div className="mx-auto flex max-w-md flex-col items-center justify-center rounded-2xl border-2 border-dashed border-zinc-300 bg-white/60 p-12 text-center dark:border-zinc-700 dark:bg-zinc-950/40">
       <p className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-        Nog geen blokken
+        {t("builder.emptyCanvas.title")}
       </p>
       <p className="mt-1 text-sm text-muted-foreground">
-        Voeg blokken toe vanuit het palet links — of start met een template.
+        {t("builder.emptyCanvas.description")}
       </p>
       <Button variant="outline" size="sm" className="mt-4" onClick={onPickTemplate}>
-        Begin met template
+        {t("builder.emptyCanvas.startWithTemplate")}
       </Button>
     </div>
   );

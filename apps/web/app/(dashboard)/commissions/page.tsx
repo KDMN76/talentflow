@@ -7,6 +7,7 @@
  */
 
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   AlertCircle,
   CheckCircle2,
@@ -76,34 +77,31 @@ interface TenantRecruiter {
   name: string;
 }
 
-const RECORD_STATUS_PILL: Record<
-  CommissionRecordStatus,
-  { label: string; cls: string }
-> = {
-  pending: {
-    label: "Wachtend",
-    cls: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border-0",
-  },
-  approved: {
-    label: "Goedgekeurd",
-    cls: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border-0",
-  },
-  paid: {
-    label: "Uitbetaald",
-    cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-0",
-  },
-  disputed: {
-    label: "Bezwaar",
-    cls: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-0",
-  },
+const RECORD_STATUS_PILL: Record<CommissionRecordStatus, string> = {
+  pending:
+    "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border-0",
+  approved:
+    "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border-0",
+  paid: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-0",
+  disputed:
+    "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-0",
 };
 
-const SCHEME_TYPE_LABEL: Record<CommissionSchemeType, string> = {
-  flat: "Vast bedrag",
-  percent_of_fee: "% van fee",
-  percent_of_margin: "% van marge",
-  tiered: "Getrapt",
-  recurring_monthly: "Maandelijks recurring",
+// Maps the API enum value to the i18n key under commissions.records.status.
+const RECORD_STATUS_KEY: Record<CommissionRecordStatus, string> = {
+  pending: "pending",
+  approved: "approved",
+  paid: "paid",
+  disputed: "disputed",
+};
+
+// Maps the API enum value to the i18n key under commissions.schemeType.
+const SCHEME_TYPE_KEY: Record<CommissionSchemeType, string> = {
+  flat: "flat",
+  percent_of_fee: "percentOfFee",
+  percent_of_margin: "percentOfMargin",
+  tiered: "tiered",
+  recurring_monthly: "recurringMonthly",
 };
 
 function formatDate(value: string | null): string {
@@ -124,19 +122,20 @@ function formatMoney(amount: number, currency = "EUR"): string {
 
 export default function CommissionsPage() {
   const { toast } = useToast();
+  const { t } = useTranslation("invoices");
 
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Commissie"
-        description="Beheer commissieschema's, koppel contracten aan recruiters en boek uitbetalingen."
+        title={t("commissions.header.title")}
+        description={t("commissions.header.description")}
       />
 
       <Tabs defaultValue="records">
         <TabsList>
-          <TabsTrigger value="records">Records</TabsTrigger>
-          <TabsTrigger value="schemes">Schema's</TabsTrigger>
-          <TabsTrigger value="assignments">Toewijzingen</TabsTrigger>
+          <TabsTrigger value="records">{t("commissions.tabs.records")}</TabsTrigger>
+          <TabsTrigger value="schemes">{t("commissions.tabs.schemes")}</TabsTrigger>
+          <TabsTrigger value="assignments">{t("commissions.tabs.assignments")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="records" className="space-y-3">
@@ -158,6 +157,7 @@ export default function CommissionsPage() {
 type Toast = ReturnType<typeof import("@/components/ui/use-toast").useToast>["toast"];
 
 function RecordsTab({ toast }: { toast: Toast }) {
+  const { t } = useTranslation("invoices");
   const [statusFilter, setStatusFilter] = useState<
     CommissionRecordStatus | "all"
   >("all");
@@ -209,17 +209,23 @@ function RecordsTab({ toast }: { toast: Toast }) {
   const handleApprove = async (id: string) => {
     try {
       await approve.mutateAsync(id);
-      toast({ title: "Goedgekeurd voor uitbetaling" });
+      toast({ title: t("commissions.records.toasts.approved") });
     } catch {
-      toast({ title: "Goedkeuren mislukt", variant: "destructive" });
+      toast({
+        title: t("commissions.records.toasts.approveError"),
+        variant: "destructive",
+      });
     }
   };
   const handlePay = async (id: string) => {
     try {
       await pay.mutateAsync(id);
-      toast({ title: "Uitbetaling vastgelegd" });
+      toast({ title: t("commissions.records.toasts.paid") });
     } catch {
-      toast({ title: "Uitbetalen mislukt", variant: "destructive" });
+      toast({
+        title: t("commissions.records.toasts.payError"),
+        variant: "destructive",
+      });
     }
   };
   const handleDispute = async () => {
@@ -229,12 +235,15 @@ function RecordsTab({ toast }: { toast: Toast }) {
         id: disputeTarget,
         reason: disputeReason,
       });
-      toast({ title: "Bezwaar geregistreerd" });
+      toast({ title: t("commissions.records.toasts.disputed") });
       setDisputeOpen(false);
       setDisputeTarget(null);
       setDisputeReason("");
     } catch {
-      toast({ title: "Bezwaar mislukt", variant: "destructive" });
+      toast({
+        title: t("commissions.records.toasts.disputeError"),
+        variant: "destructive",
+      });
     }
   };
 
@@ -242,17 +251,17 @@ function RecordsTab({ toast }: { toast: Toast }) {
     <>
       <div className="grid gap-3 sm:grid-cols-3">
         <KpiTile
-          label="Wachtend"
+          label={t("commissions.records.kpi.pending")}
           value={formatMoney(totals.pending)}
           accent="amber"
         />
         <KpiTile
-          label="Goedgekeurd"
+          label={t("commissions.records.kpi.approved")}
           value={formatMoney(totals.approved)}
           accent="indigo"
         />
         <KpiTile
-          label="Uitbetaald YTD"
+          label={t("commissions.records.kpi.paidYtd")}
           value={formatMoney(totals.paid)}
           accent="emerald"
         />
@@ -270,11 +279,21 @@ function RecordsTab({ toast }: { toast: Toast }) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Alle statussen</SelectItem>
-              <SelectItem value="pending">Wachtend</SelectItem>
-              <SelectItem value="approved">Goedgekeurd</SelectItem>
-              <SelectItem value="paid">Uitbetaald</SelectItem>
-              <SelectItem value="disputed">Bezwaar</SelectItem>
+              <SelectItem value="all">
+                {t("commissions.records.filters.allStatuses")}
+              </SelectItem>
+              <SelectItem value="pending">
+                {t("commissions.records.status.pending")}
+              </SelectItem>
+              <SelectItem value="approved">
+                {t("commissions.records.status.approved")}
+              </SelectItem>
+              <SelectItem value="paid">
+                {t("commissions.records.status.paid")}
+              </SelectItem>
+              <SelectItem value="disputed">
+                {t("commissions.records.status.disputed")}
+              </SelectItem>
             </SelectContent>
           </Select>
           <Select value={recruiterFilter} onValueChange={setRecruiterFilter}>
@@ -282,7 +301,9 @@ function RecordsTab({ toast }: { toast: Toast }) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Alle recruiters</SelectItem>
+              <SelectItem value="all">
+                {t("commissions.records.filters.allRecruiters")}
+              </SelectItem>
               {recruiterOptions.map((m) => (
                 <SelectItem key={m.id} value={m.id}>
                   {m.name}
@@ -303,24 +324,36 @@ function RecordsTab({ toast }: { toast: Toast }) {
             </div>
           ) : filtered.length === 0 ? (
             <div className="px-4 py-12 text-center text-sm text-muted-foreground">
-              Geen commissie-records.
+              {t("commissions.records.empty")}
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="border-b border-border bg-zinc-50/50 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground dark:bg-zinc-900/40">
                   <tr>
-                    <th className="px-4 py-3">Recruiter</th>
-                    <th className="px-4 py-3">Periode</th>
-                    <th className="px-4 py-3 text-right">Basis</th>
-                    <th className="px-4 py-3 text-right">Commissie</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 text-right">Acties</th>
+                    <th className="px-4 py-3">
+                      {t("commissions.records.columns.recruiter")}
+                    </th>
+                    <th className="px-4 py-3">
+                      {t("commissions.records.columns.period")}
+                    </th>
+                    <th className="px-4 py-3 text-right">
+                      {t("commissions.records.columns.base")}
+                    </th>
+                    <th className="px-4 py-3 text-right">
+                      {t("commissions.records.columns.commission")}
+                    </th>
+                    <th className="px-4 py-3">
+                      {t("commissions.records.columns.status")}
+                    </th>
+                    <th className="px-4 py-3 text-right">
+                      {t("commissions.records.columns.actions")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((r) => {
-                    const pill = RECORD_STATUS_PILL[r.status];
+                    const pillCls = RECORD_STATUS_PILL[r.status];
                     return (
                       <tr
                         key={r.id}
@@ -340,7 +373,11 @@ function RecordsTab({ toast }: { toast: Toast }) {
                           {formatMoney(r.commission_amount)}
                         </td>
                         <td className="px-4 py-3">
-                          <Badge className={pill.cls}>{pill.label}</Badge>
+                          <Badge className={pillCls}>
+                            {t(
+                              `commissions.records.status.${RECORD_STATUS_KEY[r.status]}`
+                            )}
+                          </Badge>
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex justify-end gap-1.5">
@@ -352,7 +389,7 @@ function RecordsTab({ toast }: { toast: Toast }) {
                                 className="h-8"
                               >
                                 <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
-                                Goedkeuren
+                                {t("commissions.records.actions.approve")}
                               </Button>
                             )}
                             {r.status === "approved" && (
@@ -362,7 +399,7 @@ function RecordsTab({ toast }: { toast: Toast }) {
                                 className="h-8 border-0 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700"
                               >
                                 <Coins className="mr-1 h-3.5 w-3.5" />
-                                Uitbetalen
+                                {t("commissions.records.actions.pay")}
                               </Button>
                             )}
                             {(r.status === "pending" ||
@@ -377,7 +414,7 @@ function RecordsTab({ toast }: { toast: Toast }) {
                                 className="h-8 text-amber-600 hover:bg-amber-50 hover:text-amber-700"
                               >
                                 <AlertCircle className="mr-1 h-3.5 w-3.5" />
-                                Bezwaar
+                                {t("commissions.records.actions.dispute")}
                               </Button>
                             )}
                           </div>
@@ -395,28 +432,29 @@ function RecordsTab({ toast }: { toast: Toast }) {
       <Dialog open={disputeOpen} onOpenChange={setDisputeOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Bezwaar maken</DialogTitle>
+            <DialogTitle>
+              {t("commissions.records.disputeDialog.title")}
+            </DialogTitle>
             <DialogDescription>
-              Beschrijf waarom dit record geblokkeerd moet worden voor
-              uitbetaling.
+              {t("commissions.records.disputeDialog.description")}
             </DialogDescription>
           </DialogHeader>
           <Textarea
             rows={3}
             value={disputeReason}
             onChange={(e) => setDisputeReason(e.target.value)}
-            placeholder="Bv. klant heeft factuur betwist"
+            placeholder={t("commissions.records.disputeDialog.placeholder")}
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => setDisputeOpen(false)}>
-              Annuleren
+              {t("commissions.records.disputeDialog.cancel")}
             </Button>
             <Button
               onClick={handleDispute}
               disabled={!disputeReason.trim()}
               className="bg-amber-500 text-white hover:bg-amber-600"
             >
-              Indienen
+              {t("commissions.records.disputeDialog.submit")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -433,6 +471,7 @@ interface TierRow {
 }
 
 function SchemesTab({ toast }: { toast: Toast }) {
+  const { t } = useTranslation("invoices");
   const { data: schemes, isLoading } = useCommissionSchemes();
   const create = useCreateCommissionScheme();
   const update = useUpdateCommissionScheme();
@@ -528,7 +567,7 @@ function SchemesTab({ toast }: { toast: Toast }) {
             is_default: isDefault,
           },
         });
-        toast({ title: "Schema bijgewerkt" });
+        toast({ title: t("commissions.schemes.toasts.updated") });
       } else {
         await create.mutateAsync({
           name,
@@ -537,12 +576,15 @@ function SchemesTab({ toast }: { toast: Toast }) {
           active,
           is_default: isDefault,
         });
-        toast({ title: "Nieuw schema aangemaakt" });
+        toast({ title: t("commissions.schemes.toasts.created") });
       }
       setOpen(false);
       reset();
     } catch {
-      toast({ title: "Opslaan mislukt", variant: "destructive" });
+      toast({
+        title: t("commissions.schemes.toasts.saveError"),
+        variant: "destructive",
+      });
     }
   };
 
@@ -557,7 +599,7 @@ function SchemesTab({ toast }: { toast: Toast }) {
           className="border-0 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
         >
           <Plus className="mr-1.5 h-4 w-4" />
-          Nieuw schema
+          {t("commissions.schemes.newScheme")}
         </Button>
       </div>
 
@@ -572,7 +614,7 @@ function SchemesTab({ toast }: { toast: Toast }) {
           ) : !schemes || schemes.length === 0 ? (
             <div className="px-4 py-12 text-center text-sm text-muted-foreground">
               <Layers className="mx-auto mb-2 h-10 w-10 text-muted-foreground/40" />
-              Nog geen schema's.
+              {t("commissions.schemes.empty")}
             </div>
           ) : (
             <ul className="divide-y divide-border">
@@ -588,17 +630,18 @@ function SchemesTab({ toast }: { toast: Toast }) {
                       </p>
                       {s.is_default && (
                         <Badge className="border-0 bg-emerald-100 px-1.5 py-0 text-[10px] uppercase text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-                          standaard
+                          {t("commissions.schemes.defaultBadge")}
                         </Badge>
                       )}
                       {!s.active && (
                         <Badge className="border-0 bg-zinc-100 px-1.5 py-0 text-[10px] uppercase text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                          inactief
+                          {t("commissions.schemes.inactiveBadge")}
                         </Badge>
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {SCHEME_TYPE_LABEL[s.type]} · {describeConfig(s)}
+                      {t(`commissions.schemeType.${SCHEME_TYPE_KEY[s.type]}`)} ·{" "}
+                      {describeConfig(s, t)}
                     </p>
                   </div>
                   <Button
@@ -607,7 +650,7 @@ function SchemesTab({ toast }: { toast: Toast }) {
                     onClick={() => openEdit(s)}
                   >
                     <Edit2 className="mr-1 h-3.5 w-3.5" />
-                    Bewerken
+                    {t("commissions.schemes.edit")}
                   </Button>
                 </li>
               ))}
@@ -620,26 +663,31 @@ function SchemesTab({ toast }: { toast: Toast }) {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {editing ? "Schema bewerken" : "Nieuw commissie-schema"}
+              {editing
+                ? t("commissions.schemes.dialog.editTitle")
+                : t("commissions.schemes.dialog.createTitle")}
             </DialogTitle>
             <DialogDescription>
-              Definieer hoe commissie wordt berekend voor recruiters die aan
-              dit schema gekoppeld worden.
+              {t("commissions.schemes.dialog.description")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3">
             <div>
-              <Label htmlFor="scheme-name">Naam</Label>
+              <Label htmlFor="scheme-name">
+                {t("commissions.schemes.dialog.nameLabel")}
+              </Label>
               <Input
                 id="scheme-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Bv. Standaard 8%"
+                placeholder={t("commissions.schemes.dialog.namePlaceholder")}
               />
             </div>
             <div>
-              <Label htmlFor="scheme-type">Type</Label>
+              <Label htmlFor="scheme-type">
+                {t("commissions.schemes.dialog.typeLabel")}
+              </Label>
               <Select
                 value={type}
                 onValueChange={(v) => setType(v as CommissionSchemeType)}
@@ -648,12 +696,20 @@ function SchemesTab({ toast }: { toast: Toast }) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="flat">Vast bedrag</SelectItem>
-                  <SelectItem value="percent_of_fee">% van fee</SelectItem>
-                  <SelectItem value="percent_of_margin">% van marge</SelectItem>
-                  <SelectItem value="tiered">Getrapt</SelectItem>
+                  <SelectItem value="flat">
+                    {t("commissions.schemeType.flat")}
+                  </SelectItem>
+                  <SelectItem value="percent_of_fee">
+                    {t("commissions.schemeType.percentOfFee")}
+                  </SelectItem>
+                  <SelectItem value="percent_of_margin">
+                    {t("commissions.schemeType.percentOfMargin")}
+                  </SelectItem>
+                  <SelectItem value="tiered">
+                    {t("commissions.schemeType.tiered")}
+                  </SelectItem>
                   <SelectItem value="recurring_monthly">
-                    Maandelijks recurring
+                    {t("commissions.schemeType.recurringMonthly")}
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -661,52 +717,58 @@ function SchemesTab({ toast }: { toast: Toast }) {
 
             {type === "flat" && (
               <div>
-                <Label>Bedrag (€)</Label>
+                <Label>{t("commissions.schemes.dialog.flatLabel")}</Label>
                 <Input
                   type="number"
                   value={flatAmount}
                   onChange={(e) => setFlatAmount(e.target.value)}
-                  placeholder="2500"
+                  placeholder={t("commissions.schemes.dialog.flatPlaceholder")}
                 />
               </div>
             )}
 
             {(type === "percent_of_fee" || type === "percent_of_margin") && (
               <div>
-                <Label>Percentage (%)</Label>
+                <Label>{t("commissions.schemes.dialog.percentLabel")}</Label>
                 <Input
                   type="number"
                   step="0.5"
                   value={percent}
                   onChange={(e) => setPercent(e.target.value)}
-                  placeholder="8"
+                  placeholder={t(
+                    "commissions.schemes.dialog.percentPlaceholder"
+                  )}
                 />
               </div>
             )}
 
             {type === "recurring_monthly" && (
               <div>
-                <Label>Bedrag per maand (€)</Label>
+                <Label>{t("commissions.schemes.dialog.monthlyLabel")}</Label>
                 <Input
                   type="number"
                   value={monthlyAmount}
                   onChange={(e) => setMonthlyAmount(e.target.value)}
-                  placeholder="250"
+                  placeholder={t(
+                    "commissions.schemes.dialog.monthlyPlaceholder"
+                  )}
                 />
               </div>
             )}
 
             {type === "tiered" && (
               <div className="space-y-2">
-                <Label>Tiers</Label>
-                {tiers.map((t, idx) => (
+                <Label>{t("commissions.schemes.dialog.tiersLabel")}</Label>
+                {tiers.map((tier, idx) => (
                   <div
                     key={idx}
                     className="grid grid-cols-[1fr_1fr_auto] items-center gap-2"
                   >
                     <Input
-                      placeholder="Tot bedrag (leeg = ∞)"
-                      value={t.up_to}
+                      placeholder={t(
+                        "commissions.schemes.dialog.tierUpToPlaceholder"
+                      )}
+                      value={tier.up_to}
                       onChange={(e) =>
                         setTiers((cur) =>
                           cur.map((r, i) =>
@@ -718,8 +780,10 @@ function SchemesTab({ toast }: { toast: Toast }) {
                     <Input
                       type="number"
                       step="0.5"
-                      placeholder="% commissie"
-                      value={t.percent}
+                      placeholder={t(
+                        "commissions.schemes.dialog.tierPercentPlaceholder"
+                      )}
+                      value={tier.percent}
                       onChange={(e) =>
                         setTiers((cur) =>
                           cur.map((r, i) =>
@@ -748,26 +812,29 @@ function SchemesTab({ toast }: { toast: Toast }) {
                   }
                 >
                   <Plus className="mr-1 h-3.5 w-3.5" />
-                  Tier toevoegen
+                  {t("commissions.schemes.dialog.addTier")}
                 </Button>
               </div>
             )}
 
             <div className="flex items-center justify-between rounded-lg border border-border p-3">
               <div>
-                <p className="text-sm font-medium">Actief</p>
+                <p className="text-sm font-medium">
+                  {t("commissions.schemes.dialog.activeTitle")}
+                </p>
                 <p className="text-xs text-muted-foreground">
-                  Inactief schema is niet selecteerbaar bij toewijzingen.
+                  {t("commissions.schemes.dialog.activeDescription")}
                 </p>
               </div>
               <Switch checked={active} onCheckedChange={setActive} />
             </div>
             <div className="flex items-center justify-between rounded-lg border border-border p-3">
               <div>
-                <p className="text-sm font-medium">Standaard schema</p>
+                <p className="text-sm font-medium">
+                  {t("commissions.schemes.dialog.defaultTitle")}
+                </p>
                 <p className="text-xs text-muted-foreground">
-                  Wordt automatisch toegepast bij nieuwe contracten zonder
-                  expliciete toewijzing.
+                  {t("commissions.schemes.dialog.defaultDescription")}
                 </p>
               </div>
               <Switch checked={isDefault} onCheckedChange={setIsDefault} />
@@ -776,7 +843,7 @@ function SchemesTab({ toast }: { toast: Toast }) {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>
-              Annuleren
+              {t("commissions.schemes.dialog.cancel")}
             </Button>
             <Button
               onClick={handleSave}
@@ -786,7 +853,9 @@ function SchemesTab({ toast }: { toast: Toast }) {
               {(create.isPending || update.isPending) && (
                 <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
               )}
-              {editing ? "Opslaan" : "Aanmaken"}
+              {editing
+                ? t("commissions.schemes.dialog.save")
+                : t("commissions.schemes.dialog.create")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -795,27 +864,42 @@ function SchemesTab({ toast }: { toast: Toast }) {
   );
 }
 
-function describeConfig(s: CommissionScheme): string {
+function describeConfig(
+  s: CommissionScheme,
+  t: ReturnType<typeof useTranslation>["t"]
+): string {
   const cfg = s.config as Record<string, unknown>;
   switch (s.type) {
     case "flat":
-      return `${formatMoney((cfg.amount as number) ?? 0)} per plaatsing`;
+      return t("commissions.schemes.describe.flat", {
+        amount: formatMoney((cfg.amount as number) ?? 0),
+      });
     case "percent_of_fee":
-      return `${cfg.percent ?? 0}% van fee`;
+      return t("commissions.schemes.describe.percentOfFee", {
+        percent: cfg.percent ?? 0,
+      });
     case "percent_of_margin":
-      return `${cfg.percent ?? 0}% van marge`;
+      return t("commissions.schemes.describe.percentOfMargin", {
+        percent: cfg.percent ?? 0,
+      });
     case "tiered": {
       const tiers = (cfg.tiers as { up_to: number | null; percent: number }[] | undefined) ?? [];
-      return `${tiers.length} tiers · max ${tiers[tiers.length - 1]?.percent ?? 0}%`;
+      return t("commissions.schemes.describe.tiered", {
+        count: tiers.length,
+        max: tiers[tiers.length - 1]?.percent ?? 0,
+      });
     }
     case "recurring_monthly":
-      return `${formatMoney((cfg.monthly_amount as number) ?? 0)} per maand`;
+      return t("commissions.schemes.describe.recurringMonthly", {
+        amount: formatMoney((cfg.monthly_amount as number) ?? 0),
+      });
   }
 }
 
 // ─── ASSIGNMENTS ─────────────────────────────────────────────────────────────
 
 function AssignmentsTab({ toast }: { toast: Toast }) {
+  const { t } = useTranslation("invoices");
   const { data: assignments, isLoading } = useCommissionAssignments();
   const { data: schemes } = useCommissionSchemes();
   const { data: contracts } = useContracts();
@@ -858,14 +942,17 @@ function AssignmentsTab({ toast }: { toast: Toast }) {
         scheme_name: scheme?.name,
         share_percent: parseFloat(share) || 100,
       });
-      toast({ title: "Toewijzing aangemaakt" });
+      toast({ title: t("commissions.assignments.toasts.created") });
       setOpen(false);
       setRecruiter("");
       setContractId("");
       setSchemeId("");
       setShare("100");
     } catch {
-      toast({ title: "Toewijzen mislukt", variant: "destructive" });
+      toast({
+        title: t("commissions.assignments.toasts.createError"),
+        variant: "destructive",
+      });
     }
   };
 
@@ -877,7 +964,7 @@ function AssignmentsTab({ toast }: { toast: Toast }) {
           className="border-0 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
         >
           <Plus className="mr-1.5 h-4 w-4" />
-          Nieuwe toewijzing
+          {t("commissions.assignments.newAssignment")}
         </Button>
       </div>
 
@@ -892,17 +979,25 @@ function AssignmentsTab({ toast }: { toast: Toast }) {
           ) : !assignments || assignments.length === 0 ? (
             <div className="px-4 py-12 text-center text-sm text-muted-foreground">
               <Users className="mx-auto mb-2 h-10 w-10 text-muted-foreground/40" />
-              Nog geen toewijzingen.
+              {t("commissions.assignments.empty")}
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="border-b border-border bg-zinc-50/50 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground dark:bg-zinc-900/40">
                   <tr>
-                    <th className="px-4 py-3">Recruiter</th>
-                    <th className="px-4 py-3">Contract</th>
-                    <th className="px-4 py-3">Schema</th>
-                    <th className="px-4 py-3 text-right">Aandeel</th>
+                    <th className="px-4 py-3">
+                      {t("commissions.assignments.columns.recruiter")}
+                    </th>
+                    <th className="px-4 py-3">
+                      {t("commissions.assignments.columns.contract")}
+                    </th>
+                    <th className="px-4 py-3">
+                      {t("commissions.assignments.columns.scheme")}
+                    </th>
+                    <th className="px-4 py-3 text-right">
+                      {t("commissions.assignments.columns.share")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -945,23 +1040,28 @@ function AssignmentsTab({ toast }: { toast: Toast }) {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Recruiter aan contract toewijzen</DialogTitle>
+            <DialogTitle>
+              {t("commissions.assignments.dialog.title")}
+            </DialogTitle>
             <DialogDescription>
-              Koppel een recruiter aan een contract via een commissie-schema.
+              {t("commissions.assignments.dialog.description")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label>Recruiter</Label>
+              <Label>{t("commissions.assignments.dialog.recruiterLabel")}</Label>
               {recruiterOptions.length === 0 ? (
                 <p className="rounded-md border border-dashed border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-                  Nog geen recruiters bekend. Maak eerst een commissierecord
-                  aan, of voeg een gebruiker toe in Instellingen.
+                  {t("commissions.assignments.dialog.noRecruiters")}
                 </p>
               ) : (
                 <Select value={recruiter} onValueChange={setRecruiter}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Kies een recruiter..." />
+                    <SelectValue
+                      placeholder={t(
+                        "commissions.assignments.dialog.recruiterPlaceholder"
+                      )}
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {recruiterOptions.map((m) => (
@@ -974,10 +1074,14 @@ function AssignmentsTab({ toast }: { toast: Toast }) {
               )}
             </div>
             <div>
-              <Label>Contract</Label>
+              <Label>{t("commissions.assignments.dialog.contractLabel")}</Label>
               <Select value={contractId} onValueChange={setContractId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Kies een contract..." />
+                  <SelectValue
+                    placeholder={t(
+                      "commissions.assignments.dialog.contractPlaceholder"
+                    )}
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {(contracts ?? []).map((c) => (
@@ -989,10 +1093,14 @@ function AssignmentsTab({ toast }: { toast: Toast }) {
               </Select>
             </div>
             <div>
-              <Label>Schema</Label>
+              <Label>{t("commissions.assignments.dialog.schemeLabel")}</Label>
               <Select value={schemeId} onValueChange={setSchemeId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Kies een schema..." />
+                  <SelectValue
+                    placeholder={t(
+                      "commissions.assignments.dialog.schemePlaceholder"
+                    )}
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {(schemes ?? [])
@@ -1006,7 +1114,7 @@ function AssignmentsTab({ toast }: { toast: Toast }) {
               </Select>
             </div>
             <div>
-              <Label>Aandeel %</Label>
+              <Label>{t("commissions.assignments.dialog.shareLabel")}</Label>
               <Input
                 type="number"
                 min={0}
@@ -1015,13 +1123,13 @@ function AssignmentsTab({ toast }: { toast: Toast }) {
                 onChange={(e) => setShare(e.target.value)}
               />
               <p className="mt-1 text-[11px] text-muted-foreground">
-                Gebruik &lt;100% bij splits met andere recruiters.
+                {t("commissions.assignments.dialog.shareHint")}
               </p>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>
-              Annuleren
+              {t("commissions.assignments.dialog.cancel")}
             </Button>
             <Button
               onClick={handleCreate}
@@ -1033,7 +1141,7 @@ function AssignmentsTab({ toast }: { toast: Toast }) {
               {create.isPending && (
                 <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
               )}
-              Toewijzen
+              {t("commissions.assignments.dialog.assign")}
             </Button>
           </DialogFooter>
         </DialogContent>

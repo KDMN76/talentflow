@@ -17,6 +17,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import {
   Archive,
   ArchiveRestore,
@@ -227,6 +228,7 @@ function FilterSidebar({
     channels: Record<ChannelType, number>;
   };
 }) {
+  const { t } = useTranslation("miscInbox");
   const isActive = (f: SidebarFilter) =>
     f.preset === filter.preset && f.channel === filter.channel;
 
@@ -276,10 +278,10 @@ function FilterSidebar({
     <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-white px-3 py-4 dark:bg-zinc-900 lg:flex">
       <div className="mb-2 px-1">
         <h2 className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-          Inbox
+          {t("inbox.sidebar.title")}
         </h2>
         <p className="text-[11px] text-muted-foreground">
-          Alles op één plek — email, WhatsApp, voice & meer.
+          {t("inbox.sidebar.subtitle")}
         </p>
       </div>
 
@@ -287,31 +289,31 @@ function FilterSidebar({
         <FilterRow
           f={{ preset: "all" }}
           icon={<InboxIcon className="h-4 w-4" />}
-          label="Inbox"
+          label={t("inbox.sidebar.filters.inbox")}
           count={counts.all}
         />
         <FilterRow
           f={{ preset: "unread" }}
           icon={<CircleDot className="h-4 w-4 text-indigo-500" />}
-          label="Ongelezen"
+          label={t("inbox.sidebar.filters.unread")}
           count={counts.unread}
         />
         <FilterRow
           f={{ preset: "mine" }}
           icon={<UserPlus className="h-4 w-4" />}
-          label="Toegewezen aan mij"
+          label={t("inbox.sidebar.filters.mine")}
           count={counts.mine}
         />
         <FilterRow
           f={{ preset: "pinned" }}
           icon={<Pin className="h-4 w-4" />}
-          label="Gepind"
+          label={t("inbox.sidebar.filters.pinned")}
           count={counts.pinned}
         />
         <FilterRow
           f={{ preset: "archived" }}
           icon={<Archive className="h-4 w-4" />}
-          label="Archief"
+          label={t("inbox.sidebar.filters.archived")}
           count={counts.archived}
         />
       </div>
@@ -319,7 +321,7 @@ function FilterSidebar({
       <div className="my-3 border-t border-border" />
 
       <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-        Kanalen
+        {t("inbox.sidebar.channelsHeading")}
       </p>
       <div className="space-y-0.5">
         {(
@@ -364,6 +366,7 @@ function ThreadListPane({
   search: string;
   onSearchChange: (s: string) => void;
 }) {
+  const { t } = useTranslation("miscInbox");
   return (
     <div className="flex w-full max-w-[380px] shrink-0 flex-col border-r border-border bg-white dark:bg-zinc-900">
       {/* Search */}
@@ -373,7 +376,7 @@ function ThreadListPane({
           <Input
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Zoek op naam, label of inhoud…"
+            placeholder={t("inbox.list.searchPlaceholder")}
             className="h-9 pl-8"
           />
           {search && (
@@ -399,10 +402,10 @@ function ThreadListPane({
           <div className="flex h-full flex-col items-center justify-center px-6 py-16 text-center">
             <InboxIcon className="h-8 w-8 text-zinc-300 dark:text-zinc-600" />
             <p className="mt-3 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Geen berichten
+              {t("inbox.list.emptyTitle")}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Pas je filter aan of wacht op nieuwe berichten.
+              {t("inbox.list.emptyDescription")}
             </p>
           </div>
         ) : (
@@ -431,6 +434,7 @@ function ThreadListItem({
   active: boolean;
   onClick: () => void;
 }) {
+  const { t } = useTranslation("miscInbox");
   const unread = thread.unread_count_for_assignee;
   return (
     <li>
@@ -468,7 +472,7 @@ function ThreadListItem({
                   : "font-medium text-zinc-700 dark:text-zinc-300"
               )}
             >
-              {thread.candidate_name ?? "Onbekend"}
+              {thread.candidate_name ?? t("inbox.list.unknownCandidate")}
             </p>
             <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">
               {formatRelative(thread.last_message_at)}
@@ -516,6 +520,7 @@ function ThreadDetail({
   voiceIntegration: import("@/lib/types/voice").VoiceIntegration | null;
   whatsAppIntegration: import("@/lib/types/whatsapp").WhatsAppIntegration | null;
 }) {
+  const { t } = useTranslation("miscInbox");
   const { toast } = useToast();
   const { data: timeline, isLoading } = useThreadTimeline(thread.id);
   const markRead = useMarkThreadRead();
@@ -554,15 +559,15 @@ function ThreadDetail({
                 href={`/candidates/${thread.candidate_id}`}
                 className="text-base font-semibold text-zinc-900 hover:text-indigo-600 dark:text-zinc-100 dark:hover:text-indigo-400"
               >
-                {thread.candidate_name ?? "Onbekende kandidaat"}
+                {thread.candidate_name ?? t("inbox.detail.unknownCandidate")}
               </Link>
               {thread.pinned && <Pin className="h-3.5 w-3.5 text-amber-500" fill="currentColor" />}
             </div>
             <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
               <span>
-                Toegewezen aan:{" "}
+                {t("inbox.detail.assignedTo")}{" "}
                 <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                  {thread.assignee_name ?? "Niemand"}
+                  {thread.assignee_name ?? t("inbox.detail.noAssignee")}
                 </span>
               </span>
               {thread.labels.length > 0 && (
@@ -576,7 +581,7 @@ function ThreadDetail({
                         removeLabel.mutate({ threadId: thread.id, label: l })
                       }
                       className="group inline-flex items-center gap-0.5 rounded bg-zinc-100 px-1.5 py-0.5 font-medium text-zinc-700 hover:bg-red-100 hover:text-red-700 dark:bg-zinc-800 dark:text-zinc-300"
-                      title="Verwijder label"
+                      title={t("inbox.detail.removeLabelTitle")}
                     >
                       #{l}
                       <X className="h-2.5 w-2.5 opacity-0 group-hover:opacity-100" />
@@ -594,7 +599,7 @@ function ThreadDetail({
             className="gap-1 text-xs"
             onClick={() => setAssignOpen(true)}
           >
-            <UserPlus className="h-3.5 w-3.5" /> Toewijzen
+            <UserPlus className="h-3.5 w-3.5" /> {t("inbox.detail.assign")}
           </Button>
           <Button
             size="sm"
@@ -606,7 +611,9 @@ function ThreadDetail({
                 {
                   onSuccess: () =>
                     toast({
-                      title: thread.pinned ? "Pin verwijderd" : "Vastgepind",
+                      title: thread.pinned
+                        ? t("inbox.detail.pinRemoved")
+                        : t("inbox.detail.pinned"),
                     }),
                 }
               )
@@ -614,11 +621,11 @@ function ThreadDetail({
           >
             {thread.pinned ? (
               <>
-                <PinOff className="h-3.5 w-3.5" /> Unpin
+                <PinOff className="h-3.5 w-3.5" /> {t("inbox.detail.unpin")}
               </>
             ) : (
               <>
-                <Pin className="h-3.5 w-3.5" /> Pin
+                <Pin className="h-3.5 w-3.5" /> {t("inbox.detail.pin")}
               </>
             )}
           </Button>
@@ -628,7 +635,7 @@ function ThreadDetail({
             className="gap-1 text-xs"
             onClick={() => setLabelsOpen(true)}
           >
-            <Tag className="h-3.5 w-3.5" /> Label
+            <Tag className="h-3.5 w-3.5" /> {t("inbox.detail.label")}
           </Button>
           <Button
             size="sm"
@@ -641,8 +648,8 @@ function ThreadDetail({
                   onSuccess: () =>
                     toast({
                       title: thread.archived_at
-                        ? "Hersteld uit archief"
-                        : "Gearchiveerd",
+                        ? t("inbox.detail.restoredFromArchive")
+                        : t("inbox.detail.archived"),
                     }),
                 }
               )
@@ -650,11 +657,11 @@ function ThreadDetail({
           >
             {thread.archived_at ? (
               <>
-                <ArchiveRestore className="h-3.5 w-3.5" /> Herstellen
+                <ArchiveRestore className="h-3.5 w-3.5" /> {t("inbox.detail.restore")}
               </>
             ) : (
               <>
-                <Archive className="h-3.5 w-3.5" /> Archief
+                <Archive className="h-3.5 w-3.5" /> {t("inbox.detail.archive")}
               </>
             )}
           </Button>
@@ -680,10 +687,10 @@ function ThreadDetail({
         ) : !timeline || timeline.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center text-center">
             <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Nog geen berichten in deze thread
+              {t("inbox.detail.timelineEmptyTitle")}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Start een gesprek via de compose-balk hieronder.
+              {t("inbox.detail.timelineEmptyDescription")}
             </p>
           </div>
         ) : (
@@ -700,7 +707,7 @@ function ThreadDetail({
       {/* Compose */}
       <ComposeBar
         candidateId={thread.candidate_id}
-        candidateName={thread.candidate_name ?? "kandidaat"}
+        candidateName={thread.candidate_name ?? t("inbox.detail.composeFallbackName")}
         defaultChannel={thread.last_channel === "linkedin_connection" ? "linkedin_inmail" : thread.last_channel}
         voiceIntegration={voiceIntegration}
         whatsappIntegration={whatsAppIntegration}
@@ -710,16 +717,16 @@ function ThreadDetail({
       <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Toewijzen aan recruiter</DialogTitle>
+            <DialogTitle>{t("inbox.detail.assignDialog.title")}</DialogTitle>
           </DialogHeader>
           {tenantUsers.length === 0 ? (
             <p className="text-sm text-muted-foreground py-2">
-              Geen recruiters beschikbaar — er is nog geen tenant-users API.
+              {t("inbox.detail.assignDialog.noRecruiters")}
             </p>
           ) : (
             <Select value={assigneeId} onValueChange={setAssigneeId}>
               <SelectTrigger>
-                <SelectValue placeholder="Kies een recruiter…" />
+                <SelectValue placeholder={t("inbox.detail.assignDialog.placeholder")} />
               </SelectTrigger>
               <SelectContent>
                 {tenantUsers.map((m) => (
@@ -732,7 +739,7 @@ function ThreadDetail({
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setAssignOpen(false)}>
-              Annuleren
+              {t("inbox.detail.assignDialog.cancel")}
             </Button>
             <Button
               disabled={tenantUsers.length === 0 || !assigneeId}
@@ -744,11 +751,15 @@ function ThreadDetail({
                   user_id: assigneeId,
                   user_name: user?.name,
                 });
-                toast({ title: `Toegewezen aan ${user?.name ?? assigneeId}` });
+                toast({
+                  title: t("inbox.detail.assignDialog.assignedToast", {
+                    name: user?.name ?? assigneeId,
+                  }),
+                });
                 setAssignOpen(false);
               }}
             >
-              Toewijzen
+              {t("inbox.detail.assignDialog.assign")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -787,11 +798,11 @@ function ThreadDetail({
       <Dialog open={labelsOpen} onOpenChange={setLabelsOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Label toevoegen</DialogTitle>
+            <DialogTitle>{t("inbox.detail.labelDialog.title")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-2">
             <Input
-              placeholder="Bijv. interview, follow-up"
+              placeholder={t("inbox.detail.labelDialog.placeholder")}
               value={labelInput}
               onChange={(e) => setLabelInput(e.target.value)}
             />
@@ -810,19 +821,21 @@ function ThreadDetail({
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setLabelsOpen(false)}>
-              Annuleren
+              {t("inbox.detail.labelDialog.cancel")}
             </Button>
             <Button
               onClick={async () => {
                 const v = labelInput.trim();
                 if (!v) return;
                 await addLabel.mutateAsync({ threadId: thread.id, label: v });
-                toast({ title: `Label #${v} toegevoegd` });
+                toast({
+                  title: t("inbox.detail.labelDialog.addedToast", { label: v }),
+                });
                 setLabelInput("");
                 setLabelsOpen(false);
               }}
             >
-              Toevoegen
+              {t("inbox.detail.labelDialog.add")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -832,16 +845,17 @@ function ThreadDetail({
 }
 
 function EmptyDetail() {
+  const { t } = useTranslation("miscInbox");
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-6 py-20 text-center">
       <div className="rounded-full bg-indigo-50 p-4 dark:bg-indigo-950/40">
         <InboxIcon className="h-8 w-8 text-indigo-500" />
       </div>
       <h3 className="mt-4 text-base font-semibold text-zinc-900 dark:text-zinc-100">
-        Selecteer een gesprek
+        {t("inbox.empty.title")}
       </h3>
       <p className="mt-1 text-sm text-muted-foreground">
-        Kies een thread uit de lijst om de volledige geschiedenis te bekijken.
+        {t("inbox.empty.description")}
       </p>
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import {
   ChevronRight,
   Lock,
@@ -63,6 +64,7 @@ function StatusBadge({
 }
 
 export default function SecurityOverviewPage() {
+  const { t } = useTranslation("settingsSecurity");
   const { data: sso, isLoading: ssoLoading } = useSsoConfig();
   const { data: twofa, isLoading: tfaLoading } = useTwoFactorStatus();
   const { data: settings, isLoading: setLoading } = useSecuritySettings();
@@ -70,9 +72,8 @@ export default function SecurityOverviewPage() {
   const sections: SecuritySectionLink[] = [
     {
       href: "/settings/security/sso",
-      label: "SSO / SAML",
-      description:
-        "Single sign-on via Okta, Azure AD, Google Workspace of een generieke SAML 2.0-IdP.",
+      label: t("overview.sections.sso.label"),
+      description: t("overview.sections.sso.description"),
       icon: KeyRound,
       iconClass: "bg-indigo-100 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400",
       rightSlot: (
@@ -80,12 +81,16 @@ export default function SecurityOverviewPage() {
           <StatusBadge
             loading={ssoLoading}
             ok={!!sso?.enabled}
-            okLabel={`${sso?.provider?.toUpperCase() ?? ""} actief`}
-            warnLabel="Niet geconfigureerd"
+            okLabel={t("overview.sections.sso.active", {
+              provider: sso?.provider?.toUpperCase() ?? "",
+            })}
+            warnLabel={t("overview.sections.sso.notConfigured")}
           />
           {sso?.enabled && (
             <span className="text-[10px] text-muted-foreground">
-              Auto-create: {sso.auto_create_users ? "aan" : "uit"}
+              {sso.auto_create_users
+                ? t("overview.sections.sso.autoCreateOn")
+                : t("overview.sections.sso.autoCreateOff")}
             </span>
           )}
         </div>
@@ -93,9 +98,8 @@ export default function SecurityOverviewPage() {
     },
     {
       href: "/settings/security/2fa",
-      label: "Twee-factor-authenticatie",
-      description:
-        "TOTP-app (Google Authenticator, Authy, 1Password) + 10 backup-codes per gebruiker.",
+      label: t("overview.sections.twofa.label"),
+      description: t("overview.sections.twofa.description"),
       icon: ShieldCheck,
       iconClass:
         "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400",
@@ -104,17 +108,17 @@ export default function SecurityOverviewPage() {
           <StatusBadge
             loading={tfaLoading}
             ok={!!twofa?.enabled}
-            okLabel="Ingeschakeld"
-            warnLabel="Niet ingeschakeld"
+            okLabel={t("overview.sections.twofa.enabled")}
+            warnLabel={t("overview.sections.twofa.disabled")}
           />
           {settings && (
             <span className="text-[10px] text-muted-foreground">
-              Beleid:{" "}
+              {t("overview.sections.twofa.policyPrefix")}
               {settings.two_factor_policy === "all"
-                ? "Verplicht voor iedereen"
+                ? t("overview.sections.twofa.policyAll")
                 : settings.two_factor_policy === "admins"
-                ? "Verplicht voor admins"
-                : "Niet verplicht"}
+                ? t("overview.sections.twofa.policyAdmins")
+                : t("overview.sections.twofa.policyNone")}
             </span>
           )}
         </div>
@@ -122,9 +126,8 @@ export default function SecurityOverviewPage() {
     },
     {
       href: "/settings/security/ip-allowlist",
-      label: "IP-allowlist",
-      description:
-        "Beperk toegang tot vertrouwde IP-adressen of CIDR-ranges (kantoor, VPN, VPS).",
+      label: t("overview.sections.ipAllowlist.label"),
+      description: t("overview.sections.ipAllowlist.description"),
       icon: Network,
       iconClass:
         "bg-purple-100 text-purple-600 dark:bg-purple-950/40 dark:text-purple-400",
@@ -133,11 +136,15 @@ export default function SecurityOverviewPage() {
           <StatusBadge
             loading={setLoading}
             ok={!!settings?.ip_allowlist_enabled}
-            okLabel={`Actief — ${settings?.ip_allowlist.length ?? 0} ranges`}
+            okLabel={t("overview.sections.ipAllowlist.active", {
+              count: settings?.ip_allowlist.length ?? 0,
+            })}
             warnLabel={
               settings?.ip_allowlist.length
-                ? `${settings.ip_allowlist.length} ranges, niet actief`
-                : "Geen restrictie"
+                ? t("overview.sections.ipAllowlist.inactiveWithRanges", {
+                    count: settings.ip_allowlist.length,
+                  })
+                : t("overview.sections.ipAllowlist.noRestriction")
             }
           />
         </div>
@@ -145,16 +152,19 @@ export default function SecurityOverviewPage() {
     },
     {
       href: "/settings/security/password-policy",
-      label: "Wachtwoord-beleid",
-      description:
-        "Minimale lengte, complexiteit en rotatie-interval voor lokale wachtwoorden.",
+      label: t("overview.sections.passwordPolicy.label"),
+      description: t("overview.sections.passwordPolicy.description"),
       icon: Lock,
       iconClass:
         "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300",
       rightSlot: (
         <div className="flex flex-col items-end gap-1 shrink-0">
           <Badge className="bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 border-0">
-            {settings ? `Min ${settings.password_policy.min_length} tekens` : "—"}
+            {settings
+              ? t("overview.sections.passwordPolicy.minLength", {
+                  count: settings.password_policy.min_length,
+                })
+              : t("overview.sections.passwordPolicy.empty")}
           </Badge>
         </div>
       ),
@@ -162,21 +172,21 @@ export default function SecurityOverviewPage() {
   ];
 
   const headerBadges: Array<{ label: string; ok: boolean }> = [
-    { label: "SSO", ok: !!sso?.enabled },
+    { label: t("overview.headerBadges.sso"), ok: !!sso?.enabled },
     {
       label:
         settings?.two_factor_policy === "all"
-          ? "2FA verplicht (iedereen)"
+          ? t("overview.headerBadges.twofaAll")
           : settings?.two_factor_policy === "admins"
-          ? "2FA verplicht (admins)"
-          : "2FA niet-verplicht",
+          ? t("overview.headerBadges.twofaAdmins")
+          : t("overview.headerBadges.twofaNone"),
       ok:
         !!settings &&
         (settings.two_factor_policy === "all" ||
           settings.two_factor_policy === "admins"),
     },
     {
-      label: "IP-allowlist",
+      label: t("overview.headerBadges.ipAllowlist"),
       ok: !!settings?.ip_allowlist_enabled,
     },
   ];
@@ -184,8 +194,8 @@ export default function SecurityOverviewPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Security & toegang"
-        description="Centrale beheersing van authenticatie, autorisatie en netwerk-restricties voor deze tenant."
+        title={t("overview.title")}
+        description={t("overview.description")}
         actions={
           <div className="flex flex-wrap gap-1.5">
             {headerBadges.map((b) => (
@@ -251,11 +261,10 @@ export default function SecurityOverviewPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                  Rollen & rechten
+                  {t("overview.roles.label")}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Beheer system-rollen + maak aangepaste rollen voor compliance,
-                  billing of klant-specifieke flows.
+                  {t("overview.roles.description")}
                 </p>
               </div>
               <ChevronRight className="h-4 w-4 text-zinc-300 group-hover:text-indigo-500 transition-colors mt-1" />
@@ -271,11 +280,10 @@ export default function SecurityOverviewPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                  WORM Audit-trail
+                  {t("overview.audit.label")}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Onveranderbaar audit-log van alle security-, admin- en
-                  data-events. AVG art. 30-conform.
+                  {t("overview.audit.description")}
                 </p>
               </div>
               <ChevronRight className="h-4 w-4 text-zinc-300 group-hover:text-indigo-500 transition-colors mt-1" />
