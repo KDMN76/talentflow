@@ -39,7 +39,15 @@
   "recentActivity": {
     "title": "Recent activity",
     "live": "Live",
-    "empty": "No activity yet"
+    "empty": "No activity yet",
+    "viewAll": "All activity"
+  },
+  "activityLog": {
+    "title": "Activity log",
+    "subtitle": "{{count}} events",
+    "prev": "Previous",
+    "next": "Next",
+    "pageOf": "Page {{page}} of {{pages}}"
   },
   "topJobs": {
     "title": "Top jobs",

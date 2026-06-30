@@ -66,3 +66,40 @@ export async function getDashboardStats(tenantId: string) {
     };
   });
 }
+
+/**
+ * Paginated activity-log (volledige feed) voor de /activity-pagina. Zelfde bron
+ * als het dashboard-`recentActivity`-blok, maar zonder de LIMIT 20.
+ */
+export async function listActivities(
+  tenantId: string,
+  opts: { page: number; limit: number }
+) {
+  return withTenant(tenantId, async (client) => {
+    const limit = Math.min(Math.max(opts.limit, 1), 100);
+    const page = Math.max(opts.page, 1);
+    const offset = (page - 1) * limit;
+
+    const { rows: countRows } = await client.query(
+      `SELECT COUNT(*) as total FROM activities WHERE tenant_id = $1`,
+      [tenantId]
+    );
+    const total = parseInt(countRows[0].total, 10);
+
+    const { rows } = await client.query(
+      `SELECT a.id, a.entity_type, a.entity_id, a.action, a.payload, a.created_at,
+              u.name as user_name
+       FROM activities a
+       LEFT JOIN users u ON u.id = a.user_id
+       WHERE a.tenant_id = $1
+       ORDER BY a.created_at DESC
+       LIMIT $2 OFFSET $3`,
+      [tenantId, limit, offset]
+    );
+
+    return {
+      data: rows,
+      meta: { total, page, limit, pages: Math.ceil(total / limit) },
+    };
+  });
+}

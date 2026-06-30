@@ -208,7 +208,7 @@ export default function DashboardPage() {
                 {t("recentActivity.empty")}
               </p>
             )}
-            {stats.recentActivity.map((item) => (
+            {stats.recentActivity.slice(0, 6).map((item) => (
               <div
                 key={item.id}
                 className="flex items-start gap-4 py-4 first:pt-0 last:pb-0"
@@ -237,6 +237,15 @@ export default function DashboardPage() {
                 </span>
               </div>
             ))}
+            {stats.recentActivity.length > 0 && (
+              <Link
+                href="/activity"
+                className="flex items-center justify-center gap-1 py-3 text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
+              >
+                {t("recentActivity.viewAll")}
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            )}
           </CardContent>
         </Card>
 

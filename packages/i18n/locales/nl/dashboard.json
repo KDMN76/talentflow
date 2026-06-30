@@ -39,7 +39,15 @@
   "recentActivity": {
     "title": "Recente activiteit",
     "live": "Live",
-    "empty": "Nog geen activiteit"
+    "empty": "Nog geen activiteit",
+    "viewAll": "Alle activiteit"
+  },
+  "activityLog": {
+    "title": "Activiteitenlogboek",
+    "subtitle": "{{count}} gebeurtenissen",
+    "prev": "Vorige",
+    "next": "Volgende",
+    "pageOf": "Pagina {{page}} van {{pages}}"
   },
   "topJobs": {
     "title": "Top vacatures",
