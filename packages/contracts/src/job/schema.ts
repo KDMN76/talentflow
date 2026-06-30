@@ -74,6 +74,7 @@ export const JobRowSchema = z.object({
   employment_type: z.enum(JOB_EMPLOYMENT_TYPE_VALUES).nullable(),
   status: z.enum(JOB_STATUS_VALUES),
   recruiter_id: z.string().uuid().nullable(),
+  organization_id: z.string().uuid().nullable(),
 
   // ── lifecycle ──
   deleted_at: z.string().datetime({ offset: true }).nullable(),
@@ -131,6 +132,7 @@ export const JobListItemSchema = JobRowSchema.pick({
   employment_type: true,
   status: true,
   recruiter_id: true,
+  organization_id: true,
   created_at: true,
   updated_at: true,
   job_reference: true,
@@ -146,6 +148,7 @@ export const JobListItemSchema = JobRowSchema.pick({
 })
   .extend({
     recruiter_name: z.string().nullable(),
+    organization_name: z.string().nullable(),
     application_count: z.coerce.number().int().nonnegative(),
   })
   // `.strict()` op response: in dev/test mode faalt parse als backend per
@@ -228,6 +231,7 @@ export const JobCreateInputSchema = z
     employment_type: z.enum(JOB_EMPLOYMENT_TYPE_VALUES).optional(),
     status: z.enum(JOB_STATUS_VALUES).optional(),
     recruiter_id: z.string().uuid().nullable().optional(),
+    organization_id: z.string().uuid().nullable().optional(),
 
     // Manatal-pariteit
     headcount: z.number().int().min(1).max(999).optional(),

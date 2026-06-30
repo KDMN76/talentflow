@@ -33,6 +33,7 @@ const MUTABLE_JOB_COLUMNS = [
   'employment_type',
   'status',
   'recruiter_id',
+  'organization_id',
 
   // Manatal-pariteit (007_job_detail_expansion.sql)
   'job_reference',
@@ -143,17 +144,20 @@ export async function listJobs(tenantId: string, opts: JobListOptions) {
     const { rows } = await client.query(
       `SELECT j.id, j.title, j.description, j.department, j.location,
               j.salary_min, j.salary_max,
-              j.employment_type, j.status, j.recruiter_id, j.created_at, j.updated_at,
+              j.employment_type, j.status, j.recruiter_id, j.organization_id,
+              j.created_at, j.updated_at,
               j.job_reference, j.headcount, j.experience_level, j.contract_type,
               j.industry, j.remote_type, j.open_date, j.close_date,
               j.currency, j.salary_frequency,
               u.name as recruiter_name,
+              o.name as organization_name,
               COUNT(DISTINCT a.id) as application_count
        FROM jobs j
        LEFT JOIN users u ON u.id = j.recruiter_id
+       LEFT JOIN organizations o ON o.id = j.organization_id
        LEFT JOIN applications a ON a.job_id = j.id AND a.status = 'active'
        WHERE ${where}
-       GROUP BY j.id, u.name
+       GROUP BY j.id, u.name, o.name
        ORDER BY j.created_at DESC
        LIMIT $${idx} OFFSET $${idx + 1}`,
       [...values, opts.limit, offset]
@@ -180,6 +184,7 @@ export interface CreateJobInput {
   employment_type?: string | null;
   status?: string | null;
   recruiter_id?: string | null;
+  organization_id?: string | null;
 
   // Manatal-pariteit
   job_reference?: string | null;
@@ -338,7 +343,7 @@ export async function getJob(tenantId: string, jobId: string) {
     const { rows: [job] } = await client.query(
       `SELECT j.id, j.tenant_id, j.title, j.description, j.department, j.location,
               j.salary_min, j.salary_max, j.employment_type, j.status,
-              j.recruiter_id, j.deleted_at, j.created_at, j.updated_at,
+              j.recruiter_id, j.organization_id, j.deleted_at, j.created_at, j.updated_at,
               j.job_reference, j.headcount, j.experience_level, j.contract_type,
               j.contract_details, j.open_date, j.close_date, j.industry,
               j.remote_type, j.office_address, j.package_details, j.currency,

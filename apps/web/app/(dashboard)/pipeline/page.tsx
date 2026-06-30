@@ -1,11 +1,18 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
-import { Kanban, ArrowRight, Users } from "lucide-react";
+import { Kanban, ArrowRight, Users, Building2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useJobs } from "@/hooks/useJobs";
 import { cn } from "@/lib/utils";
 
@@ -19,13 +26,49 @@ const STATUS_COLOR: Record<string, string> = {
 export default function PipelinePage() {
   const { t } = useTranslation("pipeline");
   const { data: jobs, isLoading } = useJobs("all");
+  const [clientFilter, setClientFilter] = useState<string>("all");
 
-  const openJobs = jobs?.filter((j) => j.status === "open") ?? [];
-  const otherJobs = jobs?.filter((j) => j.status !== "open") ?? [];
+  // Distinct klanten uit de geladen vacatures (alleen jobs met gekoppelde klant).
+  const clients = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const j of jobs ?? []) {
+      if (j.organization_id && j.organization_name) {
+        map.set(j.organization_id, j.organization_name);
+      }
+    }
+    return [...map.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [jobs]);
+
+  const visibleJobs = (jobs ?? []).filter(
+    (j) => clientFilter === "all" || j.organization_id === clientFilter
+  );
+  const openJobs = visibleJobs.filter((j) => j.status === "open");
+  const otherJobs = visibleJobs.filter((j) => j.status !== "open");
 
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader title={t("title")} description={t("selectJob")} />
+
+      {clients.length > 0 && (
+        <div className="flex items-center gap-2">
+          <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <Select value={clientFilter} onValueChange={setClientFilter}>
+            <SelectTrigger className="w-full max-w-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t("clientFilter.all")}</SelectItem>
+              {clients.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="space-y-3">
@@ -70,6 +113,12 @@ export default function PipelinePage() {
               </div>
             </section>
           )}
+
+          {openJobs.length === 0 && otherJobs.length === 0 && (
+            <p className="py-12 text-center text-sm text-muted-foreground">
+              {t("clientFilter.empty")}
+            </p>
+          )}
         </div>
       )}
     </div>
@@ -84,6 +133,8 @@ type PipelineJobRowJob = {
   status: string;
   application_count: number;
   recruiter_name: string | null;
+  organization_id: string | null;
+  organization_name: string | null;
 };
 
 function PipelineJobRow({ job }: { job: PipelineJobRowJob }) {
@@ -92,9 +143,12 @@ function PipelineJobRow({ job }: { job: PipelineJobRowJob }) {
   // Sub-fase 2C: department / location / recruiter_name zijn nullable na de
   // shared-contracts migratie. Filter null-onderdelen uit de meta-regel zodat
   // we niet "null · null · null" tonen voor jobs zonder die hydration.
-  const metaParts = [job.department, job.location, job.recruiter_name].filter(
-    (s): s is string => Boolean(s)
-  );
+  const metaParts = [
+    job.organization_name,
+    job.department,
+    job.location,
+    job.recruiter_name,
+  ].filter((s): s is string => Boolean(s));
 
   return (
     <Link

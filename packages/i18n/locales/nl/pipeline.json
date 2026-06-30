@@ -40,5 +40,9 @@
       "score": "Score",
       "applied": "Gesolliciteerd"
     }
+  },
+  "clientFilter": {
+    "all": "Alle klanten",
+    "empty": "Geen vacatures voor deze klant."
   }
 }

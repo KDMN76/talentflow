@@ -40,5 +40,9 @@
       "score": "Score",
       "applied": "Applied"
     }
+  },
+  "clientFilter": {
+    "all": "All clients",
+    "empty": "No jobs for this client."
   }
 }

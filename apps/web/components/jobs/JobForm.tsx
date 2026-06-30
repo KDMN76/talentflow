@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCreateJob } from "@/hooks/useJobs";
+import { useOrganizations } from "@/hooks/useCrm";
 import { useToast } from "@/components/ui/use-toast";
 import { JobTemplatePicker } from "@/components/jobs/JobTemplatePicker";
 import { CustomFieldsRenderer } from "@/components/common/CustomFieldsRenderer";
@@ -72,6 +73,7 @@ export function JobForm({ showTemplatePicker = false }: JobFormProps) {
   const { t } = useTranslation(["jobs", "common"]);
   const { toast } = useToast();
   const createJob = useCreateJob();
+  const { data: organizations } = useOrganizations();
   const { data: paySettings } = usePaySettings();
   const [pickerDone, setPickerDone] = useState(!showTemplatePicker);
   const [customValues, setCustomValues] = useState<Record<string, CustomFieldValue>>({});
@@ -233,6 +235,28 @@ export function JobForm({ showTemplatePicker = false }: JobFormProps) {
                   </p>
                 )}
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="organization_id">{t("form.clientLabel")}</Label>
+              <Select
+                value={(watch("organization_id") as string | null | undefined) ?? "none"}
+                onValueChange={(v) =>
+                  setValue("organization_id", v === "none" ? null : v)
+                }
+              >
+                <SelectTrigger id="organization_id">
+                  <SelectValue placeholder={t("form.clientPlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{t("form.clientNone")}</SelectItem>
+                  {(organizations ?? []).map((org) => (
+                    <SelectItem key={org.id} value={org.id}>
+                      {org.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
