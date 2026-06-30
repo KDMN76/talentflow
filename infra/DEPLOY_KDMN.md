@@ -10,6 +10,11 @@ De VPS host al een KDMN-stack (`kdmn-api` op `:3000`, `kdmn-db` op `:5432`,
 gebruikt eigen geïsoleerde containers op alternatieve host-poorten
 (54320 / 40000 / 31000) om elk port-conflict te vermijden.
 
+**Deploy-branch:** `main`. De VPS-checkout (`/opt/talentflow`) staat op `main`;
+een deploy gaat via push naar `main` → `git pull` op de VPS → rebuild. (Tot
+2026-06-30 liep de live-deploy tijdelijk vanaf `fix/demo-vrijdag`; die branch is
+naar `main` gemerged en opgeruimd.)
+
 ---
 
 ## Stap 0 — DNS (eenmalig, bij TransIP)
