@@ -197,9 +197,17 @@ export default function DashboardPage() {
             <CardTitle className="text-base font-semibold">
               {t("recentActivity.title")}
             </CardTitle>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Activity className="h-3.5 w-3.5" />
-              {t("recentActivity.live")}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Activity className="h-3.5 w-3.5" />
+                {t("recentActivity.live")}
+              </div>
+              <Button variant="ghost" size="sm" asChild className="text-xs">
+                <Link href="/activity">
+                  {t("recentActivity.viewAll")}
+                  <ArrowRight className="ml-1 h-3 w-3" />
+                </Link>
+              </Button>
             </div>
           </CardHeader>
           <CardContent className="divide-y divide-border">
@@ -237,15 +245,6 @@ export default function DashboardPage() {
                 </span>
               </div>
             ))}
-            {stats.recentActivity.length > 0 && (
-              <Link
-                href="/activity"
-                className="flex items-center justify-center gap-1 py-3 text-xs font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
-              >
-                {t("recentActivity.viewAll")}
-                <ArrowRight className="h-3 w-3" />
-              </Link>
-            )}
           </CardContent>
         </Card>
 

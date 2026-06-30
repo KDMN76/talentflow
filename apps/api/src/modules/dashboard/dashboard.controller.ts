@@ -25,3 +25,12 @@ export async function getActivity(req: Request, res: Response, next: NextFunctio
     next(err);
   }
 }
+
+export async function exportActivity(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const rows = await dashboardService.exportActivities(req.user!.tenantId);
+    res.json({ data: rows });
+  } catch (err) {
+    next(err);
+  }
+}

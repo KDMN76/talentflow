@@ -47,7 +47,16 @@
     "subtitle": "{{count}} events",
     "prev": "Previous",
     "next": "Next",
-    "pageOf": "Page {{page}} of {{pages}}"
+    "pageOf": "Page {{page}} of {{pages}}",
+    "export": {
+      "button": "Export",
+      "colDate": "Date",
+      "colType": "Type",
+      "colAction": "Action",
+      "colUser": "User",
+      "success": "Log exported",
+      "error": "Export failed"
+    }
   },
   "topJobs": {
     "title": "Top jobs",

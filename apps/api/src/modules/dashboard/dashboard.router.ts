@@ -8,6 +8,7 @@ const router = Router();
 router.use(requireAuth, tenantMiddleware);
 
 router.get('/stats', dashboardController.getStats);
+router.get('/activity/export', dashboardController.exportActivity);
 router.get('/activity', dashboardController.getActivity);
 
 export default router;

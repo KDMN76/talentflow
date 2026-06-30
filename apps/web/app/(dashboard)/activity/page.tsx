@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Activity, Briefcase, ChevronLeft, ChevronRight } from "lucide-react";
+import { Activity, Briefcase, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useActivityLog } from "@/hooks/useActivity";
+import { useToast } from "@/components/ui/use-toast";
+import { useActivityLog, type ActivityItem } from "@/hooks/useActivity";
+import { api } from "@/lib/api";
+import { downloadCsv } from "@/lib/downloadHelper";
 import { formatRelativeDate, formatDate, getInitials } from "@/lib/utils";
 
 function activityColor(type: string): string {
@@ -28,17 +31,51 @@ function activityColor(type: string): string {
 
 export default function ActivityLogPage() {
   const { t } = useTranslation("dashboard");
+  const { toast } = useToast();
   const [page, setPage] = useState(1);
   const { data, isLoading } = useActivityLog(page, 25);
 
   const items = data?.data ?? [];
   const meta = data?.meta;
 
+  const handleExport = async () => {
+    try {
+      const { data: exportData } = await api.get<{ data: ActivityItem[] }>(
+        "/dashboard/activity/export"
+      );
+      const rows = (exportData.data ?? []).map((a) => [
+        formatDate(a.created_at),
+        a.entity_type,
+        a.action,
+        a.user_name ?? "",
+      ]);
+      downloadCsv(
+        `activiteitenlogboek-${new Date().toISOString().slice(0, 10)}.csv`,
+        [
+          t("activityLog.export.colDate"),
+          t("activityLog.export.colType"),
+          t("activityLog.export.colAction"),
+          t("activityLog.export.colUser"),
+        ],
+        rows
+      );
+      toast({ title: t("activityLog.export.success") });
+    } catch {
+      toast({ variant: "destructive", title: t("activityLog.export.error") });
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
         title={t("activityLog.title")}
         description={t("activityLog.subtitle", { count: meta?.total ?? 0 })}
+        actions={
+          <Button variant="outline" size="sm" onClick={handleExport}>
+            <Download className="mr-1.5 h-4 w-4" />
+            {t("activityLog.export.button")}
+          </Button>
+        }
       />
 
       <Card className="border-0 shadow-sm">

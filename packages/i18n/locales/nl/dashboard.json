@@ -47,7 +47,16 @@
     "subtitle": "{{count}} gebeurtenissen",
     "prev": "Vorige",
     "next": "Volgende",
-    "pageOf": "Pagina {{page}} van {{pages}}"
+    "pageOf": "Pagina {{page}} van {{pages}}",
+    "export": {
+      "button": "Exporteren",
+      "colDate": "Datum",
+      "colType": "Type",
+      "colAction": "Actie",
+      "colUser": "Gebruiker",
+      "success": "Logboek geëxporteerd",
+      "error": "Export mislukt"
+    }
   },
   "topJobs": {
     "title": "Top vacatures",

@@ -103,3 +103,23 @@ export async function listActivities(
     };
   });
 }
+
+/**
+ * Volledige activiteitenfeed voor CSV-export (los van de paginatie-cap).
+ * Begrensd op 10000 rijen om een runaway-export te voorkomen.
+ */
+export async function exportActivities(tenantId: string) {
+  return withTenant(tenantId, async (client) => {
+    const { rows } = await client.query(
+      `SELECT a.id, a.entity_type, a.entity_id, a.action, a.payload, a.created_at,
+              u.name as user_name
+       FROM activities a
+       LEFT JOIN users u ON u.id = a.user_id
+       WHERE a.tenant_id = $1
+       ORDER BY a.created_at DESC
+       LIMIT 10000`,
+      [tenantId]
+    );
+    return rows;
+  });
+}
