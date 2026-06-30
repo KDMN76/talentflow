@@ -256,6 +256,7 @@ function OverviewTab({ filters }: { filters: AnalyticsFilters }) {
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-indigo-500" />
               {t("overview.funnel.title")}
+              <HelpHint text={t("overview.funnel.hint")} />
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
@@ -304,6 +305,7 @@ function OverviewTab({ filters }: { filters: AnalyticsFilters }) {
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <Users className="h-4 w-4 text-purple-500" />
               {t("overview.sources.title")}
+              <HelpHint text={t("overview.sources.hint")} />
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0 flex flex-col items-center">

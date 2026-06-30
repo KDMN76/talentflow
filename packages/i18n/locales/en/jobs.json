@@ -125,6 +125,7 @@
     },
     "health": {
       "label": "Health:",
+      "hint": "Score 0–100 based on time-to-fill, drop-off and recruiter activity. Higher is healthier; click for the breakdown.",
       "openBreakdownAria": "Open health breakdown",
       "dialogTitle": "Health breakdown",
       "dialogDescription": "Aggregated score based on time to fill, drop-off and recruiter activity. Higher is healthier.",
@@ -132,9 +133,11 @@
       "noData": "Health data not available yet."
     },
     "openSince": "Open for:",
+    "daysOpenHint": "Number of days since this job was opened.",
     "daysOpen_one": "{{count}} day",
     "daysOpen_other": "{{count}} days",
     "predictedClose": "Predicted close:",
+    "predictedCloseHint": "AI estimate of the close date based on the current pipeline pace.",
     "talentFit": {
       "badge": "Talent Fit active",
       "tooltip": "The Talent Fit Model ranks these matches based on your historical hires. Precision @ 1: {{precision}}%. Click for details."

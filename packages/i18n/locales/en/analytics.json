@@ -38,11 +38,13 @@
     "days": "days",
     "funnel": {
       "title": "Pipeline Funnel",
-      "tooltip": "candidates"
+      "tooltip": "candidates",
+      "hint": "Number of candidates per pipeline stage — shows where candidates progress or stall."
     },
     "sources": {
       "title": "Candidate sources",
-      "tooltip": "share"
+      "tooltip": "share",
+      "hint": "Distribution of where your candidates come from (LinkedIn, job boards, referral, etc.)."
     }
   },
   "recruiters": {

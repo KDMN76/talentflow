@@ -38,11 +38,13 @@
     "days": "dgn",
     "funnel": {
       "title": "Pipeline Funnel",
-      "tooltip": "kandidaten"
+      "tooltip": "kandidaten",
+      "hint": "Aantal kandidaten per pipelinefase — laat zien waar kandidaten vastlopen of doorstromen."
     },
     "sources": {
       "title": "Kandidaatbronnen",
-      "tooltip": "aandeel"
+      "tooltip": "aandeel",
+      "hint": "Verdeling van waar je kandidaten vandaan komen (LinkedIn, vacaturebanken, referral, enz.)."
     }
   },
   "recruiters": {

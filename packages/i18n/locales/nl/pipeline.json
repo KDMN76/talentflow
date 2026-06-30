@@ -32,6 +32,9 @@
     "board": "Bordweergave",
     "list": "Lijstweergave"
   },
+  "column": {
+    "countHint": "Aantal kandidaten in deze fase. Sleep een kaart naar een andere fase om te verplaatsen."
+  },
   "list": {
     "empty": "Geen sollicitanten gevonden.",
     "columns": {

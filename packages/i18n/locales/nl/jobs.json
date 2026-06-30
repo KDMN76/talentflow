@@ -125,6 +125,7 @@
     },
     "health": {
       "label": "Health:",
+      "hint": "Score 0–100 op basis van doorlooptijd, drop-off en recruiter-activiteit. Hoger is gezonder; klik voor de opbouw.",
       "openBreakdownAria": "Open health-breakdown",
       "dialogTitle": "Health-breakdown",
       "dialogDescription": "Geaggregeerde score op basis van doorlooptijd, drop-off en recruiter-activiteit. Hoger is gezonder.",
@@ -132,9 +133,11 @@
       "noData": "Health-data nog niet beschikbaar."
     },
     "openSince": "Open sinds:",
+    "daysOpenHint": "Aantal dagen sinds deze vacature is geopend.",
     "daysOpen_one": "{{count}} dag",
     "daysOpen_other": "{{count}} dagen",
     "predictedClose": "Verwachte afronding:",
+    "predictedCloseHint": "AI-schatting van de afrondingsdatum op basis van het huidige pipeline-tempo.",
     "talentFit": {
       "badge": "Talent Fit actief",
       "tooltip": "Talent Fit Model rangschikt deze matches op basis van jouw historische hires. Precision @ 1: {{precision}}%. Klik voor details."

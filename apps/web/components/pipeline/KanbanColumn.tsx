@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { HelpHint } from "@/components/ui/HelpHint";
 import { KanbanCard } from "./KanbanCard";
 import type { Application, PipelineStage } from "@/lib/mockData";
 
@@ -29,6 +30,7 @@ export function KanbanColumn({ stage, applications, isOver, showAbsoluteDate }: 
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 text-xs font-bold text-zinc-500 dark:text-zinc-400">
             {applications.length}
           </span>
+          <HelpHint text={t("column.countHint")} side="top" />
         </div>
         <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-zinc-100 dark:hover:bg-zinc-800">
           <Plus className="h-3.5 w-3.5" />

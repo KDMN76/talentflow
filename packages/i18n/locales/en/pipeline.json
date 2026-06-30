@@ -32,6 +32,9 @@
     "board": "Board view",
     "list": "List view"
   },
+  "column": {
+    "countHint": "Number of candidates in this stage. Drag a card to another stage to move it."
+  },
   "list": {
     "empty": "No applicants found.",
     "columns": {

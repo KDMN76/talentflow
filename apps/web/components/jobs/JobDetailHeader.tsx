@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { HelpHint } from "@/components/ui/HelpHint";
 import {
   Tooltip,
   TooltipContent,
@@ -426,6 +427,7 @@ export function JobDetailHeader({
             <div className="flex items-center gap-2">
               <Activity className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-xs text-muted-foreground">{t("detail.health.label")}</span>
+              <HelpHint text={t("detail.health.hint")} />
               {isHealthLoading ? (
                 <Skeleton className="h-6 w-14" />
               ) : health ? (
@@ -449,6 +451,7 @@ export function JobDetailHeader({
             <div className="flex items-center gap-2">
               <CalendarClock className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-xs text-muted-foreground">{t("detail.openSince")}</span>
+              <HelpHint text={t("detail.daysOpenHint")} />
               {isHealthLoading ? (
                 <Skeleton className="h-4 w-16" />
               ) : (
@@ -464,6 +467,7 @@ export function JobDetailHeader({
               <span className="text-xs text-muted-foreground">
                 {t("detail.predictedClose")}
               </span>
+              <HelpHint text={t("detail.predictedCloseHint")} />
               {isHealthLoading ? (
                 <Skeleton className="h-4 w-24" />
               ) : (
