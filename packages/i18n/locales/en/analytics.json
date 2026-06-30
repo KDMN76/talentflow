@@ -8,6 +8,16 @@
     "recruiters": "Recruiters",
     "trends": "Trends"
   },
+  "filters": {
+    "allRecruiters": "All recruiters",
+    "period": {
+      "month": "This month",
+      "3months": "Last 3 months",
+      "6months": "Last 6 months",
+      "year": "This year",
+      "all": "All time"
+    }
+  },
   "overview": {
     "kpi": {
       "openJobs": "Open jobs",

@@ -11,6 +11,7 @@ import {
   Users2,
   BarChart3,
   Search,
+  Calendar,
 } from "lucide-react";
 import {
   BarChart,
@@ -35,7 +36,15 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { HelpHint } from "@/components/ui/HelpHint";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn, getInitials } from "@/lib/utils";
+import { useTenantUsers } from "@/hooks/useUsers";
 
 import {
   useAnalyticsOverview,
@@ -44,6 +53,7 @@ import {
   useAnalyticsSourceBreakdown,
   useAnalyticsTimeToHireTrend,
   useAnalyticsApplicationsTrend,
+  type AnalyticsFilters,
 } from "@/hooks/useAnalytics";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -166,11 +176,11 @@ function CustomTooltip({ active, payload, label, formatter }: CustomTooltipProps
 
 // ─── Tab: Overzicht ───────────────────────────────────────────────────────────
 
-function OverviewTab() {
+function OverviewTab({ filters }: { filters: AnalyticsFilters }) {
   const { t } = useTranslation("analytics");
-  const { data: overview, isLoading: loadingOverview } = useAnalyticsOverview();
-  const { data: funnel, isLoading: loadingFunnel } = useAnalyticsFunnel();
-  const { data: sources, isLoading: loadingSources } = useAnalyticsSourceBreakdown();
+  const { data: overview, isLoading: loadingOverview } = useAnalyticsOverview(filters);
+  const { data: funnel, isLoading: loadingFunnel } = useAnalyticsFunnel(filters);
+  const { data: sources, isLoading: loadingSources } = useAnalyticsSourceBreakdown(filters);
 
   const isLoading = loadingOverview || loadingFunnel || loadingSources;
 
@@ -350,9 +360,9 @@ function OverviewTab() {
 
 // ─── Tab: Recruiters ──────────────────────────────────────────────────────────
 
-function RecruitersTab() {
+function RecruitersTab({ filters }: { filters: AnalyticsFilters }) {
   const { t } = useTranslation("analytics");
-  const { data: recruiters, isLoading } = useAnalyticsRecruiterStats();
+  const { data: recruiters, isLoading } = useAnalyticsRecruiterStats(filters);
   const [search, setSearch] = useState("");
 
   const filtered = useMemo(() => {
@@ -471,12 +481,14 @@ function RecruitersTab() {
 
 // ─── Tab: Trends ──────────────────────────────────────────────────────────────
 
-function TrendsTab() {
+function TrendsTab({ filters }: { filters: AnalyticsFilters }) {
   const { t } = useTranslation("analytics");
+  // Trends houden hun eigen tijdvenster; alleen de recruiter-scope volgt het filter.
+  const trendFilters = { recruiterId: filters.recruiterId };
   const { data: timeToHire, isLoading: loadingTTH } =
-    useAnalyticsTimeToHireTrend();
+    useAnalyticsTimeToHireTrend(trendFilters);
   const { data: appsTrend, isLoading: loadingApps } =
-    useAnalyticsApplicationsTrend();
+    useAnalyticsApplicationsTrend(trendFilters);
 
   const isLoading = loadingTTH || loadingApps;
 
@@ -590,14 +602,82 @@ function TrendsTab() {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+const PERIOD_PRESETS = ["month", "3months", "6months", "year", "all"] as const;
+type PeriodPreset = (typeof PERIOD_PRESETS)[number];
+
+function presetToFrom(preset: PeriodPreset): string | null {
+  const now = new Date();
+  switch (preset) {
+    case "month":
+      return new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    case "3months":
+      return new Date(now.getFullYear(), now.getMonth() - 3, now.getDate()).toISOString();
+    case "6months":
+      return new Date(now.getFullYear(), now.getMonth() - 6, now.getDate()).toISOString();
+    case "year":
+      return new Date(now.getFullYear(), 0, 1).toISOString();
+    case "all":
+      return new Date(0).toISOString();
+  }
+}
+
 export default function AnalyticsPage() {
   const { t } = useTranslation("analytics");
+  const [period, setPeriod] = useState<PeriodPreset>("month");
+  const [recruiterId, setRecruiterId] = useState<string>("all");
+  const { data: recruiters } = useTenantUsers();
+
+  const filters: AnalyticsFilters = useMemo(
+    () => ({
+      from: presetToFrom(period),
+      to: null,
+      recruiterId: recruiterId === "all" ? null : recruiterId,
+    }),
+    [period, recruiterId]
+  );
+
   return (
     <div className="space-y-8 animate-fade-in">
       <PageHeader
         title={t("header.title")}
         description={t("header.description")}
       />
+
+      {/* Filterbalk: periode + recruiter (server-side). Momentopname-KPI's
+          (open vacatures nu) blijven 'huidig'. */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-1.5">
+          <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <Select value={period} onValueChange={(v) => setPeriod(v as PeriodPreset)}>
+            <SelectTrigger className="w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PERIOD_PRESETS.map((p) => (
+                <SelectItem key={p} value={p}>
+                  {t(`filters.period.${p}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <Select value={recruiterId} onValueChange={setRecruiterId}>
+            <SelectTrigger className="w-52">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t("filters.allRecruiters")}</SelectItem>
+              {(recruiters ?? []).map((u) => (
+                <SelectItem key={u.id} value={u.id}>
+                  {u.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
       <Tabs defaultValue="overzicht" className="space-y-6">
         <TabsList className="bg-zinc-100/80 dark:bg-zinc-800/60 border border-border shadow-none h-10">
@@ -622,15 +702,15 @@ export default function AnalyticsPage() {
         </TabsList>
 
         <TabsContent value="overzicht">
-          <OverviewTab />
+          <OverviewTab filters={filters} />
         </TabsContent>
 
         <TabsContent value="recruiters">
-          <RecruitersTab />
+          <RecruitersTab filters={filters} />
         </TabsContent>
 
         <TabsContent value="trends">
-          <TrendsTab />
+          <TrendsTab filters={filters} />
         </TabsContent>
       </Tabs>
     </div>

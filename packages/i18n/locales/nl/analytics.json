@@ -8,6 +8,16 @@
     "recruiters": "Recruiters",
     "trends": "Trends"
   },
+  "filters": {
+    "allRecruiters": "Alle recruiters",
+    "period": {
+      "month": "Deze maand",
+      "3months": "Laatste 3 maanden",
+      "6months": "Laatste 6 maanden",
+      "year": "Dit jaar",
+      "all": "Alles"
+    }
+  },
   "overview": {
     "kpi": {
       "openJobs": "Open vacatures",
