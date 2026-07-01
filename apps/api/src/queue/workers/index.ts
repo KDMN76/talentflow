@@ -51,6 +51,15 @@ import './outreachLinkedIn.worker';
 import './outreachEmailNurture.worker';
 import './passiveMonitor.worker';
 import './replyClassification.worker';
+// Toegevoegd 2026-07-01: in-scope workers die eerder ontbraken in deze lijst en
+// daardoor NIET draaiden in de api-worker-container (de api-container heeft
+// DISABLE_INLINE_WORKERS=true). Bevroren/buiten-scope workers (whatsappOut,
+// whatsappHealthCheck, voiceCallTranscribe, contractExpiry, skillsSnapshot) zijn
+// bewust NIET toegevoegd — die horen bij niet-actieve/bevroren features.
+import './jobBoardPost.worker';
+import './jobBoardPoll.worker';
+import './inboxProjector.worker';
+import './retention.worker';
 import { logger } from '../../middleware/errorHandler';
 
 logger.info('All workers started', {
@@ -80,6 +89,10 @@ logger.info('All workers started', {
     'outreach-email-nurture',
     'passive-monitor',
     'reply-classification',
+    'job-board-post',
+    'job-board-poll',
+    'inbox-projector',
+    'retention',
   ],
 });
 
