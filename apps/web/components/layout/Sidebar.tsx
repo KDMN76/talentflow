@@ -106,11 +106,11 @@ const NAV_RECRUITMENT: NavItem[] = [
     ],
   },
   {
-    label: "Plaatsingen",
+    label: "Contracten",
     href: "/contracts",
     icon: FileSignature,
     children: [
-      { label: "Contracten", href: "/contracts", icon: FileSignature },
+      { label: "Overzicht", href: "/contracts", icon: FileSignature },
       { label: "Uren", href: "/timesheets", icon: Clock },
       { label: "Facturen", href: "/invoices", icon: Receipt },
       { label: "Commissie", href: "/commissions", icon: Calculator },

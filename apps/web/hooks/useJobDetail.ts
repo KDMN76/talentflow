@@ -235,10 +235,18 @@ export function useJobSourcing(jobId: string) {
   return useQuery({
     queryKey: ["jobs", jobId, "sourcing"],
     queryFn: async (): Promise<JobSourcingItem[]> => {
-      const { data } = await api.get<{ data: JobSourcingItem[] }>(
+      // API levert per rij { source, count, conversion_to_hire } — map naar de UI-shape,
+      // anders leest de tab `s.conversion_pct.toFixed()` → crash.
+      const { data } = await api.get<{ data: Array<Record<string, unknown>> }>(
         `/jobs/${jobId}/sourcing`
       );
-      return data.data;
+      return (data.data ?? []).map((s) => ({
+        source: String(s.source ?? ""),
+        candidates: (s.count as number) ?? 0,
+        hires: (s.hired_count as number) ?? 0,
+        conversion_pct: (s.conversion_to_hire as number) ?? 0,
+        cost_per_hire_cents: (s.cost_per_hire_cents as number) ?? 0,
+      }));
     },
     enabled: !!jobId,
     staleTime: 60_000,
@@ -251,10 +259,37 @@ export function useJobBiasCheck(jobId: string) {
   return useQuery({
     queryKey: ["jobs", jobId, "bias-check"],
     queryFn: async (): Promise<BiasCheckResult | null> => {
-      const { data } = await api.get<BiasCheckResult>(
+      // API levert { bias_flags:[{type,text,suggestion}], clarity_score, inclusivity_score, computed_at }.
+      // Normaliseer naar de UI-shape (BiasCheckResult) — anders leest de tab `data.flags.length` → crash.
+      const { data } = await api.get<Record<string, unknown>>(
         `/jobs/${jobId}/bias-check`
       );
-      return data;
+      const flagLabels: Record<string, string> = {
+        gendered_language: "Gender-gekleurde taal",
+        gender_coded: "Gender-gekleurde taal",
+        age_coded: "Leeftijd-gekleurd",
+        vague_requirement: "Vage eis",
+        exclusive_language: "Uitsluitende taal",
+        salary_undisclosed: "Salaris niet vermeld",
+        jargon: "Jargon",
+      };
+      const rawFlags = (data.bias_flags as Array<Record<string, string>>) ?? [];
+      return {
+        job_id: jobId,
+        clarity_score: (data.clarity_score as number) ?? 0,
+        inclusivity_score: (data.inclusivity_score as number) ?? 0,
+        flags: rawFlags.map((f) => ({
+          type: f.type,
+          label: flagLabels[f.type] ?? f.type,
+          excerpt: f.text ?? "",
+          suggestion: f.suggestion ?? "",
+          severity: "medium" as const,
+        })),
+        ai_disclosure:
+          (data.ai_disclosure as string) ??
+          "Door AI gegenereerd — de recruiter behoudt het finale oordeel.",
+        computed_at: (data.computed_at as string) ?? new Date().toISOString(),
+      };
     },
     enabled: !!jobId,
     staleTime: 5 * 60_000,

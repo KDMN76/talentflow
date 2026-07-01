@@ -1,11 +1,9 @@
 "use client";
 
-import { ChevronRight, Kanban } from "lucide-react";
+import { Kanban } from "lucide-react";
 import { KanbanBoard } from "@/components/pipeline/KanbanBoard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApplications, usePipelineStages } from "@/hooks/usePipeline";
-import { useJobFunnel } from "@/hooks/useJobDetail";
-import { cn } from "@/lib/utils";
 
 /**
  * Pipeline tab — kanban board + inline stage-conversion badges.
@@ -18,7 +16,6 @@ import { cn } from "@/lib/utils";
 export function JobPipelineTab({ jobId }: { jobId: string }) {
   const { data: stages, isLoading: stagesLoading } = usePipelineStages(jobId);
   const { data: applications, isLoading: appsLoading } = useApplications(jobId);
-  const { data: funnel } = useJobFunnel(jobId);
 
   const isLoading = stagesLoading || appsLoading;
 
@@ -52,51 +49,8 @@ export function JobPipelineTab({ jobId }: { jobId: string }) {
     );
   }
 
-  // Build a stage-id → conversion-pct map for the chevron badges.
-  const conversionByStage = new Map<string, number | null>(
-    (funnel?.stages ?? []).map((s) => [s.stage_id, s.conversion_to_next_pct])
-  );
-
   return (
     <div className="space-y-4">
-      {/* Stage conversion badges — aligned over the kanban columns. */}
-      <div className="flex gap-5 overflow-x-auto pb-2">
-        {stages.map((stage, i) => {
-          const conv = conversionByStage.get(stage.id);
-          const isLast = i === stages.length - 1;
-          return (
-            <div key={`conv-${stage.id}`} className="w-72 shrink-0 flex items-center gap-3">
-              <div className="flex-1 flex items-center gap-2 min-w-0">
-                <span
-                  className="h-2 w-2 rounded-full shrink-0"
-                  style={{ background: stage.color }}
-                />
-                <span className="text-xs font-medium text-muted-foreground truncate">
-                  {stage.name}
-                </span>
-              </div>
-              {!isLast && conv != null && (
-                <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground shrink-0">
-                  <ChevronRight className="h-3 w-3" />
-                  <span
-                    className={cn(
-                      "rounded-md px-1.5 py-0.5",
-                      conv >= 70
-                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-                        : conv >= 40
-                        ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
-                        : "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300"
-                    )}
-                  >
-                    {conv}%
-                  </span>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
       <KanbanBoard
         stages={stages}
         applications={applications ?? []}

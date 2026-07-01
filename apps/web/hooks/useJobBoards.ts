@@ -77,11 +77,11 @@ export function useJobPostings(filters: JobPostingFilters = {}) {
   return useQuery({
     queryKey: ["job-boards", "postings", filters],
     queryFn: async (): Promise<JobPosting[]> => {
-      const { data } = await api.get<{ items: JobPosting[]; next_cursor: string | null }>(
+      const { data } = await api.get<{ data: JobPosting[]; next_cursor: string | null }>(
         "/job-boards/postings",
         { params: filters }
       );
-      return data.items;
+      return data.data ?? [];
     },
     refetchInterval: (query) => {
       const data = query.state.data;

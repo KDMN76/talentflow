@@ -48,8 +48,14 @@ export interface EmailJobData {
 function buildReplyTo(tenantId: string, threadId: string): string | undefined {
   const domain = process.env.RESEND_REPLY_DOMAIN;
   if (!domain) return undefined;
-  // Plus-addressing: reply+<tenantId>+<threadId>@<domain>
-  return `reply+${tenantId}+${threadId}@${domain}`;
+  // Plus-addressing: reply+<tenantId>+<threadId>@<domain>.
+  // RFC 5321 staat max 64 tekens toe in het local-part. Twee volle UUID's + prefix = 79,
+  // waardoor Resend de HELE mail weigert ("Invalid reply_to field"). Sla reply-to dan over
+  // i.p.v. de verzending te blokkeren — inbound reply-threading is nog niet actief
+  // (geen geverifieerd reply-domein/MX/webhook; zie ROADMAP Sectie 6).
+  const localPart = `reply+${tenantId}+${threadId}`;
+  if (localPart.length > 64) return undefined;
+  return `${localPart}@${domain}`;
 }
 
 function ensureHtml(data: EmailJobData): string {
