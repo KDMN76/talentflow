@@ -69,12 +69,15 @@
       "valueLabel": "Waarde (€)",
       "closeDateLabel": "Verwachte sluitdatum",
       "notesLabel": "Notities",
-      "notesPlaceholder": "Optionele notities..."
+      "notesPlaceholder": "Optionele notities...",
+      "noOrgsTitle": "Nog geen klanten",
+      "noOrgsHint": "Een deal hoort bij een klant. Maak eerst een klant aan op het tabblad 'Organisaties' hierboven, dan kun je hier een deal koppelen."
     }
   },
   "actions": {
     "cancel": "Annuleren",
     "saving": "Bezig...",
-    "create": "Aanmaken"
+    "create": "Aanmaken",
+    "close": "Sluiten"
   }
 }

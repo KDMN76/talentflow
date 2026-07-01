@@ -1,4 +1,62 @@
 {
+  "inbox": {
+    "sidebar": {
+      "title": "Postvak",
+      "subtitle": "Al je gesprekken op één plek",
+      "channelsHeading": "Kanalen",
+      "filters": {
+        "inbox": "Postvak IN",
+        "unread": "Ongelezen",
+        "mine": "Aan mij toegewezen",
+        "pinned": "Vastgepind",
+        "archived": "Gearchiveerd"
+      }
+    },
+    "list": {
+      "searchPlaceholder": "Zoek in berichten…",
+      "emptyTitle": "Geen berichten",
+      "emptyDescription": "Er zijn geen berichten in deze weergave.",
+      "unknownCandidate": "Onbekende kandidaat"
+    },
+    "empty": {
+      "title": "Selecteer een gesprek",
+      "description": "Kies links een bericht om het gesprek te bekijken."
+    },
+    "detail": {
+      "archive": "Archiveren",
+      "archived": "Gearchiveerd",
+      "assign": "Toewijzen",
+      "assignedTo": "Toegewezen aan",
+      "noAssignee": "Niet toegewezen",
+      "composeFallbackName": "kandidaat",
+      "label": "Label",
+      "removeLabelTitle": "Label verwijderen",
+      "pin": "Vastpinnen",
+      "unpin": "Losmaken",
+      "pinned": "Vastgepind",
+      "pinRemoved": "Pin verwijderd",
+      "restore": "Terugzetten",
+      "restoredFromArchive": "Teruggezet uit archief",
+      "unknownCandidate": "Onbekende kandidaat",
+      "timelineEmptyTitle": "Nog geen berichten",
+      "timelineEmptyDescription": "Er zijn nog geen berichten in dit gesprek.",
+      "assignDialog": {
+        "title": "Gesprek toewijzen",
+        "placeholder": "Kies een recruiter…",
+        "assign": "Toewijzen",
+        "cancel": "Annuleren",
+        "noRecruiters": "Geen recruiters beschikbaar",
+        "assignedToast": "Toegewezen aan {{name}}"
+      },
+      "labelDialog": {
+        "title": "Label toevoegen",
+        "placeholder": "Labelnaam…",
+        "add": "Toevoegen",
+        "cancel": "Annuleren",
+        "addedToast": "Label \"{{label}}\" toegevoegd"
+      }
+    }
+  },
   "skills": {
     "header": {
       "title": "Skills",

@@ -69,12 +69,15 @@
       "valueLabel": "Value (€)",
       "closeDateLabel": "Expected close date",
       "notesLabel": "Notes",
-      "notesPlaceholder": "Optional notes..."
+      "notesPlaceholder": "Optional notes...",
+      "noOrgsTitle": "No clients yet",
+      "noOrgsHint": "A deal belongs to a client. First create a client on the 'Organizations' tab above, then you can link a deal here."
     }
   },
   "actions": {
     "cancel": "Cancel",
     "saving": "Saving...",
-    "create": "Create"
+    "create": "Create",
+    "close": "Close"
   }
 }

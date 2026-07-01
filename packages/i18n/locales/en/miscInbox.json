@@ -1,4 +1,62 @@
 {
+  "inbox": {
+    "sidebar": {
+      "title": "Inbox",
+      "subtitle": "All your conversations in one place",
+      "channelsHeading": "Channels",
+      "filters": {
+        "inbox": "Inbox",
+        "unread": "Unread",
+        "mine": "Assigned to me",
+        "pinned": "Pinned",
+        "archived": "Archived"
+      }
+    },
+    "list": {
+      "searchPlaceholder": "Search messages…",
+      "emptyTitle": "No messages",
+      "emptyDescription": "There are no messages in this view.",
+      "unknownCandidate": "Unknown candidate"
+    },
+    "empty": {
+      "title": "Select a conversation",
+      "description": "Choose a message on the left to view the conversation."
+    },
+    "detail": {
+      "archive": "Archive",
+      "archived": "Archived",
+      "assign": "Assign",
+      "assignedTo": "Assigned to",
+      "noAssignee": "Unassigned",
+      "composeFallbackName": "candidate",
+      "label": "Label",
+      "removeLabelTitle": "Remove label",
+      "pin": "Pin",
+      "unpin": "Unpin",
+      "pinned": "Pinned",
+      "pinRemoved": "Pin removed",
+      "restore": "Restore",
+      "restoredFromArchive": "Restored from archive",
+      "unknownCandidate": "Unknown candidate",
+      "timelineEmptyTitle": "No messages yet",
+      "timelineEmptyDescription": "There are no messages in this conversation yet.",
+      "assignDialog": {
+        "title": "Assign conversation",
+        "placeholder": "Choose a recruiter…",
+        "assign": "Assign",
+        "cancel": "Cancel",
+        "noRecruiters": "No recruiters available",
+        "assignedToast": "Assigned to {{name}}"
+      },
+      "labelDialog": {
+        "title": "Add label",
+        "placeholder": "Label name…",
+        "add": "Add",
+        "cancel": "Cancel",
+        "addedToast": "Label \"{{label}}\" added"
+      }
+    }
+  },
   "skills": {
     "header": {
       "title": "Skills",
