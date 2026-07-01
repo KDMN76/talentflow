@@ -744,3 +744,184 @@ Uit de multi-agent go-live-audit. De 🔴-blokkers zijn deze sessie gefixt (zie 
 - **i18n-wave3 afgerond** (commit 460e207, LIVE + geverifieerd): de geparkeerde WIP-stash teruggehaald en gedeployd → **32 pagina's** gemigreerd naar i18n, waarmee de 6 eerder dormante namespaces (settingsCore/Security/Access/Advanced, miscHome/Dev/Portals) nu **live actief** zijn. `inbox/page.tsx` werd schoon auto-gemerged (mijn delete-feature + miscInbox-migratie). Verificatie: web tsc schoon, lokale `next build` groen, een eigen key-coverage-script bevestigt dat **alle 41 gecheckte pagina's** hun keys in de juiste namespace hebben (geen rauwe keys); live op /settings rendert echte teksten (Settings/Security/Branding…), 0 console-errors.
 - **[BUG] open follow-up** (P2): `timesheets/page.tsx` bewust teruggezet naar HEAD — die WIP-migratie was kapot (verkeerde namespace `miscInbox` i.p.v. een timesheets-namespace, `(t)=>`-shadow van de vertaal-`t`, ontbrekende `WEEKDAYS_NL`, `.label` op een `{cls}`-object). Pagina werkt (hardcoded NL); aparte nette migratie nodig.
 - **Resterende stash** (`stash@{0}`: "wip: i18n wave3 + wave2-wiring"): bevat de originele WIP incl. 5 "wave2-wiring"-bestanden (candidates/[id], interviews/[id], job-boards, portal-links, skills — deels al gedeployd via ca3e7fa). Als vangnet bewaard; kan later worden nagelopen/gedropt.
+
+---
+
+## Sectie 5: Concurrentie-onderzoek & strategische positionering (2026-06-30)
+
+> Status: **strategie-voorstel, nog niets gebouwd.** Alle items P2; Kaan promoot. Deze sectie
+> legt vast wat 4 NL/EU-concurrenten beter doen, waar de marktgap ligt, en welke niche TalentFlow
+> zou moeten winnen. Opdracht Kaan: "bouw iets niche en het beste in dat niche; solo te onderhouden;
+> iets waar ik over jaren nog achter sta; en dat realistisch €1000s/maand oplevert. Niet alles
+> erop en eraan." De **beslissing over de niche-richting (5.5/5.9) ligt bij Kaan** voordat er gebouwd wordt.
+
+### 5.0 Methode & bronnen
+Vijf web-grounded research-agents (juni 2026): Recruitee, Carerix, OTYS, RecruitNow + een marktbrede
+gap-analyse. Bronnen: officiële sites, recruitmenttech.nl (RT25-benchmark), werf-en.nl, flexnieuws.nl,
+G2/Capterra, EU AI Act-juridische bronnen, Rijksoverheid/KVK (Wet DBA). Daarna geverifieerd tegen de
+TalentFlow-codebase (niet aangenomen). *(Perplexity-tool gaf 401/ongeldige key; agents draaiden op
+WebSearch/WebFetch — dekking compleet, maar Perplexity-key fixen voor diepere review-sentiment-runs.)*
+
+### 5.1 Wat de concurrenten beter doen
+- **Recruitee (Tellent)** — corporate/in-house, SMB. **Beter dan wij:** UX/Kanban-polish (categorie-benchmark,
+  "productief in dagen"); **CareersHub** no-code career-site + Google for Jobs-syndicatie + careers-analytics.
+  Zwak: geen agency/uitzend, geen back-office, AI alleen assisterend. Prijs ~€301/mo+ (per job-slot, unlimited users).
+- **Carerix (PIXID)** — agency/uitzend, BeNeLux-incumbent. **Beter dan wij:** front-to-back staffing-diepte +
+  **AFAS/Exact-payroll-ecosysteem** (Solid Online-connector); relatie-CRM/marketing-automation; enterprise-referenties
+  (Randstad/Adecco). Zwak: dated UI (deels opgefrist "Cx5Color"), AI laat + **add-on-tax** (theMatchBox/MrWork/Carv apart),
+  opaak quote-only, 0 onafhankelijke reviews.
+- **OTYS (Mysolution)** — alle segmenten, NL, ~25 jaar. **Beter dan wij:** matching-stack Actonomy + Textkernel
+  (semantisch + CV-parsing); open REST-API/marketplace (200+); modulariteit over hele funnel. Zwak: implementatie-pijn,
+  "te complex/traag", betaalde support, €2.750/user/jaar.
+- **RecruitNow (Cockpit X)** — uitzend/flex, NL, snel groeiend. **Beter dan wij:** **Cockpit X agentic AI** (named agents
+  Fenne = AI-recruiter die over WhatsApp screent, Sem = leads), usage-based geprijsd; WhatsApp-native (NPS +5, reactietijd -50%);
+  10 releases/jaar. Zwak: **géén native back-office** (alles via AFAS Flex/Easyflex), prijs-kwaliteit 3.6/5, matching list-based.
+
+NL-gebruikersbenchmark RT25 2026 (hoe hoger hoe beter): Recruition 4.41, ForceFlow 4.27, Byner 4.14, Ubeeo 3.93,
+Carerix 3.88, OTYS 3.54, Recruitee 3.33. → de NL-markt is gefragmenteerd; veel kleine lokale winnaars = ruimte.
+
+### 5.2 Wat TalentFlow al beter/uniek doet (geverifieerd in code)
+- **All-in-one incl. native back-office**: contracts, timesheets, invoices, commissions + accounting-connectors
+  (Exact Online, Twinfield, SnelStart). → verder dan RecruitNow (front-office only).
+- **Agentic sourcing-agent** aanwezig (`sourcing/searchAgent.service.ts`) → voor op Recruitee/Carerix/OTYS (assisterend).
+- **Omni-channel inbox + WhatsApp + voice/calls** → Carerix-niveau, beter dan Recruitee.
+- **Compliance/AVG + EU AI Act-fundament**: `aiDisclosure.ts` (NL-transparantietekst), `aiEvents.ts` (logging),
+  `matchExplanation.ts`, DEI-funnel, pay-equity, WhatsApp-consent → fundament dat alle 4 incumbenten missen.
+- **NL job-board-connectors**: Indeed, LinkedIn, StepStone, Broadbean, Nationale Vacaturebank, Werkzoeken, Jobbird, Jobs.nl.
+- **Moderne stack + transparante prijs mogelijk** (tegenover opaak/add-on-tax).
+
+### 5.3 Echte gaps van TalentFlow (geverifieerd)
+- **UX/looks** — clutter, dichte KPI's, te groot menu (zie ook Sectie 4 stagebedrijf-feedback). Grootste zichtbare gat.
+- **Fasensysteem ondiep** — `cao` is een vrij tekstveld (max 120) + `wtza_compliant`-vlag; **geen** echte fase A/B/C-engine,
+  géén ketenregeling, géén ABU/NBBU-automatiek.
+- **Staffing-payroll-koppelingen ontbreken** — alleen boekhoud-connectors; **geen** AFAS (Flex), Nmbrs, Easyflex/HelloFlex.
+- **Career-site/multiposting-polish** — builder bestaat, maar niet bewezen op CareersHub-niveau (Google for Jobs, careers-analytics).
+
+### 5.4 De marktgap (kans)
+De markt splitst hard in **corporate** (Greenhouse/Ashby/Recruitee) vs **agency/uitzend** (Carerix/OTYS/RecruitNow/Bullhorn);
+een product dat beide wil zijn "wint geen van beide". Onbezette plek: **een AI-native, Nederlands-eerst recruitment-systeem
+voor de bureau-kant, met agentic automatisering + self-serve analytics + AVG/AI-Act ingebouwd, tegen transparante all-in-prijs.**
+Incumbenten zijn daar dated (Carerix/OTYS), missen back-office (RecruitNow) of zijn corporate/Engels (Recruitee/Ashby).
+
+### 5.5 Niche-positionering — 3 opties met echte trade-offs
+**Optie A — Moderne ATS+CRM voor kleine/boutique NL-bureaus (W&S + lichte detachering, 1-15 koppen).**
+Best-in-niche op: UX/snelheid, AI-screening/matching, omnichannel (WhatsApp), transparante all-in-prijs, dag-1 onboarding.
+Bewust NIET: eigen payroll/CAO/fase-engine (koppel i.p.v. bezit). Monetisatie: veel kleine bureaus × €200-400/mo
+(10-20 klanten = €2-8k/mo). Solo-houdbaar: **ja** (geen compliance-tredmolen). Trade-off: je raakt de zware uitzenders
+(die fase/payroll native eisen) niet — die blijven bij Carerix/Mysolution.
+
+**Optie B — Verticale staffing-ATS voor techniek/installatie/bouw NL.**
+Best-in-niche op: domein-workflows (monteurs, projecten, VCA/certificeringen, planning) + koppeling met het bestaande
+KDMN-ecosysteem (planning/platform); **KDMN als eerste klant + warme referentie**. Bewust NIET: generiek alle-branches.
+Monetisatie: kleinere TAM maar hoge betalingsbereidheid + warme leads via KDMN-netwerk. Solo-houdbaar: **ja**, domeinkennis = moat.
+Trade-off: afhankelijk van één vertical; vereist domein-diepte; minder schaalbaar breed.
+
+**Optie C — AI-recruiter-copiloot bovenop andermans ATS'en (agentic layer, geen volledige ATS).**
+Best-in-niche op: agentic source→screen→plan→nudge als plug-in. Bewust NIET: zelf de hele ATS zijn.
+Monetisatie: usage-based. Solo-houdbaar: **matig** (integratie-onderhoud per externe ATS). Trade-off: crowded
+(Cockpit X + vele startups), afhankelijk van API's van derden, zwakke lock-in — botst met "iets waar ik achter sta".
+
+### 5.6 Aanbeveling (founder-lens) + dubbele kritiek
+**Aanbeveling: Optie A als kern, met Optie B als wig.** Lanceer als hét moderne, AI-native, NL-eerst ATS+CRM voor
+**kleine recruitment-/staffingbureaus**, met een **techniek/bouw-staffing-wig** waarbij KDMN eerste klant + referentie is.
+Koppel (niet bezit) payroll/CAO. Win op UX + AI + Nederlands + transparante prijs — precies waar incumbenten het zwakst zijn.
+Reden: al jouw bestaande investeringen (back-office-lite, contracts/facturatie, NL job-boards, AI-agent, compliance-fundament)
+wijzen al hierheen; je bent ~80% gebouwd op de meest verdedigbare, minst bediende kant; en het is solo te onderhouden
+omdat je de payroll/CAO-wettredmolen bewust níet bezit.
+
+- **Kritiek vanuit de klant (bureau-eigenaar):** "Waarom jou i.p.v. Carerix/RecruitNow?" → antwoord moet glashelder zijn:
+  moderner, sneller, AI doet het saaie werk, alles inbegrepen, helft van de prijs, en je begrijpt mijn branche (techniek).
+  Risico: als payroll via een externe koppeling moet, voelt dat als "tweede systeem" — de koppeling (AFAS/Easyflex) moet
+  daarom écht naadloos zijn, anders verlies je van all-in-one Mysolution.
+- **Kritiek vanuit de ontwikkelaar (jij, solo):** grootste risico is **scope-clutter** — TalentFlow heeft nu al ~45 modules;
+  "het beste in een niche" betekent eerder **schrappen/verbergen** dan bijbouwen. Tweede risico: één payroll-koppeling goed
+  onderhouden is al werk; beloof er niet drie tegelijk. Derde: KDMN-wig mag geen excuus worden om een generiek product
+  half-techniek te maken — de vertical is marketing + 2-3 workflows, niet een fork.
+
+### 5.7 Anti-scope — wat we voor deze niche bewust NIET bouwen
+- Geen eigen **fasensysteem/CAO/payroll-engine** (juridische tredmolen; koppel naar AFAS Flex/Easyflex).
+- Geen **VMS/MSP/enterprise**-functionaliteit.
+- Geen **straddle** van corporate + agency tegelijk als hoofdproduct.
+- Geen nieuwe modules "voor de volledigheid" — eerder de bestaande ~45 modules **dunnen/verbergen** tot een strakke kern.
+
+### 5.8 Geprioriteerd plan (gemapt op de niche-aanbeveling)
+*Inschattingen = uren-werk + complexity; nog niet gepland, wachten op niche-akkoord.*
+
+**Fase 0 — Focus & ontstapelen (maakt het "niche en strak"):**
+- Module-audit: kern-flow (vacature→source→screen→pipeline→plaatsing→factuur) zichtbaar; rest onder "geavanceerd"/uit. *(~12-16u, medium)*
+- Sidebar-declutter + KPI-card-consolidatie + lichtere achtergrond (overlapt Sectie 4.4/4.5/4.6). *(~16-24u, medium)*
+
+**Fase 1 — Looks & UX best-in-niche (de hele belofte vs dated incumbenten):**
+- Kanban-pipeline polijsten tot Recruitee-niveau. *(~16u, medium)*
+- Design-system-consistentie over kern-pagina's (DESIGN.md-uitrol, Sectie 2). *(~16-24u, medium)*
+
+**Fase 2 — AI-native differentiator (2026-frontier, leun op sourcing-agent):**
+- Agentic lus sluiten: screen→plan→nudge→stage-update met recruiter-goedkeuring. *(~40u, high)*
+- WhatsApp conversational pre-screening (à la Fenne/Carerix Private AI). *(~24u, medium-high)*
+- Auto-scheduling/agenda. *(~16u, medium)*
+
+**Fase 3 — NL-bureau-fit zonder de tredmolen:**
+- Eén naadloze payroll-koppeling (AFAS Flex óf Easyflex — kiezen, niet beide). *(~24-40u, high)*
+- Wet DBA/ZZP-risicocheck bij intake (onopgeloste marktpijn = differentiator). *(~24u, medium-high)*
+- Techniek/bouw-wig: VCA/certificering-veld + KDMN-referentie-workflow. *(~16u, medium)*
+
+**Fase 4 — Differentiators tot verkooppunt maken (fundament bestaat):**
+- EU AI Act productiseren: human-oversight-gates (blokkeer auto-reject), 6-mnd beslis-logging, kandidaat-AI-notificatie,
+  bias/adverse-impact-dashboard (bouwt op `aiDisclosure.ts`/`deiFunnel`). *(~24-32u, medium)*
+- Self-serve analytics polijsten (Ashby-grade; reports-builder bestaat). *(~16-24u, medium)*
+- Transparante, gepubliceerde all-in-prijs als positionering (geen add-on-tax). *(strategie, geen bouw)*
+
+### 5.9 Open beslissing voor Kaan (vóór er gebouwd wordt)
+1. **Niche-richting bevestigen:** Optie A (kern) + B (techniek-wig) — akkoord, of andere keuze?
+2. **Payroll-koppeling kiezen** (als Fase 3 doorgaat): AFAS Flex of Easyflex?
+3. **Startfase** zodra akkoord: aanbevolen Fase 0 → 1 (snelste zichtbare winst, laagste risico).
+4. **Pricing-model:** per-seat vs per-job-slot (Teamtailor/Recruitee doen per-slot — vriendelijker voor groeiende teams).
+
+### 5.10 CORRECTIE — eerste klant/vertical = ITProposal BV (IT-detachering) (2026-07-01)
+**Vervangt de "techniek/bouw"-aanname in 5.5 Optie B, 5.6 en 5.8 Fase 3.** Kaan's bevestiging:
+de **eerste focus-klant + design partner #1 is ITProposal BV, een IT-detacheringsbedrijf** (tevens zijn
+stagebedrijf). Voor hen wordt het eerste platform gebouwd; zij leveren feedback/real-world data/referentie.
+
+Gevolg voor de positionering:
+- De **vertical-wig is IT-detachering/secondment**, niet techniek/installatie/bouw. Domein-workflows:
+  IT-consultants/freelancers vinden, **tech-stack/skills-matching**, **uren- en project-detachering**,
+  **client-plaatsingen + marge/tarief-tracking** — niet monteurs/VCA/planning.
+- KDMN blijft de eigenaar/leverancier, maar de **eerste referentieklant is ITProposal** (niet KDMN zelf).
+- Manatal blijft de benchmark (ITProposal komt daar vandaan; ~€1.000/mo TCO-besparing is de drijfveer).
+- Kern-niche-aanbeveling (5.6) blijft staan: **moderne, AI-native, NL-eerst ATS+CRM voor kleine
+  recruitment-/detacheringsbureaus**, met **IT-detachering als eerste wig** via ITProposal.
+- Anti-scope (5.7) blijft: payroll/CAO koppelen, niet bezitten; geen VMS/enterprise; ontstapelen i.p.v. bijbouwen.
+
+5.8 Fase 3 "Techniek/bouw-wig: VCA/certificering-veld" → **lees als** "IT-detachering-wig: tech-stack/skills-
+matching + tarief/marge-veld + ITProposal-referentie-workflow". Overige fases (0/1/2/4) ongewijzigd.
+
+---
+
+## Sectie 6: Prod-verificatie follow-ups (2026-07-01)
+
+> Gevonden tijdens de 3-daagse prod-verificatie (zie `docs/PROD_VERIFICATIE_2026-07-01.md`). Alle P2;
+> Kaan promoot. De kern (ATS+CRM+plaatsing, AI, e-mail, workers) draait live geverifieerd — dit zijn de
+> resterende punten.
+
+- **[P2] Embedding-backfill** — 0/50.004 kandidaten + 0/303 jobs hebben een embedding (OpenAI stond tot
+  2026-07-01 uit). Nieuwe records embedden vanzelf; bestaande niet → **semantische matchscore geeft nu niets
+  over bestaande data**. Actie: een backfill-run over kandidaten/jobs (kost ~centen aan OpenAI-embeddings).
+  Voor IT Proposal's cutover minder urgent (import embedt automatisch); wel nodig voor demo's op load-test-data.
+- **[P2] RLS non-owner-cutover** — prod draait als `talentflow` superuser (`bypassrls=true`) → RLS-policies
+  inert; isolatie leunt op app-laag `WHERE tenant_id`. **Harde gate vóór de eerste 2e externe klant.** Fix is
+  gebouwd + dev-bewezen (`docs/RLS_HARDENING.md`); cutover naar `talentflow_app` (NOBYPASSRLS) is een
+  Kaan-beslissing (irreversibel-ish → niet autonoom uitgevoerd).
+- **[P2] Per-tenant e-mail-afzender** — `RESEND_FROM` is nu globaal `TalentFlow <no-reply@send.kdmn.nl>`.
+  Voor SaaS moet elke tenant met de eigen naam (en evt. eigen geverifieerd domein) kunnen versturen, zodat
+  IT Proposal's kandidaat/klant-mail "IT Proposal" toont i.p.v. "TalentFlow".
+- **[P2] OpenAI-kostencap/monitoring** — vóór opschalen een provider-hard-cap + per-tenant metering op
+  `ai_events` activeren (zie AI-kosten-notitie). Self-hosted embeddings (€0) is een latere schaaloptie
+  (let op `vector(1536)`-migratie).
+- **[P2] Sleutelrotatie** — Anthropic/OpenAI/Resend-keys kwamen in de chat langs → roteren.
+- **[P2] ESLint ontbreekt** — geen `.eslintrc`/`eslint.config.*`; `npm run lint` kan niet draaien. Config toevoegen.
+- **[P2] i18n-staart** — 16/79 dashboard-pagina's nog hardcoded NL (incl. `timesheets/page.tsx`, waarvan de
+  eerdere migratie kapot was en is teruggedraaid).
+- **[P2] `RESEND_REPLY_DOMAIN`** staat nog op `reply.talentflow.kdmn.nl` — uitlijnen op `send.kdmn.nl` zodra
+  inbound e-mail (reply-threading) wordt aangezet (nu bewust uit).
+- **[INFO] 5 workers bewust uit** (`whatsappOut`, `whatsappHealthCheck`, `voiceCallTranscribe`, `contractExpiry`,
+  `skillsSnapshot`) — horen bij bevroren/niet-actieve features; aanzetten pas als die features live gaan.
