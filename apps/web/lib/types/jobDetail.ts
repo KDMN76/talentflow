@@ -82,7 +82,7 @@ export interface JobFunnelStage {
   name: string;
   /** Position (1-based). */
   position: number;
-  /** Active applications currently in this stage. */
+  /** Applications currently in this stage (all statuses). */
   count: number;
   /**
    * Conversion rate from this stage to the next (0..100), computed by the
@@ -94,11 +94,14 @@ export interface JobFunnelStage {
 export interface JobFunnelResponse {
   job_id: string;
   stages: JobFunnelStage[];
-  /** Sum of `count` across all stages. */
+  /** Total number of applications for this job (all statuses). */
   total: number;
   /** Number of applications with status='hired'. */
   hired: number;
-  /** Number of applications with status='rejected'. */
+  /**
+   * Number of applications that left the funnel without a hire
+   * (status is neither 'active' nor 'hired': rejected/withdrawn/…).
+   */
   dropped: number;
   computed_at: string;
 }

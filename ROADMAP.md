@@ -925,3 +925,16 @@ matching + tarief/marge-veld + ITProposal-referentie-workflow". Overige fases (0
   inbound e-mail (reply-threading) wordt aangezet (nu bewust uit).
 - **[INFO] 5 workers bewust uit** (`whatsappOut`, `whatsappHealthCheck`, `voiceCallTranscribe`, `contractExpiry`,
   `skillsSnapshot`) — horen bij bevroren/niet-actieve features; aanzetten pas als die features live gaan.
+
+### Follow-ups batch 2026-07-02 (stagebedrijf-feedbackronde 2)
+- **[P2] CampaignBuilder.tsx heeft nog het raw-HTML-textarea-patroon** (`camp-body`) — zelfde vervanging door
+  `RichTextEditor` als email-templates/ComposeEmailModal (die zijn gedaan).
+- **[P2] Redis eviction-policy** — compose zet `allkeys-lru`; BullMQ wil `noeviction` (warning bij elke
+  queue-connectie). Onder memory-druk kunnen queue-keys geëvict worden → jobs kwijt. Compose-wijziging + herstart.
+- **[P2] `GET /jobs/:id/sourcing-suggestions` bestaat niet** (404) — de SourcingSuggestionsCard in de AI-Suite-tab
+  toont daardoor altijd de lege staat. Endpoint bouwen of kaart verwijderen.
+- **[P2] apiRateLimit-429 heeft nog lege `details`** — authRateLimit is gefixt (countdown); de generieke limiter nog niet.
+- **[BESLISSING Kaan] Auto-post naar job boards bij publiceren** — nu handmatig (boards kiezen → posten). Automatisch
+  posten naar een standaard-set bij "Publiceren" kan gebouwd worden; wachten op keuze.
+- **[INFO] Demo-seed load-test-tenant** — `apps/api/scripts/seed-load-test-modules.sql` (idempotent, per-tabel-guards)
+  vulde 2026-07-02 alle lege modules; embedding-backfill (300 jobs + 2.000 kandidaten) via one-off enqueue-script gedraaid.

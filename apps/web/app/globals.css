@@ -84,6 +84,25 @@
   @apply shadow-2xl opacity-90;
 }
 
+/* Kanban: clearly visible horizontal scrollbar (board + synced top bar).
+   Overrides the global 6px scrollbar so the bar is always easy to spot. */
+.kanban-scroll::-webkit-scrollbar {
+  height: 10px;
+}
+.kanban-scroll::-webkit-scrollbar-track {
+  @apply rounded-full bg-muted;
+}
+.kanban-scroll::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-muted-foreground/40;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.kanban-scroll::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/60;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
 /* Fade-in animation */
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(8px); }

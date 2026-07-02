@@ -203,10 +203,42 @@ export function useJobFunnel(jobId: string) {
   return useQuery({
     queryKey: ["jobs", jobId, "funnel"],
     queryFn: async (): Promise<JobFunnelResponse | null> => {
-      const { data } = await api.get<JobFunnelResponse>(
-        `/jobs/${jobId}/funnel`
-      );
-      return data;
+      // API levert {stages:[{stage_id,stage_name,position,count,
+      // conversion_rate_from_previous}],total,hired,dropped} — map naar de
+      // UI-shape. Let op de shift-semantiek: `conversion_to_next_pct` van
+      // stage i = `conversion_rate_from_previous` van stage i+1 (de laatste
+      // stage heeft geen volgende → null).
+      const { data } = await api.get<{
+        stages: Array<{
+          stage_id: string;
+          stage_name: string;
+          position: number;
+          count: number;
+          conversion_rate_from_previous: number | null;
+        }>;
+        total?: number;
+        hired?: number;
+        dropped?: number;
+      }>(`/jobs/${jobId}/funnel`);
+
+      const rawStages = data.stages ?? [];
+      return {
+        job_id: jobId,
+        stages: rawStages.map((s, i) => ({
+          stage_id: s.stage_id,
+          name: s.stage_name,
+          position: s.position,
+          count: s.count,
+          conversion_to_next_pct:
+            i < rawStages.length - 1
+              ? rawStages[i + 1].conversion_rate_from_previous
+              : null,
+        })),
+        total: data.total ?? 0,
+        hired: data.hired ?? 0,
+        dropped: data.dropped ?? 0,
+        computed_at: new Date().toISOString(),
+      };
     },
     enabled: !!jobId,
     staleTime: 30_000,

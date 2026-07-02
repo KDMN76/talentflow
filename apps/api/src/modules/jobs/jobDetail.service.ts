@@ -56,6 +56,12 @@ export interface JobFunnelStage {
 
 export interface JobFunnelResponse {
   stages: JobFunnelStage[];
+  /** Total number of applications for this job (all statuses). */
+  total: number;
+  /** Applications with status = 'hired'. */
+  hired: number;
+  /** Applications that left the funnel without a hire (see getJobFunnel). */
+  dropped: number;
 }
 
 export interface ComparableJob {
@@ -505,7 +511,29 @@ export async function getJobFunnel(
       };
     });
 
-    return { stages };
+    // Totals for the stat tiles. Derivation choice: `applications.status` is
+    // the only outcome source the schema offers (001_init.sql: free-text
+    // TEXT, default 'active'; the pipeline API writes 'active' | 'rejected'
+    // | 'withdrawn' | 'hired', legacy/seed data also contains
+    // 'offer_declined'). There is no terminal-stage flag or separate outcome
+    // table, so: hired = status='hired', dropped = everything that is
+    // neither active nor hired — this stays correct if new drop-out
+    // statuses are added later. total = ALL applications for the job.
+    const { rows: [totals] } = await client.query(
+      `SELECT COUNT(*)::int AS total,
+              COUNT(*) FILTER (WHERE status = 'hired')::int AS hired,
+              COUNT(*) FILTER (WHERE status NOT IN ('active', 'hired'))::int AS dropped
+       FROM applications
+       WHERE job_id = $1 AND tenant_id = $2`,
+      [jobId, tenantId]
+    );
+
+    return {
+      stages,
+      total: Number(totals?.total ?? 0),
+      hired: Number(totals?.hired ?? 0),
+      dropped: Number(totals?.dropped ?? 0),
+    };
   });
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   DndContext,
@@ -71,6 +71,42 @@ export function KanbanBoard({ stages, applications, jobId }: KanbanBoardProps) {
 
   const { toast } = useToast();
   const moveApplication = useMoveApplication();
+
+  // Always-visible horizontal scrollbar above the board, synced two-way with
+  // the board's own scroll position. The dummy div inside `topScrollRef` gets
+  // the board's scrollWidth so both scrollbars cover the same range.
+  const boardRef = useRef<HTMLDivElement | null>(null);
+  const topScrollRef = useRef<HTMLDivElement | null>(null);
+  const [boardScrollWidth, setBoardScrollWidth] = useState(0);
+
+  useEffect(() => {
+    if (view !== "board") return;
+    const board = boardRef.current;
+    if (!board) return;
+
+    const measure = () => setBoardScrollWidth(board.scrollWidth);
+    measure();
+
+    const observer = new ResizeObserver(measure);
+    observer.observe(board);
+    // Observe the columns too: the board element itself does not resize when
+    // columns are added/removed, but its scrollWidth does.
+    Array.from(board.children).forEach((child) => observer.observe(child));
+    return () => observer.disconnect();
+  }, [view, stages.length]);
+
+  // Two-way sync. Loop-guard: only assign when the positions actually differ,
+  // so the echoed scroll event from the other pane is a no-op instead of an
+  // infinite ping-pong.
+  const syncScroll = useCallback(
+    (source: HTMLDivElement | null, target: HTMLDivElement | null) => {
+      if (!source || !target) return;
+      if (Math.abs(target.scrollLeft - source.scrollLeft) > 1) {
+        target.scrollLeft = source.scrollLeft;
+      }
+    },
+    []
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -223,7 +259,21 @@ export function KanbanBoard({ stages, applications, jobId }: KanbanBoardProps) {
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex gap-5 overflow-x-auto pb-4">
+          {/* Always-visible top scrollbar (mirrors the board's scroll range) */}
+          <div
+            ref={topScrollRef}
+            onScroll={() => syncScroll(topScrollRef.current, boardRef.current)}
+            className="kanban-scroll overflow-x-scroll overflow-y-hidden"
+            aria-hidden="true"
+          >
+            <div style={{ width: boardScrollWidth }} className="h-px" />
+          </div>
+
+          <div
+            ref={boardRef}
+            onScroll={() => syncScroll(boardRef.current, topScrollRef.current)}
+            className="kanban-scroll flex gap-5 overflow-x-scroll pb-4"
+          >
             {stages.map((stage) => (
               <KanbanColumn
                 key={stage.id}

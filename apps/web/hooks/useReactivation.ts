@@ -42,11 +42,27 @@ export function useReactivationAlerts(filters?: ReactivationFilters) {
       if (typeof filters?.max_score === "number") {
         params.max_score = filters.max_score;
       }
-      const { data } = await api.get<{ data: TalentReactivationAlert[] }>(
-        "/matching/reactivation-alerts",
-        { params: Object.keys(params).length > 0 ? params : undefined }
-      );
-      return data.data;
+      const { data } = await api.get<{
+        data: Array<TalentReactivationAlert & { reason?: string | null }>;
+      }>("/matching/reactivation-alerts", {
+        params: Object.keys(params).length > 0 ? params : undefined,
+      });
+      // API-DTO levert één vlak `reason: string | null`; de UI (AlertRow/
+      // ReasonBadge) leest `reasons: ReactivationReason[]` — normaliseer,
+      // anders crasht `alert.reasons.map` zodra er alerts bestaan.
+      return (data.data ?? []).map((raw) => ({
+        ...raw,
+        reasons: Array.isArray(raw.reasons)
+          ? raw.reasons
+          : raw.reason
+            ? [
+                {
+                  type: "high_score_uncontacted" as const,
+                  label: raw.reason,
+                },
+              ]
+            : [],
+      }));
     },
     staleTime: 30_000,
   });
@@ -58,10 +74,11 @@ export function useReactivationStats() {
   return useQuery({
     queryKey: ["reactivation-alerts", "stats"],
     queryFn: async (): Promise<ReactivationStats> => {
-      const { data } = await api.get<{ data: ReactivationStats }>(
+      // Endpoint geeft het stats-object plat terug (geen {data}-wrapper).
+      const { data } = await api.get<ReactivationStats>(
         "/matching/reactivation-alerts/stats"
       );
-      return data.data;
+      return data;
     },
     staleTime: 60_000,
     refetchInterval: 60_000,

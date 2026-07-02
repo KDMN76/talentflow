@@ -174,6 +174,10 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
+  // Rate-limit-headers zichtbaar maken voor de browser-client (login-UX:
+  // resterende pogingen + retry-countdown). Zonder exposedHeaders kan axios
+  // deze cross-origin niet lezen.
+  exposedHeaders: ['RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset', 'Retry-After'],
 }));
 
 // ── Body parsing ─────────────────────────────────────────────────────────────
