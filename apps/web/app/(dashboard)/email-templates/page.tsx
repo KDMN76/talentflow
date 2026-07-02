@@ -21,6 +21,10 @@ import {
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  MergeVariableInput,
+  RichTextEditor,
+} from "@/components/ui/RichTextEditor";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -252,11 +256,11 @@ function EditorDialog({ open, onOpenChange, initial }: EditorDialogProps) {
           {/* Subject */}
           <div className="space-y-1.5">
             <Label htmlFor="tpl-subject">Onderwerp</Label>
-            <Input
+            <MergeVariableInput
               id="tpl-subject"
               value={subject}
-              onChange={(e) => {
-                setSubject(e.target.value);
+              onChange={(v) => {
+                setSubject(v);
                 if (errors.subject) setErrors((p) => ({ ...p, subject: "" }));
               }}
               placeholder="Bijv. Uitnodiging gesprek - {{job.title}}"
@@ -272,7 +276,7 @@ function EditorDialog({ open, onOpenChange, initial }: EditorDialogProps) {
           {/* Body HTML */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label htmlFor="tpl-body">Bericht (HTML)</Label>
+              <Label>Bericht</Label>
               <Button
                 type="button"
                 variant="ghost"
@@ -284,16 +288,13 @@ function EditorDialog({ open, onOpenChange, initial }: EditorDialogProps) {
                 {showPreview ? "Preview verbergen" : "Live preview"}
               </Button>
             </div>
-            <textarea
-              id="tpl-body"
+            <RichTextEditor
               value={bodyHtml}
-              onChange={(e) => {
-                setBodyHtml(e.target.value);
+              onChange={(html) => {
+                setBodyHtml(html);
                 if (errors.body_html) setErrors((p) => ({ ...p, body_html: "" }));
               }}
-              rows={10}
-              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition resize-y"
-              placeholder="<p>Beste {{candidate.first_name}}…</p>"
+              placeholder="Beste {{candidate.first_name}}… Typ {{ voor variabelen."
             />
             {errors.body_html && (
               <p className="text-xs text-destructive flex items-center gap-1">

@@ -15,7 +15,10 @@ import {
   type EmailTemplate,
 } from "@talentflow/shared";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  MergeVariableInput,
+  RichTextEditor,
+} from "@/components/ui/RichTextEditor";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -296,11 +299,11 @@ export function ComposeEmailModal({
             {/* Subject */}
             <div className="space-y-1.5">
               <Label htmlFor="email-subject">Onderwerp</Label>
-              <Input
+              <MergeVariableInput
                 id="email-subject"
                 value={subject}
-                onChange={(e) => {
-                  setSubject(e.target.value);
+                onChange={(v) => {
+                  setSubject(v);
                   if (errors.subject) setErrors((p) => ({ ...p, subject: undefined }));
                 }}
                 placeholder="Bijv. Uitnodiging gesprek - {{job.title}}"
@@ -316,23 +319,19 @@ export function ComposeEmailModal({
             {/* Body */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label htmlFor="email-body">Bericht (HTML toegestaan)</Label>
+                <Label>Bericht</Label>
                 <span className="text-[11px] text-muted-foreground">
-                  Gebruik {"{{candidate.first_name}}"}, {"{{job.title}}"},{" "}
-                  {"{{recruiter.name}}"}
+                  Typ {"{{"} voor variabelen en vacatures
                 </span>
               </div>
-              <textarea
-                id="email-body"
+              <RichTextEditor
                 value={bodyHtml}
-                onChange={(e) => {
-                  setBodyHtml(e.target.value);
+                onChange={(html) => {
+                  setBodyHtml(html);
                   if (errors.body_html)
                     setErrors((p) => ({ ...p, body_html: undefined }));
                 }}
-                rows={12}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition resize-y"
-                placeholder="<p>Beste {{candidate.first_name}}…</p>"
+                placeholder="Beste {{candidate.first_name}}… Typ {{ voor variabelen."
               />
               {errors.body_html && (
                 <p className="text-xs text-destructive flex items-center gap-1">
