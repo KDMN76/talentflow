@@ -11,8 +11,8 @@
  *   - GET  /devices                             alias: subs als { devices: [...] }
  *   - DELETE /devices/:id                       alias van /subscriptions/:id
  *
- *   - GET   /preferences                        lijst eigen preferences
- *   - PATCH /preferences                        upsert per (channel, event_type)
+ *   - GET  /preferences                         geconsolideerd voorkeuren-object
+ *   - PUT  /preferences                         sla geconsolideerd object op
  *
  *   - GET  /log                                 recente delivery-log
  *   - POST /test                                stuur test-push naar eigen device(s)
@@ -40,7 +40,7 @@ router.get('/devices', ctrl.listDevices);
 router.delete('/devices/:id', ctrl.deleteSubscription);
 
 router.get('/preferences', ctrl.getPreferences);
-router.patch('/preferences', ctrl.patchPreferences);
+router.put('/preferences', ctrl.putPreferences);
 
 router.get('/log', ctrl.getLog);
 router.post('/test', ctrl.sendTest);

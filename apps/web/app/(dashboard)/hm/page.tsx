@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CheckCircle2, Clock, Sparkles, Undo2 } from "lucide-react";
+import { CheckCircle2, Clock, CloudOff, Sparkles, Undo2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -32,7 +32,7 @@ interface PendingDecision {
 
 export default function HiringManagerPage() {
   const { t } = useTranslation("hm");
-  const { data: queue, isLoading } = useHmCandidatesToReview();
+  const { data: queue, isLoading, isError, refetch } = useHmCandidatesToReview();
   const { data: stats } = useHmStats();
   const decisionMutation = useHmDecision();
   const { toast } = useToast();
@@ -91,22 +91,28 @@ export default function HiringManagerPage() {
   // Decision flow
   // ------------------------------------------------------------------------
 
+  /**
+   * Voert de beslissing echt door op de backend. Retourneert `false` bij een
+   * mislukte write — de aanroeper zet de kandidaat dan terug op de stapel
+   * zodat de swipe NIET stilletjes verloren gaat.
+   */
   const commitDecision = useCallback(
-    async (input: PendingDecision) => {
+    async (input: PendingDecision): Promise<boolean> => {
       try {
         await decisionMutation.mutateAsync({
           candidateId: input.candidate.application_id,
           decision: input.decision,
           scorecard: input.scorecard,
+          stageId: input.candidate.stage_id ?? null,
         });
+        return true;
       } catch {
-        // Mutation already absorbs errors and falls back to mock-success;
-        // any other failure is surfaced as a toast below.
         toast({
           variant: "destructive",
           title: t("review.toasts.syncFailed.title"),
           description: t("review.toasts.syncFailed.description"),
         });
+        return false;
       }
     },
     [decisionMutation, toast, t]
@@ -157,7 +163,13 @@ export default function HiringManagerPage() {
             (p) => p.candidate.application_id !== candidate.application_id
           )
         );
-        commitDecision(entry);
+        void commitDecision(entry).then((ok) => {
+          if (!ok) {
+            // Write mislukt — kandidaat terug op de stapel, beslissing niet
+            // doorgevoerd.
+            setStack((s) => [entry.candidate, ...s]);
+          }
+        });
       }, UNDO_WINDOW_MS);
 
       timersRef.current.set(candidate.application_id, timer);
@@ -193,11 +205,19 @@ export default function HiringManagerPage() {
             { ...candidate, last_skipped_at: new Date().toISOString() },
           ];
         });
-        // Fire-and-forget: tell the backend so deadlines update.
-        commitDecision({
+        // Backend bijwerken zodat deadlines kloppen; bij een mislukte write
+        // gaat de kandidaat terug naar boven en vervalt de "later"-melding.
+        void commitDecision({
           candidate,
           decision: "later",
           scheduledAt: Date.now(),
+        }).then((ok) => {
+          if (!ok) {
+            setStack((s) => [
+              candidate,
+              ...s.filter((c) => c.application_id !== candidate.application_id),
+            ]);
+          }
         });
         toast({
           title: t("review.toasts.later.title"),
@@ -242,12 +262,17 @@ export default function HiringManagerPage() {
       if (!scoring) return;
       setSubmittingScorecard(true);
       try {
-        await commitDecision({
+        const ok = await commitDecision({
           candidate: scoring,
           decision: "approve",
           scheduledAt: Date.now(),
           scorecard: input,
         });
+        if (!ok) {
+          // Write mislukt: sheet blijft open zodat de HM opnieuw kan
+          // versturen — de fout-toast is al getoond door commitDecision.
+          return;
+        }
         toast({
           title: t("review.toasts.approved.title"),
           description: t("review.toasts.approved.description", {
@@ -317,6 +342,8 @@ export default function HiringManagerPage() {
             <div className="mx-auto w-full max-w-md">
               <Skeleton className="h-[560px] w-full rounded-3xl" />
             </div>
+          ) : isError && stack.length === 0 ? (
+            <ErrorState onRetry={() => refetch()} />
           ) : remaining === 0 ? (
             <EmptyState />
           ) : (
@@ -371,6 +398,33 @@ function EmptyState() {
         <p className="text-sm text-muted-foreground max-w-xs">
           {t("review.empty.description")}
         </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Eerlijke fout-staat: de wachtrij kon niet geladen worden. */
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation("hm");
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardContent className="flex flex-col items-center justify-center gap-3 py-20 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950/50">
+          <CloudOff className="h-8 w-8 text-amber-600" />
+        </div>
+        <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
+          {t("review.loadError.title")}
+        </h3>
+        <p className="text-sm text-muted-foreground max-w-xs">
+          {t("review.loadError.description")}
+        </p>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+        >
+          {t("review.loadError.retry")}
+        </button>
       </CardContent>
     </Card>
   );

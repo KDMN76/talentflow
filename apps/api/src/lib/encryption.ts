@@ -8,8 +8,10 @@
  *     [12 bytes IV][16 bytes auth tag][N bytes ciphertext]
  *
  * Key resolutie:
- *   - production: `process.env.ENCRYPTION_KEY` MOET een 32-byte (64-hex)
- *     key zijn. Anders gooien we direct fail-fast.
+ *   - production: `process.env.ENCRYPTION_KEY` (32-byte hex/base64) heeft
+ *     voorrang. Ontbreekt die, dan leiden we een key af via
+ *     `scrypt(JWT_SECRET, vaste salt)` — zie `deriveKeyFromJwtSecret()`
+ *     voor de afweging. Alleen als óók JWT_SECRET ontbreekt: fail-fast.
  *   - dev/test  : fallback naar een fixed test-key (`talentflow-dev-key-…`)
  *     gehashed naar 32 bytes. Dit voorkomt dat lokale tests breken zonder
  *     env-var, terwijl production-deploys altijd een echte key vereisen.
@@ -25,7 +27,31 @@ const IV_LEN = 12; // 96-bit IV is GCM-aanbevolen
 const TAG_LEN = 16;
 const DEV_KEY_SEED = 'talentflow-dev-encryption-key-NOT-FOR-PROD';
 
+// Vaste, publieke salt voor de scrypt-afleiding uit JWT_SECRET. De salt hoeft
+// niet geheim te zijn (de entropie komt uit JWT_SECRET); hij moet alleen VAST
+// zijn zodat encrypt/decrypt over processen heen dezelfde key opleveren.
+const JWT_DERIVE_SALT = 'talentflow-encryption-v1';
+
 let cachedKey: Buffer | null = null;
+
+/**
+ * Production-fallback zonder nieuwe env-var: leid de AES-key af uit het al
+ * aanwezige JWT_SECRET via scrypt met een vaste salt.
+ *
+ * Afweging (bewust gedocumenteerd):
+ *   + Geen nieuwe prod-secret nodig — JWT_SECRET staat al in de compose-env
+ *     van zowel `api` als `api-worker` (ENCRYPTION_KEY staat daar NIET).
+ *   + scrypt is memory-hard; zelfs bij een matig JWT_SECRET is brute-force
+ *     op de afgeleide key duurder dan op een kale SHA-256.
+ *   − Key-rotatie van JWT_SECRET maakt bestaande blobs onleesbaar. Dat is
+ *     acceptabel voor SMTP-wachtwoorden (opnieuw invoeren in Settings) maar
+ *     zet je géén onvervangbare data mee vast.
+ *   − Wordt later alsnog ENCRYPTION_KEY gezet, dan wint die en zijn eerder
+ *     met de afgeleide key versleutelde blobs onleesbaar → herinvoeren.
+ */
+function deriveKeyFromJwtSecret(jwtSecret: string): Buffer {
+  return crypto.scryptSync(jwtSecret, JWT_DERIVE_SALT, 32);
+}
 
 function resolveKey(): Buffer {
   if (cachedKey) return cachedKey;
@@ -59,9 +85,17 @@ function resolveKey(): Buffer {
     return cachedKey;
   }
 
-  // Geen env-var → in production fail, anders dev-fallback.
+  // Geen ENCRYPTION_KEY → production: afleiden uit JWT_SECRET (zie
+  // deriveKeyFromJwtSecret voor de trade-off), anders dev-fallback.
   if (process.env.NODE_ENV === 'production') {
-    throw new Error('[encryption] ENCRYPTION_KEY is required in production');
+    const jwtSecret = process.env.JWT_SECRET;
+    if (jwtSecret && jwtSecret.length >= 32) {
+      cachedKey = deriveKeyFromJwtSecret(jwtSecret);
+      return cachedKey;
+    }
+    throw new Error(
+      '[encryption] ENCRYPTION_KEY (of een JWT_SECRET van ≥32 tekens) is vereist in production'
+    );
   }
   cachedKey = crypto.createHash('sha256').update(DEV_KEY_SEED).digest();
   return cachedKey;

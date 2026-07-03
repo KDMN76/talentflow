@@ -145,3 +145,32 @@ registry.registerPath({
     429: standardErrorResponses[429],
   },
 });
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/auth/reset-password',
+  tags: ['Authentication'],
+  summary: 'Reset password with token',
+  description:
+    'Zet een nieuw wachtwoord via een reset-token uit de mail. Token is single-use en ' +
+    'verloopt na 1 uur; alle bestaande sessies worden ingetrokken. Geen auto-login.',
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            token: z.string().min(20),
+            password: z.string().min(8),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: jsonResponse('Wachtwoord opnieuw ingesteld', MessageResponse),
+    404: standardErrorResponses[404],
+    409: standardErrorResponses[409],
+    410: standardErrorResponses[410],
+    429: standardErrorResponses[429],
+  },
+});

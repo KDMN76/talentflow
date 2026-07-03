@@ -46,12 +46,30 @@ export type {
 
 // ─── Integration ─────────────────────────────────────────────────────────────
 
+export interface WhatsAppIntegrationState {
+  /** Gekoppelde 360dialog-integratie van de tenant, of null. */
+  integration: WhatsAppIntegration | null;
+  /**
+   * Kan WhatsApp in deze omgeving echt gebruikt worden? False in productie
+   * zonder live 360dialog-configuratie — de UI toont dan een eerlijke
+   * "WhatsApp is niet geactiveerd"-staat.
+   */
+  serviceActive: boolean;
+}
+
 export function useWhatsAppIntegration() {
   return useQuery({
     queryKey: ["whatsapp", "integration"],
-    queryFn: async (): Promise<WhatsAppIntegration> => {
-      const { data } = await api.get<WhatsAppIntegration>("/whatsapp/integration");
-      return data;
+    queryFn: async (): Promise<WhatsAppIntegrationState> => {
+      // Backend-shape: { data: WhatsAppIntegration | null, service_active }
+      const { data } = await api.get<{
+        data: WhatsAppIntegration | null;
+        service_active?: boolean;
+      }>("/whatsapp/integration");
+      return {
+        integration: data.data ?? null,
+        serviceActive: data.service_active ?? true,
+      };
     },
   });
 }
@@ -65,11 +83,11 @@ export function useConnectWhatsApp() {
       waba_id: string;
       display_name?: string;
     }): Promise<WhatsAppIntegration> => {
-      const { data } = await api.post<WhatsAppIntegration>(
+      const { data } = await api.post<{ data: WhatsAppIntegration }>(
         "/whatsapp/integration/connect",
         input
       );
-      return data;
+      return data.data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["whatsapp"] }),
   });
@@ -89,10 +107,10 @@ export function useWhatsAppHealthCheck() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (): Promise<WhatsAppIntegration> => {
-      const { data } = await api.post<WhatsAppIntegration>(
+      const { data } = await api.post<{ data: WhatsAppIntegration }>(
         "/whatsapp/integration/health-check"
       );
-      return data;
+      return data.data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["whatsapp"] }),
   });
@@ -104,11 +122,12 @@ export function useWhatsAppTemplates(filters: { status?: WhatsAppTemplateStatus 
   return useQuery({
     queryKey: ["whatsapp", "templates", filters],
     queryFn: async (): Promise<WhatsAppTemplate[]> => {
-      const { data } = await api.get<{ items: WhatsAppTemplate[] }>(
+      // Backend-shape: { data: [...], next_cursor } — niet { items }.
+      const { data } = await api.get<{ data: WhatsAppTemplate[] }>(
         "/whatsapp/templates",
         { params: filters }
       );
-      return data.items;
+      return data.data ?? [];
     },
     refetchInterval: (query) => {
       const data = query.state.data;
@@ -135,11 +154,11 @@ export function useCreateTemplate() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: CreateTemplateInput): Promise<WhatsAppTemplate> => {
-      const { data } = await api.post<WhatsAppTemplate>(
+      const { data } = await api.post<{ data: WhatsAppTemplate }>(
         "/whatsapp/templates",
         input
       );
-      return data;
+      return data.data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["whatsapp", "templates"] }),
   });
@@ -152,11 +171,11 @@ export function useUpdateTemplate() {
       id: string;
       patch: Partial<CreateTemplateInput>;
     }): Promise<WhatsAppTemplate> => {
-      const { data } = await api.patch<WhatsAppTemplate>(
+      const { data } = await api.patch<{ data: WhatsAppTemplate }>(
         `/whatsapp/templates/${input.id}`,
         input.patch
       );
-      return data;
+      return data.data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["whatsapp", "templates"] }),
   });
@@ -176,10 +195,10 @@ export function useSubmitTemplate() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string): Promise<WhatsAppTemplate> => {
-      const { data } = await api.post<WhatsAppTemplate>(
+      const { data } = await api.post<{ data: WhatsAppTemplate }>(
         `/whatsapp/templates/${id}/submit`
       );
-      return data;
+      return data.data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["whatsapp", "templates"] }),
   });
@@ -197,11 +216,11 @@ export function useWhatsAppMessages(filters: WhatsAppMessageFilters = {}) {
   return useQuery({
     queryKey: ["whatsapp", "messages", filters],
     queryFn: async (): Promise<WhatsAppMessage[]> => {
-      const { data } = await api.get<{ items: WhatsAppMessage[] }>(
+      const { data } = await api.get<{ data: WhatsAppMessage[] }>(
         "/whatsapp/messages",
         { params: filters }
       );
-      return data.items;
+      return data.data ?? [];
     },
   });
 }
@@ -218,11 +237,11 @@ export function useSendWhatsAppMessage() {
       media_url?: string;
       media_type?: string;
     }): Promise<WhatsAppMessage> => {
-      const { data } = await api.post<WhatsAppMessage>(
+      const { data } = await api.post<{ data: WhatsAppMessage }>(
         "/whatsapp/messages",
         input
       );
-      return data;
+      return data.data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["whatsapp"] }),
   });
@@ -232,11 +251,11 @@ export function useWhatsAppConversations(filters: { candidate_id?: string } = {}
   return useQuery({
     queryKey: ["whatsapp", "conversations", filters],
     queryFn: async (): Promise<WhatsAppConversation[]> => {
-      const { data } = await api.get<{ items: WhatsAppConversation[] }>(
+      const { data } = await api.get<{ data: WhatsAppConversation[] }>(
         "/whatsapp/conversations",
         { params: filters }
       );
-      return data.items;
+      return data.data ?? [];
     },
   });
 }
@@ -247,11 +266,11 @@ export function useWhatsAppConsents(filters: { status?: ConsentStatus } = {}) {
   return useQuery({
     queryKey: ["whatsapp", "consents", filters],
     queryFn: async (): Promise<WhatsAppConsent[]> => {
-      const { data } = await api.get<{ items: WhatsAppConsent[] }>(
+      const { data } = await api.get<{ data: WhatsAppConsent[] }>(
         "/whatsapp/consents",
         { params: filters }
       );
-      return data.items;
+      return data.data ?? [];
     },
   });
 }
@@ -262,10 +281,10 @@ export function useWhatsAppConsentForCandidate(candidateId: string | undefined) 
     enabled: !!candidateId,
     queryFn: async (): Promise<WhatsAppConsent | null> => {
       if (!candidateId) return null;
-      const { data } = await api.get<WhatsAppConsent>(
+      const { data } = await api.get<{ data: WhatsAppConsent | null }>(
         `/whatsapp/consents/${candidateId}`
       );
-      return data;
+      return data.data ?? null;
     },
   });
 }
@@ -277,12 +296,11 @@ export function useInviteWhatsAppConsent() {
       candidate_id: string;
       phone_number: string;
       candidate_name?: string;
-    }): Promise<WhatsAppConsent> => {
-      const { data } = await api.post<WhatsAppConsent>(
-        "/whatsapp/consents/invite",
-        input
-      );
-      return data;
+    }): Promise<{ token_url: string; expires_at: string }> => {
+      const { data } = await api.post<{
+        data: { token_url: string; expires_at: string };
+      }>("/whatsapp/consents/invite", input);
+      return data.data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["whatsapp", "consents"] }),
   });
@@ -295,11 +313,11 @@ export function useWithdrawWhatsAppConsent() {
       candidate_id: string;
       reason: string;
     }): Promise<WhatsAppConsent> => {
-      const { data } = await api.post<WhatsAppConsent>(
+      const { data } = await api.post<{ data: WhatsAppConsent }>(
         `/whatsapp/consents/${input.candidate_id}/withdraw`,
         { reason: input.reason }
       );
-      return data;
+      return data.data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["whatsapp", "consents"] }),
   });

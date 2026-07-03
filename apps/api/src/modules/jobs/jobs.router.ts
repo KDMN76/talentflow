@@ -99,6 +99,10 @@ router.get('/:id/health', jobDetailController.getJobHealth);
 router.get('/:id/funnel', jobDetailController.getJobFunnel);
 router.get('/:id/comparable', jobDetailController.getComparableJobs);
 router.get('/:id/sourcing', jobDetailController.getJobSourcing);
+router.get(
+  '/:id/sourcing-suggestions',
+  jobDetailController.getJobSourcingSuggestions
+);
 router.get('/:id/bias-check', jobDetailController.getJobBiasCheck);
 
 // ─── Existing /:id routes ───────────────────────────────────────────────────

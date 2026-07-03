@@ -1,110 +1,202 @@
 /**
- * Notification preferences — Sprint Q2.4.
+ * Notification preferences — Sprint Q2.4 (geconsolideerd contract: ROADMAP
+ * "Notificatie-voorkeuren: frontend/backend-contract mismatch").
  *
- * Per (user, channel, event_type) bewaren we:
- *   - enabled        (default TRUE als rij ontbreekt)
+ * Opslagmodel (source-of-truth voor de delivery-worker): per
+ * (user, channel, event_type)-rij in `notification_preferences`:
+ *   - enabled        (default TRUE als rij ontbreekt — opt-out policy)
  *   - quiet_hours_start / quiet_hours_end (TIME, optioneel)
  *   - timezone       (default Europe/Amsterdam)
+ *
+ * Wire-model (settings-pagina, `GET/PUT /api/notifications/preferences`):
+ * één geconsolideerd object — zie `NotificationPreferencesSchema` in
+ * `@talentflow/contracts`. De mapping object ↔ rijen gebeurt hier.
+ *
+ * Master-representatie: de UI-toggle `push_enabled` wordt bewaard als
+ * sentinel-rij met `event_type = '_master'` (MASTER_EVENT_TYPE). Dat kan
+ * zonder migratie: `event_type` is TEXT zonder CHECK-constraint en de
+ * UNIQUE (tenant, user, channel, event_type) dekt de master-rij mee.
+ * Geen master-rij = kanaal aan (zelfde opt-out default als per-event).
  *
  * Quiet-hours wordt geëvalueerd in de user's TZ. Verschil met server-tijd
  * is belangrijk: een Nederlandse user die om 22:00 lokale tijd niet meer
  * gestoord wil worden, is in UTC iets anders.
  *
  * `getEffectivePreference` is de hot-path die de worker per push aanroept
- * — moet snel en stabiel zijn.
+ * — moet snel en stabiel zijn. Sinds de master-rij checkt hij master AND
+ * event: master uit = alles uit voor dat kanaal.
  */
 
+import {
+  NOTIFICATION_EVENT_TYPES,
+  type NotificationEventToggles,
+  type NotificationPreferences,
+  type NotificationPreferencesUpdate,
+} from '@talentflow/contracts';
 import { withTenant } from '../../db/pool';
-import { AppError } from '../../middleware/errorHandler';
 import { logAudit, type AuditContext } from '../../lib/audit';
 import { AuditActions } from '../../lib/auditActions';
 
 export type NotificationChannel = 'push' | 'email' | 'in_app';
 
-export const ALL_EVENT_TYPES = [
-  'new_candidate_review',
-  'scorecard_deadline',
-  'interview_reminder',
-  'application_status_change',
-  'daily_digest',
-] as const;
+/** Bekende event-types — single source of truth in @talentflow/contracts. */
+export const ALL_EVENT_TYPES = NOTIFICATION_EVENT_TYPES;
 export type NotificationEventType = (typeof ALL_EVENT_TYPES)[number] | string;
 
-export interface NotificationPreference {
-  id: string;
-  tenant_id: string;
-  user_id: string;
-  channel: NotificationChannel;
+/**
+ * Sentinel event_type voor de master-rij ("push aan/uit" van de UI).
+ * De underscore-prefix voorkomt botsingen met echte event-types en valt
+ * buiten het vocabulaire in `NOTIFICATION_EVENT_TYPES`.
+ */
+export const MASTER_EVENT_TYPE = '_master';
+
+const DEFAULT_TIMEZONE = 'Europe/Amsterdam';
+
+interface PreferenceRow {
   event_type: string;
   enabled: boolean;
   quiet_hours_start: string | null;
   quiet_hours_end: string | null;
   timezone: string;
-  created_at: string;
-  updated_at: string;
 }
 
-export interface UpsertPreferenceInput {
-  enabled?: boolean;
-  quiet_hours_start?: string | null;
-  quiet_hours_end?: string | null;
-  timezone?: string;
+/** Postgres TIME ("HH:MM:SS") of "H:MM" → genormaliseerd "HH:MM". */
+function toHHMM(t: string | null | undefined): string | null {
+  if (!t) return null;
+  const m = /^(\d{1,2}):(\d{2})/.exec(t);
+  if (!m) return null;
+  return `${m[1].padStart(2, '0')}:${m[2]}`;
 }
 
-export async function listPreferences(
+/**
+ * Map de per-rij-representatie (channel='push') naar het geconsolideerde
+ * wire-object. Ontbrekende rijen = enabled (opt-out policy, consistent
+ * met `getEffectivePreference`).
+ */
+function mapRowsToConsolidated(rows: PreferenceRow[]): NotificationPreferences {
+  const master = rows.find((r) => r.event_type === MASTER_EVENT_TYPE);
+
+  const events = {} as NotificationEventToggles;
+  for (const evt of NOTIFICATION_EVENT_TYPES) {
+    const row = rows.find((r) => r.event_type === evt);
+    events[evt] = row ? row.enabled : true;
+  }
+
+  // Quiet-hours + timezone zijn kanaal-breed: master-rij is leidend; val
+  // terug op de eerste rij met een venster (legacy per-rij data), daarna
+  // op een willekeurige rij (timezone), daarna defaults.
+  const src =
+    master ??
+    rows.find((r) => r.quiet_hours_start !== null || r.quiet_hours_end !== null) ??
+    rows[0];
+
+  return {
+    push_enabled: master ? master.enabled : true,
+    events,
+    quiet_hours_start: toHHMM(src?.quiet_hours_start),
+    quiet_hours_end: toHHMM(src?.quiet_hours_end),
+    timezone: src?.timezone || DEFAULT_TIMEZONE,
+  };
+}
+
+const SELECT_PUSH_ROWS_SQL = `
+  SELECT event_type, enabled, quiet_hours_start, quiet_hours_end, timezone
+  FROM notification_preferences
+  WHERE tenant_id = $1 AND user_id = $2 AND channel = 'push'`;
+
+/**
+ * Geconsolideerde voorkeuren voor de settings-pagina
+ * (`GET /api/notifications/preferences`).
+ */
+export async function getConsolidatedPreferences(
   tenantId: string,
   userId: string
-): Promise<NotificationPreference[]> {
+): Promise<NotificationPreferences> {
   return withTenant(tenantId, async (client) => {
-    const { rows } = await client.query(
-      `SELECT * FROM notification_preferences
-       WHERE tenant_id = $1 AND user_id = $2
-       ORDER BY channel, event_type`,
-      [tenantId, userId]
-    );
-    return rows as NotificationPreference[];
+    const { rows } = await client.query(SELECT_PUSH_ROWS_SQL, [
+      tenantId,
+      userId,
+    ]);
+    return mapRowsToConsolidated(rows as PreferenceRow[]);
   });
 }
 
-export async function upsertPreference(
+/**
+ * Sla het geconsolideerde object op als per-rij-data
+ * (`PUT /api/notifications/preferences`).
+ *
+ * Eén transactie: master-rij (`_master` ← push_enabled) + één rij per
+ * meegegeven event-toggle. Quiet-hours + timezone worden op ALLE
+ * geschreven rijen gesynchroniseerd zodat de worker-hot-path
+ * (`getEffectivePreference`) ze op de event-rij zelf vindt.
+ *
+ * Semantiek: `quiet_hours_*` weggelaten of null = venster wissen;
+ * `timezone` weggelaten = huidige waarde behouden; ontbrekende
+ * event-keys blijven onaangeroerd.
+ */
+export async function saveConsolidatedPreferences(
   tenantId: string,
   userId: string,
-  channel: NotificationChannel,
-  eventType: string,
-  settings: UpsertPreferenceInput,
+  input: NotificationPreferencesUpdate,
   ctx: AuditContext = {}
-): Promise<NotificationPreference> {
-  if (!['push', 'email', 'in_app'].includes(channel)) {
-    throw new AppError(400, 'INVALID_CHANNEL', `Onbekend channel: ${channel}`);
-  }
-
+): Promise<NotificationPreferences> {
   return withTenant(tenantId, async (client) => {
-    const { rows } = await client.query(
-      `INSERT INTO notification_preferences
-         (tenant_id, user_id, channel, event_type,
-          enabled, quiet_hours_start, quiet_hours_end, timezone)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       ON CONFLICT (tenant_id, user_id, channel, event_type)
-       DO UPDATE SET
-         enabled            = COALESCE(EXCLUDED.enabled, notification_preferences.enabled),
-         quiet_hours_start  = EXCLUDED.quiet_hours_start,
-         quiet_hours_end    = EXCLUDED.quiet_hours_end,
-         timezone           = COALESCE(EXCLUDED.timezone, notification_preferences.timezone),
-         updated_at         = now()
-       RETURNING *`,
-      [
-        tenantId,
-        userId,
-        channel,
-        eventType,
-        settings.enabled ?? true,
-        settings.quiet_hours_start ?? null,
-        settings.quiet_hours_end ?? null,
-        settings.timezone ?? 'Europe/Amsterdam',
-      ]
+    // Huidige staat — nodig voor timezone-behoud bij weggelaten veld.
+    const before = await client.query(SELECT_PUSH_ROWS_SQL, [tenantId, userId]);
+    const existing = mapRowsToConsolidated(before.rows as PreferenceRow[]);
+
+    const quietStart = input.quiet_hours_start ?? null;
+    const quietEnd = input.quiet_hours_end ?? null;
+    const timezone = input.timezone ?? existing.timezone ?? DEFAULT_TIMEZONE;
+
+    const upserts: Array<{ eventType: string; enabled: boolean }> = [
+      { eventType: MASTER_EVENT_TYPE, enabled: input.push_enabled },
+    ];
+    for (const evt of NOTIFICATION_EVENT_TYPES) {
+      const value = input.events?.[evt];
+      if (typeof value === 'boolean') {
+        upserts.push({ eventType: evt, enabled: value });
+      }
+    }
+
+    for (const { eventType, enabled } of upserts) {
+      await client.query(
+        `INSERT INTO notification_preferences
+           (tenant_id, user_id, channel, event_type,
+            enabled, quiet_hours_start, quiet_hours_end, timezone)
+         VALUES ($1, $2, 'push', $3, $4, $5, $6, $7)
+         ON CONFLICT (tenant_id, user_id, channel, event_type)
+         DO UPDATE SET
+           enabled            = EXCLUDED.enabled,
+           quiet_hours_start  = EXCLUDED.quiet_hours_start,
+           quiet_hours_end    = EXCLUDED.quiet_hours_end,
+           timezone           = EXCLUDED.timezone,
+           updated_at         = now()`,
+        [tenantId, userId, eventType, enabled, quietStart, quietEnd, timezone]
+      );
+    }
+
+    // Het quiet-venster is één instelling voor het hele kanaal, maar wordt
+    // per rij opgeslagen. Sync het daarom naar ÁLLE bestaande push-rijen —
+    // ook events die deze PUT niet meestuurde. Zonder deze stap houdt een
+    // partial PUT (bv. alleen push_enabled) oude vensters in leven op de
+    // niet-geraakte event-rijen, en leest getEffectivePreference (event-rij
+    // leidend) dan een venster dat de gebruiker al had uitgezet.
+    await client.query(
+      `UPDATE notification_preferences
+          SET quiet_hours_start = $3,
+              quiet_hours_end   = $4,
+              timezone          = $5,
+              updated_at        = now()
+        WHERE tenant_id = $1 AND user_id = $2 AND channel = 'push'
+          AND (quiet_hours_start IS DISTINCT FROM $3
+            OR quiet_hours_end   IS DISTINCT FROM $4
+            OR timezone          IS DISTINCT FROM $5)`,
+      [tenantId, userId, quietStart, quietEnd, timezone]
     );
 
-    const pref = rows[0] as NotificationPreference;
+    const after = await client.query(SELECT_PUSH_ROWS_SQL, [tenantId, userId]);
+    const consolidated = mapRowsToConsolidated(after.rows as PreferenceRow[]);
 
     await logAudit(
       client,
@@ -112,22 +204,15 @@ export async function upsertPreference(
       {
         action: AuditActions.NOTIFICATION_PREFERENCE_UPDATED,
         entityType: 'notification_preference',
-        entityId: pref.id,
-        after: {
-          channel: pref.channel,
-          event_type: pref.event_type,
-          enabled: pref.enabled,
-          quiet_hours: pref.quiet_hours_start
-            ? `${pref.quiet_hours_start}-${pref.quiet_hours_end}`
-            : null,
-          timezone: pref.timezone,
-        },
+        entityId: userId,
+        before: existing,
+        after: consolidated,
         userId,
       },
       ctx
     );
 
-    return pref;
+    return consolidated;
   });
 }
 
@@ -153,37 +238,39 @@ export async function getEffectivePreference(
   channel: NotificationChannel,
   eventType: string
 ): Promise<EffectivePreference> {
-  const pref = await withTenant(tenantId, async (client) => {
+  // Eén query voor beide rijen (event + master) — hot-path, geen 2 roundtrips.
+  const rows = await withTenant(tenantId, async (client) => {
     const { rows } = await client.query(
-      `SELECT enabled, quiet_hours_start, quiet_hours_end, timezone
+      `SELECT event_type, enabled, quiet_hours_start, quiet_hours_end, timezone
        FROM notification_preferences
        WHERE tenant_id = $1 AND user_id = $2
-         AND channel = $3 AND event_type = $4`,
-      [tenantId, userId, channel, eventType]
+         AND channel = $3 AND event_type IN ($4, $5)`,
+      [tenantId, userId, channel, eventType, MASTER_EVENT_TYPE]
     );
-    return rows[0] as
-      | {
-          enabled: boolean;
-          quiet_hours_start: string | null;
-          quiet_hours_end: string | null;
-          timezone: string;
-        }
-      | undefined;
+    return rows as PreferenceRow[];
   });
 
-  // Default-policy: opt-out, niet opt-in. Geen rij ⇒ alles aan.
-  if (!pref) {
-    return { enabled: true, quietNow: false, quietEndsAtUtc: null };
-  }
+  const master = rows.find((r) => r.event_type === MASTER_EVENT_TYPE);
+  const event = rows.find((r) => r.event_type === eventType);
 
-  if (!pref.enabled) {
+  // Default-policy: opt-out, niet opt-in. Geen rij ⇒ aan.
+  // Master AND event: master uit ⇒ kanaal volledig uit, ongeacht per-event.
+  const enabled = (master?.enabled ?? true) && (event?.enabled ?? true);
+  if (!enabled) {
     return { enabled: false, quietNow: false, quietEndsAtUtc: null };
   }
 
+  // Quiet-hours: event-rij is leidend (de save-path synct het venster naar
+  // alle rijen); val terug op de master-rij voor users zonder event-rij.
+  const src = event ?? master;
+  if (!src) {
+    return { enabled: true, quietNow: false, quietEndsAtUtc: null };
+  }
+
   const window = computeQuietWindow(
-    pref.quiet_hours_start,
-    pref.quiet_hours_end,
-    pref.timezone || 'Europe/Amsterdam',
+    src.quiet_hours_start,
+    src.quiet_hours_end,
+    src.timezone || DEFAULT_TIMEZONE,
     new Date()
   );
 

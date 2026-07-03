@@ -81,6 +81,14 @@ const SETTINGS_SUBPAGES = [
     descKey: "index.subpages.branding.description",
   },
   {
+    href: "/settings/email",
+    icon: Mail,
+    iconBg: "bg-blue-100 dark:bg-blue-950/40",
+    iconColor: "text-blue-600 dark:text-blue-400",
+    titleKey: "index.subpages.email.title",
+    descKey: "index.subpages.email.description",
+  },
+  {
     href: "/settings/custom-fields",
     icon: Settings2,
     iconBg: "bg-indigo-100 dark:bg-indigo-950/40",

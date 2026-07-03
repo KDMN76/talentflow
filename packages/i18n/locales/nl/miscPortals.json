@@ -232,7 +232,8 @@
     "toasts": {
       "transcriptionCopied": "Transcript gekopieerd",
       "copyFailed": "Kopiëren mislukt",
-      "transcriptionRequested": "Transcript aangevraagd"
+      "transcriptionRequested": "Transcript aangevraagd",
+      "transcriptionFailed": "Transcriberen mislukt — Voice is mogelijk niet geactiveerd in deze omgeving"
     }
   }
 }

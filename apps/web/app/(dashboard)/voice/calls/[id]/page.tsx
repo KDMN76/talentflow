@@ -294,6 +294,11 @@ export default function CallDetailPage() {
                         toast({
                           title: t("voiceCall.toasts.transcriptionRequested"),
                         }),
+                      onError: () =>
+                        toast({
+                          title: t("voiceCall.toasts.transcriptionFailed"),
+                          variant: "destructive",
+                        }),
                     })
                   }
                   className="h-7 text-xs"

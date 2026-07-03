@@ -97,8 +97,12 @@ export default function CandidateProfilePage() {
   const sendMessage = useSendMessage();
 
   // Q4.6: voice + WhatsApp quick-actions
-  const { data: voiceIntegration } = useVoiceIntegration();
-  const { data: whatsAppIntegration } = useWhatsAppIntegration();
+  const { data: voiceState } = useVoiceIntegration();
+  const voiceIntegration = voiceState?.integration ?? null;
+  const voiceServiceActive = voiceState?.serviceActive ?? true;
+  const { data: whatsAppState } = useWhatsAppIntegration();
+  const whatsAppIntegration = whatsAppState?.integration ?? null;
+  const whatsAppServiceActive = whatsAppState?.serviceActive ?? true;
   const { data: waConsent } = useWhatsAppConsentForCandidate(id);
   const initiateCall = useInitiateCall();
   const sendWhatsApp = useSendWhatsAppMessage();
@@ -181,26 +185,41 @@ export default function CandidateProfilePage() {
           <Button
             variant="outline"
             size="sm"
-            disabled={!candidate.phone || voiceIntegration?.status !== "connected"}
+            disabled={
+              !voiceServiceActive ||
+              !candidate.phone ||
+              voiceIntegration?.status !== "connected"
+            }
             title={
-              !candidate.phone
+              !voiceServiceActive
+                ? "Voice is niet geactiveerd in deze omgeving"
+                : !candidate.phone
                 ? "Geen telefoonnummer bekend"
                 : voiceIntegration?.status !== "connected"
                 ? "Twilio niet geconfigureerd — ga naar Instellingen → Voice"
                 : "Direct bellen via Twilio"
             }
             onClick={async () => {
-              const call = await initiateCall.mutateAsync({
-                candidate_id: id,
-                candidate_name:
-                  candidate.name ||
-                  `${candidate.first_name ?? ""} ${candidate.last_name ?? ""}`.trim(),
-              });
-              toast({
-                title: "Bellen gestart",
-                description: `Twilio-call ${call.id}`,
-              });
-              router.push(`/voice/calls/${call.id}`);
+              try {
+                const call = await initiateCall.mutateAsync({
+                  candidate_id: id,
+                  candidate_name:
+                    candidate.name ||
+                    `${candidate.first_name ?? ""} ${candidate.last_name ?? ""}`.trim(),
+                });
+                toast({
+                  title: "Bellen gestart",
+                  description: `Twilio-call ${call.id}`,
+                });
+                router.push(`/voice/calls/${call.id}`);
+              } catch {
+                toast({
+                  title: "Bellen mislukt",
+                  description:
+                    "Het gesprek kon niet gestart worden. Voice is mogelijk niet geactiveerd.",
+                  variant: "destructive",
+                });
+              }
             }}
             className="gap-1.5"
           >
@@ -211,11 +230,14 @@ export default function CandidateProfilePage() {
             variant="outline"
             size="sm"
             disabled={
+              !whatsAppServiceActive ||
               whatsAppIntegration?.status !== "connected" ||
               waConsent?.status !== "granted"
             }
             title={
-              whatsAppIntegration?.status !== "connected"
+              !whatsAppServiceActive
+                ? "WhatsApp is niet geactiveerd in deze omgeving"
+                : whatsAppIntegration?.status !== "connected"
                 ? "WhatsApp niet geconfigureerd — ga naar Instellingen → WhatsApp"
                 : waConsent?.status !== "granted"
                 ? "Geen WhatsApp-toestemming van kandidaat"
@@ -786,17 +808,26 @@ export default function CandidateProfilePage() {
             <Button
               disabled={!waBody.trim() || sendWhatsApp.isPending}
               onClick={async () => {
-                await sendWhatsApp.mutateAsync({
-                  candidate_id: id,
-                  kind: "text",
-                  body: waBody.trim(),
-                });
-                toast({
-                  title: "WhatsApp verzonden",
-                  description: `Naar ${candidate.name}`,
-                });
-                setWaBody("");
-                setWaOpen(false);
+                try {
+                  await sendWhatsApp.mutateAsync({
+                    candidate_id: id,
+                    kind: "text",
+                    body: waBody.trim(),
+                  });
+                  toast({
+                    title: "WhatsApp verzonden",
+                    description: `Naar ${candidate.name}`,
+                  });
+                  setWaBody("");
+                  setWaOpen(false);
+                } catch {
+                  toast({
+                    title: "Versturen mislukt",
+                    description:
+                      "Het WhatsApp-bericht is niet verstuurd. WhatsApp is mogelijk niet geactiveerd.",
+                    variant: "destructive",
+                  });
+                }
               }}
               className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"
             >

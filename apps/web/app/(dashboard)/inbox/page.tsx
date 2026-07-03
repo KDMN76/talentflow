@@ -123,8 +123,8 @@ export default function UnifiedInboxPage() {
 
   const { data: threads, isLoading } = useInboxThreads(serverFilters);
   const { data: allThreads } = useInboxThreads({});
-  const { data: voiceIntegration } = useVoiceIntegration();
-  const { data: whatsAppIntegration } = useWhatsAppIntegration();
+  const { data: voiceState } = useVoiceIntegration();
+  const { data: whatsAppState } = useWhatsAppIntegration();
 
   // Per-channel counts for sidebar
   const channelCounts = useMemo(() => {
@@ -199,8 +199,10 @@ export default function UnifiedInboxPage() {
         {selectedThread ? (
           <ThreadDetail
             thread={selectedThread}
-            voiceIntegration={voiceIntegration ?? null}
-            whatsAppIntegration={whatsAppIntegration ?? null}
+            voiceIntegration={voiceState?.integration ?? null}
+            voiceServiceActive={voiceState?.serviceActive ?? true}
+            whatsAppIntegration={whatsAppState?.integration ?? null}
+            whatsAppServiceActive={whatsAppState?.serviceActive ?? true}
           />
         ) : (
           <EmptyDetail />
@@ -514,11 +516,15 @@ function ThreadListItem({
 function ThreadDetail({
   thread,
   voiceIntegration,
+  voiceServiceActive,
   whatsAppIntegration,
+  whatsAppServiceActive,
 }: {
   thread: UnifiedThread;
   voiceIntegration: import("@/lib/types/voice").VoiceIntegration | null;
+  voiceServiceActive: boolean;
   whatsAppIntegration: import("@/lib/types/whatsapp").WhatsAppIntegration | null;
+  whatsAppServiceActive: boolean;
 }) {
   const { t } = useTranslation("miscInbox");
   const { toast } = useToast();
@@ -710,7 +716,9 @@ function ThreadDetail({
         candidateName={thread.candidate_name ?? t("inbox.detail.composeFallbackName")}
         defaultChannel={thread.last_channel === "linkedin_connection" ? "linkedin_inmail" : thread.last_channel}
         voiceIntegration={voiceIntegration}
+        voiceServiceActive={voiceServiceActive}
         whatsappIntegration={whatsAppIntegration}
+        whatsappServiceActive={whatsAppServiceActive}
       />
 
       {/* Assign dialog */}

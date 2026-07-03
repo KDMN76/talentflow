@@ -647,3 +647,142 @@ export async function getJobSourcing(
     }));
   });
 }
+
+// ═════════════════════════════════════════════════════════════════════════════
+// SOURCING SUGGESTIONS — deterministic boolean-search strings (no AI)
+// ═════════════════════════════════════════════════════════════════════════════
+
+/** Seniority-tokens die we uit de job-titel destilleren voor AND-filters. */
+const SENIORITY_TERMS = ['senior', 'medior', 'junior', 'lead', 'principal', 'staff'];
+
+/** Max aantal skills per groep — langere strings zijn onbruikbaar in zoekbalken. */
+const MAX_REQUIRED_TERMS = 4;
+const MAX_NICE_TO_HAVE_TERMS = 3;
+
+function normalizeTerms(terms: string[], max: number): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of terms) {
+    const term = (raw ?? '').replace(/"/g, '').trim();
+    const key = term.toLowerCase();
+    if (!term || seen.has(key)) continue;
+    seen.add(key);
+    out.push(term);
+    if (out.length >= max) break;
+  }
+  return out;
+}
+
+function quote(term: string): string {
+  return `"${term.toLowerCase()}"`;
+}
+
+function orGroup(terms: string[]): string {
+  return terms.length === 1
+    ? quote(terms[0])
+    : `(${terms.map(quote).join(' OR ')})`;
+}
+
+/**
+ * Genereert 3-5 boolean-search-strings uit job title + skills. Volledig
+ * deterministisch (geen AI, geen randomness): zelfde input → zelfde output.
+ * Exported los van de service zodat unit-tests geen DB-mock nodig hebben.
+ *
+ * Varianten (in prioriteitsvolgorde, gededupliceerd, max 5):
+ *   1. Required skills (+ seniority uit titel) — LinkedIn X-ray
+ *   2. Titel + strikte AND van top-skills
+ *   3. Required + nice-to-have combinatie — LinkedIn X-ray
+ *   4. Titel-only LinkedIn X-ray (werkt voor elke job, ook zonder skills)
+ *   5. Skills (of titel) — GitHub X-ray
+ *   6. CV X-ray fallback (garandeert ≥3 suggesties bij skill-loze jobs)
+ */
+export function buildSourcingSuggestions(input: {
+  title: string;
+  requiredSkills: string[];
+  niceToHaveSkills: string[];
+}): string[] {
+  const title = (input.title ?? '').replace(/"/g, '').trim();
+  const required = normalizeTerms(input.requiredSkills ?? [], MAX_REQUIRED_TERMS);
+  const requiredKeys = new Set(required.map((s) => s.toLowerCase()));
+  const nice = normalizeTerms(
+    (input.niceToHaveSkills ?? []).filter(
+      (s) => !requiredKeys.has((s ?? '').replace(/"/g, '').trim().toLowerCase())
+    ),
+    MAX_NICE_TO_HAVE_TERMS
+  );
+  const titleLower = title.toLowerCase();
+  const seniority =
+    SENIORITY_TERMS.find((t) => titleLower.includes(t)) ?? null;
+
+  const suggestions: string[] = [];
+
+  // 1. Core skills (+ seniority) — LinkedIn X-ray
+  if (required.length > 0) {
+    const parts = [orGroup(required)];
+    if (seniority) parts.push(quote(seniority));
+    suggestions.push(`${parts.join(' AND ')} site:linkedin.com/in`);
+  }
+
+  // 2. Titel + strikte AND van top-skills
+  if (title && required.length >= 2) {
+    suggestions.push(
+      `${quote(title)} AND ${required.slice(0, 3).map(quote).join(' AND ')}`
+    );
+  }
+
+  // 3. Required + nice-to-have combinatie
+  if (required.length > 0 && nice.length > 0) {
+    suggestions.push(
+      `${orGroup(required)} AND ${orGroup(nice)} site:linkedin.com/in`
+    );
+  }
+
+  // 4. Titel-only LinkedIn X-ray
+  if (title) {
+    suggestions.push(`${quote(title)} site:linkedin.com/in`);
+  }
+
+  // 5. GitHub X-ray (tech-sourcing)
+  if (required.length > 0) {
+    suggestions.push(`${orGroup(required.slice(0, 3))} site:github.com`);
+  } else if (title) {
+    suggestions.push(`${quote(title)} site:github.com`);
+  }
+
+  // 6. CV X-ray fallback
+  if (title) {
+    suggestions.push(`${quote(title)} AND ("cv" OR "resume") -vacature -jobs`);
+  }
+
+  // Dedupe + clamp op 5. Minimum van 3 is gegarandeerd zolang de job een
+  // titel heeft (varianten 4/5/6 werken zonder skills); title is NOT NULL
+  // in het schema.
+  return [...new Set(suggestions)].slice(0, 5);
+}
+
+/**
+ * GET /jobs/:id/sourcing-suggestions — haalt de job-velden op (tenant-scoped,
+ * zelfde 404-gedrag als de sibling-endpoints) en genereert de strings.
+ */
+export async function getJobSourcingSuggestions(
+  tenantId: string,
+  jobId: string
+): Promise<string[]> {
+  return withTenant(tenantId, async (client) => {
+    const { rows: [job] } = await client.query(
+      `SELECT title, required_skills, nice_to_have_skills
+       FROM jobs
+       WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL`,
+      [jobId, tenantId]
+    );
+    if (!job) {
+      throw new AppError(404, 'JOB_NOT_FOUND', 'Vacature niet gevonden');
+    }
+
+    return buildSourcingSuggestions({
+      title: (job.title ?? '') as string,
+      requiredSkills: (job.required_skills ?? []) as string[],
+      niceToHaveSkills: (job.nice_to_have_skills ?? []) as string[],
+    });
+  });
+}

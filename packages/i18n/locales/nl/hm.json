@@ -16,6 +16,11 @@
       "title": "Geen kandidaten te beoordelen",
       "description": "Geniet van je dag. We sturen een push-notificatie zodra er nieuwe kandidaten klaar staan."
     },
+    "loadError": {
+      "title": "Wachtrij kon niet geladen worden",
+      "description": "We konden je kandidaten niet ophalen. Controleer je verbinding en probeer het opnieuw.",
+      "retry": "Opnieuw proberen"
+    },
     "undoButton": "Ongedaan",
     "toasts": {
       "syncFailed": {
@@ -55,6 +60,11 @@
     "empty": {
       "title": "Geen openstaande scorecards",
       "description": "Lekker bezig — alles is op tijd."
+    },
+    "loadError": {
+      "title": "Deadlines konden niet geladen worden",
+      "description": "We konden je scorecard-deadlines niet ophalen. Probeer het opnieuw.",
+      "retry": "Opnieuw proberen"
     },
     "countdown": {
       "over": "over ",

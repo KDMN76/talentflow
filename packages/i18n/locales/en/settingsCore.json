@@ -11,6 +11,10 @@
         "title": "Branding",
         "description": "Logo, colors and house style for your portal and emails."
       },
+      "email": {
+        "title": "Email",
+        "description": "Sender name, Reply-To and custom SMTP server."
+      },
       "customFields": {
         "title": "Custom fields",
         "description": "Your own fields for candidates and jobs."
@@ -238,6 +242,72 @@
       "description": "Set your primary and accent color.",
       "primaryLabel": "Primary color",
       "primaryAria": "Primary color"
+    }
+  },
+  "email": {
+    "title": "Email",
+    "description": "Sender name, Reply-To and optional custom SMTP server.",
+    "adminOnly": "Only administrators can view and change the organisation's email settings.",
+    "save": "Save",
+    "sender": {
+      "title": "Sender",
+      "description": "How your emails appear in candidates' inboxes.",
+      "fromNameLabel": "Sender name",
+      "fromNamePlaceholder": "E.g. IT Proposal",
+      "fromNameHint": "Candidates will see:",
+      "replyToLabel": "Reply-To address (optional)",
+      "replyToPlaceholder": "info@youragency.com",
+      "replyToHint": "Candidate replies are delivered to this address. Empty = replies are not deliverable."
+    },
+    "smtp": {
+      "title": "Custom SMTP server",
+      "description": "Send email through your own mail server instead of TalentFlow.",
+      "enabledAria": "Enable custom SMTP server",
+      "hostLabel": "Host",
+      "portLabel": "Port",
+      "secureLabel": "Secure connection (TLS)",
+      "secureHint": "On = implicit TLS (usually port 465), off = STARTTLS (usually port 587).",
+      "userLabel": "Username",
+      "passLabel": "Password",
+      "passPlaceholder": "SMTP password",
+      "passSetPlaceholder": "•••••••• (stored — leave empty to keep)",
+      "passClear": "Clear stored password",
+      "passClearUndo": "Undo clear",
+      "fromLabel": "From address",
+      "fromHint": "The email address used when sending via SMTP. Empty = username."
+    },
+    "test": {
+      "title": "Test email",
+      "description": "Verify your settings with a real email.",
+      "targetHint": "The test email is sent to your own address: {{email}}",
+      "button": "Send test email",
+      "savedFirstHint": "The test email uses the saved settings — save your changes first."
+    },
+    "toasts": {
+      "saved": {
+        "title": "Saved",
+        "description": "The email settings have been updated."
+      },
+      "saveError": {
+        "title": "Save failed",
+        "description": "Something went wrong. Please try again."
+      },
+      "hostRequired": {
+        "title": "SMTP host missing",
+        "description": "Enter a host or disable the SMTP server."
+      },
+      "invalidPort": {
+        "title": "Invalid port",
+        "description": "Choose a port number between 1 and 65535."
+      },
+      "testSent": {
+        "title": "Test email sent",
+        "description": "Sent to {{to}} via {{provider}}. Check your inbox (and spam folder)."
+      },
+      "testError": {
+        "title": "Test email failed",
+        "description": "Sending failed. Check your settings."
+      }
     }
   }
 }

@@ -332,7 +332,7 @@ describe('billing.issueInvoice — state machine', () => {
       .mockResolvedValue([]);
     const client = mockClient({
       __matcher: (sql, params) => {
-        if (/SELECT \* FROM invoices WHERE id = \$1 FOR UPDATE/i.test(sql)) {
+        if (/SELECT \* FROM invoices WHERE id = \$1 AND tenant_id = \$2 FOR UPDATE/i.test(sql)) {
           return {
             rows: [
               {
@@ -396,7 +396,7 @@ describe('billing.issueInvoice — state machine', () => {
   it('refuses to issue an already-sent invoice', async () => {
     const client = mockClient({
       __matcher: (sql) => {
-        if (/SELECT \* FROM invoices WHERE id = \$1 FOR UPDATE/i.test(sql)) {
+        if (/SELECT \* FROM invoices WHERE id = \$1 AND tenant_id = \$2 FOR UPDATE/i.test(sql)) {
           return {
             rows: [
               {
@@ -428,7 +428,7 @@ describe('billing.issueInvoice — state machine', () => {
   it('void blocks transitions from paid', async () => {
     const client = mockClient({
       __matcher: (sql) => {
-        if (/SELECT \* FROM invoices WHERE id = \$1 FOR UPDATE/i.test(sql)) {
+        if (/SELECT \* FROM invoices WHERE id = \$1 AND tenant_id = \$2 FOR UPDATE/i.test(sql)) {
           return {
             rows: [
               {
@@ -460,7 +460,7 @@ describe('billing.issueInvoice — state machine', () => {
   it('markPaid transitions sent → paid', async () => {
     const client = mockClient({
       __matcher: (sql, params) => {
-        if (/SELECT \* FROM invoices WHERE id = \$1 FOR UPDATE/i.test(sql)) {
+        if (/SELECT \* FROM invoices WHERE id = \$1 AND tenant_id = \$2 FOR UPDATE/i.test(sql)) {
           return {
             rows: [
               {

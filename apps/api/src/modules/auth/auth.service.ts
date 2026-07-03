@@ -495,12 +495,197 @@ export async function logout(refreshTokenRaw: string): Promise<void> {
   }, { authContext: true });
 }
 
-export async function forgotPassword(email: string, tenantSlug: string): Promise<void> {
-  // Phase 1 stub — queue an email but don't actually send it
+// Reset-tokens leven kort: 1 uur is genoeg om een mail te openen, en beperkt
+// het venster waarin een gelekte/onderschepte link bruikbaar is.
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+
+/**
+ * Forgot-password: genereer een single-use reset-token en mail de link.
+ *
+ * Enumeratie-neutraal: deze functie resolvet ALTIJD zonder fout, ongeacht of
+ * de tenant/gebruiker bestaat of actief is. De controller antwoordt altijd
+ * dezelfde 200. Alleen voor bestaande, actieve gebruikers wordt er echt een
+ * token aangemaakt en een mail geënqueued.
+ *
+ * Zelfde patroon als inviteUser (users.service): random 32 bytes base64url,
+ * alleen de sha256-hash in de DB, raw token enkel in de mail-link. Eerdere
+ * openstaande reset-tokens van dezelfde gebruiker worden geïnvalideerd zodat
+ * er maar één werkende link tegelijk bestaat.
+ */
+export async function forgotPassword(
+  email: string,
+  tenantSlug: string,
+  ctx: AuditContext = {}
+): Promise<void> {
+  // 1) Tenant + user opzoeken. withAuthTx omdat we net als bij login de
+  //    tenant-context pas ná de slug-lookup kennen.
+  const user = await withAuthTx(async (client: PoolClient) => {
+    const { rows: [tenant] } = await client.query(
+      'SELECT id FROM tenants WHERE slug = $1',
+      [tenantSlug]
+    );
+    if (!tenant) return null;
+
+    // tenant.id komt uit de DB (UUID) — zelfde interpolatie-patroon als login.
+    await client.query(`SET LOCAL app.tenant_id = '${tenant.id}'`);
+
+    const { rows: [u] } = await client.query(
+      `SELECT id, email, name, tenant_id, is_active
+         FROM users
+        WHERE tenant_id = $1 AND email = $2`,
+      [tenant.id, email.toLowerCase()]
+    );
+    // Inactieve accounts (bv. nog-niet-geaccepteerde invites) krijgen geen
+    // reset-mail: de invite-flow is daarvoor het juiste pad.
+    if (!u || !u.is_active) return null;
+    return u as { id: string; email: string; name: string; tenant_id: string };
+  });
+
+  // Token altijd genereren (ook voor onbekende accounts): het crypto-werk is
+  // dan op beide paden gelijk. Samen met de jitter hieronder maakt dat een
+  // timing-orakel (bestaat dit account?) onbetrouwbaar; de authRateLimit
+  // (10/15min) is de primaire demper.
+  const resetToken = crypto.randomBytes(32).toString('base64url');
+  const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+  const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+
+  if (!user) {
+    // Neutraal: geen fout, geen mail — en een random vertraging in dezelfde
+    // orde als de DB+queue-writes van het positieve pad.
+    const jitterMs = 100 + crypto.randomInt(150);
+    await new Promise((resolve) => setTimeout(resolve, jitterMs));
+    return;
+  }
+
+  const tenantId: string = user.tenant_id;
+
+  // 2) Oude openstaande tokens invalideren + nieuwe uitgeven (tenant-scoped).
+  await withTenant(tenantId, async (client) => {
+    await client.query(
+      `UPDATE password_reset_tokens SET used_at = now()
+        WHERE user_id = $1 AND tenant_id = $2 AND used_at IS NULL`,
+      [user.id, tenantId]
+    );
+    await client.query(
+      `INSERT INTO password_reset_tokens (tenant_id, user_id, token_hash, expires_at)
+       VALUES ($1, $2, $3, $4)`,
+      [tenantId, user.id, resetTokenHash, expiresAt]
+    );
+    await logAudit(
+      client,
+      tenantId,
+      {
+        action: AuditActions.USER_PASSWORD_RESET_REQUESTED,
+        entityType: 'user',
+        entityId: user.id,
+        after: { email: user.email },
+        userId: user.id,
+      },
+      ctx
+    );
+  });
+
+  // 3) Mail via het bestaande e-mailpad (zelfde als user-invitation).
+  //    Geen tenantId in de job-data: de worker verstuurt dan direct zonder
+  //    communications/threads-administratie — dit is geen kandidaat-mail.
+  const baseUrl = process.env.PUBLIC_APP_URL ?? 'https://talentflow.kdmn.nl';
   await emailSenderQueue.add('forgot-password', {
-    to: email,
+    to: user.email,
     subject: 'Wachtwoord opnieuw instellen — TalentFlow',
-    body: `Er is een verzoek ontvangen om uw wachtwoord opnieuw in te stellen voor tenant ${tenantSlug}. (Stub: niet geïmplementeerd in Phase 1)`,
+    body:
+      `Er is een verzoek ontvangen om het wachtwoord van uw TalentFlow-account opnieuw in te stellen. ` +
+      `Stel een nieuw wachtwoord in via: ${baseUrl}/reset-password?token=${resetToken} ` +
+      `(deze link verloopt over 1 uur en is eenmalig bruikbaar). ` +
+      `Heeft u dit verzoek niet gedaan? Dan kunt u deze e-mail negeren; uw wachtwoord blijft ongewijzigd.`,
+  });
+}
+
+/**
+ * Reset-password: wissel een single-use reset-token in voor een nieuw wachtwoord.
+ *
+ * - Lookup op token_hash via auth_context (de hash is de enige sleutel).
+ * - Consume is race-veilig: UPDATE ... WHERE used_at IS NULL AND expires_at >
+ *   now(), zodat twee parallelle resets er hooguit één laten slagen.
+ * - Alle refresh-tokens van de gebruiker worden ingetrokken (sessie-invalidatie):
+ *   wie het wachtwoord reset — bv. na een gestolen wachtwoord — logt daarmee
+ *   ook eventuele meekijkers uit.
+ * - Geen auto-login: de gebruiker logt daarna in met het nieuwe wachtwoord.
+ */
+export async function resetPassword(
+  token: string,
+  newPassword: string,
+  ctx: AuditContext = {}
+): Promise<void> {
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+  // 1) Token opzoeken op hash (geen tenant-context).
+  const rec = await withAuthTx(async (client) => {
+    const { rows: [row] } = await client.query(
+      `SELECT prt.id AS token_id, prt.tenant_id, prt.user_id,
+              prt.expires_at, prt.used_at,
+              u.email, u.is_active
+         FROM password_reset_tokens prt
+         JOIN users u ON u.id = prt.user_id
+        WHERE prt.token_hash = $1`,
+      [tokenHash]
+    );
+    return row ?? null;
+  }, { authContext: true });
+
+  if (!rec) {
+    throw new AppError(404, 'INVALID_RESET_TOKEN', 'Deze herstellink is ongeldig');
+  }
+  if (rec.used_at) {
+    throw new AppError(409, 'RESET_TOKEN_USED', 'Deze herstellink is al gebruikt');
+  }
+  if (new Date(rec.expires_at) < new Date()) {
+    throw new AppError(410, 'RESET_TOKEN_EXPIRED', 'Deze herstellink is verlopen');
+  }
+  if (!rec.is_active) {
+    // Account is intussen uitgeschakeld — reset staat dan niet open.
+    throw new AppError(403, 'ACCOUNT_DISABLED', 'Dit account is uitgeschakeld');
+  }
+
+  const tenantId: string = rec.tenant_id;
+  const userId: string = rec.user_id;
+  // Zelfde hashing als acceptInvite/register: bcrypt met SALT_ROUNDS.
+  const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+
+  // 2) Token consumeren + wachtwoord zetten + sessies intrekken (atomair).
+  await withTenant(tenantId, async (client) => {
+    const consumed = await client.query(
+      `UPDATE password_reset_tokens
+          SET used_at = now()
+        WHERE id = $1 AND tenant_id = $2 AND used_at IS NULL AND expires_at > now()`,
+      [rec.token_id, tenantId]
+    );
+    if (consumed.rowCount === 0) {
+      // Race: tussen lookup en hier alsnog gebruikt/verlopen.
+      throw new AppError(409, 'RESET_TOKEN_USED', 'Deze herstellink is al gebruikt');
+    }
+    await client.query(
+      `UPDATE users
+          SET password_hash = $1
+        WHERE id = $2 AND tenant_id = $3`,
+      [passwordHash, userId, tenantId]
+    );
+    // Sessie-invalidatie: alle bestaande refresh-tokens van deze gebruiker weg.
+    await client.query(
+      `DELETE FROM refresh_tokens WHERE user_id = $1 AND tenant_id = $2`,
+      [userId, tenantId]
+    );
+    await logAudit(
+      client,
+      tenantId,
+      {
+        action: AuditActions.USER_PASSWORD_CHANGED,
+        entityType: 'user',
+        entityId: userId,
+        after: { via: 'password_reset', email: rec.email, revoked_all_sessions: true },
+        userId,
+      },
+      ctx
+    );
   });
 }
 

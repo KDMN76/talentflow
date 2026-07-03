@@ -8,6 +8,7 @@ import {
   CalendarDays,
   ClipboardList,
   Clock,
+  CloudOff,
   Loader2,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -55,7 +56,7 @@ function formatCountdown(due: string, t: CountdownTranslator): string {
 
 export default function HmScorecardsPage() {
   const { t } = useTranslation("hm");
-  const { data, isLoading } = useHmScorecardDeadlines();
+  const { data, isLoading, isError, refetch } = useHmScorecardDeadlines();
   const decision = useHmDecision();
   const { toast } = useToast();
 
@@ -103,6 +104,7 @@ export default function HmScorecardsPage() {
         candidateId: scoring.application_id,
         decision: "approve",
         scorecard: input,
+        stageId: scoring.stage_id ?? null,
       });
       toast({
         title: t("scorecards.toasts.submitted.title"),
@@ -177,6 +179,23 @@ export default function HmScorecardsPage() {
             <Skeleton className="h-20 rounded-2xl" />
             <Skeleton className="h-20 rounded-2xl" />
           </div>
+        ) : isError ? (
+          <Card className="border-0 shadow-sm">
+            <CardContent className="flex flex-col items-center justify-center gap-2 py-14 text-center">
+              <CloudOff className="h-8 w-8 text-amber-600" />
+              <p className="text-sm font-semibold">{t("scorecards.loadError.title")}</p>
+              <p className="text-xs text-muted-foreground">
+                {t("scorecards.loadError.description")}
+              </p>
+              <button
+                type="button"
+                onClick={() => refetch()}
+                className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-700"
+              >
+                {t("scorecards.loadError.retry")}
+              </button>
+            </CardContent>
+          </Card>
         ) : filtered.length === 0 ? (
           <Card className="border-0 shadow-sm">
             <CardContent className="flex flex-col items-center justify-center gap-2 py-14 text-center">

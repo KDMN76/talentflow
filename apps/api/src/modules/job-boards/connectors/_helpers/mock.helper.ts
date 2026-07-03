@@ -21,8 +21,13 @@ import type { IntegrationCreds } from '../../types';
  * specifically looks for `access_token`/`api_key`; we delegate to QQQ
  * when both are absent and add the OAuth `client_secret` fallback used
  * by StepStone + Broadbean.
+ *
+ * PRODUCTIE-GUARD: in productie is mock-mode altijd uit — een posting zonder
+ * echte credentials moet daar eerlijk falen in plaats van een synthetisch
+ * 'posted' te faken.
  */
 export function inMockMode(integration?: IntegrationCreds | null): boolean {
+  if (process.env.NODE_ENV === 'production') return false;
   if (process.env.JOB_BOARDS_MOCK === 'true') return true;
   if (!integration) return true;
   const creds = integration.credentials ?? {};

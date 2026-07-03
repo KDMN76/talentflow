@@ -49,6 +49,35 @@ export async function getPendingReviews(
   }
 }
 
+export async function getStats(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const stats = await hmService.getStats(req.user!.tenantId, req.user!.userId);
+    res.json(stats);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getScorecardDeadlines(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const deadlines = await hmService.getScorecardDeadlines(
+      req.user!.tenantId,
+      req.user!.userId
+    );
+    res.json({ data: deadlines });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function getApplicationDetails(
   req: Request,
   res: Response,

@@ -32,6 +32,11 @@ const forgotPasswordSchema = z.object({
   tenantSlug: z.string().min(1),
 });
 
+const resetPasswordSchema = z.object({
+  token: z.string().min(20),
+  password: z.string().min(8),
+});
+
 const acceptInviteSchema = z.object({
   token: z.string().min(20),
   password: z.string().min(8),
@@ -124,9 +129,21 @@ export async function logout(req: Request, res: Response, next: NextFunction): P
 export async function forgotPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { email, tenantSlug } = forgotPasswordSchema.parse(req.body);
-    await authService.forgotPassword(email, tenantSlug);
+    await authService.forgotPassword(email, tenantSlug, auditCtxFromReq(req));
     // Always return 200 to prevent email enumeration
     res.json({ message: 'Als dit e-mailadres bestaat, ontvangt u een e-mail' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function resetPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const input = resetPasswordSchema.parse(req.body);
+    await authService.resetPassword(input.token, input.password, auditCtxFromReq(req));
+    // Geen auto-login: alle sessies zijn zojuist ingetrokken; de gebruiker
+    // logt opnieuw in met het nieuwe wachtwoord.
+    res.json({ message: 'Wachtwoord is opnieuw ingesteld' });
   } catch (err) {
     next(err);
   }

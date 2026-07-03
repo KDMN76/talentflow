@@ -42,6 +42,32 @@ export type {
   FindingStatus,
 } from "@/lib/types/sourcing";
 
+// ─── Sources ─────────────────────────────────────────────────────────────────
+
+export interface SourcingSourceStatus {
+  id: string;
+  name: string;
+  enabled: boolean;
+  external: boolean;
+}
+
+/**
+ * Welke bronnen kan de agent echt gebruiken? Gebruikt voor eerlijke
+ * empty-states: geen externe bronnen geconfigureerd → leg dat uit.
+ */
+export function useSourcingSources() {
+  return useQuery({
+    queryKey: ["sourcing", "sources"],
+    queryFn: async (): Promise<SourcingSourceStatus[]> => {
+      const { data } = await api.get<{ data: SourcingSourceStatus[] }>(
+        "/sourcing/sources"
+      );
+      return data.data;
+    },
+    staleTime: 5 * 60_000,
+  });
+}
+
 // ─── Briefs ──────────────────────────────────────────────────────────────────
 
 export interface BriefFilters {

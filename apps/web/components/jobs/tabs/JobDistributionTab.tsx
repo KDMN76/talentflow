@@ -464,10 +464,20 @@ function BoardRow(props: BoardRowProps) {
           </Badge>
         ) : posting?.status === "failed" ? (
           <>
-            <Badge className="border-0 bg-red-100 text-[11px] text-red-700 dark:bg-red-950/40 dark:text-red-300">
-              <AlertCircle className="mr-1 h-3 w-3" />
-              Mislukt
-            </Badge>
+            <div className="flex max-w-[280px] flex-col items-end gap-1">
+              <Badge className="border-0 bg-red-100 text-[11px] text-red-700 dark:bg-red-950/40 dark:text-red-300">
+                <AlertCircle className="mr-1 h-3 w-3" />
+                Mislukt
+              </Badge>
+              {posting.error_message && (
+                <p
+                  className="text-right text-[11px] leading-snug text-red-700/90 dark:text-red-300/90"
+                  title={posting.error_message}
+                >
+                  {posting.error_message}
+                </p>
+              )}
+            </div>
             <Button
               size="sm"
               variant="outline"

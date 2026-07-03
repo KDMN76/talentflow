@@ -218,6 +218,17 @@ export async function submitTemplate(
   templateId: string,
   ctx: OperationCtx
 ): Promise<TemplateRow> {
+  // Bevroren feature-guard: in productie zonder live 360dialog-koppeling is
+  // er geen echte Meta-review. Eerder werd de template dan na 2s "mock
+  // auto-approved" — nep-goedkeuring. Nu een eerlijke 503.
+  if (!dialog360.isServiceActive()) {
+    throw new AppError(
+      503,
+      'WHATSAPP_NOT_ENABLED',
+      'WhatsApp is niet geactiveerd in deze omgeving. Templates kunnen niet ter review worden ingediend.'
+    );
+  }
+
   // Load template to confirm draft state.
   const draft = await withTenant(tenantId, async (client) => {
     const { rows: [row] } = await client.query<TemplateRow>(
@@ -309,6 +320,16 @@ export async function syncTemplateStatus(
   templateId: string,
   ctx: OperationCtx
 ): Promise<TemplateRow> {
+  // Zelfde guard als submitTemplate: mock-sync doet alsof Meta 'approved'
+  // teruggeeft — in productie zonder live koppeling is dat nep.
+  if (!dialog360.isServiceActive()) {
+    throw new AppError(
+      503,
+      'WHATSAPP_NOT_ENABLED',
+      'WhatsApp is niet geactiveerd in deze omgeving. Template-status kan niet gesynchroniseerd worden.'
+    );
+  }
+
   const template = await withTenant(tenantId, async (client) => {
     const { rows: [row] } = await client.query<TemplateRow>(
       `SELECT * FROM whatsapp_templates WHERE id = $1 AND tenant_id = $2`,

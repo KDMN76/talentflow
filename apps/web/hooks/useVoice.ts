@@ -23,12 +23,30 @@ export type { CallStatus, VoiceCall, VoiceIntegration } from "@/lib/types/voice"
 
 // ─── Integration ─────────────────────────────────────────────────────────────
 
+export interface VoiceIntegrationState {
+  /** Gekoppelde Twilio-integratie van de tenant, of null. */
+  integration: VoiceIntegration | null;
+  /**
+   * Kan Voice in deze omgeving echt gebruikt worden? False in productie
+   * zonder live Twilio-configuratie — de UI toont dan een eerlijke
+   * "Voice is niet geactiveerd"-staat.
+   */
+  serviceActive: boolean;
+}
+
 export function useVoiceIntegration() {
   return useQuery({
     queryKey: ["voice", "integration"],
-    queryFn: async (): Promise<VoiceIntegration> => {
-      const { data } = await api.get<VoiceIntegration>("/voice/integration");
-      return data;
+    queryFn: async (): Promise<VoiceIntegrationState> => {
+      // Backend-shape: { data: VoiceIntegration | null, service_active: boolean }
+      const { data } = await api.get<{
+        data: VoiceIntegration | null;
+        service_active?: boolean;
+      }>("/voice/integration");
+      return {
+        integration: data.data ?? null,
+        serviceActive: data.service_active ?? true,
+      };
     },
   });
 }
@@ -41,11 +59,11 @@ export function useConnectVoice() {
       auth_token: string;
       phone_number: string;
     }): Promise<VoiceIntegration> => {
-      const { data } = await api.post<VoiceIntegration>(
+      const { data } = await api.post<{ data: VoiceIntegration }>(
         "/voice/integration/connect",
         input
       );
-      return data;
+      return data.data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["voice"] }),
   });
@@ -73,10 +91,11 @@ export function useVoiceCalls(filters: VoiceCallFilters = {}) {
   return useQuery({
     queryKey: ["voice", "calls", filters],
     queryFn: async (): Promise<VoiceCall[]> => {
-      const { data } = await api.get<{ items: VoiceCall[] }>("/voice/calls", {
+      // Backend-shape: { data: VoiceCall[], next_cursor } — niet { items }.
+      const { data } = await api.get<{ data: VoiceCall[] }>("/voice/calls", {
         params: filters,
       });
-      return data.items;
+      return data.data ?? [];
     },
     refetchInterval: (query) => {
       const data = query.state.data;
@@ -103,8 +122,10 @@ export function useVoiceCall(callId: string | undefined) {
     enabled: !!callId,
     queryFn: async (): Promise<VoiceCall> => {
       if (!callId) throw new Error("Geen call-ID");
-      const { data } = await api.get<VoiceCall>(`/voice/calls/${callId}`);
-      return data;
+      const { data } = await api.get<{ data: VoiceCall }>(
+        `/voice/calls/${callId}`
+      );
+      return data.data;
     },
     refetchInterval: (query) => {
       const data = query.state.data;
@@ -129,10 +150,10 @@ export function useInitiateCall() {
       candidate_id: string;
       candidate_name?: string;
     }): Promise<VoiceCall> => {
-      const { data } = await api.post<VoiceCall>("/voice/calls", {
+      const { data } = await api.post<{ data: VoiceCall }>("/voice/calls", {
         candidate_id: input.candidate_id,
       });
-      return data;
+      return data.data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["voice"] }),
   });

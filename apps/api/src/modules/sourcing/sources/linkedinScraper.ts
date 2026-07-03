@@ -20,7 +20,16 @@ import type {
   BooleanQuery,
   SourcingSourceContext,
 } from './types';
+import { mockCandidatesAllowed } from './types';
 import { logger } from '../../../middleware/errorHandler';
+
+function isLiveConfigured(): boolean {
+  return (
+    process.env.LINKEDIN_SOURCING_LIVE === 'true' &&
+    !!process.env.LINKEDIN_SOURCING_API_URL &&
+    !!process.env.LINKEDIN_SOURCING_API_KEY
+  );
+}
 
 function buildMockCandidates(query: BooleanQuery, count: number): RawCandidate[] {
   const baseSkills = (query.query.match(/[a-zA-ZÀ-ÿ]{3,}/g) ?? []).slice(0, 5);
@@ -48,7 +57,10 @@ function buildMockCandidates(query: BooleanQuery, count: number): RawCandidate[]
 export const linkedinScraperSource: SourcingSource = {
   id: 'linkedin',
   name: 'LinkedIn',
-  isEnabled: () => true, // mock altijd beschikbaar
+  // Live geconfigureerd → altijd enabled. Zonder configuratie is de source
+  // alleen enabled buiten productie (mock voor lokale dev/tests) — in
+  // productie wordt hij geskipt zodat er nooit nepkandidaten ontstaan.
+  isEnabled: () => isLiveConfigured() || mockCandidatesAllowed(),
   async search(
     query: BooleanQuery,
     ctx: SourcingSourceContext
@@ -57,6 +69,7 @@ export const linkedinScraperSource: SourcingSource = {
     const limit = Math.max(3, Math.min(50, ctx.limit ?? 15));
 
     if (!live) {
+      if (!mockCandidatesAllowed()) return [];
       return buildMockCandidates(query, Math.min(limit, 8));
     }
 
@@ -65,6 +78,10 @@ export const linkedinScraperSource: SourcingSource = {
     const apiUrl = process.env.LINKEDIN_SOURCING_API_URL;
     const apiKey = process.env.LINKEDIN_SOURCING_API_KEY;
     if (!apiUrl || !apiKey) {
+      if (!mockCandidatesAllowed()) {
+        logger.warn('[sourcingAgent/linkedin] LIVE mode aan zonder API_URL/API_KEY — geen resultaten (mock niet toegestaan in productie)');
+        return [];
+      }
       logger.warn('[sourcingAgent/linkedin] LIVE mode aan zonder API_URL/API_KEY — fallback mock');
       return buildMockCandidates(query, Math.min(limit, 8));
     }
@@ -83,6 +100,12 @@ export const linkedinScraperSource: SourcingSource = {
         }),
       });
       if (!res.ok) {
+        if (!mockCandidatesAllowed()) {
+          logger.warn('[sourcingAgent/linkedin] live API non-2xx — geen resultaten', {
+            status: res.status,
+          });
+          return [];
+        }
         logger.warn('[sourcingAgent/linkedin] live API non-2xx, fallback mock', {
           status: res.status,
         });
@@ -105,6 +128,12 @@ export const linkedinScraperSource: SourcingSource = {
         metadata: c.metadata ?? {},
       }));
     } catch (err) {
+      if (!mockCandidatesAllowed()) {
+        logger.warn('[sourcingAgent/linkedin] live fetch threw — geen resultaten', {
+          error: (err as Error).message,
+        });
+        return [];
+      }
       logger.warn('[sourcingAgent/linkedin] live fetch threw, fallback mock', {
         error: (err as Error).message,
       });

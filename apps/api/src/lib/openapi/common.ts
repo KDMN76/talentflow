@@ -61,6 +61,14 @@ export const standardErrorResponses = {
     description: 'Not Found',
     content: { 'application/json': { schema: ErrorResponse } },
   },
+  409: {
+    description: 'Conflict — huidige resource-state staat de actie niet toe',
+    content: { 'application/json': { schema: ErrorResponse } },
+  },
+  410: {
+    description: 'Gone — resource of token is verlopen / niet meer geldig',
+    content: { 'application/json': { schema: ErrorResponse } },
+  },
   429: {
     description: 'Rate limit exceeded — zie `Retry-After`-header',
     content: { 'application/json': { schema: ErrorResponse } },

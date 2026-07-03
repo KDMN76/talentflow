@@ -208,6 +208,14 @@
       "empty": {
         "title": "Nog geen findings",
         "description": "De agent is bezig — kandidaten verschijnen zodra ze gescoord zijn."
+      },
+      "noSources": {
+        "title": "Geen kandidaten gevonden — externe bronnen niet actief",
+        "description": "Deze run heeft alleen je eigen kandidaten-database doorzocht. Externe bronnen (LinkedIn, GitHub, Hunter) zijn in deze omgeving niet geconfigureerd, dus daar zijn geen kandidaten uit opgehaald. Koppel een externe bron of verbreed je brief om meer kandidaten te vinden."
+      },
+      "noneFound": {
+        "title": "Geen kandidaten gevonden",
+        "description": "De run is afgerond zonder passende kandidaten. Probeer de brief te verbreden: minder must-haves, ruimere locaties of een hoger doelaantal."
       }
     },
     "findingCard": {

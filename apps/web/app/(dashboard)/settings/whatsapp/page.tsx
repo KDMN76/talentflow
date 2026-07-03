@@ -144,7 +144,23 @@ const CONSENT_STATUS_PILL: Record<
 };
 
 export default function WhatsAppSettingsPage() {
-  const { data: integration, isLoading } = useWhatsAppIntegration();
+  const { data: state, isLoading } = useWhatsAppIntegration();
+  const integration = state?.integration ?? null;
+  const serviceActive = state?.serviceActive ?? true;
+
+  // Eerlijke bevroren-feature-staat: in deze omgeving is WhatsApp niet
+  // geactiveerd — geen verbind-formulier dat activatie suggereert.
+  if (!isLoading && !serviceActive) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <PageHeader
+          title="WhatsApp Business"
+          description="Beheer je WhatsApp-integratie, templates en kandidaat-toestemmingen."
+        />
+        <NotActivatedCard />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -186,6 +202,33 @@ export default function WhatsAppSettingsPage() {
         </Tabs>
       )}
     </div>
+  );
+}
+
+// ─── Niet geactiveerd ────────────────────────────────────────────────────────
+
+/**
+ * Eerlijke staat voor omgevingen waar WhatsApp (nog) niet is geactiveerd.
+ * Geen nep-verbindformulier: de feature staat bewust uit.
+ */
+function NotActivatedCard() {
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardContent className="flex flex-col items-center gap-3 py-14 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+          <MessageCircle className="h-7 w-7 text-zinc-400" />
+        </div>
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+          WhatsApp is niet geactiveerd
+        </h2>
+        <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+          WhatsApp Business is in deze omgeving nog niet geactiveerd. Er kunnen
+          geen berichten worden verstuurd en templates kunnen niet ter
+          goedkeuring worden ingediend. Neem contact op met je beheerder om
+          WhatsApp te activeren.
+        </p>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -528,7 +571,14 @@ function TemplateCard({
                   onSuccess: () =>
                     toast({
                       title: "Ingediend",
-                      description: "Meta beoordeelt nu — duurt ~5min.",
+                      description: "De template is ter beoordeling naar Meta gestuurd.",
+                    }),
+                  onError: () =>
+                    toast({
+                      title: "Indienen mislukt",
+                      description:
+                        "WhatsApp is niet geactiveerd in deze omgeving of Meta is niet bereikbaar.",
+                      variant: "destructive",
                     }),
                 })
               }
@@ -1090,7 +1140,6 @@ function InviteConsentDialog({ onClose }: { onClose: () => void }) {
   const invite = useInviteWhatsAppConsent();
   const [candidateId, setCandidateId] = useState("");
   const [phone, setPhone] = useState("");
-  const [method, setMethod] = useState<"template" | "email">("template");
   const { data: candidates, isLoading: candidatesLoading } = useCandidates();
 
   const candidate = (candidates ?? []).find((c) => c.id === candidateId);
@@ -1138,46 +1187,16 @@ function InviteConsentDialog({ onClose }: { onClose: () => void }) {
               placeholder="+31 6 1234 5678"
             />
           </div>
-          <div className="space-y-1.5">
-            <Label>Verzendmethode</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setMethod("template")}
-                className={cn(
-                  "flex items-start gap-2 rounded-lg border p-3 text-left transition-colors",
-                  method === "template"
-                    ? "border-emerald-500 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950/40"
-                    : "border-border hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
-                )}
-              >
-                <MessageCircle className="mt-0.5 h-4 w-4 text-emerald-600" />
-                <div>
-                  <p className="text-xs font-semibold">WhatsApp-template</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    Snelle conversie, lage drempel.
-                  </p>
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setMethod("email")}
-                className={cn(
-                  "flex items-start gap-2 rounded-lg border p-3 text-left transition-colors",
-                  method === "email"
-                    ? "border-indigo-500 bg-indigo-50 dark:border-indigo-700 dark:bg-indigo-950/40"
-                    : "border-border hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
-                )}
-              >
-                <Mail className="mt-0.5 h-4 w-4 text-indigo-600" />
-                <div>
-                  <p className="text-xs font-semibold">E-mail link</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    Werkt zonder bestaand WA-contact.
-                  </p>
-                </div>
-              </button>
-            </div>
+          {/* Eerlijke uitleg: TalentFlow maakt een persoonlijke opt-in link
+              aan maar verstuurt die (nog) niet automatisch. De oude UI
+              suggereerde een verzonden WhatsApp/e-mail die nooit bestond. */}
+          <div className="flex items-start gap-2 rounded-lg border border-border bg-zinc-50/70 p-3 dark:bg-zinc-800/40">
+            <Mail className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" />
+            <p className="text-[11px] leading-relaxed text-muted-foreground">
+              Er wordt een persoonlijke opt-in link aangemaakt (72 uur geldig).
+              TalentFlow verstuurt deze niet automatisch — deel de link zelf
+              met de kandidaat, bijvoorbeeld via e-mail of telefoon.
+            </p>
           </div>
         </div>
         <DialogFooter>
@@ -1185,24 +1204,38 @@ function InviteConsentDialog({ onClose }: { onClose: () => void }) {
             Annuleren
           </Button>
           <Button
-            disabled={!candidateId || !phone}
+            disabled={!candidateId || !phone || invite.isPending}
             onClick={async () => {
-              await invite.mutateAsync({
-                candidate_id: candidateId,
-                phone_number: phone,
-                candidate_name: candidate?.name,
-              });
-              toast({
-                title: "Uitnodiging verstuurd",
-                description:
-                  method === "template"
-                    ? "WhatsApp-template afgeleverd."
-                    : "E-mail met opt-in link verzonden.",
-              });
-              onClose();
+              try {
+                const result = await invite.mutateAsync({
+                  candidate_id: candidateId,
+                  phone_number: phone,
+                  candidate_name: candidate?.name,
+                });
+                let copied = false;
+                try {
+                  await navigator.clipboard.writeText(result.token_url);
+                  copied = true;
+                } catch {
+                  /* clipboard niet beschikbaar — link staat in de toast */
+                }
+                toast({
+                  title: "Opt-in link aangemaakt",
+                  description: copied
+                    ? "De link staat op je klembord — deel hem met de kandidaat."
+                    : `Deel deze link met de kandidaat: ${result.token_url}`,
+                });
+                onClose();
+              } catch {
+                toast({
+                  title: "Aanmaken mislukt",
+                  description: "De opt-in link kon niet worden aangemaakt.",
+                  variant: "destructive",
+                });
+              }
             }}
           >
-            Versturen
+            {invite.isPending ? "Bezig…" : "Link aanmaken"}
           </Button>
         </DialogFooter>
       </DialogContent>

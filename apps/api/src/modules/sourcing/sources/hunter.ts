@@ -20,6 +20,7 @@ import type {
   BooleanQuery,
   SourcingSourceContext,
 } from './types';
+import { mockCandidatesAllowed } from './types';
 import { logger } from '../../../middleware/errorHandler';
 
 interface HunterEmail {
@@ -79,7 +80,8 @@ function mockCandidates(query: BooleanQuery, count: number): RawCandidate[] {
 export const hunterSource: SourcingSource = {
   id: 'hunter',
   name: 'Hunter.io',
-  isEnabled: () => true,
+  // Zonder API-key alleen enabled buiten productie (mock voor dev/tests).
+  isEnabled: () => !!process.env.HUNTER_API_KEY || mockCandidatesAllowed(),
   async search(
     query: BooleanQuery,
     ctx: SourcingSourceContext
@@ -88,6 +90,9 @@ export const hunterSource: SourcingSource = {
     const apiKey = process.env.HUNTER_API_KEY;
     const companies = extractCompanyTokens(query.query);
     if (!apiKey || companies.length === 0) {
+      // Geen key of geen detecteerbare company: zonder mock-permissie is dit
+      // een eerlijk leeg resultaat (geen verzonnen medewerkers).
+      if (!mockCandidatesAllowed()) return [];
       return mockCandidates(query, Math.min(limit, 5));
     }
     const company = companies[0];
@@ -96,6 +101,10 @@ export const hunterSource: SourcingSource = {
     try {
       const res = await fetch(url);
       if (!res.ok) {
+        if (!mockCandidatesAllowed()) {
+          logger.warn('[sourcingAgent/hunter] non-2xx — geen resultaten', { status: res.status });
+          return [];
+        }
         logger.warn('[sourcingAgent/hunter] non-2xx — fallback mock', { status: res.status });
         return mockCandidates(query, Math.min(limit, 4));
       }
@@ -116,6 +125,12 @@ export const hunterSource: SourcingSource = {
         metadata: { hunter_email: e.value, seniority: e.seniority },
       }));
     } catch (err) {
+      if (!mockCandidatesAllowed()) {
+        logger.warn('[sourcingAgent/hunter] fetch threw — geen resultaten', {
+          error: (err as Error).message,
+        });
+        return [];
+      }
       logger.warn('[sourcingAgent/hunter] fetch threw — fallback mock', {
         error: (err as Error).message,
       });

@@ -283,6 +283,24 @@ export async function getJobSourcing(
   }
 }
 
+export async function getJobSourcingSuggestions(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    // Deterministische boolean-search-strings (geen AI) — de frontend-hook
+    // useJobSourcingSuggestions verwacht `{ data: string[] }`.
+    const data = await jobDetailService.getJobSourcingSuggestions(
+      req.user!.tenantId,
+      req.params.id
+    );
+    res.json({ data });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function getJobBiasCheck(
   req: Request,
   res: Response,

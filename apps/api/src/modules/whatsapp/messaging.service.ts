@@ -125,6 +125,16 @@ export async function sendMessage(
   input: SendMessageInput,
   ctx: SendOperationCtx
 ): Promise<WhatsAppMessageRow> {
+  // Bevroren feature-guard: in productie zonder live 360dialog-koppeling zou
+  // de mock-connector "sent/delivered" faken. Eerlijke 503 in plaats daarvan.
+  if (!dialog360.isServiceActive()) {
+    throw new AppError(
+      503,
+      'WHATSAPP_NOT_ENABLED',
+      'WhatsApp is niet geactiveerd in deze omgeving. Berichten kunnen niet verstuurd worden.'
+    );
+  }
+
   const consent = await getConsent(tenantId, candidateId);
   if (!consent || consent.status !== 'granted') {
     throw new WhatsAppConsentMissingError();

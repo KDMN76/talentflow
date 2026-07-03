@@ -22,6 +22,7 @@ import { AppError, logger } from '../../middleware/errorHandler';
 import { emailSenderQueue } from '../../queue/queues';
 import { logAudit } from '../../lib/audit';
 import { AuditActions } from '../../lib/auditActions';
+import { applyMergeVars } from '../../lib/mergeVariables';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -84,7 +85,7 @@ export async function startBulkCampaign(
   }
 
   // Step 1: filter eligible (consent) and prepare insert in single transaction.
-  const { campaign, eligible, skipped } = await withTenant(tenantId, async (client) => {
+  const { campaign, eligible, skipped, tenantName } = await withTenant(tenantId, async (client) => {
     // Validate mailbox-integration belongs to this tenant + active.
     if (input.via === 'mailbox_integration' && input.mailbox_integration_id) {
       const { rows: [mb] } = await client.query<{ id: string; active: boolean }>(
@@ -100,19 +101,28 @@ export async function startBulkCampaign(
       }
     }
 
-    // Lookup all candidates in scope.
+    // Lookup all candidates in scope. first_name/last_name zijn nodig voor
+    // de merge-variabelen ({{candidate.first_name}}) in het enqueue-pad.
     const { rows: candidates } = await client.query<{
       id: string;
       email: string | null;
       name: string;
+      first_name: string | null;
+      last_name: string | null;
       email_consent: boolean | null;
     }>(
-      `SELECT id, email, name, email_consent
+      `SELECT id, email, name, first_name, last_name, email_consent
        FROM candidates
        WHERE tenant_id = $1
          AND id = ANY($2::uuid[])
          AND deleted_at IS NULL`,
       [tenantId, input.candidate_ids]
+    );
+
+    // Tenant-naam voor {{tenant.name}} (één lookup voor de hele campagne).
+    const { rows: [tenantRow] } = await client.query<{ name: string }>(
+      'SELECT name FROM tenants WHERE id = $1',
+      [tenantId]
     );
 
     const eligibleList = candidates.filter(
@@ -192,6 +202,7 @@ export async function startBulkCampaign(
       campaign: campaignRow,
       eligible: eligibleList,
       skipped: skippedCount,
+      tenantName: tenantRow?.name ?? '',
     };
   });
 
@@ -200,6 +211,13 @@ export async function startBulkCampaign(
   for (let i = 0; i < eligible.length; i++) {
     const candidate = eligible[i];
     if (!candidate.email) continue;
+    // Merge-variabelen per ontvanger: de worker verwacht post-merge HTML
+    // (zie emailSender.worker.ts) — zonder deze stap zou elke kandidaat
+    // letterlijk "{{candidate.first_name}}" in de mail zien.
+    const mergeCtx = {
+      candidate,
+      tenant: { name: tenantName },
+    };
     try {
       await emailSenderQueue.add(
         'send-email',
@@ -208,8 +226,8 @@ export async function startBulkCampaign(
           candidateId: candidate.id,
           templateId: input.template_id,
           to: candidate.email,
-          subject: input.subject,
-          bodyHtml: input.body_html,
+          subject: applyMergeVars(input.subject, mergeCtx),
+          bodyHtml: applyMergeVars(input.body_html, mergeCtx),
           userId,
           mailboxIntegrationId:
             input.via === 'mailbox_integration' ? input.mailbox_integration_id : undefined,

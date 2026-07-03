@@ -34,6 +34,7 @@ function makeListItem(overrides: Record<string, unknown> = {}) {
     employment_type: 'fulltime' as const,
     status: 'draft' as const,
     recruiter_id: null,
+    organization_id: null,
     created_at: '2026-05-16T18:51:45.591Z',
     updated_at: '2026-05-16T18:51:45.591Z',
     job_reference: 'JOB-4H3JGG',
@@ -47,6 +48,7 @@ function makeListItem(overrides: Record<string, unknown> = {}) {
     currency: 'EUR',
     salary_frequency: 'monthly' as const,
     recruiter_name: null,
+    organization_name: null,
     application_count: 0,
     ...overrides,
   };
@@ -118,6 +120,9 @@ describe('Job contracts — backend response validatie (fail-fast)', () => {
       application_count: 0,
     };
     delete (detail as Record<string, unknown>).application_count;
+    // organization_name is een list-hydration veld (JobListItemSchema) en GEEN
+    // deel van JobDetailSchema — getJob retourneert het niet.
+    delete (detail as Record<string, unknown>).organization_name;
     // Mocht alleen passeren als alle JobRow-velden aanwezig zijn.
     const ok = JobDetailSchema.safeParse(detail);
     if (!ok.success) {

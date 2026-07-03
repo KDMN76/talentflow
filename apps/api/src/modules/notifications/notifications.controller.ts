@@ -4,6 +4,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
+import { NotificationPreferencesUpdateSchema } from '@talentflow/contracts';
 import { auditCtxFromReq } from '../../lib/audit';
 import { getVapidPublicKey, type PushPayload } from '../../lib/webPush';
 import {
@@ -12,8 +13,8 @@ import {
   deactivatePushSubscription,
 } from './pushSubscription.service';
 import {
-  listPreferences,
-  upsertPreference,
+  getConsolidatedPreferences,
+  saveConsolidatedPreferences,
 } from './preferences.service';
 import {
   listNotificationLog,
@@ -27,23 +28,6 @@ const subscribeSchema = z.object({
     p256dh: z.string().min(1),
     auth: z.string().min(1),
   }),
-});
-
-const preferenceSchema = z.object({
-  channel: z.enum(['push', 'email', 'in_app']),
-  event_type: z.string().min(1).max(64),
-  enabled: z.boolean().optional(),
-  quiet_hours_start: z
-    .string()
-    .regex(/^\d{2}:\d{2}(?::\d{2})?$/)
-    .nullable()
-    .optional(),
-  quiet_hours_end: z
-    .string()
-    .regex(/^\d{2}:\d{2}(?::\d{2})?$/)
-    .nullable()
-    .optional(),
-  timezone: z.string().min(1).max(64).optional(),
 });
 
 const testPushSchema = z.object({
@@ -160,43 +144,46 @@ export async function deleteSubscription(
   }
 }
 
+/**
+ * GET /api/notifications/preferences — geconsolideerd object
+ * `{ push_enabled, events{}, quiet_hours_start, quiet_hours_end, timezone }`.
+ * Shape: `NotificationPreferencesSchema` uit @talentflow/contracts.
+ */
 export async function getPreferences(
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
   try {
-    const prefs = await listPreferences(
+    const prefs = await getConsolidatedPreferences(
       req.user!.tenantId,
       req.user!.userId
     );
-    res.json({ data: prefs });
+    res.json(prefs);
   } catch (err) {
     next(err);
   }
 }
 
-export async function patchPreferences(
+/**
+ * PUT /api/notifications/preferences — sla het geconsolideerde object op.
+ * Body: `NotificationPreferencesUpdateSchema`; response: de volledige
+ * opgeslagen staat (zelfde shape als GET).
+ */
+export async function putPreferences(
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
   try {
-    const body = preferenceSchema.parse(req.body);
-    const pref = await upsertPreference(
+    const body = NotificationPreferencesUpdateSchema.parse(req.body);
+    const prefs = await saveConsolidatedPreferences(
       req.user!.tenantId,
       req.user!.userId,
-      body.channel,
-      body.event_type,
-      {
-        enabled: body.enabled,
-        quiet_hours_start: body.quiet_hours_start ?? null,
-        quiet_hours_end: body.quiet_hours_end ?? null,
-        timezone: body.timezone,
-      },
+      body,
       auditCtxFromReq(req)
     );
-    res.json(pref);
+    res.json(prefs);
   } catch (err) {
     next(err);
   }

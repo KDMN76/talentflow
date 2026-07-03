@@ -232,7 +232,8 @@
     "toasts": {
       "transcriptionCopied": "Transcript copied",
       "copyFailed": "Copy failed",
-      "transcriptionRequested": "Transcript requested"
+      "transcriptionRequested": "Transcript requested",
+      "transcriptionFailed": "Transcription failed — Voice may not be enabled in this environment"
     }
   }
 }

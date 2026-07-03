@@ -364,7 +364,7 @@ describe('accounting.syncInvoiceToAccounting — idempotent', () => {
               rowCount: 1,
             };
           }
-          if (/SELECT id, tenant_id, provider, settings, credentials_encrypted[^]*FROM accounting_integrations[^]*WHERE status = 'connected'/i.test(sql)) {
+          if (/SELECT id, tenant_id, provider, settings, credentials_encrypted[^]*FROM accounting_integrations[^]*WHERE tenant_id = \$1 AND status = 'connected'/i.test(sql)) {
             return {
               rows: [
                 {

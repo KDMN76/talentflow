@@ -53,15 +53,18 @@ describe('startBulkCampaign — consent-filter', () => {
     let recipientInsertSqls: string[] = [];
     client = mockClient({
       __matcher: (sql) => {
-        if (/SELECT id, email, name, email_consent/i.test(sql)) {
+        if (/SELECT id, email, name, first_name, last_name, email_consent/i.test(sql)) {
           return {
             rows: [
-              { id: CAND_A, email: 'a@x.com', name: 'A', email_consent: true },
-              { id: CAND_B, email: 'b@x.com', name: 'B', email_consent: false },
-              { id: CAND_C, email: null, name: 'C', email_consent: true },
+              { id: CAND_A, email: 'a@x.com', name: 'Anna Aa', first_name: 'Anna', last_name: 'Aa', email_consent: true },
+              { id: CAND_B, email: 'b@x.com', name: 'B', first_name: 'Bea', last_name: null, email_consent: false },
+              { id: CAND_C, email: null, name: 'C', first_name: 'Cee', last_name: null, email_consent: true },
             ],
             rowCount: 3,
           };
+        }
+        if (/SELECT name FROM tenants/i.test(sql)) {
+          return { rows: [{ name: 'IT Proposal' }], rowCount: 1 };
         }
         if (/INSERT INTO bulk_campaigns/i.test(sql)) {
           return {
@@ -98,8 +101,8 @@ describe('startBulkCampaign — consent-filter', () => {
 
     const result = await startBulkCampaign(TENANT_ID, USER_ID, {
       candidate_ids: [CAND_A, CAND_B, CAND_C],
-      subject: 'Hi',
-      body_html: '<p>hi</p>',
+      subject: 'Hi {{candidate.first_name}}',
+      body_html: '<p>hi {{candidate.first_name}}, groet {{tenant.name}}</p>',
       via: 'resend',
     });
 
@@ -115,6 +118,10 @@ describe('startBulkCampaign — consent-filter', () => {
     const [, payload] = enqueueMock.mock.calls[0] as [string, Record<string, unknown>];
     expect(payload.candidateId).toBe(CAND_A);
     expect(payload.to).toBe('a@x.com');
+    // Merge-variabelen zijn per ontvanger toegepast — de worker verwacht
+    // post-merge HTML, dus rauwe {{...}} in de payload is een bug.
+    expect(payload.subject).toBe('Hi Anna');
+    expect(payload.bodyHtml).toBe('<p>hi Anna, groet IT Proposal</p>');
     // Geen mailbox-integration in resend-modus.
     expect(payload.mailboxIntegrationId).toBeUndefined();
     expect(payload.campaignId).toBe(CAMPAIGN_ID);
@@ -151,14 +158,17 @@ describe('startBulkCampaign — consent-filter', () => {
   it('rate-limit: i-de job krijgt delay = i*1000 ms', async () => {
     client = mockClient({
       __matcher: (sql) => {
-        if (/SELECT id, email, name, email_consent/i.test(sql)) {
+        if (/SELECT id, email, name, first_name, last_name, email_consent/i.test(sql)) {
           return {
             rows: [
-              { id: CAND_A, email: 'a@x.com', name: 'A', email_consent: true },
-              { id: CAND_B, email: 'b@x.com', name: 'B', email_consent: true },
+              { id: CAND_A, email: 'a@x.com', name: 'A', first_name: 'Anna', last_name: null, email_consent: true },
+              { id: CAND_B, email: 'b@x.com', name: 'B', first_name: 'Bea', last_name: null, email_consent: true },
             ],
             rowCount: 2,
           };
+        }
+        if (/SELECT name FROM tenants/i.test(sql)) {
+          return { rows: [{ name: 'IT Proposal' }], rowCount: 1 };
         }
         if (/INSERT INTO bulk_campaigns/i.test(sql)) {
           return {

@@ -351,16 +351,16 @@ registry.registerPath({
   method: 'get',
   path: '/api/notifications/preferences',
   tags: ['Notifications'],
-  summary: 'Get notification preferences',
+  summary: 'Get consolidated notification preferences',
   security: authSecurity,
   responses: { 200: jsonResponse('OK', z.unknown()) },
 });
 
 registry.registerPath({
-  method: 'patch',
+  method: 'put',
   path: '/api/notifications/preferences',
   tags: ['Notifications'],
-  summary: 'Update notification preferences',
+  summary: 'Replace consolidated notification preferences',
   security: authSecurity,
   responses: { 200: jsonResponse('OK', z.unknown()) },
 });
@@ -392,10 +392,37 @@ registry.registerPath({
   path: '/health',
   tags: ['Public'],
   summary: 'Liveness probe',
+  description:
+    'Zegt alleen dat het proces draait — de Docker HEALTHCHECK hangt hieraan. Dependency-checks leven op /health/ready.',
   responses: {
     200: jsonResponse(
       'OK',
       z.object({ status: z.literal('ok'), timestamp: z.string().datetime() })
+    ),
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/health/ready',
+  tags: ['Public'],
+  summary: 'Readiness probe (Postgres + Redis)',
+  description:
+    'Checkt of de app écht verkeer kan bedienen: SELECT 1 op Postgres en PING op Redis, elk met een 2s-timeout. 503 zodra één dependency faalt. Bewust gescheiden van /health zodat een infra-storing geen container-restart-loop triggert.',
+  responses: {
+    200: jsonResponse(
+      'OK',
+      z.object({
+        status: z.literal('ready'),
+        checks: z.object({ db: z.string(), redis: z.string() }),
+      })
+    ),
+    503: jsonResponse(
+      'Niet ready — minstens één dependency faalt',
+      z.object({
+        status: z.literal('not_ready'),
+        checks: z.object({ db: z.string(), redis: z.string() }),
+      })
     ),
   },
 });

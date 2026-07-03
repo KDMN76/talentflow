@@ -7,6 +7,8 @@
  * of Indeed weten niets van de DB of de queue.
  */
 
+import { mocksAllowed } from '../../lib/env';
+
 export type JobBoardRegion = 'global' | 'nl' | 'de' | 'eu';
 export type JobBoardAuthType = 'oauth2' | 'api_key' | 'xml_feed' | 'none';
 export type JobPostingStatus =
@@ -101,18 +103,39 @@ export interface JobBoardConnector {
 }
 
 /**
- * Helper: detecteer of we in mock-mode draaien (env-flag of integratie zonder
- * geldige credentials). Connectors gebruiken dit zodat dev/demo werkt zonder
- * echte API-keys.
+ * Mag een connector synthetische (mock) resultaten teruggeven? Zelfde patroon
+ * als de AI-client: mock alleen buiten productie. In productie zonder echte
+ * credentials moet een posting eerlijk op 'failed' uitkomen — nooit een
+ * verzonnen 'posted'.
  */
-export function isMockMode(integration: IntegrationCreds | null): boolean {
-  if (process.env.JOB_BOARDS_MOCK === 'true') return true;
-  if (!integration) return true;
+export function mockPostingsAllowed(): boolean {
+  return mocksAllowed();
+}
+
+/**
+ * Heeft de integratie bruikbare credentials (token of api-key)?
+ */
+export function hasRealCredentials(
+  integration: IntegrationCreds | null
+): boolean {
+  if (!integration) return false;
   const creds = integration.credentials ?? {};
-  // Heuristiek: als er ECHT geen tokens of api-keys zijn → mock.
-  const hasReal =
+  const hasToken =
     typeof creds.access_token === 'string' && creds.access_token.length > 8;
   const hasApiKey =
     typeof creds.api_key === 'string' && creds.api_key.length > 8;
-  return !(hasReal || hasApiKey);
+  return hasToken || hasApiKey;
+}
+
+/**
+ * Helper: detecteer of we in mock-mode draaien (env-flag of integratie zonder
+ * geldige credentials). Connectors gebruiken dit zodat dev/demo werkt zonder
+ * echte API-keys. In productie is mock-mode UIT: dan gaat het echte pad in en
+ * faalt een niet-geconfigureerde integratie hard (geen fake succes).
+ */
+export function isMockMode(integration: IntegrationCreds | null): boolean {
+  if (!mockPostingsAllowed()) return false;
+  if (process.env.JOB_BOARDS_MOCK === 'true') return true;
+  if (!integration) return true;
+  return !hasRealCredentials(integration);
 }

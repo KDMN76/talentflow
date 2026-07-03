@@ -10,6 +10,17 @@
  */
 
 import type { AgentBrief } from '../brief.service';
+import { mocksAllowed } from '../../../lib/env';
+
+/**
+ * Mogen sources mock-kandidaten leveren? Zelfde patroon als de AI-client
+ * (searchAgent `shouldUseMock`): mocks alleen wanneer credentials ontbreken
+ * ÉN we NIET in productie draaien. In productie zonder key levert een source
+ * een eerlijk leeg resultaat — nooit verzonnen kandidaten.
+ */
+export function mockCandidatesAllowed(): boolean {
+  return mocksAllowed();
+}
 
 export interface BooleanQuery {
   /** Boolean-string zoals "(react OR vue) AND typescript AND amsterdam" */

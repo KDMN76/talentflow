@@ -37,9 +37,29 @@ import {
   upsertMemory,
   deleteMemory,
 } from './runs.service';
+import { ALL_SOURCES } from './sources';
 
 const router = Router();
 router.use(requireAuth, tenantMiddleware);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sources — welke bronnen kan de agent daadwerkelijk gebruiken?
+//
+// Frontend gebruikt dit voor een eerlijke lege staat: als er geen externe
+// bronnen geconfigureerd zijn legt de UI uit waarom een run weinig/geen
+// kandidaten oplevert, in plaats van een kale "geen resultaten".
+// ─────────────────────────────────────────────────────────────────────────────
+
+router.get('/sources', (_req, res) => {
+  res.json({
+    data: ALL_SOURCES.map((s) => ({
+      id: s.id,
+      name: s.name,
+      enabled: s.isEnabled(),
+      external: s.id !== 'existing_db',
+    })),
+  });
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Schemas

@@ -19,6 +19,7 @@ import { randomUUID } from 'crypto';
 import { withTenant } from '../../db/pool';
 import { AppError, logger } from '../../middleware/errorHandler';
 import { encrypt, decrypt } from '../../lib/encryption';
+import { mocksAllowed } from '../../lib/env';
 import { recordCommunication, truncatePreview } from '../../lib/inboxProjector';
 import { transcribeAudio } from '../../lib/whisper';
 import { eventBus } from '../../lib/eventBus';
@@ -78,6 +79,27 @@ export interface VoiceCall {
 
 function isLive(): boolean {
   return process.env.TWILIO_LIVE === 'true';
+}
+
+/**
+ * Kan Voice in deze omgeving echt gebruikt worden? Live óf een niet-productie
+ * omgeving waar de mock-progressie (queued→ringing→completed) acceptabel is
+ * voor lokale dev/tests. In productie zonder TWILIO_LIVE is Voice "niet
+ * geactiveerd": write-paden weigeren met 503 in plaats van nep-gesprekken
+ * te simuleren.
+ */
+export function isVoiceServiceActive(): boolean {
+  return isLive() || mocksAllowed();
+}
+
+function assertVoiceActive(): void {
+  if (!isVoiceServiceActive()) {
+    throw new AppError(
+      503,
+      'VOICE_NOT_ENABLED',
+      'Voice is niet geactiveerd in deze omgeving. Bellen via TalentFlow staat uit.'
+    );
+  }
 }
 
 function rowToIntegration(row: Record<string, unknown>): VoiceIntegration {
@@ -171,6 +193,10 @@ export async function connectIntegration(
   input: ConnectIntegrationInput,
   userId: string
 ): Promise<VoiceIntegration> {
+  // Bevroren feature-guard: in productie zou de mock elke willekeurige
+  // SID/token als geldig Twilio-account "valideren".
+  assertVoiceActive();
+
   if (!input.account_sid || !input.auth_token || !input.phone_number) {
     throw new AppError(
       400,
@@ -365,6 +391,10 @@ export async function initiateOutboundCall(
   tenantId: string,
   input: InitiateOutboundCallInput
 ): Promise<VoiceCall> {
+  // Bevroren feature-guard: in productie belde dit NIET echt — de mock
+  // simuleerde queued→ringing→completed (42s) alsof er gebeld was.
+  assertVoiceActive();
+
   const secrets = await loadSecrets(tenantId);
   if (!secrets) {
     throw new AppError(
@@ -523,6 +553,10 @@ export async function requestTranscription(
   tenantId: string,
   callId: string
 ): Promise<VoiceCall> {
+  // Guard: zonder actieve voice-service zou hier een mock-transcript worden
+  // opgeslagen alsof er echt getranscribeerd is.
+  assertVoiceActive();
+
   const call = await withTenant(tenantId, async (client) => {
     const { rows } = await client.query<Record<string, unknown>>(
       `UPDATE voice_calls

@@ -114,17 +114,27 @@ status-regels.
 `--env-file infra/.env.prod` voor élk subcommando (build, up, down, logs, exec).
 Niemand hoeft de flag te onthouden.
 
-### Openstaand vangnet (TODO, valideren op VPS)
+### Vangnet #2: `env_file:` per service (DOORGEVOERD 2026-07-03)
 
-Een tweede vangnet — `env_file: ./.env.prod` per service in de compose-YAML — is
-nog **niet** doorgevoerd omdat het niet veilig lokaal te valideren is (geen
-docker + geen `.env.prod` op de dev-machine). Let op bij het doorvoeren:
-`environment:` **overschrijft** `env_file:`, dus je moet tegelijk de pure
-pass-through `${VAR}`-entries uit de `environment:`-blokken halen (anders maakt
-een vergeten `--env-file` ze leeg en winnen die lege waarden van de env_file).
-Remapped vars (bv. `SENTRY_DSN: ${SENTRY_DSN_API}`) moeten als expliciete
-`environment:`-entry blijven staan. Build-time `NEXT_PUBLIC_*` (in `args:`) lost
-`env_file:` sowieso niet op — daarvoor blijft `deploy.sh` nodig. Zie ROADMAP.
+`api` en `api-worker` hebben nu `env_file: [./.env.prod]` en een
+`environment:`-blok met **alleen literals** (`NODE_ENV`, `PORT`,
+`DISABLE_INLINE_WORKERS`). De pure pass-through `${VAR}`-entries zijn bewust
+verwijderd: `environment:` **overschrijft** `env_file:`, dus lege interpolaties
+(vergeten `--env-file`) zouden anders alsnog winnen. `SENTRY_DSN_API` is
+tegenwoordig een gelijknamige pass-through en komt dus ook via env_file binnen.
+
+Bewuste keuzes daarbij:
+- **`web` heeft GEEN env_file** — zijn runtime-env bevat geen secrets
+  (NEXT_PUBLIC_* is build-time gebakken) en zo krijgt de web-container geen
+  DB-/API-keys in zijn environment (kleinere blast-radius).
+- **redis/postgres/minio niet** — hun kritieke `${VAR}`-gebruik zit in
+  `command:`/`healthcheck:`/remaps, en dáár helpt `env_file:` niet (compose
+  interpoleert die uit de shell/--env-file, niet uit service-env_file).
+- Build-time `NEXT_PUBLIC_*` (in `args:`) lost `env_file:` sowieso niet op —
+  **`deploy.sh` blijft daarom het enige toegestane aanroeppad.**
+- Consequentie: api/api-worker zien álle vars uit `.env.prod`. Geaccepteerd:
+  de wachtwoorden zaten toch al in `DATABASE_URL`/`REDIS_URL`/`STORAGE_S3_*`
+  die deze services nodig hebben.
 
 ## 7. Healthchecks
 

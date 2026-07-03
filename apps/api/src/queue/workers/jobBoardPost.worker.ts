@@ -22,6 +22,14 @@ import {
   applyPostResult,
   loadPostingForPost,
 } from '../../modules/job-boards/service';
+import {
+  hasRealCredentials,
+  mockPostingsAllowed,
+} from '../../modules/job-boards/types';
+
+export const NOT_CONFIGURED_MESSAGE =
+  'Dit job-board is niet gekoppeld: er zijn geen geldige API-credentials geconfigureerd. ' +
+  'Verbind het board via Vacaturebanken → Verbinden en probeer het opnieuw.';
 
 export interface JobBoardPostJobData {
   tenantId: string;
@@ -61,6 +69,22 @@ async function processPostJob(job: Job<JobBoardPostJobData>): Promise<unknown> {
       status: ctx.posting.status,
     });
     return { skipped: true };
+  }
+
+  // Eerlijkheids-guard: in productie mag een connector nooit een synthetisch
+  // 'posted' faken. Zonder echte credentials markeren we de posting direct
+  // als 'failed' met een duidelijke NL-melding — géén retry (heeft geen zin
+  // zolang de integratie niet gekoppeld is).
+  // hasRealCredentials = dezelfde strengere check als de connectors zelf
+  // (access_token/api_key > 8 tekens) — voorkomt dat een half-gevulde
+  // integratie de guard passeert en dan alsnog met een rauwe API-fout faalt.
+  if (!mockPostingsAllowed() && !hasRealCredentials(ctx.creds)) {
+    await applyPostFailure(tenantId, postingId, NOT_CONFIGURED_MESSAGE);
+    logger.warn('[jobBoards] post worker — board niet geconfigureerd', {
+      postingId,
+      boardId,
+    });
+    return { failed: true, reason: 'not_configured' };
   }
 
   try {

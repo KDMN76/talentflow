@@ -303,13 +303,45 @@ export function useHMJobs() {
   });
 }
 
+/** Shape zoals de backend hem levert (apps/api modules/hm). */
+interface HmPendingReviewApi {
+  application_id: string;
+  candidate_id: string;
+  candidate_name: string;
+  candidate_email: string | null;
+  candidate_position: string | null;
+  ai_score: number | null;
+  applied_at: string;
+  job_id: string;
+  job_title: string;
+  stage_id: string | null;
+  stage_name: string | null;
+  summary: string | null;
+  skills: string[];
+}
+
 export function usePendingReviews() {
   return useQuery({
     queryKey: ["hm", "reviews", "pending"],
-    queryFn: async () => {
+    queryFn: async (): Promise<HMReview[]> => {
       try {
-        const { data } = await api.get<{ data: HMReview[] }>("/hm/reviews/pending");
-        return data.data;
+        const { data } = await api.get<{ data: HmPendingReviewApi[] }>(
+          "/hm/reviews/pending"
+        );
+        return data.data.map((r) => ({
+          application_id: r.application_id,
+          candidate_name: r.candidate_name,
+          candidate_email: r.candidate_email ?? "",
+          candidate_position: r.candidate_position,
+          ai_score: r.ai_score,
+          applied_at: r.applied_at,
+          job_id: r.job_id,
+          job_title: r.job_title,
+          stage_id: r.stage_id,
+          stage_name: r.stage_name ?? "",
+          ai_summary: r.summary ?? undefined,
+          skills: r.skills ?? [],
+        }));
       } catch (err) {
         if (MOCK_MODE) return [...mockHMReviews];
         throw err;
@@ -328,19 +360,8 @@ export function useHmStats() {
     queryKey: ["hm", "stats"],
     queryFn: async (): Promise<HMStats> => {
       try {
-        // Backend heeft geen /hm/stats — de cijfers komen uit /hm/dashboard.
-        // scorecard-tellers hebben (nog) geen backend-bron → eerlijke 0 i.p.v.
-        // verzonnen aantallen.
-        const { data } = await api.get<{
-          pending_reviews: number;
-          approved_today: number;
-        }>("/hm/dashboard");
-        return {
-          to_review: data.pending_reviews ?? 0,
-          scorecards_due_today: 0,
-          scorecards_overdue: 0,
-          approved_today: data.approved_today ?? 0,
-        };
+        const { data } = await api.get<HMStats>("/hm/stats");
+        return data;
       } catch (err) {
         if (MOCK_MODE) return { ...mockHMStats };
         throw err;
@@ -360,38 +381,10 @@ export function useHmScorecardDeadlines() {
         return data.data;
       } catch (err) {
         if (MOCK_MODE) return [...mockHMScorecardDeadlines];
-        // Endpoint bestaat nog niet op de backend → eerlijke lege lijst.
-        return [];
+        // Fout propageert naar de error-state van de pagina — geen stille
+        // lege lijst die "alles is af" suggereert terwijl de API stuk is.
+        throw err;
       }
-    },
-  });
-}
-
-export interface ReviewDecisionInput {
-  applicationId: string;
-  decision: "approve" | "reject" | "later";
-  notes?: string;
-}
-
-export function useReviewApplication() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ applicationId, decision, notes }: ReviewDecisionInput) => {
-      try {
-        const { data } = await api.post<{ ok: true }>(
-          `/hm/applications/${applicationId}/review`,
-          { decision, notes }
-        );
-        return data;
-      } catch {
-        // In mock-mode pretend the action succeeded
-        return { ok: true as const };
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["hm", "dashboard"] });
-      queryClient.invalidateQueries({ queryKey: ["hm", "stats"] });
-      queryClient.invalidateQueries({ queryKey: ["hm", "reviews", "pending"] });
     },
   });
 }
@@ -401,12 +394,14 @@ export interface HmDecisionInput {
   decision: "approve" | "reject" | "later";
   notes?: string;
   scorecard?: ScorecardInput;
+  /** Huidige pipeline-fase — nodig om de scorecard aan de fase te koppelen. */
+  stageId?: string | null;
 }
 
 /**
- * The Q2.4 swipe-deck mutation. Wraps `useReviewApplication` and optionally
- * forwards an inline scorecard. Falls back to mock success when the API is
- * unreachable.
+ * The Q2.4 swipe-deck mutation. Optionally submits an inline scorecard first
+ * (mapped naar het backend-contract van POST /applications/:id/scorecards),
+ * daarna de review-beslissing. Fouten propageren — geen mock-succes.
  */
 export function useHmDecision() {
   const queryClient = useQueryClient();
@@ -416,21 +411,31 @@ export function useHmDecision() {
       decision,
       notes,
       scorecard,
+      stageId,
     }: HmDecisionInput) => {
-      try {
-        if (scorecard) {
-          await api
-            .post(`/applications/${candidateId}/scorecards`, scorecard)
-            .catch(() => undefined);
-        }
-        const { data } = await api.post<{ ok: true }>(
-          `/hm/applications/${candidateId}/review`,
-          { decision, notes }
-        );
-        return data;
-      } catch {
-        return { ok: true as const };
+      if (scorecard) {
+        // Backend-contract: criteria_scores [{criterion, score}], submit-vlag
+        // voor 'ingediend' i.p.v. draft. De oude code stuurde het frontend-
+        // shape (criteria/template_id) dat door zod werd weggestript — de
+        // scorecard kwam dan als lege draft binnen: een stille dataverlies-bug.
+        await api.post(`/applications/${candidateId}/scorecards`, {
+          stage_id: stageId ?? null,
+          overall_score: scorecard.overall_score,
+          recommendation: scorecard.recommendation,
+          notes: scorecard.notes ?? undefined,
+          criteria_scores: scorecard.criteria
+            .filter((c): c is { key: string; label: string; score: number } =>
+              c.score !== null
+            )
+            .map((c) => ({ criterion: c.label, score: c.score })),
+          submit: true,
+        });
       }
+      const { data } = await api.post<{ ok: true }>(
+        `/hm/applications/${candidateId}/review`,
+        { decision, notes }
+      );
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hm", "dashboard"] });

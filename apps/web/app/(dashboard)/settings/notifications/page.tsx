@@ -39,25 +39,54 @@ import {
   subscribeToPushNotifications,
   unsubscribeFromPushNotifications,
 } from "@/lib/pushSubscription";
+import {
+  useNotificationPreferences,
+  useSaveNotificationPreferences,
+} from "@/hooks/useNotificationPreferences";
+import type {
+  NotificationEventType,
+  NotificationPreferences,
+  NotificationPreferencesUpdate,
+} from "@talentflow/contracts";
 
 // ----------------------------------------------------------------
 // Types
 // ----------------------------------------------------------------
 
-type EventType =
-  | "new_candidate_review"
-  | "scorecard_deadline"
-  | "interview_reminder"
-  | "application_status_change"
-  | "daily_digest";
+type EventType = NotificationEventType;
 
-type NotificationPreferences = {
+/**
+ * Form-state van deze pagina. Zelfde shape als het wire-object, maar met
+ * quiet-hours als string ("" = geen venster) zodat <input type="time">
+ * direct kan binden. Conversie wire ↔ form: `fromWire` / `toUpdate`.
+ */
+type PrefsFormState = {
   push_enabled: boolean;
   events: Record<EventType, boolean>;
-  quiet_hours_start: string; // "HH:MM"
-  quiet_hours_end: string; // "HH:MM"
+  quiet_hours_start: string; // "HH:MM" of "" = geen stille uren
+  quiet_hours_end: string; // "HH:MM" of "" = geen stille uren
   timezone: string;
 };
+
+function fromWire(p: NotificationPreferences): PrefsFormState {
+  return {
+    push_enabled: p.push_enabled,
+    events: { ...p.events },
+    quiet_hours_start: p.quiet_hours_start ?? "",
+    quiet_hours_end: p.quiet_hours_end ?? "",
+    timezone: p.timezone,
+  };
+}
+
+function toUpdate(p: PrefsFormState): NotificationPreferencesUpdate {
+  return {
+    push_enabled: p.push_enabled,
+    events: { ...p.events },
+    quiet_hours_start: p.quiet_hours_start === "" ? null : p.quiet_hours_start,
+    quiet_hours_end: p.quiet_hours_end === "" ? null : p.quiet_hours_end,
+    timezone: p.timezone,
+  };
+}
 
 type RegisteredDevice = {
   id: string;
@@ -90,17 +119,21 @@ const EVENT_LABELS: Record<EventType, { title: string; description: string }> = 
   },
 };
 
-const DEFAULT_PREFS: NotificationPreferences = {
+/**
+ * Placeholder tot de server-waarden geladen zijn — spiegelt de
+ * server-defaults (opt-out policy: alles aan, geen stille uren).
+ */
+const DEFAULT_PREFS: PrefsFormState = {
   push_enabled: false,
   events: {
     new_candidate_review: true,
     scorecard_deadline: true,
     interview_reminder: true,
-    application_status_change: false,
-    daily_digest: false,
+    application_status_change: true,
+    daily_digest: true,
   },
-  quiet_hours_start: "22:00",
-  quiet_hours_end: "07:00",
+  quiet_hours_start: "",
+  quiet_hours_end: "",
   timezone: "Europe/Amsterdam",
 };
 
@@ -119,31 +152,38 @@ const TIMEZONES = [
 
 export default function NotificationSettingsPage() {
   const { toast } = useToast();
-  const [prefs, setPrefs] = useState<NotificationPreferences>(DEFAULT_PREFS);
+  const prefsQuery = useNotificationPreferences();
+  const saveMutation = useSaveNotificationPreferences();
+  const [prefs, setPrefs] = useState<PrefsFormState>(DEFAULT_PREFS);
   const [devices, setDevices] = useState<RegisteredDevice[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [devicesLoading, setDevicesLoading] = useState(true);
   const [hasSubscription, setHasSubscription] = useState(false);
   const [permission, setPermission] = useState<
     NotificationPermission | "unsupported"
   >("default");
   const [busyAction, setBusyAction] = useState<string | null>(null);
 
-  // Initial load
+  const loading = devicesLoading || prefsQuery.isPending;
+  const saving = saveMutation.isPending;
+
+  // Opgeslagen voorkeuren van de server → form-state.
+  useEffect(() => {
+    if (prefsQuery.data) {
+      setPrefs(fromWire(prefsQuery.data));
+    }
+  }, [prefsQuery.data]);
+
+  // Devices + browser push-status.
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const [prefsRes, devicesRes] = await Promise.all([
-          api.get<NotificationPreferences>("/notifications/preferences").catch(() => null),
-          api.get<{ devices: RegisteredDevice[] }>("/notifications/devices").catch(() => null),
-        ]);
+        const devicesRes = await api
+          .get<{ devices: RegisteredDevice[] }>("/notifications/devices")
+          .catch(() => null);
 
         if (!mounted) return;
 
-        if (prefsRes?.data) {
-          setPrefs({ ...DEFAULT_PREFS, ...prefsRes.data });
-        }
         if (devicesRes?.data?.devices) {
           setDevices(devicesRes.data.devices);
         }
@@ -152,7 +192,7 @@ export default function NotificationSettingsPage() {
         setHasSubscription(!!sub);
         setPermission(getNotificationPermission());
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) setDevicesLoading(false);
       }
     })();
     return () => {
@@ -166,19 +206,28 @@ export default function NotificationSettingsPage() {
   // Handlers
   // ----------------------------------------------------------------
 
-  async function persist(next: NotificationPreferences) {
-    setSaving(true);
+  /**
+   * Sla het volledige voorkeuren-object op via PUT en toon de door de
+   * server genormaliseerde staat (round-trip). Geeft `true` bij succes.
+   */
+  async function persist(
+    next: PrefsFormState,
+    opts: { silent?: boolean } = {}
+  ): Promise<boolean> {
     try {
-      await api.put("/notifications/preferences", next);
-      setPrefs(next);
+      const saved = await saveMutation.mutateAsync(toUpdate(next));
+      setPrefs(fromWire(saved));
+      if (!opts.silent) {
+        toast({ title: "Voorkeuren opgeslagen" });
+      }
+      return true;
     } catch (err) {
       toast({
         title: "Opslaan mislukt",
         description: err instanceof Error ? err.message : "Probeer opnieuw.",
         variant: "destructive",
       });
-    } finally {
-      setSaving(false);
+      return false;
     }
   }
 
@@ -189,11 +238,16 @@ export default function NotificationSettingsPage() {
         await subscribeToPushNotifications();
         setHasSubscription(true);
         setPermission(getNotificationPermission());
-        await persist({ ...prefs, push_enabled: true });
-        toast({
-          title: "Push ingeschakeld",
-          description: "Je ontvangt nu meldingen op dit apparaat.",
-        });
+        const ok = await persist(
+          { ...prefs, push_enabled: true },
+          { silent: true }
+        );
+        if (ok) {
+          toast({
+            title: "Push ingeschakeld",
+            description: "Je ontvangt nu meldingen op dit apparaat.",
+          });
+        }
       } catch (err) {
         toast({
           title: "Inschakelen mislukt",
@@ -208,8 +262,13 @@ export default function NotificationSettingsPage() {
       try {
         await unsubscribeFromPushNotifications();
         setHasSubscription(false);
-        await persist({ ...prefs, push_enabled: false });
-        toast({ title: "Push uitgeschakeld" });
+        const ok = await persist(
+          { ...prefs, push_enabled: false },
+          { silent: true }
+        );
+        if (ok) {
+          toast({ title: "Push uitgeschakeld" });
+        }
       } finally {
         setBusyAction(null);
       }
@@ -498,7 +557,7 @@ function ToggleSwitch({
 }: {
   checked: boolean;
   disabled?: boolean;
-  onChange: (next: boolean) => void | Promise<void>;
+  onChange: (next: boolean) => void | Promise<unknown>;
 }) {
   return (
     <button

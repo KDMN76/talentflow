@@ -343,7 +343,9 @@ describe('listInterviews + getInterview', () => {
   it('lists with filters', async () => {
     client = mockClient({
       __matcher: (sql) => {
-        if (/^SELECT i\.\* FROM interviews i/i.test(sql)) {
+        // listInterviews selecteert i.* + hydration-kolommen (location_type,
+        // candidate_name, job_title) met LEFT JOINs vóór FROM interviews i.
+        if (/^SELECT i\.\*[^]*FROM interviews i/i.test(sql)) {
           return {
             rows: [
               {
@@ -369,7 +371,8 @@ describe('listInterviews + getInterview', () => {
   it('getInterview returns participants + kit', async () => {
     client = mockClient({
       __matcher: (sql) => {
-        if (/^SELECT \* FROM interviews/i.test(sql)) {
+        // getInterview selecteert i.* + hydration-kolommen met LEFT JOINs.
+        if (/^SELECT i\.\*[^]*FROM interviews i/i.test(sql)) {
           return {
             rows: [
               {

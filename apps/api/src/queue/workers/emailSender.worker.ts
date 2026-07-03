@@ -2,6 +2,7 @@ import { Worker, Job } from 'bullmq';
 import IORedis from 'ioredis';
 import { logger } from '../../middleware/errorHandler';
 import { sendEmail } from '../../lib/emailService';
+import { sendTenantEmail } from '../../lib/tenantMailer';
 import { withTenant } from '../../db/pool';
 import { sendEmailViaIntegration } from '../../modules/integrations/mailbox.service';
 import { recordBulkRecipientResult } from '../../modules/communications/bulkCampaign.service';
@@ -194,14 +195,17 @@ async function processEmailJob(job: Job<EmailJobData>): Promise<unknown> {
       }
 
       // 2) Reply-To bouwen (plus-addressing) als we een thread hebben.
+      //    Let op: een per-tenant `reply_to` (tenant_email_settings) wint in
+      //    sendTenantEmail van deze plus-addressing Reply-To.
       const replyTo = threadId ? buildReplyTo(tenantId, threadId) : undefined;
 
-      // 3) Versturen.
+      // 3) Versturen — tenant-aware transport: eigen SMTP indien enabled,
+      //    anders Resend met per-tenant afzendernaam (zie lib/tenantMailer.ts).
       const html = ensureHtml(data);
       const text = ensureText(data);
       let sendResult;
       try {
-        sendResult = await sendEmail({
+        sendResult = await sendTenantEmail(tenantId, {
           to: data.to,
           subject: data.subject,
           html,

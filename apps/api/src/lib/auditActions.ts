@@ -39,9 +39,13 @@ export const AuditActions = {
   USER_INVITED: 'user.invited',
   USER_ROLE_CHANGED: 'user.role_changed',
   USER_PASSWORD_CHANGED: 'user.password_changed',
+  USER_PASSWORD_RESET_REQUESTED: 'user.password_reset_requested',
 
   // ─── Tenant lifecycle (Q1.2) ────────────────────────────────────────────
   TENANT_CREATED: 'tenant.created',
+  // Per-tenant e-mailinstellingen (afzendernaam / Reply-To / SMTP — migration 042).
+  TENANT_EMAIL_SETTINGS_UPDATED: 'tenant.email_settings_updated',
+  TENANT_EMAIL_TEST_SENT: 'tenant.email_test_sent',
 
   // ─── Data export (Q1.2 — GDPR-bewijs dat data is geëxporteerd) ──────────
   DATA_EXPORTED: 'data.exported',

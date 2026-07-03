@@ -51,8 +51,24 @@ import {
 import { useCandidates } from "@/hooks/useCandidates";
 
 export default function VoiceSettingsPage() {
-  const { data: integration, isLoading } = useVoiceIntegration();
+  const { data: state, isLoading } = useVoiceIntegration();
+  const integration = state?.integration ?? null;
+  const serviceActive = state?.serviceActive ?? true;
   const [testOpen, setTestOpen] = useState(false);
+
+  // Eerlijke bevroren-feature-staat: in deze omgeving belt TalentFlow niet
+  // echt — geen verbind-formulier of test-bel-knop die anders suggereert.
+  if (!isLoading && !serviceActive) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <PageHeader
+          title="Voice & VoIP"
+          description="Verbind Twilio en bel kandidaten direct vanuit TalentFlow."
+        />
+        <NotActivatedCard />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -83,6 +99,29 @@ export default function VoiceSettingsPage() {
         </>
       )}
     </div>
+  );
+}
+
+/**
+ * Eerlijke staat voor omgevingen waar Voice (nog) niet is geactiveerd.
+ */
+function NotActivatedCard() {
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardContent className="flex flex-col items-center gap-3 py-14 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+          <Phone className="h-7 w-7 text-zinc-400" />
+        </div>
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+          Voice is niet geactiveerd
+        </h2>
+        <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+          Bellen via TalentFlow is in deze omgeving nog niet geactiveerd. Er
+          kunnen geen gesprekken worden gestart of getranscribeerd. Neem
+          contact op met je beheerder om Voice te activeren.
+        </p>
+      </CardContent>
+    </Card>
   );
 }
 

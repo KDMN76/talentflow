@@ -17,6 +17,7 @@ import type {
   BooleanQuery,
   SourcingSourceContext,
 } from './types';
+import { mockCandidatesAllowed } from './types';
 import { logger } from '../../../middleware/errorHandler';
 
 interface GitHubSearchUserItem {
@@ -77,14 +78,18 @@ function mockCandidates(query: BooleanQuery, count: number): RawCandidate[] {
 export const githubSource: SourcingSource = {
   id: 'github',
   name: 'GitHub',
-  isEnabled: () => true,
+  // Zonder token alleen enabled buiten productie (mock voor dev/tests).
+  isEnabled: () => !!process.env.GITHUB_TOKEN || mockCandidatesAllowed(),
   async search(
     query: BooleanQuery,
     ctx: SourcingSourceContext
   ): Promise<RawCandidate[]> {
     const limit = Math.max(3, Math.min(30, ctx.limit ?? 15));
     const token = process.env.GITHUB_TOKEN;
-    if (!token) return mockCandidates(query, Math.min(limit, 6));
+    if (!token) {
+      if (!mockCandidatesAllowed()) return [];
+      return mockCandidates(query, Math.min(limit, 6));
+    }
 
     const q = buildGitHubQ(query);
     const url = `https://api.github.com/search/users?q=${encodeURIComponent(q)}&per_page=${Math.min(limit, 20)}`;
@@ -97,6 +102,10 @@ export const githubSource: SourcingSource = {
         },
       });
       if (!res.ok) {
+        if (!mockCandidatesAllowed()) {
+          logger.warn('[sourcingAgent/github] non-2xx — geen resultaten', { status: res.status });
+          return [];
+        }
         logger.warn('[sourcingAgent/github] non-2xx — fallback mock', { status: res.status });
         return mockCandidates(query, Math.min(limit, 4));
       }
@@ -124,6 +133,12 @@ export const githubSource: SourcingSource = {
       }
       return out;
     } catch (err) {
+      if (!mockCandidatesAllowed()) {
+        logger.warn('[sourcingAgent/github] fetch threw — geen resultaten', {
+          error: (err as Error).message,
+        });
+        return [];
+      }
       logger.warn('[sourcingAgent/github] fetch threw — fallback mock', {
         error: (err as Error).message,
       });

@@ -91,6 +91,16 @@ export async function connectIntegration(
   input: ConnectInput,
   ctx: OperationCtx
 ): Promise<PublicIntegration> {
+  // Bevroren feature-guard: in productie zonder live 360dialog-omgeving zou
+  // de mock-health-check elke willekeurige key als "verbonden" valideren.
+  if (!dialog360.isServiceActive()) {
+    throw new AppError(
+      503,
+      'WHATSAPP_NOT_ENABLED',
+      'WhatsApp is niet geactiveerd in deze omgeving. Er kan geen integratie worden gekoppeld.'
+    );
+  }
+
   if (!input.phone_number.startsWith('+')) {
     throw new AppError(400, 'INVALID_PHONE_NUMBER', 'phone_number moet E.164-formaat zijn (start met +)');
   }
@@ -270,6 +280,15 @@ export async function healthCheck(
   tenantId: string,
   ctx?: OperationCtx
 ): Promise<PublicIntegration> {
+  // Guard: mock-health-check zou in productie 'connected/green' faken.
+  if (!dialog360.isServiceActive()) {
+    throw new AppError(
+      503,
+      'WHATSAPP_NOT_ENABLED',
+      'WhatsApp is niet geactiveerd in deze omgeving. Health-check niet mogelijk.'
+    );
+  }
+
   const creds = await loadConnectorCreds(tenantId);
   let quality: WhatsAppIntegrationRow['quality_rating'] = 'unknown';
   let messagingLimit: string | null = null;

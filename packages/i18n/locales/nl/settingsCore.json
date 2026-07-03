@@ -11,6 +11,10 @@
         "title": "Branding",
         "description": "Logo, kleuren en huisstijl voor je portaal en e-mails."
       },
+      "email": {
+        "title": "E-mail",
+        "description": "Afzendernaam, Reply-To en eigen SMTP-server."
+      },
       "customFields": {
         "title": "Aangepaste velden",
         "description": "Eigen velden voor kandidaten en vacatures."
@@ -238,6 +242,72 @@
       "description": "Stel je primaire en accentkleur in.",
       "primaryLabel": "Primaire kleur",
       "primaryAria": "Primaire kleur"
+    }
+  },
+  "email": {
+    "title": "E-mail",
+    "description": "Afzendernaam, Reply-To en optionele eigen SMTP-server.",
+    "adminOnly": "Alleen beheerders kunnen de e-mailinstellingen van de organisatie bekijken en wijzigen.",
+    "save": "Opslaan",
+    "sender": {
+      "title": "Afzender",
+      "description": "Hoe je e-mails bij kandidaten in de inbox verschijnen.",
+      "fromNameLabel": "Afzendernaam",
+      "fromNamePlaceholder": "Bijv. IT Proposal",
+      "fromNameHint": "Kandidaten zien:",
+      "replyToLabel": "Reply-To adres (optioneel)",
+      "replyToPlaceholder": "info@jouwbureau.nl",
+      "replyToHint": "Antwoorden van kandidaten komen op dit adres binnen. Leeg = antwoorden zijn niet afleverbaar."
+    },
+    "smtp": {
+      "title": "Eigen SMTP-server",
+      "description": "Verstuur e-mail via je eigen mailserver in plaats van TalentFlow.",
+      "enabledAria": "Eigen SMTP-server inschakelen",
+      "hostLabel": "Host",
+      "portLabel": "Poort",
+      "secureLabel": "Beveiligde verbinding (TLS)",
+      "secureHint": "Aan = impliciete TLS (meestal poort 465), uit = STARTTLS (meestal poort 587).",
+      "userLabel": "Gebruikersnaam",
+      "passLabel": "Wachtwoord",
+      "passPlaceholder": "SMTP-wachtwoord",
+      "passSetPlaceholder": "•••••••• (opgeslagen — laat leeg om te behouden)",
+      "passClear": "Opgeslagen wachtwoord wissen",
+      "passClearUndo": "Wissen ongedaan maken",
+      "fromLabel": "Afzenderadres",
+      "fromHint": "Het e-mailadres waarvandaan via SMTP wordt verstuurd. Leeg = gebruikersnaam."
+    },
+    "test": {
+      "title": "Testmail",
+      "description": "Controleer je instellingen met een echte e-mail.",
+      "targetHint": "De testmail wordt naar je eigen adres gestuurd: {{email}}",
+      "button": "Verstuur testmail",
+      "savedFirstHint": "De testmail gebruikt de opgeslagen instellingen — sla wijzigingen eerst op."
+    },
+    "toasts": {
+      "saved": {
+        "title": "Opgeslagen",
+        "description": "De e-mailinstellingen zijn bijgewerkt."
+      },
+      "saveError": {
+        "title": "Opslaan mislukt",
+        "description": "Er ging iets mis. Probeer het opnieuw."
+      },
+      "hostRequired": {
+        "title": "SMTP-host ontbreekt",
+        "description": "Vul een host in of zet de SMTP-server uit."
+      },
+      "invalidPort": {
+        "title": "Ongeldige poort",
+        "description": "Kies een poortnummer tussen 1 en 65535."
+      },
+      "testSent": {
+        "title": "Testmail verstuurd",
+        "description": "Verstuurd naar {{to}} via {{provider}}. Controleer je inbox (en spam-map)."
+      },
+      "testError": {
+        "title": "Testmail mislukt",
+        "description": "Versturen is niet gelukt. Controleer je instellingen."
+      }
     }
   }
 }

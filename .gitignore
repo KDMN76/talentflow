@@ -29,6 +29,13 @@ infra/.env.production
 # Seed-credentials voor lokale dev — NOOIT committen, ook test-secrets niet
 .seed-credentials.dev
 
+# Load-test/repro-scripts met hardcoded (test)credentials — lokaal houden
+apps/api/scripts/seed-load-test*.sql
+apps/api/scripts/cleanup-load-test.sql
+apps/api/scripts/_load-esco.sql
+apps/api/scripts/_skills-map.sql
+apps/web/scripts/repro-*.mjs
+
 # Logs
 *.log
 npm-debug.log*

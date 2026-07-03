@@ -226,6 +226,21 @@ const healthHandler = (_req: express.Request, res: express.Response) => {
 app.get('/health', healthHandler);
 app.get('/api/health', healthHandler);
 
+// ── Readiness check ──────────────────────────────────────────────────────────
+// `/health` hierboven blijft bewust liveness-only: de Docker HEALTHCHECK
+// (Dockerfile + docker-compose.prod.yml) hangt eraan en zou bij een DB/Redis-
+// storing anders een restart-loop veroorzaken. Échte dependency-checks
+// (Postgres SELECT 1 + Redis PING, elk max 2s) leven op `/health/ready` —
+// zie lib/readiness.ts voor de volledige rationale. Beide paden geregistreerd
+// om dezelfde reden als hierboven (host-Nginx routet alleen `/api/*`).
+import { createReadinessHandler } from './lib/readiness';
+import { pool } from './db/pool';
+import { redis } from './queue/queues';
+
+const readinessHandler = createReadinessHandler({ db: pool, redis });
+app.get('/health/ready', readinessHandler);
+app.get('/api/health/ready', readinessHandler);
+
 // One-shot startup log dat het shared schema überhaupt geladen is + werkt.
 // Logged één keer bij boot — als de import of parse breekt, faalt de app
 // meteen ipv pas bij de eerste request.

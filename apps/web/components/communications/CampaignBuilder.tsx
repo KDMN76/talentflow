@@ -15,7 +15,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  MergeVariableInput,
+  RichTextEditor,
+} from "@/components/ui/RichTextEditor";
 import {
   Select,
   SelectContent,
@@ -234,27 +237,25 @@ export function CampaignBuilder({ onClose, onCreated }: CampaignBuilderProps) {
 
             <div className="space-y-1.5">
               <Label htmlFor="camp-subject">Onderwerp</Label>
-              <Input
+              <MergeVariableInput
                 id="camp-subject"
                 value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="Bv. Nieuwe rol — past dit nog bij je?"
+                onChange={(v) => setSubject(v)}
+                placeholder="Bv. Nieuwe rol — past dit nog bij je? Typ {{ voor variabelen."
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="camp-body">Bericht (HTML toegestaan)</Label>
-              <Textarea
-                id="camp-body"
-                rows={8}
+              <Label>Bericht</Label>
+              <RichTextEditor
                 value={bodyHtml}
-                onChange={(e) => setBodyHtml(e.target.value)}
-                placeholder="Hi {{first_name}},&#10;&#10;..."
-                className="font-mono text-xs"
+                onChange={(html) => setBodyHtml(html)}
+                placeholder="Hi {{candidate.first_name}}… Typ {{ voor variabelen."
               />
               <p className="text-[11px] text-muted-foreground">
-                Ondersteunde merge-vars: <code>{"{{first_name}}"}</code>,{" "}
-                <code>{"{{last_name}}"}</code>, <code>{"{{job_title}}"}</code>.
+                Typ <code>{"{{"}</code> voor merge-variabelen zoals{" "}
+                <code>{"{{candidate.first_name}}"}</code> en{" "}
+                <code>{"{{job.title}}"}</code>.
               </p>
             </div>
           </>

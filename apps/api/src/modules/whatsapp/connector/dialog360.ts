@@ -18,6 +18,7 @@ import axios, { type AxiosResponse } from 'axios';
 import crypto from 'crypto';
 import { EventEmitter } from 'events';
 import { logger } from '../../../middleware/errorHandler';
+import { mocksAllowed } from '../../../lib/env';
 
 export const DIALOG360_BASE_URL = 'https://waba-v2.360dialog.io';
 
@@ -74,6 +75,24 @@ export interface TemplateSubmitResult {
 
 export function isLive(): boolean {
   return process.env.WHATSAPP_360DIALOG_LIVE === 'true';
+}
+
+/**
+ * Mag de connector mocken? Alleen buiten productie. In productie zonder
+ * live-configuratie is WhatsApp "niet geactiveerd": write-paden weigeren dan
+ * met een 503 in plaats van nep-succes (mock-sends, auto-goedkeuring) te
+ * simuleren.
+ */
+export function mockAllowed(): boolean {
+  return mocksAllowed();
+}
+
+/**
+ * Kan WhatsApp daadwerkelijk gebruikt worden in deze omgeving? Live óf een
+ * omgeving waar mock expliciet is toegestaan (dev/test).
+ */
+export function isServiceActive(): boolean {
+  return isLive() || mockAllowed();
 }
 
 // ───────────────────────────────────────────────────────────────────────────

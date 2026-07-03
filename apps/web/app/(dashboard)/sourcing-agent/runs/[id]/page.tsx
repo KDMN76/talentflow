@@ -50,6 +50,7 @@ import {
   useBulkApproveFindings,
   useBulkRejectFindings,
   useCancelRun,
+  useSourcingSources,
 } from "@/hooks/useSourcing";
 import {
   RUN_STATUS_PILL,
@@ -73,6 +74,10 @@ export default function RunDetailPage() {
   const { data: brief } = useAgentBrief(run?.brief_id);
   const { data: findings } = useAgentFindings(runId);
   const { data: job } = useJob(brief?.job_id ?? "");
+  const { data: sources } = useSourcingSources();
+  const externalSourcesEnabled = (sources ?? []).some(
+    (s) => s.external && s.enabled
+  );
   const cancelRun = useCancelRun();
   const bulkApprove = useBulkApproveFindings();
   const bulkReject = useBulkRejectFindings();
@@ -282,12 +287,37 @@ export default function RunDetailPage() {
           {!findings || findings.length === 0 ? (
             <Card className="border-0 shadow-sm">
               <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
-                <p className="text-sm font-medium">
-                  {t("runDetail.findings.empty.title")}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {t("runDetail.findings.empty.description")}
-                </p>
+                {run.status === "queued" || run.status === "running" ? (
+                  <>
+                    <p className="text-sm font-medium">
+                      {t("runDetail.findings.empty.title")}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("runDetail.findings.empty.description")}
+                    </p>
+                  </>
+                ) : !externalSourcesEnabled ? (
+                  // Eerlijke uitleg: er zijn geen externe bronnen actief, dus
+                  // alleen de eigen database is doorzocht.
+                  <>
+                    <AlertCircle className="h-6 w-6 text-amber-500" />
+                    <p className="text-sm font-medium">
+                      {t("runDetail.findings.noSources.title")}
+                    </p>
+                    <p className="max-w-md text-xs leading-relaxed text-muted-foreground">
+                      {t("runDetail.findings.noSources.description")}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm font-medium">
+                      {t("runDetail.findings.noneFound.title")}
+                    </p>
+                    <p className="max-w-md text-xs leading-relaxed text-muted-foreground">
+                      {t("runDetail.findings.noneFound.description")}
+                    </p>
+                  </>
+                )}
               </CardContent>
             </Card>
           ) : (

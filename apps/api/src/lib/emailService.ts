@@ -38,8 +38,17 @@ function getClient(): Resend | null {
   return cachedClient;
 }
 
-function defaultFrom(): string {
+/**
+ * Globale afzender ("TalentFlow <no-reply@send.kdmn.nl>"). Exported zodat
+ * tenantMailer.ts de display-naam per tenant kan overriden zonder het
+ * geverifieerde adres te dupliceren.
+ */
+export function getDefaultFrom(): string {
   return process.env.RESEND_FROM ?? 'TalentFlow <noreply@talentflow.app>';
+}
+
+function defaultFrom(): string {
+  return getDefaultFrom();
 }
 
 // ─── Public API ─────────────────────────────────────────────────────────────

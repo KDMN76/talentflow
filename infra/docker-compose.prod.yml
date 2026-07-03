@@ -76,10 +76,13 @@ services:
       - '${REDIS_PASSWORD}'
       - '--appendonly'
       - 'yes'
+      # BullMQ vereist noeviction: onder allkeys-lru kunnen queue-keys bij
+      # memory-druk stilletjes geëvict worden → jobs kwijt. Bij vol geheugen
+      # weigert Redis schrijven (luid falen) i.p.v. stil dataverlies.
       - '--maxmemory'
-      - '256mb'
+      - '512mb'
       - '--maxmemory-policy'
-      - 'allkeys-lru'
+      - 'noeviction'
     volumes:
       - redis_data:/data
     networks:
@@ -147,6 +150,15 @@ services:
     image: talentflow/api:latest
     container_name: talentflow-api
     restart: unless-stopped
+    # Vangnet #2 (naast deploy.sh): runtime-env rechtstreeks uit .env.prod,
+    # zodat een vergeten `--env-file` de container niet met lege env
+    # recreate't (incident 2026-05-21). De pure pass-through ${VAR}-entries
+    # zijn hier bewust VERWIJDERD: `environment:` wint van `env_file:`, dus
+    # lege interpolaties zouden anders alsnog winnen. Alleen literals blijven.
+    # LET OP: build-args (NEXT_PUBLIC_*) dekt dit níet — deploy.sh blijft
+    # verplicht. Volledige uitleg: docs/docker.md §6.
+    env_file:
+      - ./.env.prod
     environment:
       NODE_ENV: production
       PORT: '4000'
@@ -154,28 +166,6 @@ services:
       # inline worker-startup zodat we geen dubbele consumers per queue
       # krijgen. Lokaal dev: deze flag is leeg → workers starten inline.
       DISABLE_INLINE_WORKERS: 'true'
-      DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: ${REDIS_URL}
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
-      CORS_ORIGIN: ${CORS_ORIGIN}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      RESEND_API_KEY: ${RESEND_API_KEY}
-      RESEND_FROM: ${RESEND_FROM}
-      RESEND_REPLY_DOMAIN: ${RESEND_REPLY_DOMAIN}
-      RESEND_WEBHOOK_SECRET: ${RESEND_WEBHOOK_SECRET}
-      STORAGE_DRIVER: ${STORAGE_DRIVER}
-      STORAGE_S3_ENDPOINT: ${STORAGE_S3_ENDPOINT}
-      STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET}
-      STORAGE_S3_ACCESS_KEY: ${STORAGE_S3_ACCESS_KEY}
-      STORAGE_S3_SECRET_KEY: ${STORAGE_S3_SECRET_KEY}
-      STORAGE_S3_REGION: ${STORAGE_S3_REGION}
-      SENTRY_DSN_API: ${SENTRY_DSN_API}
-      SENTRY_ENV: ${SENTRY_ENV}
-      # Hotfix 2026-05-15: zet op 'true' om POST /api/auth/register dicht
-      # te zetten (403 REGISTRATION_DISABLED). Invite-only flow komt morgen.
-      DISABLE_PUBLIC_REGISTRATION: ${DISABLE_PUBLIC_REGISTRATION:-false}
     depends_on:
       postgres:
         condition: service_healthy
@@ -209,25 +199,11 @@ services:
     # monitoren we via BullMQ-queues + Sentry, niet via HTTP.
     healthcheck:
       disable: true
+    # Zelfde vangnet als bij `api` — zie de toelichting daar.
+    env_file:
+      - ./.env.prod
     environment:
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: ${REDIS_URL}
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      RESEND_API_KEY: ${RESEND_API_KEY}
-      RESEND_FROM: ${RESEND_FROM}
-      RESEND_REPLY_DOMAIN: ${RESEND_REPLY_DOMAIN}
-      STORAGE_DRIVER: ${STORAGE_DRIVER}
-      STORAGE_S3_ENDPOINT: ${STORAGE_S3_ENDPOINT}
-      STORAGE_S3_BUCKET: ${STORAGE_S3_BUCKET}
-      STORAGE_S3_ACCESS_KEY: ${STORAGE_S3_ACCESS_KEY}
-      STORAGE_S3_SECRET_KEY: ${STORAGE_S3_SECRET_KEY}
-      STORAGE_S3_REGION: ${STORAGE_S3_REGION}
-      SENTRY_DSN_API: ${SENTRY_DSN_API}
-      SENTRY_ENV: ${SENTRY_ENV}
     depends_on:
       api:
         condition: service_healthy

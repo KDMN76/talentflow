@@ -208,6 +208,14 @@
       "empty": {
         "title": "No findings yet",
         "description": "The agent is working — candidates appear as soon as they're scored."
+      },
+      "noSources": {
+        "title": "No candidates found — external sources not active",
+        "description": "This run only searched your own candidate database. External sources (LinkedIn, GitHub, Hunter) are not configured in this environment, so no candidates were pulled from them. Connect an external source or broaden your brief to find more candidates."
+      },
+      "noneFound": {
+        "title": "No candidates found",
+        "description": "The run finished without matching candidates. Try broadening the brief: fewer must-haves, wider locations or a higher target count."
       }
     },
     "findingCard": {

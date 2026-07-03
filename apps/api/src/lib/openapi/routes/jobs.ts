@@ -227,6 +227,20 @@ registry.registerPath({
 
 registry.registerPath({
   method: 'get',
+  path: '/api/jobs/{id}/sourcing-suggestions',
+  tags: ['Jobs'],
+  summary: 'Boolean-search sourcing suggestions',
+  description:
+    'Genereert 3-5 deterministische boolean-search-strings (LinkedIn/GitHub X-ray) uit job title + required_skills + nice_to_have_skills. Geen AI — zelfde input geeft zelfde output.',
+  security: authSecurity,
+  request: { params: idParam },
+  responses: {
+    200: jsonResponse('OK', z.object({ data: z.array(z.string()) })),
+  },
+});
+
+registry.registerPath({
+  method: 'get',
   path: '/api/jobs/{id}/bias-check',
   tags: ['Jobs'],
   summary: 'Bias check on job description (AI)',

@@ -9,24 +9,13 @@ import { AppError } from '../../middleware/errorHandler';
 // candidate — the heavy lifting (sourcing, scheduling, etc.) stays with the
 // recruiter.
 //
-// All DB ops are wrapped in try/catch so missing optional tables (e.g. the
-// `scorecards` table during early MVP) degrade to mock fallbacks instead of
-// returning a 500.
+// GEEN mock-fallbacks: een DB-fout propageert als echte fout naar de client.
+// Eerder degradeerden alle reads/writes bij een missing-table (42P01) naar
+// verzonnen data — een demo of productie-omgeving toonde dan nepkandidaten
+// en "gelukte" reviews die nergens waren opgeslagen.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const HM_REVIEW_STAGES = ['Interview', 'Technische test', 'Aanbieding', 'Offer'];
-
-/**
- * Postgres "undefined_table" — the underlying table doesn't exist yet.
- */
-function isMissingTableError(err: unknown): boolean {
-  const code = (err as { code?: string } | null)?.code;
-  return code === '42P01';
-}
-
-function isAppError(err: unknown): err is AppError {
-  return err instanceof AppError;
-}
 
 // ─── Dashboard ───────────────────────────────────────────────────────────────
 
@@ -41,8 +30,7 @@ export async function getMyDashboard(
   tenantId: string,
   userId: string
 ): Promise<HmDashboard> {
-  try {
-    return await withTenant(tenantId, async (client) => {
+  return withTenant(tenantId, async (client) => {
       const { rows: [openJobsRow] } = await client.query(
         `SELECT COUNT(*) as count FROM jobs
          WHERE tenant_id = $1 AND recruiter_id = $2
@@ -94,18 +82,7 @@ export async function getMyDashboard(
         approved_today: approvedToday,
         rejected_today: rejectedToday,
       };
-    });
-  } catch (err) {
-    if (isMissingTableError(err)) {
-      return {
-        open_jobs: 3,
-        pending_reviews: 5,
-        approved_today: 2,
-        rejected_today: 1,
-      };
-    }
-    throw err;
-  }
+  });
 }
 
 // ─── My Jobs ─────────────────────────────────────────────────────────────────
@@ -121,8 +98,7 @@ export async function getMyJobs(
   tenantId: string,
   userId: string
 ): Promise<HmJob[]> {
-  try {
-    return await withTenant(tenantId, async (client) => {
+  return withTenant(tenantId, async (client) => {
       const { rows } = await client.query(
         `SELECT j.id, j.title, j.location,
                 COUNT(DISTINCT a.id) FILTER (WHERE a.status = 'active') as application_count
@@ -143,32 +119,7 @@ export async function getMyJobs(
         location: r.location ?? null,
         application_count: parseInt(r.application_count, 10) || 0,
       }));
-    });
-  } catch (err) {
-    if (isMissingTableError(err)) {
-      return [
-        {
-          id: 'mock-job-1',
-          title: 'Senior Backend Engineer',
-          application_count: 12,
-          location: 'Amsterdam',
-        },
-        {
-          id: 'mock-job-2',
-          title: 'Product Designer',
-          application_count: 7,
-          location: 'Remote',
-        },
-        {
-          id: 'mock-job-3',
-          title: 'DevOps Lead',
-          application_count: 4,
-          location: 'Den Haag',
-        },
-      ];
-    }
-    throw err;
-  }
+  });
 }
 
 // ─── Pending Reviews ─────────────────────────────────────────────────────────
@@ -178,27 +129,45 @@ export interface HmPendingReview {
   candidate_id: string;
   candidate_name: string;
   candidate_email: string | null;
+  candidate_position: string | null;
   ai_score: number | null;
   applied_at: string;
   job_id: string;
   job_title: string;
+  stage_id: string | null;
   stage_name: string | null;
   summary: string | null;
+  skills: string[];
+}
+
+function toStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(String);
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed.map(String) : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
 }
 
 export async function getPendingReviews(
   tenantId: string,
   userId: string
 ): Promise<HmPendingReview[]> {
-  try {
-    return await withTenant(tenantId, async (client) => {
+  return withTenant(tenantId, async (client) => {
       const { rows } = await client.query(
         `SELECT a.id              as application_id,
                 a.applied_at,
                 a.job_id,
+                a.stage_id,
                 c.id              as candidate_id,
                 c.name            as candidate_name,
                 c.email           as candidate_email,
+                c.current_position as candidate_position,
+                c.skills          as candidate_skills,
                 c.ai_score,
                 c.notes           as summary,
                 j.title           as job_title,
@@ -231,70 +200,17 @@ export async function getPendingReviews(
         candidate_id: r.candidate_id,
         candidate_name: r.candidate_name,
         candidate_email: r.candidate_email ?? null,
+        candidate_position: r.candidate_position ?? null,
         ai_score: r.ai_score !== null && r.ai_score !== undefined ? Number(r.ai_score) : null,
         applied_at: r.applied_at,
         job_id: r.job_id,
         job_title: r.job_title,
+        stage_id: r.stage_id ?? null,
         stage_name: r.stage_name ?? null,
         summary: r.summary ?? null,
+        skills: toStringArray(r.candidate_skills),
       }));
-    });
-  } catch (err) {
-    if (isMissingTableError(err)) {
-      const now = new Date().toISOString();
-      return [
-        {
-          application_id: 'mock-app-1',
-          candidate_id: 'mock-cand-1',
-          candidate_name: 'Sophie van der Berg',
-          candidate_email: 'sophie@example.com',
-          ai_score: 87,
-          applied_at: now,
-          job_id: 'mock-job-1',
-          job_title: 'Senior Backend Engineer',
-          stage_name: 'Interview',
-          summary: '8 jaar Node.js, sterke architect-ervaring met microservices.',
-        },
-        {
-          application_id: 'mock-app-2',
-          candidate_id: 'mock-cand-2',
-          candidate_name: 'Marco Janssen',
-          candidate_email: 'marco@example.com',
-          ai_score: 74,
-          applied_at: now,
-          job_id: 'mock-job-1',
-          job_title: 'Senior Backend Engineer',
-          stage_name: 'Technische test',
-          summary: 'Sterke Java-achtergrond, leert snel nieuwe stacks.',
-        },
-        {
-          application_id: 'mock-app-3',
-          candidate_id: 'mock-cand-3',
-          candidate_name: 'Aisha el-Hamdaoui',
-          candidate_email: 'aisha@example.com',
-          ai_score: 92,
-          applied_at: now,
-          job_id: 'mock-job-2',
-          job_title: 'Product Designer',
-          stage_name: 'Interview',
-          summary: 'Top portfolio, ervaring met B2B SaaS design systems.',
-        },
-        {
-          application_id: 'mock-app-4',
-          candidate_id: 'mock-cand-4',
-          candidate_name: 'Pieter de Wit',
-          candidate_email: 'pieter@example.com',
-          ai_score: 68,
-          applied_at: now,
-          job_id: 'mock-job-3',
-          job_title: 'DevOps Lead',
-          stage_name: 'Aanbieding',
-          summary: 'Solide Kubernetes-ervaring, twijfel over leiderschap.',
-        },
-      ];
-    }
-    throw err;
-  }
+  });
 }
 
 // ─── Review Application ──────────────────────────────────────────────────────
@@ -308,8 +224,7 @@ export async function reviewApplication(
   decision: HmDecision,
   notes?: string
 ) {
-  try {
-    return await withTenant(tenantId, async (client) => {
+  return withTenant(tenantId, async (client) => {
       // 1. Verify application belongs to a job assigned to this HM
       const { rows: [app] } = await client.query(
         `SELECT a.id, a.job_id, a.candidate_id, a.stage_id, a.status
@@ -394,22 +309,7 @@ export async function reviewApplication(
       );
 
       return updated;
-    });
-  } catch (err) {
-    if (isAppError(err)) throw err;
-    if (isMissingTableError(err)) {
-      // Optimistic mock response
-      return {
-        id: applicationId,
-        status: decision === 'reject' ? 'rejected' : 'active',
-        decision,
-        notes: notes ?? null,
-        updated_at: new Date().toISOString(),
-        mock: true,
-      };
-    }
-    throw err;
-  }
+  });
 }
 
 // ─── Application Details ─────────────────────────────────────────────────────
@@ -419,8 +319,7 @@ export async function getApplicationDetails(
   userId: string,
   applicationId: string
 ) {
-  try {
-    return await withTenant(tenantId, async (client) => {
+  return withTenant(tenantId, async (client) => {
       const { rows: [row] } = await client.query(
         `SELECT a.id            as application_id,
                 a.status,
@@ -459,33 +358,20 @@ export async function getApplicationDetails(
         );
       }
 
-      // Previous notes from scorecards (if available) + activity timeline
-      let previousReviews: Array<{
-        reviewer_id: string;
-        reviewer_name: string | null;
-        decision: string;
-        notes: string | null;
-        created_at: string;
-      }> = [];
-      try {
-        // Echte scorecards-kolommen: interviewer_id + recommendation
-        // (geen reviewer_id/decision — dat gaf 42703 → 500).
-        const { rows: scRows } = await client.query(
-          `SELECT sc.interviewer_id as reviewer_id,
-                  sc.recommendation as decision,
-                  sc.notes, sc.created_at,
-                  u.name as reviewer_name
-           FROM scorecards sc
-           LEFT JOIN users u ON u.id = sc.interviewer_id
-           WHERE sc.application_id = $1 AND sc.tenant_id = $2
-           ORDER BY sc.created_at DESC`,
-          [applicationId, tenantId]
-        );
-        previousReviews = scRows;
-      } catch (innerErr) {
-        if (!isMissingTableError(innerErr)) throw innerErr;
-        // scorecards table missing — leave list empty
-      }
+      // Previous notes from scorecards + activity timeline.
+      // Echte scorecards-kolommen: interviewer_id + recommendation
+      // (geen reviewer_id/decision — dat gaf 42703 → 500).
+      const { rows: previousReviews } = await client.query(
+        `SELECT sc.interviewer_id as reviewer_id,
+                sc.recommendation as decision,
+                sc.notes, sc.created_at,
+                u.name as reviewer_name
+         FROM scorecards sc
+         LEFT JOIN users u ON u.id = sc.interviewer_id
+         WHERE sc.application_id = $1 AND sc.tenant_id = $2
+         ORDER BY sc.created_at DESC`,
+        [applicationId, tenantId]
+      );
 
       const { rows: timeline } = await client.query(
         `SELECT a.id, a.action, a.payload, a.created_at,
@@ -531,42 +417,123 @@ export async function getApplicationDetails(
         previous_reviews: previousReviews,
         timeline,
       };
-    });
-  } catch (err) {
-    if (isAppError(err)) throw err;
-    if (isMissingTableError(err)) {
+  });
+}
+
+// ─── Stats (swipe-deck header) ───────────────────────────────────────────────
+
+export interface HmStats {
+  to_review: number;
+  scorecards_due_today: number;
+  scorecards_overdue: number;
+  approved_today: number;
+}
+
+export async function getStats(
+  tenantId: string,
+  userId: string
+): Promise<HmStats> {
+  const [dashboard, deadlines] = await Promise.all([
+    getMyDashboard(tenantId, userId),
+    getScorecardDeadlines(tenantId, userId),
+  ]);
+  return {
+    to_review: dashboard.pending_reviews,
+    scorecards_due_today: deadlines.filter((d) => d.bucket === 'today').length,
+    scorecards_overdue: deadlines.filter((d) => d.bucket === 'overdue').length,
+    approved_today: dashboard.approved_today,
+  };
+}
+
+// ─── Scorecard deadlines ─────────────────────────────────────────────────────
+//
+// Open scorecards voor deze hiring manager: elke actieve sollicitatie in een
+// HM-reviewfase (van een job die aan deze HM is toegewezen) waarvoor deze
+// gebruiker nog geen ingediende scorecard heeft op de huidige fase.
+//
+// Deadline-regel (deterministisch, uit echte data — geen verzonnen datums):
+//   - is er een afgelopen interview voor de sollicitatie → scheduled_end + 48u
+//   - anders → laatste stage-wijziging (applications.updated_at) + 72u
+
+export type HmDeadlineBucket = 'overdue' | 'today' | 'this_week' | 'later';
+
+export interface HmScorecardDeadline {
+  application_id: string;
+  candidate_name: string;
+  job_id: string;
+  job_title: string;
+  stage_id: string | null;
+  stage_name: string | null;
+  due_at: string;
+  bucket: HmDeadlineBucket;
+}
+
+function bucketFor(due: Date, now: Date): HmDeadlineBucket {
+  if (due.getTime() < now.getTime()) return 'overdue';
+  const endOfToday = new Date(now);
+  endOfToday.setHours(23, 59, 59, 999);
+  if (due.getTime() <= endOfToday.getTime()) return 'today';
+  if (due.getTime() <= now.getTime() + 7 * 24 * 3600 * 1000) return 'this_week';
+  return 'later';
+}
+
+export async function getScorecardDeadlines(
+  tenantId: string,
+  userId: string
+): Promise<HmScorecardDeadline[]> {
+  return withTenant(tenantId, async (client) => {
+    const { rows } = await client.query(
+      `SELECT a.id            as application_id,
+              a.stage_id,
+              c.name          as candidate_name,
+              j.id            as job_id,
+              j.title         as job_title,
+              ps.name         as stage_name,
+              COALESCE(
+                (SELECT MAX(i.scheduled_end) + INTERVAL '48 hours'
+                   FROM interviews i
+                  WHERE i.application_id = a.id
+                    AND i.tenant_id = a.tenant_id
+                    AND i.scheduled_end < now()
+                    AND i.cancelled_at IS NULL),
+                a.updated_at + INTERVAL '72 hours'
+              ) as due_at
+       FROM applications a
+       JOIN jobs j       ON j.id = a.job_id       AND j.tenant_id = a.tenant_id
+       JOIN candidates c ON c.id = a.candidate_id AND c.tenant_id = a.tenant_id
+       LEFT JOIN pipeline_stages ps ON ps.id = a.stage_id
+       WHERE a.tenant_id = $1
+         AND j.recruiter_id = $2
+         AND a.status = 'active'
+         AND ps.name = ANY($3::text[])
+         AND j.deleted_at IS NULL
+         AND c.deleted_at IS NULL
+         AND NOT EXISTS (
+           SELECT 1 FROM scorecards sc
+           WHERE sc.application_id = a.id
+             AND sc.tenant_id = a.tenant_id
+             AND sc.interviewer_id = $2
+             AND (sc.stage_id = a.stage_id OR (sc.stage_id IS NULL AND a.stage_id IS NULL))
+             AND sc.submitted_at IS NOT NULL
+         )
+       ORDER BY due_at ASC
+       LIMIT 100`,
+      [tenantId, userId, HM_REVIEW_STAGES]
+    );
+
+    const now = new Date();
+    return rows.map((r) => {
+      const due = new Date(r.due_at);
       return {
-        application: {
-          id: applicationId,
-          status: 'active',
-          applied_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          stage_id: null,
-          stage_name: 'Interview',
-        },
-        job: {
-          id: 'mock-job-1',
-          title: 'Senior Backend Engineer',
-          location: 'Amsterdam',
-          department: 'Engineering',
-        },
-        candidate: {
-          id: 'mock-cand-1',
-          name: 'Sophie van der Berg',
-          email: 'sophie@example.com',
-          phone: '+31 6 12345678',
-          skills: ['Node.js', 'PostgreSQL', 'AWS'],
-          ai_score: 87,
-          resume_url: null,
-          source: 'LinkedIn',
-          tags: ['senior', 'backend'],
-          summary: '8 jaar Node.js, sterke architect-ervaring.',
-        },
-        previous_reviews: [],
-        timeline: [],
-        mock: true,
+        application_id: r.application_id,
+        candidate_name: r.candidate_name,
+        job_id: r.job_id,
+        job_title: r.job_title,
+        stage_id: r.stage_id ?? null,
+        stage_name: r.stage_name ?? null,
+        due_at: due.toISOString(),
+        bucket: bucketFor(due, now),
       };
-    }
-    throw err;
-  }
+    });
+  });
 }

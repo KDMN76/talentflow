@@ -57,7 +57,10 @@ const notesBody = z.object({
 router.get('/integration', async (req, res, next) => {
   try {
     const data = await voice.getIntegration(req.user!.tenantId);
-    res.json({ data });
+    // service_active: kan Voice in deze omgeving echt gebruikt worden?
+    // In productie zonder TWILIO_LIVE is dit false — de UI toont dan een
+    // eerlijke "Voice is niet geactiveerd"-staat.
+    res.json({ data, service_active: voice.isVoiceServiceActive() });
   } catch (err) {
     next(err);
   }

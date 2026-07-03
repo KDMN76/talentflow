@@ -53,7 +53,11 @@ interface ComposeBarProps {
   candidateName: string;
   defaultChannel?: ChannelType;
   whatsappIntegration?: WhatsAppIntegration | null;
+  /** False wanneer WhatsApp in deze omgeving niet geactiveerd is. */
+  whatsappServiceActive?: boolean;
   voiceIntegration?: VoiceIntegration | null;
+  /** False wanneer Voice in deze omgeving niet geactiveerd is. */
+  voiceServiceActive?: boolean;
   allowedChannels?: ChannelType[];
 }
 
@@ -100,7 +104,9 @@ export function ComposeBar({
   candidateName,
   defaultChannel = "email",
   whatsappIntegration,
+  whatsappServiceActive = true,
   voiceIntegration,
+  voiceServiceActive = true,
   allowedChannels = ALL_CHANNELS,
 }: ComposeBarProps) {
   const { toast } = useToast();
@@ -122,8 +128,10 @@ export function ComposeBar({
   const sendEmail = useSendEmail();
   const initiateCall = useInitiateCall();
 
-  const whatsAppConnected = whatsappIntegration?.status === "connected";
-  const voiceConnected = voiceIntegration?.status === "connected";
+  const whatsAppConnected =
+    whatsappServiceActive && whatsappIntegration?.status === "connected";
+  const voiceConnected =
+    voiceServiceActive && voiceIntegration?.status === "connected";
   const consentGranted = consent?.status === "granted";
   // Vrije tekst (en dus emoji) kan op alle kanalen behalve voice, en bij
   // WhatsApp alleen binnen het open 24u-sessievenster.
@@ -132,11 +140,24 @@ export function ComposeBar({
 
   const channelDisabled = useMemo<Partial<Record<ChannelType, string>>>(() => {
     const reasons: Partial<Record<ChannelType, string>> = {};
-    if (!whatsAppConnected) reasons.whatsapp = "WhatsApp niet geconfigureerd";
+    if (!whatsappServiceActive) reasons.whatsapp = "WhatsApp is niet geactiveerd";
+    else if (!whatsAppConnected) reasons.whatsapp = "WhatsApp niet geconfigureerd";
     else if (!consentGranted) reasons.whatsapp = "Geen WhatsApp-toestemming van kandidaat";
-    if (!voiceConnected) reasons.voice = "Twilio niet geconfigureerd";
+    if (!voiceServiceActive) reasons.voice = "Voice is niet geactiveerd";
+    else if (!voiceConnected) reasons.voice = "Twilio niet geconfigureerd";
+    // Eerlijk: deze kanalen hebben (nog) geen echte backend. De oude compose
+    // toonde "SMS verzonden" / "LinkedIn-InMail verzonden" zonder dat er ooit
+    // iets werd verstuurd.
+    reasons.sms = "SMS is niet beschikbaar in TalentFlow";
+    reasons.linkedin_inmail = "LinkedIn-koppeling is nog niet beschikbaar";
     return reasons;
-  }, [whatsAppConnected, consentGranted, voiceConnected]);
+  }, [
+    whatsappServiceActive,
+    whatsAppConnected,
+    consentGranted,
+    voiceServiceActive,
+    voiceConnected,
+  ]);
 
   const handleSend = async () => {
     if (channel === "email") {
@@ -160,67 +181,85 @@ export function ComposeBar({
     }
 
     if (channel === "whatsapp") {
-      if (sessionOpen) {
-        if (!body) {
-          toast({ title: "Bericht is leeg", variant: "destructive" });
-          return;
-        }
-        await sendWhatsApp.mutateAsync({
-          candidate_id: candidateId,
-          kind: "text",
-          body,
-        });
-        toast({ title: "WhatsApp-bericht verzonden" });
-        setBody("");
-      } else {
-        if (!templateId) {
-          toast({
-            title: "Kies een template",
-            description: "Buiten het 24u-venster is een template verplicht.",
-            variant: "destructive",
+      try {
+        if (sessionOpen) {
+          if (!body) {
+            toast({ title: "Bericht is leeg", variant: "destructive" });
+            return;
+          }
+          await sendWhatsApp.mutateAsync({
+            candidate_id: candidateId,
+            kind: "text",
+            body,
           });
-          return;
+          toast({ title: "WhatsApp-bericht verzonden" });
+          setBody("");
+        } else {
+          if (!templateId) {
+            toast({
+              title: "Kies een template",
+              description: "Buiten het 24u-venster is een template verplicht.",
+              variant: "destructive",
+            });
+            return;
+          }
+          await sendWhatsApp.mutateAsync({
+            candidate_id: candidateId,
+            kind: "template",
+            template_id: templateId,
+          });
+          toast({ title: "WhatsApp-template verzonden" });
+          setTemplateId("");
         }
-        await sendWhatsApp.mutateAsync({
-          candidate_id: candidateId,
-          kind: "template",
-          template_id: templateId,
+      } catch {
+        toast({
+          title: "Versturen mislukt",
+          description:
+            "Het WhatsApp-bericht is niet verstuurd. WhatsApp is mogelijk niet geactiveerd.",
+          variant: "destructive",
         });
-        toast({ title: "WhatsApp-template verzonden" });
-        setTemplateId("");
       }
       return;
     }
 
     if (channel === "voice") {
-      const call = await initiateCall.mutateAsync({
-        candidate_id: candidateId,
-        candidate_name: candidateName,
-      });
-      toast({
-        title: "Bellen gestart",
-        description: `${candidateName} (${call.id})`,
-      });
+      try {
+        const call = await initiateCall.mutateAsync({
+          candidate_id: candidateId,
+          candidate_name: candidateName,
+        });
+        toast({
+          title: "Bellen gestart",
+          description: `${candidateName} (${call.id})`,
+        });
+      } catch {
+        toast({
+          title: "Bellen mislukt",
+          description:
+            "Het gesprek kon niet gestart worden. Voice is mogelijk niet geactiveerd.",
+          variant: "destructive",
+        });
+      }
       return;
     }
 
     if (channel === "sms") {
-      if (!body) {
-        toast({ title: "Bericht is leeg", variant: "destructive" });
-        return;
-      }
-      toast({ title: "SMS verzonden", description: `Naar ${candidateName}` });
-      setBody("");
+      // Eerlijk: er is geen SMS-backend — geen nep "SMS verzonden" meer.
+      toast({
+        title: "SMS is niet beschikbaar",
+        description: "TalentFlow ondersteunt (nog) geen SMS-verzending.",
+        variant: "destructive",
+      });
       return;
     }
 
     if (channel === "linkedin_inmail") {
-      if (!body) {
-        toast({ title: "Bericht is leeg", variant: "destructive" });
-        return;
-      }
-      toast({ title: "LinkedIn-InMail verzonden" });
-      setBody("");
+      // Eerlijk: er is geen LinkedIn-send-backend — geen nep-succes meer.
+      toast({
+        title: "LinkedIn-InMail is niet beschikbaar",
+        description: "De LinkedIn-koppeling is nog niet beschikbaar.",
+        variant: "destructive",
+      });
     }
   };
 

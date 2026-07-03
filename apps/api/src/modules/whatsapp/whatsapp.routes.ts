@@ -14,6 +14,7 @@ import * as wa from './whatsapp.service';
 import * as templates from './templates.service';
 import * as messaging from './messaging.service';
 import * as consent from './consent.service';
+import * as dialog360 from './connector/dialog360';
 
 const router = Router();
 router.use(requireAuth, tenantMiddleware);
@@ -116,7 +117,10 @@ const listConsentsQuery = z.object({
 router.get('/integration', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const integration = await wa.getIntegration(req.user!.tenantId);
-    res.json({ data: integration });
+    // service_active: kan WhatsApp in deze omgeving echt gebruikt worden?
+    // In productie zonder live 360dialog-config is dit false — de UI toont
+    // dan een eerlijke "WhatsApp is niet geactiveerd"-staat.
+    res.json({ data: integration, service_active: dialog360.isServiceActive() });
   } catch (err) {
     next(err);
   }
