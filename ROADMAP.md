@@ -938,3 +938,73 @@ matching + tarief/marge-veld + ITProposal-referentie-workflow". Overige fases (0
   posten naar een standaard-set bij "Publiceren" kan gebouwd worden; wachten op keuze.
 - **[INFO] Demo-seed load-test-tenant** — `apps/api/scripts/seed-load-test-modules.sql` (idempotent, per-tabel-guards)
   vulde 2026-07-02 alle lege modules; embedding-backfill (300 jobs + 2.000 kandidaten) via one-off enqueue-script gedraaid.
+
+---
+
+## Sectie 7: Grote autonome bouwronde (2026-07-08) — OPGELEVERD
+
+Opdracht Kaan: "pak alles op, ook alles wat in de roadmap staat; code-reviewer op veiligheid
++ onnodige code; kom pas terug als je klaar bent met het product." Uitgevoerd met een team
+parallelle agents + drie code-reviewers. Twee productie-milestones gedeployed en live geverifieerd.
+
+### Milestone 1 (commit `1462ed0`, live) — auth/e-mail/eerlijkheid/API-kern
+- **Wachtwoord-reset** end-to-end (enumeratie-neutraal + timing-jitter, gehashte single-use tokens 1u,
+  sessie-intrekking); `/forgot-password` + `/reset-password`. Migratie 041.
+- **Notificatie-voorkeuren** GET/PUT geconsolideerd ↔ per-rij; `getEffectivePreference` checkt master AND event;
+  quiet-hours gesynct over alle rijen. (Sluit Sectie 1 "Notificatie-voorkeuren contract-mismatch".)
+- **Per-tenant e-mail**: afzendernaam + reply-to + eigen SMTP (nodemailer, AES-256-GCM at rest) + testmail;
+  SSRF-guard op SMTP-host/poort. Migratie 042. (Sluit Sectie 5.1.)
+- **Mock-eerlijkheid**: geen fake succes in prod — HM-swipe echte data, sourcing/job-boards/whatsapp/voice
+  weigeren eerlijk (503/failed + NL-melding), gedeelde `mocksAllowed()`. (Sluit deel van 6.2.)
+- **Bulk-campagnes** mergen `{{variabelen}}` nu echt per ontvanger. **API-fixes**: `/health/ready` (DB+Redis),
+  sourcing-suggestions-endpoint (sluit follow-up), apiRateLimit-429-details (sluit follow-up), jobs.status enum,
+  pool-timeout. **CampaignBuilder** → RichTextEditor (sluit follow-up).
+- **Infra**: Redis `noeviction`+512mb (sluit follow-up), `env_file`-vangnet api/api-worker (sluit Sectie 1 deploy.sh#2 +
+  docs/docker.md §6), uptime-monitor met mail-alert, dode `deploy.yml` verwijderd, disk-prune 104 GB.
+- **Security onderweg**: publieke registratie stond live OPEN → gedicht (403).
+
+### Milestone 2 (commits `010d31a`…`cfde129`, live) — compliance/security/white-label/portalen/modules
+- **GDPR (AVG art. 15+17)**: export-dossier + delete/anonymisatie e2e, gehashte kort-levende download-tokens
+  (dashboard + self-service). Migratie 046. (Sluit Sectie 3 "GDPR export" + "GDPR delete".)
+- **2FA (TOTP)**: QR-setup, recovery-codes (single-use, gehasht), replay-protectie (atomair), tenant-policy
+  "verplicht" + afdwing-flow. Migratie 047. (Sluit Sectie 2 "2FA/SSO" — TOTP-deel; SAML/OIDC blijft anti-scope.)
+- **AI Act**: human-oversight-gate (auto-reject → pending_review + recruiter-approval), kandidaat-AI-samenvatting,
+  "AI & Bias"-analytics (adverse-impact 4/5-regel, <30-suppressie), beslis-logging + 6-mnd-retentie. Migratie 043.
+  (Sluit Sectie 3 "AI Act compliance module".)
+- **Pay transparency (EU 2023/970)**: publiceer-gate (422 zonder salarisband, ook via jd-generator + job-templates),
+  beloningscriteria op career-page + job-detail, admin-toggle, rapport. Migratie 044. (Sluit Sectie 3 "Pay transparency".)
+- **White-label branding**: logo-upload (SVG-hardening: scrub + CSP-sandbox + nosniff), accentkleur via CSS-var met
+  WCAG-contrastvalidatie, logo in sidebar, e-mail-footer. Migratie 045. (Sluit Sectie 2 "Multi-tenant white-label" —
+  behalve custom subdomein, blijft infra-taak.)
+- **Reports**: builder e2e (blokken/filters/run/CSV-export) + embed-token met expiry. Migratie 049.
+  (Sluit Sectie 2 "Reports module fix".)
+- **Klantportaal**: gast-shortlist zonder login (PII-vrij bewezen), feedback-loop, audit. Migratie 048.
+  (Sluit Sectie 2 "Klantportaal voor shortlist-feedback".)
+- **Module-flags**: per-tenant module-zichtbaarheid (moduleGuard + settings/modules), grandfather bestaande tenants.
+  Migratie 050. **Viewer-rol schrijf-gaten gedicht** (jobs/crm/interviews/scorecards waren schrijfbaar). **Demo-tenant-script**
+  (viewer-rol, random creds). (Sluit Sectie 2 "Demo-tenant" + strategie Fase 0 ontstapelen.)
+- **Career-page** blok-voor-blok publiek renderen + **auto-post opt-in** bij publiceren (Kaan-beslissing: default UIT,
+  nu bouwbaar/aan te zetten — sluit de [BESLISSING Kaan]-follow-up).
+- **Leftovers**: skill-profile PATCH-endpoint (sluit 2026-06-30 open bug), klant-select op job-detail, OpenAPI HM, HM-tijdzone.
+- **i18n-staart**: timesheets/pipeline/ai-generator/api-explorer/api-keys/jd-drafts/custom-fields/integrations/
+  notifications/voice/whatsapp gemigreerd (11+ pagina's). **ESLint** opgezet (`npm run lint` exit 0, config web+api).
+- **RLS non-owner cutover UITGEVOERD** (2026-07-08): prod draait onder `talentflow_app` (NOBYPASSRLS); DB-afgedwongen
+  isolatie live, backup + probe + smoke groen. (Sluit Sectie 6.2 "RLS non-owner-cutover" — de harde gate vóór klant #2.)
+
+### Kwaliteit
+Drie code-reviewers (publieke token-endpoints, 2FA/migraties, contract-drift): **geen kritiek/hoog** in de nieuwe code;
+alle nieuwe tenant-tabellen RLS ENABLE+FORCE+policy; 8 bevindingen gefixt (GDPR-token hashen, 2FA-race atomair,
+`withTenant` in verify-controller, `enforce2faPolicy` exact-match, skill-profile-normalisatie, rol-toewijzing `role_key`,
+portal-mock alleen non-prod). Testsuite bij oplevering: **1805 api + 25 web groen; api+web `tsc` schoon; i18n-pariteit**.
+
+### Nog open na deze ronde (P2/P3, expliciet niet gedaan)
+- **[P2] Custom subdomein per tenant** (career-page + white-label) — infra-werk (nginx-vhost + DNS + cert), o.a.
+  `werkenbij.kdmnprojecten.com`. Schema-support (`career_pages.custom_domain`) bestaat; serveerpad niet.
+- **[P2] Billing/Stripe** — plan in `docs/STRIPE_PLAN.md`; bouw wacht op Kaan's Stripe-account + keys.
+- **[P2] Outlook/Gmail-OAuth mailbox-sync** — app-registraties nodig (Kaan).
+- **[P2] i18n-restant** — enkele settings-pagina's (talent-fit, availability, custom-fields deels, workflows) nog hardcoded NL;
+  `career-public`-SSR-renderer is levend (niet dood, reviewer-aanname klopte niet).
+- **[P2] Reports-share plaintext-tokens** (portal/embed) — GDPR-token is gehasht; portal/embed-tokens nog plaintext (LOW).
+- **[P3] Lint-warnings opruimen** (73 warnings, niet-blokkerend) + testfiles onder tsc-gate.
+- **[BESLISSING Kaan] Manatal-cijfer in beschermde bestanden** — CLAUDE.md + ROADMAP.md regel 890 dragen nog "~€1.000/mo";
+  de echte factuur is ≈€620/mo (zie `docs/TCO_ROI.md`). Mag ik die twee regels corrigeren?

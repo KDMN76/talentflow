@@ -4,6 +4,26 @@ Security-runbook voor de TalentFlow multi-tenant SaaS. Dit document beschrijft d
 overgang naar echt door de database afgedwongen tenant-isolatie via Row-Level
 Security (RLS).
 
+> ## ✅ CUTOVER UITGEVOERD — 2026-07-08
+> Productie draait sinds 2026-07-08 onder de non-owner rol **`talentflow_app`**
+> (`NOSUPERUSER NOBYPASSRLS`). RLS wordt nu écht door de database afgedwongen;
+> tenant-isolatie leunt niet langer alleen op de app-laag. Vooraf: verse
+> Postgres-dump naar R2 (`postgres-2026-07-08-1827.sql.gz`, 337 MB). Isolatie-
+> probe onder de rol bewees: reads mét context werken (incl. de nieuwe tabellen
+> `ai_action_proposals`/`tenant_module_settings`/`data_export_tokens`),
+> cross-tenant = 0 rijen, geen context = 0 rijen (fail-closed, geen 500). Live
+> smoke ná cutover: login 200, **refresh 200** (auth_context-pad), POST
+> /candidates 201 (WITH CHECK), candidates/jobs/dashboard 200.
+>
+> - `DATABASE_URL` in `infra/.env.prod` wijst nu naar `talentflow_app`.
+> - De owner-URL staat als `MIGRATE_DATABASE_URL` in `.env.prod` — **toekomstige
+>   migraties draaien met die URL** (de app-rol kan geen DDL): zie "Toekomstige
+>   migraties ná de cutover" onderaan.
+> - Rollback (indien ooit nodig): zet `DATABASE_URL` terug op de owner-waarde uit
+>   `infra/.env.prod.bak-rlscutover` en `./infra/deploy.sh up -d --no-deps
+>   --force-recreate api api-worker`.
+> - Het rol-wachtwoord staat alleen in `infra/.env.prod` (chmod 600) op de VPS.
+
 ---
 
 ## Bevinding
