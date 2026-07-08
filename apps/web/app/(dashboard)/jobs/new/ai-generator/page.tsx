@@ -984,11 +984,11 @@ function PublishStep({
 
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-2">
-                  <Label htmlFor="smin">Salaris min</Label>
+                  <Label htmlFor="smin">{t("publish.details.salaryMinLabel")}</Label>
                   <Input
                     id="smin"
                     type="number"
-                    placeholder="65000"
+                    placeholder={t("publish.details.salaryMinPlaceholder")}
                     value={overrides.salary_min ?? ""}
                     onChange={(e) =>
                       setOverride(
@@ -999,11 +999,11 @@ function PublishStep({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="smax">Salaris max</Label>
+                  <Label htmlFor="smax">{t("publish.details.salaryMaxLabel")}</Label>
                   <Input
                     id="smax"
                     type="number"
-                    placeholder="85000"
+                    placeholder={t("publish.details.salaryMaxPlaceholder")}
                     value={overrides.salary_max ?? ""}
                     onChange={(e) =>
                       setOverride(
@@ -1014,7 +1014,7 @@ function PublishStep({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Frequentie</Label>
+                  <Label>{t("publish.details.frequencyLabel")}</Label>
                   <Select
                     value={
                       overrides.salary_frequency ??
@@ -1027,9 +1027,9 @@ function PublishStep({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="hourly">per uur</SelectItem>
-                      <SelectItem value="monthly">per maand</SelectItem>
-                      <SelectItem value="annual">per jaar</SelectItem>
+                      <SelectItem value="hourly">{t("publish.details.frequencyHourly")}</SelectItem>
+                      <SelectItem value="monthly">{t("publish.details.frequencyMonthly")}</SelectItem>
+                      <SelectItem value="annual">{t("publish.details.frequencyAnnual")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1037,12 +1037,12 @@ function PublishStep({
 
               <div className="space-y-2">
                 <Label htmlFor="comp-criteria">
-                  Beloningscriteria (EU-loontransparantie)
+                  {t("publish.details.criteriaLabel")}
                 </Label>
                 <textarea
                   id="comp-criteria"
                   rows={3}
-                  placeholder="Bijv. inschaling op basis van ervaring, cao-schaal 8-10, jaarlijkse beoordelingscyclus…"
+                  placeholder={t("publish.details.criteriaPlaceholder")}
                   value={overrides.compensation_criteria ?? ""}
                   onChange={(e) =>
                     setOverride(
@@ -1053,14 +1053,13 @@ function PublishStep({
                   className="flex min-h-[80px] w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 resize-none"
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  Beschrijf hoe de beloning wordt bepaald — kandidaten zien
-                  dit op de vacature (EU-richtlijn 2023/970).
+                  {t("publish.details.criteriaHint")}
                 </p>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="opendate">Open vanaf</Label>
+                  <Label htmlFor="opendate">{t("publish.details.openDateLabel")}</Label>
                   <Input
                     id="opendate"
                     type="date"
@@ -1071,7 +1070,7 @@ function PublishStep({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="closedate">Sluitingsdatum</Label>
+                  <Label htmlFor="closedate">{t("publish.details.closeDateLabel")}</Label>
                   <Input
                     id="closedate"
                     type="date"
@@ -1085,10 +1084,10 @@ function PublishStep({
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="ref">Referentie</Label>
+                  <Label htmlFor="ref">{t("publish.details.referenceLabel")}</Label>
                   <Input
                     id="ref"
-                    placeholder="ENG-FE-2026-04"
+                    placeholder={t("publish.details.referencePlaceholder")}
                     value={overrides.job_reference ?? ""}
                     onChange={(e) =>
                       setOverride("job_reference", e.target.value)
@@ -1096,11 +1095,11 @@ function PublishStep({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="head">Aantal posities</Label>
+                  <Label htmlFor="head">{t("publish.details.headcountLabel")}</Label>
                   <Input
                     id="head"
                     type="number"
-                    placeholder="1"
+                    placeholder={t("publish.details.headcountPlaceholder")}
                     value={overrides.headcount ?? ""}
                     onChange={(e) =>
                       setOverride(
@@ -1116,15 +1115,13 @@ function PublishStep({
 
           {publishBlocked && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300">
-              Direct live zetten vereist een volledige salarisband (minimum
-              én maximum) — verplicht volgens de EU-loontransparantie-
-              richtlijn (2023/970). Vul de band in of kies “Als concept”.
+              {t("publish.payWarning")}
             </div>
           )}
 
           <div className="flex flex-wrap items-center justify-end gap-3">
             <Button variant="outline" onClick={onBack}>
-              Terug
+              {t("publish.back")}
             </Button>
             <Select
               value={publishStatus}
@@ -1134,8 +1131,8 @@ function PublishStep({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="draft">Als concept opslaan</SelectItem>
-                <SelectItem value="open">Direct live (Open)</SelectItem>
+                <SelectItem value="draft">{t("publish.statusDraft")}</SelectItem>
+                <SelectItem value="open">{t("publish.statusOpen")}</SelectItem>
               </SelectContent>
             </Select>
             <Button
@@ -1148,7 +1145,7 @@ function PublishStep({
               ) : (
                 <Send className="mr-2 h-4 w-4" />
               )}
-              {publishStatus === "open" ? "Publiceer live" : "Publiceer als concept"}
+              {publishStatus === "open" ? t("publish.publishLive") : t("publish.publishDraft")}
             </Button>
           </div>
         </div>
@@ -1159,7 +1156,7 @@ function PublishStep({
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-purple-500" />
-                Voorvertoning
+                {t("publish.preview")}
               </CardTitle>
             </CardHeader>
             <CardContent>
