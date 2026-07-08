@@ -88,6 +88,8 @@ import nlSettingsNotifications from "../locales/nl/settingsNotifications.json";
 import enSettingsNotifications from "../locales/en/settingsNotifications.json";
 import nlSettingsVoice from "../locales/nl/settingsVoice.json";
 import enSettingsVoice from "../locales/en/settingsVoice.json";
+import nlSettingsWhatsapp from "../locales/nl/settingsWhatsapp.json";
+import enSettingsWhatsapp from "../locales/en/settingsWhatsapp.json";
 
 export const SUPPORTED_LOCALES = ["nl", "en"] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
@@ -148,6 +150,7 @@ export const resources = {
     settingsIntegrations: nlSettingsIntegrations,
     settingsNotifications: nlSettingsNotifications,
     settingsVoice: nlSettingsVoice,
+    settingsWhatsapp: nlSettingsWhatsapp,
   },
   en: {
     common: enCommon,
@@ -188,6 +191,7 @@ export const resources = {
     settingsIntegrations: enSettingsIntegrations,
     settingsNotifications: enSettingsNotifications,
     settingsVoice: enSettingsVoice,
+    settingsWhatsapp: enSettingsWhatsapp,
   },
 } as const;
 

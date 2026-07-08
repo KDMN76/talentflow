@@ -1,0 +1,179 @@
+{
+  "header": {
+    "title": "WhatsApp Business",
+    "description": "Manage your WhatsApp integration, templates and candidate consents."
+  },
+  "tabs": {
+    "templates": "Templates",
+    "consent": "Consent",
+    "messages": "Messages"
+  },
+  "notActivated": {
+    "title": "WhatsApp is not activated",
+    "description": "WhatsApp Business is not yet activated in this environment. No messages can be sent and templates cannot be submitted for approval. Contact your administrator to activate WhatsApp."
+  },
+  "connected": {
+    "connected": "Connected",
+    "phoneLabel": "Phone number",
+    "messagingLimitLabel": "Messaging limit",
+    "messagingLimitHint": "Increases automatically with a good quality rating.",
+    "lastCheck": "Last check: {{date}}",
+    "healthCheck": "Health check",
+    "disconnect": "Disconnect",
+    "toasts": {
+      "healthCheckOk": "Health check succeeded",
+      "disconnected": "Connection closed"
+    }
+  },
+  "connect": {
+    "title": "Connect your WhatsApp Business account",
+    "descriptionPrefix": "Enter your Meta WhatsApp Business API credentials. See",
+    "docLink": "Meta documentation",
+    "descriptionSuffix": "for how to find your WABA ID and API key.",
+    "phoneLabel": "Phone number",
+    "wabaLabel": "WABA-ID",
+    "apiKeyLabel": "API key",
+    "displayNameLabel": "Display name (optional)",
+    "submit": "Connect",
+    "submitting": "Connecting…",
+    "toasts": {
+      "requiredTitle": "Required fields",
+      "requiredDescription": "Enter phone number, WABA ID and API key.",
+      "connectedTitle": "Connected",
+      "connectedDescription": "WhatsApp Business is now active."
+    }
+  },
+  "templateStatus": {
+    "draft": "Draft",
+    "submitted": "Awaiting approval",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "paused": "Paused",
+    "disabled": "Disabled"
+  },
+  "consentStatus": {
+    "granted": "Consent",
+    "pending": "Pending",
+    "withdrawn": "Withdrawn",
+    "blocked": "Blocked"
+  },
+  "templates": {
+    "countLine": "{{count}} templates · Meta approves within ~5min — 4s in mock mode.",
+    "new": "New template"
+  },
+  "templateCard": {
+    "edit": "Edit",
+    "submit": "Send for approval",
+    "reviewing": "Meta is reviewing…",
+    "deleteTitle": "Delete",
+    "toasts": {
+      "submittedTitle": "Submitted",
+      "submittedDescription": "The template has been sent to Meta for review.",
+      "submitErrorTitle": "Submission failed",
+      "submitErrorDescription": "WhatsApp is not activated in this environment or Meta is unreachable.",
+      "deletedTitle": "Deleted"
+    }
+  },
+  "editor": {
+    "editTitle": "Edit template: {{name}}",
+    "newTitle": "New template",
+    "nameLabel": "Name",
+    "languageLabel": "Language",
+    "languages": {
+      "nl": "Dutch",
+      "en": "English",
+      "de": "German",
+      "fr": "French"
+    },
+    "categoryLabel": "Category",
+    "categories": {
+      "utility": "Utility (transactional)",
+      "marketing": "Marketing",
+      "authentication": "Authentication"
+    },
+    "headerLabel": "Header",
+    "headerTypes": {
+      "none": "None",
+      "text": "Text",
+      "image": "Image",
+      "video": "Video",
+      "document": "Document"
+    },
+    "headerTextPlaceholder": "Header text (max 60 characters)",
+    "headerUploadHint": "You'll upload a {{type}} when sending.",
+    "bodyLabel": "Body",
+    "variableButton": "Variable",
+    "bodyPlaceholder": "Hi {{token}}, …",
+    "footerLabel": "Footer (optional)",
+    "buttonsLabel": "Buttons (max 3)",
+    "addReply": "Reply",
+    "addUrl": "Link",
+    "typeLink": "link",
+    "typeReply": "reply",
+    "defaultReply": "Quick reply",
+    "defaultUrl": "Open link",
+    "moveUp": "Up",
+    "moveDown": "Down",
+    "examplesLabel": "Examples for variables",
+    "previewLabel": "Preview",
+    "bodyPreviewPlaceholder": "The body appears here.",
+    "previewNote": "Preview as WhatsApp shows it on a phone.",
+    "cancel": "Cancel",
+    "save": "Save",
+    "create": "Create",
+    "toasts": {
+      "requiredTitle": "Required fields",
+      "requiredDescription": "Name and body are required.",
+      "updated": "Template updated",
+      "savedDraft": "Template saved as draft"
+    }
+  },
+  "consent": {
+    "countLine": "{{count}} candidates · Only process candidates with status \"Consent\".",
+    "invite": "Invite",
+    "table": {
+      "candidate": "Candidate",
+      "phone": "Phone",
+      "status": "Status",
+      "source": "Source",
+      "since": "Since",
+      "actions": "Actions"
+    },
+    "withdraw": "Withdraw",
+    "reinvite": "Invite again"
+  },
+  "invite": {
+    "title": "Invite opt-in",
+    "candidateLabel": "Candidate",
+    "candidatesLoading": "Loading candidates...",
+    "noCandidates": "No candidates available",
+    "selectCandidate": "Choose a candidate…",
+    "phoneLabel": "Phone number",
+    "info": "A personal opt-in link is created (valid for 72 hours). TalentFlow does not send it automatically — share the link with the candidate yourself, for example via email or phone.",
+    "cancel": "Cancel",
+    "submit": "Create link",
+    "submitting": "Working…",
+    "toasts": {
+      "createdTitle": "Opt-in link created",
+      "createdCopied": "The link is on your clipboard — share it with the candidate.",
+      "createdShare": "Share this link with the candidate: {{url}}",
+      "errorTitle": "Creation failed",
+      "errorDescription": "The opt-in link could not be created."
+    }
+  },
+  "withdraw": {
+    "title": "Withdraw consent",
+    "descriptionPrefix": "Withdrawing for ",
+    "descriptionSuffix": ". This is recorded in the audit trail.",
+    "reasonPlaceholder": "Reason (required)",
+    "cancel": "Cancel",
+    "submit": "Withdraw",
+    "toast": "Consent withdrawn"
+  },
+  "messages": {
+    "empty": "No WhatsApp messages sent yet.",
+    "sent": "→ Sent",
+    "received": "← Received",
+    "mediaFallback": "(media)"
+  }
+}

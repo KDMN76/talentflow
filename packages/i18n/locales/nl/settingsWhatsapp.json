@@ -1,0 +1,179 @@
+{
+  "header": {
+    "title": "WhatsApp Business",
+    "description": "Beheer je WhatsApp-integratie, templates en kandidaat-toestemmingen."
+  },
+  "tabs": {
+    "templates": "Templates",
+    "consent": "Consent",
+    "messages": "Berichten"
+  },
+  "notActivated": {
+    "title": "WhatsApp is niet geactiveerd",
+    "description": "WhatsApp Business is in deze omgeving nog niet geactiveerd. Er kunnen geen berichten worden verstuurd en templates kunnen niet ter goedkeuring worden ingediend. Neem contact op met je beheerder om WhatsApp te activeren."
+  },
+  "connected": {
+    "connected": "Verbonden",
+    "phoneLabel": "Telefoonnummer",
+    "messagingLimitLabel": "Messaging-limiet",
+    "messagingLimitHint": "Verhoogt automatisch bij goede quality-rating.",
+    "lastCheck": "Laatste check: {{date}}",
+    "healthCheck": "Health-check",
+    "disconnect": "Ontkoppelen",
+    "toasts": {
+      "healthCheckOk": "Health-check geslaagd",
+      "disconnected": "Verbinding verbroken"
+    }
+  },
+  "connect": {
+    "title": "Verbind je WhatsApp Business-account",
+    "descriptionPrefix": "Voer je Meta WhatsApp Business API-credentials in. Zie",
+    "docLink": "Meta-documentatie",
+    "descriptionSuffix": "voor hoe je je WABA-ID en API-key vindt.",
+    "phoneLabel": "Telefoonnummer",
+    "wabaLabel": "WABA-ID",
+    "apiKeyLabel": "API-key",
+    "displayNameLabel": "Weergavenaam (optioneel)",
+    "submit": "Verbinden",
+    "submitting": "Verbinden…",
+    "toasts": {
+      "requiredTitle": "Verplichte velden",
+      "requiredDescription": "Vul telefoonnummer, WABA-ID en API-key in.",
+      "connectedTitle": "Verbonden",
+      "connectedDescription": "WhatsApp Business is nu actief."
+    }
+  },
+  "templateStatus": {
+    "draft": "Concept",
+    "submitted": "Wacht op goedkeuring",
+    "approved": "Goedgekeurd",
+    "rejected": "Afgewezen",
+    "paused": "Gepauzeerd",
+    "disabled": "Uitgeschakeld"
+  },
+  "consentStatus": {
+    "granted": "Toestemming",
+    "pending": "In afwachting",
+    "withdrawn": "Ingetrokken",
+    "blocked": "Geblokkeerd"
+  },
+  "templates": {
+    "countLine": "{{count}} templates · Meta keurt goed binnen ~5min — in mock-mode 4s.",
+    "new": "Nieuwe template"
+  },
+  "templateCard": {
+    "edit": "Bewerken",
+    "submit": "Verzenden ter goedkeuring",
+    "reviewing": "Meta beoordeelt…",
+    "deleteTitle": "Verwijderen",
+    "toasts": {
+      "submittedTitle": "Ingediend",
+      "submittedDescription": "De template is ter beoordeling naar Meta gestuurd.",
+      "submitErrorTitle": "Indienen mislukt",
+      "submitErrorDescription": "WhatsApp is niet geactiveerd in deze omgeving of Meta is niet bereikbaar.",
+      "deletedTitle": "Verwijderd"
+    }
+  },
+  "editor": {
+    "editTitle": "Template bewerken: {{name}}",
+    "newTitle": "Nieuwe template",
+    "nameLabel": "Naam",
+    "languageLabel": "Taal",
+    "languages": {
+      "nl": "Nederlands",
+      "en": "English",
+      "de": "Deutsch",
+      "fr": "Français"
+    },
+    "categoryLabel": "Categorie",
+    "categories": {
+      "utility": "Utility (transactioneel)",
+      "marketing": "Marketing",
+      "authentication": "Authentication"
+    },
+    "headerLabel": "Header",
+    "headerTypes": {
+      "none": "Geen",
+      "text": "Text",
+      "image": "Image",
+      "video": "Video",
+      "document": "Document"
+    },
+    "headerTextPlaceholder": "Header tekst (max 60 tekens)",
+    "headerUploadHint": "Bij verzenden upload je een {{type}}.",
+    "bodyLabel": "Body",
+    "variableButton": "Variabele",
+    "bodyPlaceholder": "Hoi {{token}}, …",
+    "footerLabel": "Footer (optioneel)",
+    "buttonsLabel": "Knoppen (max 3)",
+    "addReply": "Antwoord",
+    "addUrl": "Link",
+    "typeLink": "link",
+    "typeReply": "antwoord",
+    "defaultReply": "Snel antwoord",
+    "defaultUrl": "Open link",
+    "moveUp": "Omhoog",
+    "moveDown": "Omlaag",
+    "examplesLabel": "Voorbeelden voor variabelen",
+    "previewLabel": "Voorbeeld",
+    "bodyPreviewPlaceholder": "De body verschijnt hier.",
+    "previewNote": "Voorbeeldweergave zoals WhatsApp die toont op een telefoon.",
+    "cancel": "Annuleren",
+    "save": "Opslaan",
+    "create": "Aanmaken",
+    "toasts": {
+      "requiredTitle": "Verplichte velden",
+      "requiredDescription": "Naam en body zijn verplicht.",
+      "updated": "Template bijgewerkt",
+      "savedDraft": "Template opgeslagen als concept"
+    }
+  },
+  "consent": {
+    "countLine": "{{count}} kandidaten · Verwerk alleen kandidaten met status \"Toestemming\".",
+    "invite": "Uitnodigen",
+    "table": {
+      "candidate": "Kandidaat",
+      "phone": "Telefoon",
+      "status": "Status",
+      "source": "Bron",
+      "since": "Sinds",
+      "actions": "Acties"
+    },
+    "withdraw": "Intrekken",
+    "reinvite": "Opnieuw uitnodigen"
+  },
+  "invite": {
+    "title": "Opt-in uitnodigen",
+    "candidateLabel": "Kandidaat",
+    "candidatesLoading": "Kandidaten laden...",
+    "noCandidates": "Geen kandidaten beschikbaar",
+    "selectCandidate": "Kies een kandidaat…",
+    "phoneLabel": "Telefoonnummer",
+    "info": "Er wordt een persoonlijke opt-in link aangemaakt (72 uur geldig). TalentFlow verstuurt deze niet automatisch — deel de link zelf met de kandidaat, bijvoorbeeld via e-mail of telefoon.",
+    "cancel": "Annuleren",
+    "submit": "Link aanmaken",
+    "submitting": "Bezig…",
+    "toasts": {
+      "createdTitle": "Opt-in link aangemaakt",
+      "createdCopied": "De link staat op je klembord — deel hem met de kandidaat.",
+      "createdShare": "Deel deze link met de kandidaat: {{url}}",
+      "errorTitle": "Aanmaken mislukt",
+      "errorDescription": "De opt-in link kon niet worden aangemaakt."
+    }
+  },
+  "withdraw": {
+    "title": "Toestemming intrekken",
+    "descriptionPrefix": "Intrekken voor ",
+    "descriptionSuffix": ". Dit wordt vastgelegd in de audit-trail.",
+    "reasonPlaceholder": "Reden (verplicht)",
+    "cancel": "Annuleren",
+    "submit": "Intrekken",
+    "toast": "Toestemming ingetrokken"
+  },
+  "messages": {
+    "empty": "Nog geen WhatsApp-berichten verzonden.",
+    "sent": "→ Verzonden",
+    "received": "← Ontvangen",
+    "mediaFallback": "(media)"
+  }
+}

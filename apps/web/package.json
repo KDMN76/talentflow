@@ -67,6 +67,8 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.48.0",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.3",
     "jsdom": "^29.1.1"
   }
 }
