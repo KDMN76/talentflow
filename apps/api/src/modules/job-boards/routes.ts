@@ -13,9 +13,46 @@ import { requireAuth } from '../../middleware/auth';
 import { tenantMiddleware } from '../../middleware/tenant';
 import { auditCtxFromReq } from '../../lib/audit';
 import * as service from './service';
+import {
+  getAutoPostSettings,
+  updateAutoPostSettings,
+} from './autoPost.service';
 
 const router = Router();
 router.use(requireAuth, tenantMiddleware);
+
+// ── /auto-post-settings ──────────────────────────────────────────────────
+// Tenant opt-in: automatisch posten bij publiceren (default UIT) + de
+// standaard-boards waarnaar geplaatst wordt.
+router.get(
+  '/auto-post-settings',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const data = await getAutoPostSettings(req.user!.tenantId);
+      res.json({ data });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+const autoPostSettingsSchema = z.object({
+  enabled: z.boolean(),
+  boards: z.array(z.string().min(1)).max(20).default([]),
+});
+
+router.put(
+  '/auto-post-settings',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const body = autoPostSettingsSchema.parse(req.body);
+      const data = await updateAutoPostSettings(req.user!.tenantId, body);
+      res.json({ data });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 // ── /catalog ─────────────────────────────────────────────────────────────
 router.get(

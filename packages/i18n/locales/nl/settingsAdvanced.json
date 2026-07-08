@@ -132,6 +132,10 @@
         "label": "Standaardvaluta",
         "help": "Valuta die standaard wordt gebruikt voor salarisranges."
       },
+      "defaultFrequency": {
+        "label": "Standaard salarisfrequentie",
+        "help": "Frequentie die het vacatureformulier voor-invult voor nieuwe vacatures."
+      },
       "save": "Opslaan"
     },
     "currencies": {
@@ -139,6 +143,34 @@
       "gbp": "Brits pond (GBP)",
       "usd": "Amerikaanse dollar (USD)",
       "chf": "Zwitserse frank (CHF)"
+    },
+    "frequencies": {
+      "monthly": "Per maand",
+      "annual": "Per jaar",
+      "hourly": "Per uur"
+    },
+    "report": {
+      "title": "Loontransparantie-rapport",
+      "description": "Hoeveel van je open vacatures voldoen aan de EU-richtlijn (volledige salarisband).",
+      "enforcedOn": "Afdwinging aan",
+      "enforcedOff": "Afdwinging uit",
+      "pctLabel": "Open vacatures met salarisband",
+      "stats": {
+        "open": "Open vacatures",
+        "withBand": "Met band",
+        "withoutBand": "Zonder band",
+        "withoutFrequency": "Zonder frequentie"
+      },
+      "actionList": {
+        "title": "Actielijst — vacatures zonder volledige band",
+        "empty": "Alle open vacatures hebben een volledige salarisband. Goed bezig!"
+      },
+      "missing": {
+        "salary_min": "Minimum ontbreekt",
+        "salary_max": "Maximum ontbreekt",
+        "salary_frequency": "Frequentie ontbreekt"
+      },
+      "payEquityLink": "Bekijk het pay-equity-dashboard"
     },
     "toast": {
       "saved": {

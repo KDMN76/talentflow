@@ -1,27 +1,20 @@
 "use client";
 
-import type {
-  DimensionDef,
-  FunnelBlockConfig,
-  MetricDef,
-  MetricKey,
-} from "@/lib/types/reports";
-import { Field, Section, SingleSelect, StagesEditor } from "./shared";
+import type { FunnelBlock } from "@/lib/types/reports";
+import { Section, StagesEditor } from "./shared";
 import { FilterBuilder } from "../FilterBuilder";
 
 export interface FunnelEditPanelProps {
-  config: FunnelBlockConfig;
-  onChange: (next: FunnelBlockConfig) => void;
-  metrics: MetricDef[];
-  dimensions: DimensionDef[];
+  config: FunnelBlock;
+  onChange: (next: FunnelBlock) => void;
 }
 
-export function FunnelEditPanel({
-  config,
-  onChange,
-  metrics,
-  dimensions,
-}: FunnelEditPanelProps) {
+/**
+ * Funnel telt per pipeline-stap het aantal sollicitaties (op stage-NAAM,
+ * zoals die in de pipeline heet). Geen metric-keuze — de backend telt
+ * altijd unieke sollicitaties per stage.
+ */
+export function FunnelEditPanel({ config, onChange }: FunnelEditPanelProps) {
   return (
     <div className="space-y-4">
       <Section title="Stages (volgorde)">
@@ -29,25 +22,15 @@ export function FunnelEditPanel({
           stages={config.stages}
           onChange={(stages) => onChange({ ...config, stages })}
         />
-      </Section>
-
-      <Section title="Metric">
-        <Field label="Wat tellen we per stage?">
-          <SingleSelect
-            value={config.metric ?? "candidates_count"}
-            onChange={(v) =>
-              onChange({ ...config, metric: v as MetricKey })
-            }
-            options={metrics.map((m) => ({ value: m.key, label: m.label }))}
-          />
-        </Field>
+        <p className="text-[10px] text-muted-foreground">
+          Gebruik de exacte namen van je pipeline-stappen. Minimaal 2 stages.
+        </p>
       </Section>
 
       <Section title="Filters">
         <FilterBuilder
           filters={config.filters ?? []}
           onChange={(filters) => onChange({ ...config, filters })}
-          dimensions={dimensions}
         />
       </Section>
     </div>

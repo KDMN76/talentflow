@@ -47,5 +47,13 @@
   "clientFilter": {
     "all": "Alle klanten",
     "empty": "Geen vacatures voor deze klant."
+  },
+  "jobPage": {
+    "back": "Terug",
+    "title": "Pipeline — {{title}}",
+    "description": "{{count}} actieve sollicitanten · {{stages}} fasen",
+    "details": "Details",
+    "emptyTitle": "Geen pipeline ingesteld",
+    "emptyDescription": "Voeg fasen toe aan deze vacature om te beginnen."
   }
 }

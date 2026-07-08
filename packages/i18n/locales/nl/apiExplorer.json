@@ -1,0 +1,67 @@
+{
+  "header": {
+    "title": "API Playground",
+    "description": "Probeer endpoints uit met je eigen API-keys, debug responses en deel snippets."
+  },
+  "toasts": {
+    "invalidBodyTitle": "Body is geen geldig JSON",
+    "invalidBodyDescription": "Controleer de body editor.",
+    "requestFailedTitle": "Request mislukt",
+    "unknownError": "Onbekende fout",
+    "copiedTitle": "Gekopieerd",
+    "copiedResponseBody": "Response body is gekopieerd.",
+    "snippetSavedTitle": "Snippet opgeslagen",
+    "snippetLoadedTitle": "Snippet geladen",
+    "curlCopiedTitle": "cURL gekopieerd"
+  },
+  "tree": {
+    "searchPlaceholder": "Zoek endpoint...",
+    "loading": "Spec laden...",
+    "empty": "Geen endpoints gevonden"
+  },
+  "snippets": {
+    "title": "Bewaarde snippets",
+    "empty": "Nog geen snippets bewaard.",
+    "deleteTitle": "Verwijderen"
+  },
+  "emptyState": "Kies een endpoint links om te beginnen.",
+  "request": {
+    "snippet": "Snippet",
+    "run": "Run",
+    "pathParamsLabel": "Path parameters",
+    "pathParamPlaceholder": "waarde voor {{name}}",
+    "queryParamsLabel": "Query parameters",
+    "addButton": "+ Toevoegen",
+    "noQueryParams": "Geen query params.",
+    "keyPlaceholder": "key",
+    "valuePlaceholder": "value",
+    "headerPlaceholder": "header",
+    "authLabel": "Authenticatie",
+    "authJwt": "Eigen sessie (JWT)",
+    "authApiKey": "API-sleutel",
+    "selectApiKeyPlaceholder": "Kies API-sleutel",
+    "apiKeyWarning": "Let op: server-proxy gebruikt jouw sessie. De plain key is alleen zichtbaar in de gegenereerde cURL.",
+    "headersLabel": "Headers",
+    "bodyLabel": "Request body (JSON)"
+  },
+  "response": {
+    "title": "Response",
+    "durationMs": "{{duration}} ms",
+    "copyBody": "Kopieer body",
+    "empty": "Voer een request uit om hier de response te zien.",
+    "headersToggle": "Headers ({{count}})",
+    "bodyLabel": "Body"
+  },
+  "curlDialog": {
+    "title": "cURL command",
+    "copy": "Kopieer",
+    "close": "Sluiten"
+  },
+  "saveDialog": {
+    "title": "Snippet bewaren",
+    "nameLabel": "Naam",
+    "namePlaceholder": "Bijv. Lijst kandidaten — debug",
+    "cancel": "Annuleren",
+    "save": "Opslaan"
+  }
+}

@@ -27,7 +27,7 @@
     },
     "payWarning": {
       "title": "The EU Pay Transparency Directive requires a salary range",
-      "description": "Without a minimum and maximum salary, this job cannot be published. Enter the range below.",
+      "description": "Without a minimum salary, maximum salary and frequency, this job cannot be published. Complete the full range below.",
       "settingsLink": "Go to Pay Transparency settings"
     },
     "sections": {
@@ -49,22 +49,39 @@
     "requirementsLabel": "Requirements (one per line, optional)",
     "requirementsPlaceholder": "5+ years of React experience\nTypeScript expertise\nExperience with Next.js",
     "euRequiredBadge": "EU required",
-    "salaryMinLabel": "Minimum (EUR/year)",
-    "salaryMaxLabel": "Maximum (EUR/year)",
+    "salaryMinLabel": "Minimum (EUR)",
+    "salaryMaxLabel": "Maximum (EUR)",
+    "salaryFrequencyLabel": "Frequency",
+    "salaryFrequencyPlaceholder": "Choose frequency",
+    "salaryFrequencies": {
+      "monthly": "Per month",
+      "annual": "Per year",
+      "hourly": "Per hour"
+    },
+    "compensationCriteriaLabel": "Compensation criteria",
+    "compensationCriteriaPlaceholder": "E.g. grading based on experience, CLA scale 8-10, annual review cycle…",
+    "compensationCriteriaHelp": "Describe how compensation is determined — candidates see this on the job posting (EU Directive 2023/970).",
+    "publishBlockedTooltip": "Publishing requires a complete salary range: minimum, maximum and frequency.",
     "submit": "Create job",
+    "publish": "Create & publish",
     "validation": {
       "descriptionTooShort": "Description is too short",
       "departmentRequired": "Department is required",
-      "locationRequired": "Location is required"
+      "locationRequired": "Location is required",
+      "compensationCriteriaTooLong": "Compensation criteria may be at most 2000 characters"
     },
     "toasts": {
       "salaryRequired": {
         "title": "Salary range required",
-        "description": "Your tenant enforces pay transparency under EU 2023/970. Enter a minimum and maximum."
+        "description": "Your tenant enforces pay transparency under EU 2023/970. Enter a minimum, maximum and frequency."
       },
       "created": {
         "title": "Job created",
         "description": "\"{{title}}\" has been saved as a draft."
+      },
+      "published": {
+        "title": "Job published",
+        "description": "\"{{title}}\" is live with status Open."
       },
       "createError": {
         "title": "Error",

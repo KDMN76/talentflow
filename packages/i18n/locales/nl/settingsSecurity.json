@@ -102,11 +102,24 @@
     },
     "disableDialog": {
       "title": "Tweefactorauthenticatie uitschakelen",
-      "warning": "Het uitschakelen van 2FA maakt je account minder veilig. Voer een code uit je authenticator-app of een back-upcode in om te bevestigen.",
+      "warning": "Het uitschakelen van 2FA maakt je account minder veilig. Voer je wachtwoord en een code uit je authenticator-app of een back-upcode in om te bevestigen.",
+      "passwordLabel": "Wachtwoord",
+      "passwordPlaceholder": "Je huidige wachtwoord",
       "codeLabel": "Verificatiecode",
       "codePlaceholder": "Code of back-upcode",
       "cancel": "Annuleren",
       "disable": "Uitschakelen"
+    },
+    "policy": {
+      "title": "Organisatiebeleid",
+      "description": "Dwing tweefactorauthenticatie af voor alle gebruikers in je organisatie. Gebruikers zonder 2FA worden na de overgangsperiode geblokkeerd tot ze het hebben ingesteld.",
+      "requireAll": "2FA verplicht voor iedereen",
+      "requireAllHint": "Alle gebruikers moeten 2FA instellen om toegang te houden.",
+      "graceLabel": "Overgangsperiode (dagen)",
+      "graceHint": "Aantal dagen dat gebruikers krijgen om 2FA in te stellen voordat de toegang wordt beperkt (0–90).",
+      "save": "Beleid opslaan",
+      "saved": "2FA-beleid opgeslagen",
+      "saveFailed": "Opslaan mislukt"
     },
     "regenDialog": {
       "title": "Back-upcodes vernieuwen",

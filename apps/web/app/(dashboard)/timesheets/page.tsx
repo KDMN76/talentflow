@@ -10,6 +10,7 @@
 
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import {
   CheckCircle2,
   ChevronRight,
@@ -52,38 +53,28 @@ import {
 } from "@/hooks/useBackOffice";
 import type { Timesheet, TimesheetStatus } from "@/lib/types/backOffice";
 
-const STATUS_PILL: Record<TimesheetStatus, { label: string; cls: string }> = {
+const STATUS_PILL: Record<TimesheetStatus, { labelKey: string; cls: string }> = {
   draft: {
-    label: "Concept",
+    labelKey: "status.draft",
     cls: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border-0",
   },
   submitted: {
-    label: "Ingediend",
+    labelKey: "status.submitted",
     cls: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border-0",
   },
   approved: {
-    label: "Goedgekeurd",
+    labelKey: "status.approved",
     cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-0",
   },
   rejected: {
-    label: "Afgekeurd",
+    labelKey: "status.rejected",
     cls: "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300 border-0",
   },
   disputed: {
-    label: "Bezwaar",
+    labelKey: "status.disputed",
     cls: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-0",
   },
 };
-
-const WEEKDAYS_NL = [
-  "Ma",
-  "Di",
-  "Wo",
-  "Do",
-  "Vr",
-  "Za",
-  "Zo",
-];
 
 function formatDate(value: string | null): string {
   if (!value) return "—";
@@ -106,6 +97,7 @@ export default function TimesheetsListPage() {
   const searchParams = useSearchParams();
   const focusId = searchParams?.get("focus") ?? null;
   const { toast } = useToast();
+  const { t } = useTranslation("timesheets");
 
   const [statusFilter, setStatusFilter] = useState<TimesheetStatus | "all">(
     "all"
@@ -170,11 +162,11 @@ export default function TimesheetsListPage() {
     try {
       await approve.mutateAsync(id);
       toast({
-        title: "Goedgekeurd",
-        description: "Timesheet kan nu worden gefactureerd.",
+        title: t("toast.approvedTitle"),
+        description: t("toast.approvedDescription"),
       });
     } catch {
-      toast({ title: "Goedkeuren mislukt", variant: "destructive" });
+      toast({ title: t("toast.approveFailed"), variant: "destructive" });
     }
   };
 
@@ -192,29 +184,29 @@ export default function TimesheetsListPage() {
         reason: rejectReason.trim(),
       });
       toast({
-        title: "Afgekeurd",
-        description: "Kandidaat ontvangt een melding om de uren te corrigeren.",
+        title: t("toast.rejectedTitle"),
+        description: t("toast.rejectedDescription"),
       });
       setRejectOpen(false);
       setRejectTarget(null);
       setRejectReason("");
     } catch {
-      toast({ title: "Afkeuren mislukt", variant: "destructive" });
+      toast({ title: t("toast.rejectFailed"), variant: "destructive" });
     }
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Timesheets"
-        description="Beoordeel ingediende urenstaten en geef vrij voor facturatie."
+        title={t("header.title")}
+        description={t("header.description")}
       />
 
       <div className="grid gap-3 sm:grid-cols-4">
-        <StatTile label="Totaal" value={stats.total} accent="zinc" />
-        <StatTile label="Te keuren" value={stats.pending} accent="amber" />
-        <StatTile label="Goedgekeurd" value={stats.approved} accent="emerald" />
-        <StatTile label="Afgekeurd / bezwaar" value={stats.rejected} accent="red" />
+        <StatTile label={t("stats.total")} value={stats.total} accent="zinc" />
+        <StatTile label={t("stats.pending")} value={stats.pending} accent="amber" />
+        <StatTile label={t("stats.approved")} value={stats.approved} accent="emerald" />
+        <StatTile label={t("stats.rejected")} value={stats.rejected} accent="red" />
       </div>
 
       {/* Filters */}
@@ -225,7 +217,7 @@ export default function TimesheetsListPage() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Zoek op kandidaat of klant..."
+              placeholder={t("filters.searchPlaceholder")}
               className="pl-9"
             />
             {search && (
@@ -247,12 +239,12 @@ export default function TimesheetsListPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Alle statussen</SelectItem>
-              <SelectItem value="submitted">Ingediend</SelectItem>
-              <SelectItem value="approved">Goedgekeurd</SelectItem>
-              <SelectItem value="rejected">Afgekeurd</SelectItem>
-              <SelectItem value="disputed">Bezwaar</SelectItem>
-              <SelectItem value="draft">Concept</SelectItem>
+              <SelectItem value="all">{t("filters.allStatuses")}</SelectItem>
+              <SelectItem value="submitted">{t("filters.statusSubmitted")}</SelectItem>
+              <SelectItem value="approved">{t("filters.statusApproved")}</SelectItem>
+              <SelectItem value="rejected">{t("filters.statusRejected")}</SelectItem>
+              <SelectItem value="disputed">{t("filters.statusDisputed")}</SelectItem>
+              <SelectItem value="draft">{t("filters.statusDraft")}</SelectItem>
             </SelectContent>
           </Select>
           <Select value={contractFilter} onValueChange={setContractFilter}>
@@ -260,7 +252,7 @@ export default function TimesheetsListPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Alle contracten</SelectItem>
+              <SelectItem value="all">{t("filters.allContracts")}</SelectItem>
               {(contracts ?? []).map((c) => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.candidate_name} — {c.client_name}
@@ -283,9 +275,9 @@ export default function TimesheetsListPage() {
           ) : filtered.length === 0 ? (
             <div className="px-4 py-16 text-center">
               <FileText className="mx-auto mb-3 h-10 w-10 text-muted-foreground/40" />
-              <p className="text-sm font-semibold">Geen timesheets gevonden</p>
+              <p className="text-sm font-semibold">{t("empty.title")}</p>
               <p className="text-xs text-muted-foreground">
-                Pas de filters aan om meer resultaten te zien.
+                {t("empty.description")}
               </p>
             </div>
           ) : (
@@ -293,22 +285,22 @@ export default function TimesheetsListPage() {
               <table className="w-full text-sm">
                 <thead className="border-b border-border bg-zinc-50/50 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground dark:bg-zinc-900/40">
                   <tr>
-                    <th className="px-4 py-3">Kandidaat / klant</th>
-                    <th className="px-4 py-3">Week</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 text-right">Uren</th>
-                    <th className="px-4 py-3 text-right">Overuren</th>
-                    <th className="px-4 py-3 text-right">Acties</th>
+                    <th className="px-4 py-3">{t("table.candidateClient")}</th>
+                    <th className="px-4 py-3">{t("table.week")}</th>
+                    <th className="px-4 py-3">{t("table.status")}</th>
+                    <th className="px-4 py-3 text-right">{t("table.hours")}</th>
+                    <th className="px-4 py-3 text-right">{t("table.overtime")}</th>
+                    <th className="px-4 py-3 text-right">{t("table.actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((t) => {
-                    const c = findContract(t.contract_id);
-                    const pill = STATUS_PILL[t.status];
+                  {filtered.map((ts) => {
+                    const c = findContract(ts.contract_id);
+                    const pill = STATUS_PILL[ts.status];
                     return (
                       <tr
-                        key={t.id}
-                        onClick={() => setDetail(t)}
+                        key={ts.id}
+                        onClick={() => setDetail(ts)}
                         className="cursor-pointer border-b border-border/60 transition hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20"
                       >
                         <td className="px-4 py-3">
@@ -320,22 +312,24 @@ export default function TimesheetsListPage() {
                           </p>
                         </td>
                         <td className="px-4 py-3 text-xs text-zinc-600 dark:text-zinc-400">
-                          {formatDate(t.week_start)} —{" "}
-                          {formatDate(t.week_end)}
+                          {formatDate(ts.week_start)} —{" "}
+                          {formatDate(ts.week_end)}
                         </td>
                         <td className="px-4 py-3">
-                          <Badge className={pill.cls}>{pill.label}</Badge>
+                          <Badge className={pill.cls}>{t(pill.labelKey)}</Badge>
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums font-semibold">
-                          {t.total_hours.toFixed(1)}u
+                          {t("units.hours", { value: ts.total_hours.toFixed(1) })}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-amber-600 dark:text-amber-400">
-                          {t.total_overtime_hours > 0
-                            ? `+${t.total_overtime_hours.toFixed(1)}u`
+                          {ts.total_overtime_hours > 0
+                            ? t("units.overtime", {
+                                value: ts.total_overtime_hours.toFixed(1),
+                              })
                             : "—"}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          {t.status === "submitted" ? (
+                          {ts.status === "submitted" ? (
                             <div
                               className="flex justify-end gap-1.5"
                               onClick={(e) => e.stopPropagation()}
@@ -343,15 +337,15 @@ export default function TimesheetsListPage() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => openReject(t)}
+                                onClick={() => openReject(ts)}
                                 className="h-8 border-destructive/40 text-destructive hover:bg-destructive/10"
                               >
                                 <XCircle className="mr-1 h-3.5 w-3.5" />
-                                Afkeuren
+                                {t("actions.reject")}
                               </Button>
                               <Button
                                 size="sm"
-                                onClick={() => handleApprove(t.id)}
+                                onClick={() => handleApprove(ts.id)}
                                 disabled={approve.isPending}
                                 className="h-8 border-0 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700"
                               >
@@ -360,7 +354,7 @@ export default function TimesheetsListPage() {
                                 ) : (
                                   <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
                                 )}
-                                Goedkeuren
+                                {t("actions.approve")}
                               </Button>
                             </div>
                           ) : (
@@ -389,13 +383,16 @@ export default function TimesheetsListPage() {
             <>
               <DialogHeader>
                 <DialogTitle>
-                  {findContract(detail.contract_id)?.candidate_name ?? "Timesheet"}
+                  {findContract(detail.contract_id)?.candidate_name ??
+                    t("detail.titleFallback")}
                 </DialogTitle>
                 <DialogDescription>
-                  Werkweek {formatDate(detail.week_start)} —{" "}
-                  {formatDate(detail.week_end)} ·{" "}
+                  {t("detail.week", {
+                    start: formatDate(detail.week_start),
+                    end: formatDate(detail.week_end),
+                  })}{" "}
                   <Badge className={STATUS_PILL[detail.status].cls}>
-                    {STATUS_PILL[detail.status].label}
+                    {t(STATUS_PILL[detail.status].labelKey)}
                   </Badge>
                 </DialogDescription>
               </DialogHeader>
@@ -406,11 +403,11 @@ export default function TimesheetsListPage() {
                   <table className="w-full text-sm">
                     <thead className="border-b border-border bg-zinc-50/50 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground dark:bg-zinc-900/40">
                       <tr>
-                        <th className="px-3 py-2">Dag</th>
-                        <th className="px-3 py-2 text-right">Uren</th>
-                        <th className="px-3 py-2 text-right">Overuren</th>
-                        <th className="px-3 py-2 text-right">Pauze</th>
-                        <th className="px-3 py-2">Omschrijving</th>
+                        <th className="px-3 py-2">{t("detail.entries.day")}</th>
+                        <th className="px-3 py-2 text-right">{t("detail.entries.hours")}</th>
+                        <th className="px-3 py-2 text-right">{t("detail.entries.overtime")}</th>
+                        <th className="px-3 py-2 text-right">{t("detail.entries.break")}</th>
+                        <th className="px-3 py-2">{t("detail.entries.description")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -420,7 +417,7 @@ export default function TimesheetsListPage() {
                             colSpan={5}
                             className="px-3 py-6 text-center text-xs text-muted-foreground"
                           >
-                            Geen uren ingevuld.
+                            {t("detail.entries.empty")}
                           </td>
                         </tr>
                       ) : (
@@ -434,22 +431,24 @@ export default function TimesheetsListPage() {
                             >
                               <td className="px-3 py-2 text-xs">
                                 <span className="font-medium">
-                                  {WEEKDAYS_NL[idx]}
+                                  {t(`weekdays.${idx}`)}
                                 </span>{" "}
                                 <span className="text-muted-foreground">
                                   {formatDay(e.date)}
                                 </span>
                               </td>
                               <td className="px-3 py-2 text-right tabular-nums">
-                                {e.hours.toFixed(1)}u
+                                {t("units.hours", { value: e.hours.toFixed(1) })}
                               </td>
                               <td className="px-3 py-2 text-right tabular-nums text-amber-600">
                                 {e.overtime_hours > 0
-                                  ? `+${e.overtime_hours.toFixed(1)}u`
+                                  ? t("units.overtime", {
+                                      value: e.overtime_hours.toFixed(1),
+                                    })
                                   : "—"}
                               </td>
                               <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
-                                {e.break_minutes}m
+                                {t("units.breakMinutes", { value: e.break_minutes })}
                               </td>
                               <td className="px-3 py-2 text-xs text-muted-foreground">
                                 {e.description ?? "—"}
@@ -462,14 +461,18 @@ export default function TimesheetsListPage() {
                     <tfoot className="border-t border-border bg-zinc-50/40 dark:bg-zinc-900/40">
                       <tr>
                         <td className="px-3 py-2 text-xs font-semibold">
-                          Totaal
+                          {t("detail.entries.total")}
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums font-semibold">
-                          {detail.total_hours.toFixed(1)}u
+                          {t("units.hours", {
+                            value: detail.total_hours.toFixed(1),
+                          })}
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums font-semibold text-amber-600">
                           {detail.total_overtime_hours > 0
-                            ? `+${detail.total_overtime_hours.toFixed(1)}u`
+                            ? t("units.overtime", {
+                                value: detail.total_overtime_hours.toFixed(1),
+                              })
                             : "—"}
                         </td>
                         <td colSpan={2} />
@@ -481,31 +484,41 @@ export default function TimesheetsListPage() {
                 {/* Audit trail */}
                 <div className="rounded-lg border border-border bg-zinc-50/50 p-3 text-xs dark:bg-zinc-900/40">
                   <p className="mb-1.5 font-semibold text-zinc-700 dark:text-zinc-300">
-                    Activiteit
+                    {t("detail.audit.title")}
                   </p>
                   <ul className="space-y-1 text-muted-foreground">
                     <li className="flex items-center gap-1.5">
-                      <Clock className="h-3 w-3" /> Aangemaakt op{" "}
-                      {formatDate(detail.created_at)}
+                      <Clock className="h-3 w-3" />{" "}
+                      {t("detail.audit.created", {
+                        date: formatDate(detail.created_at),
+                      })}
                     </li>
                     {detail.submitted_at && (
                       <li className="flex items-center gap-1.5">
-                        <Clock className="h-3 w-3" /> Ingediend op{" "}
-                        {formatDate(detail.submitted_at)}
+                        <Clock className="h-3 w-3" />{" "}
+                        {t("detail.audit.submitted", {
+                          date: formatDate(detail.submitted_at),
+                        })}
                       </li>
                     )}
                     {detail.approved_at && (
                       <li className="flex items-center gap-1.5 text-emerald-600">
-                        <CheckCircle2 className="h-3 w-3" /> Goedgekeurd op{" "}
-                        {formatDate(detail.approved_at)}
+                        <CheckCircle2 className="h-3 w-3" />{" "}
+                        {t("detail.audit.approved", {
+                          date: formatDate(detail.approved_at),
+                        })}
                       </li>
                     )}
                     {detail.rejected_at && (
                       <li className="flex items-start gap-1.5 text-red-600">
                         <XCircle className="mt-0.5 h-3 w-3 shrink-0" />
                         <span>
-                          Afgekeurd op {formatDate(detail.rejected_at)} —{" "}
-                          {detail.rejection_reason ?? "geen reden"}
+                          {t("detail.audit.rejected", {
+                            date: formatDate(detail.rejected_at),
+                            reason:
+                              detail.rejection_reason ??
+                              t("detail.audit.noReason"),
+                          })}
                         </span>
                       </li>
                     )}
@@ -525,7 +538,7 @@ export default function TimesheetsListPage() {
                       className="border-destructive/40 text-destructive hover:bg-destructive/10"
                     >
                       <XCircle className="mr-1.5 h-4 w-4" />
-                      Afkeuren
+                      {t("actions.reject")}
                     </Button>
                     <Button
                       onClick={async () => {
@@ -535,13 +548,13 @@ export default function TimesheetsListPage() {
                       className="border-0 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700"
                     >
                       <CheckCircle2 className="mr-1.5 h-4 w-4" />
-                      Goedkeuren
+                      {t("actions.approve")}
                     </Button>
                   </>
                 )}
                 {detail.status !== "submitted" && (
                   <Button variant="outline" onClick={() => setDetail(null)}>
-                    Sluiten
+                    {t("actions.close")}
                   </Button>
                 )}
               </DialogFooter>
@@ -554,25 +567,24 @@ export default function TimesheetsListPage() {
       <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Timesheet afkeuren</DialogTitle>
+            <DialogTitle>{t("reject.title")}</DialogTitle>
             <DialogDescription>
-              De kandidaat ontvangt direct je opmerking en kan de uren
-              corrigeren.
+              {t("reject.description")}
             </DialogDescription>
           </DialogHeader>
           <div>
-            <Label htmlFor="reject-reason">Reden van afkeuring</Label>
+            <Label htmlFor="reject-reason">{t("reject.reasonLabel")}</Label>
             <Textarea
               id="reject-reason"
               rows={3}
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="Bv. Pauze van 30min ontbreekt op woensdag"
+              placeholder={t("reject.reasonPlaceholder")}
             />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRejectOpen(false)}>
-              Annuleren
+              {t("reject.cancel")}
             </Button>
             <Button
               onClick={handleReject}
@@ -582,7 +594,7 @@ export default function TimesheetsListPage() {
               {reject.isPending && (
                 <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
               )}
-              Afkeuren
+              {t("reject.submit")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -110,18 +110,31 @@ export async function upsertTenantBranding(
 ): Promise<TenantBranding> {
   validateInput(input);
 
+  // Semantiek per veld: `undefined` = niet aanraken, `null` = expliciet wissen,
+  // waarde = zetten. De oude COALESCE-variant kon velden nooit wissen (null
+  // viel altijd terug op de bestaande waarde) — daardoor "deed opslaan niets"
+  // bij het leegmaken van bv. brand_name in de settings-UI.
+  const provided = {
+    logo_url: input.logo_url !== undefined,
+    favicon_url: input.favicon_url !== undefined,
+    primary_color: input.primary_color !== undefined,
+    accent_color: input.accent_color !== undefined,
+    brand_name: input.brand_name !== undefined,
+    email_footer: input.email_footer !== undefined,
+  };
+
   return withTenant(tenantId, async (client) => {
     const { rows: [row] } = await client.query<TenantBranding>(
       `INSERT INTO tenant_branding
          (tenant_id, logo_url, favicon_url, primary_color, accent_color, brand_name, email_footer, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, now())
        ON CONFLICT (tenant_id) DO UPDATE SET
-         logo_url       = COALESCE(EXCLUDED.logo_url,       tenant_branding.logo_url),
-         favicon_url    = COALESCE(EXCLUDED.favicon_url,    tenant_branding.favicon_url),
-         primary_color  = COALESCE(EXCLUDED.primary_color,  tenant_branding.primary_color),
-         accent_color   = COALESCE(EXCLUDED.accent_color,   tenant_branding.accent_color),
-         brand_name     = COALESCE(EXCLUDED.brand_name,     tenant_branding.brand_name),
-         email_footer   = COALESCE(EXCLUDED.email_footer,   tenant_branding.email_footer),
+         logo_url       = CASE WHEN $8  THEN EXCLUDED.logo_url       ELSE tenant_branding.logo_url       END,
+         favicon_url    = CASE WHEN $9  THEN EXCLUDED.favicon_url    ELSE tenant_branding.favicon_url    END,
+         primary_color  = CASE WHEN $10 THEN EXCLUDED.primary_color  ELSE tenant_branding.primary_color  END,
+         accent_color   = CASE WHEN $11 THEN EXCLUDED.accent_color   ELSE tenant_branding.accent_color   END,
+         brand_name     = CASE WHEN $12 THEN EXCLUDED.brand_name     ELSE tenant_branding.brand_name     END,
+         email_footer   = CASE WHEN $13 THEN EXCLUDED.email_footer   ELSE tenant_branding.email_footer   END,
          updated_at     = now()
        RETURNING tenant_id, logo_url, favicon_url, primary_color, accent_color,
                  brand_name, email_footer, updated_at`,
@@ -133,6 +146,12 @@ export async function upsertTenantBranding(
         input.accent_color ?? null,
         input.brand_name ?? null,
         input.email_footer ?? null,
+        provided.logo_url,
+        provided.favicon_url,
+        provided.primary_color,
+        provided.accent_color,
+        provided.brand_name,
+        provided.email_footer,
       ]
     );
     return row;

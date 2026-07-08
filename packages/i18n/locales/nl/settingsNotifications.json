@@ -1,0 +1,89 @@
+{
+  "page": {
+    "title": "Meldingen",
+    "description": "Bepaal welke push-notificaties je ontvangt en wanneer."
+  },
+  "master": {
+    "title": "Push-meldingen",
+    "description": "Krijg een seintje op je telefoon of desktop.",
+    "unsupported": "Deze browser ondersteunt geen push-notificaties.",
+    "denied": "Meldingen zijn geblokkeerd in je browser. Wijzig dit in de site-instellingen om ze opnieuw te activeren.",
+    "testButton": "Verstuur test-melding"
+  },
+  "events": {
+    "title": "Per type",
+    "description": "Schakel specifieke event-types uit als je er teveel krijgt.",
+    "types": {
+      "new_candidate_review": {
+        "title": "Nieuwe kandidaat te beoordelen",
+        "description": "Direct seintje als er een sollicitatie op je wacht."
+      },
+      "scorecard_deadline": {
+        "title": "Scorecard-deadline",
+        "description": "Reminder voordat een scorecard te laat is."
+      },
+      "interview_reminder": {
+        "title": "Interview-herinnering",
+        "description": "15 minuten voor een geplande sollicitatiegesprek."
+      },
+      "application_status_change": {
+        "title": "Status van sollicitatie wijzigt",
+        "description": "Bij goedkeuren, afwijzen of doorzetten naar volgende fase."
+      },
+      "daily_digest": {
+        "title": "Dagelijkse samenvatting",
+        "description": "Eén overzichtsbericht per dag (in plaats van losse meldingen)."
+      }
+    }
+  },
+  "quietHours": {
+    "title": "Stille uren",
+    "description": "Tijdens deze uren worden meldingen niet verstuurd (alleen kritieke uitzonderingen).",
+    "startLabel": "Start",
+    "endLabel": "Einde",
+    "timezoneLabel": "Tijdzone"
+  },
+  "devices": {
+    "title": "Geregistreerde apparaten",
+    "description": "Apparaten die meldingen ontvangen. Verwijder verloren of niet meer gebruikte apparaten.",
+    "loading": "Laden...",
+    "empty": "Nog geen apparaten geregistreerd.",
+    "unknownDevice": "Onbekend apparaat",
+    "lastActive": "Laatst actief: {{date}}",
+    "active": "Actief",
+    "revokeAria": "Apparaat {{label}} intrekken"
+  },
+  "toasts": {
+    "saved": {
+      "title": "Voorkeuren opgeslagen"
+    },
+    "saveError": {
+      "title": "Opslaan mislukt",
+      "description": "Probeer opnieuw."
+    },
+    "pushEnabled": {
+      "title": "Push ingeschakeld",
+      "description": "Je ontvangt nu meldingen op dit apparaat."
+    },
+    "enableError": {
+      "title": "Inschakelen mislukt"
+    },
+    "pushDisabled": {
+      "title": "Push uitgeschakeld"
+    },
+    "testSent": {
+      "title": "Test-melding verstuurd",
+      "description": "Je zou hem binnen enkele seconden moeten zien."
+    },
+    "testError": {
+      "title": "Test-melding mislukt"
+    },
+    "deviceRevoked": {
+      "title": "Apparaat ingetrokken"
+    },
+    "revokeError": {
+      "title": "Intrekken mislukt"
+    },
+    "unknownError": "Onbekende fout"
+  }
+}

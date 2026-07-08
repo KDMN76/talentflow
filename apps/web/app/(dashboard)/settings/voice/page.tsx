@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import Link from "next/link";
 import { Check, ExternalLink, Phone, Plug, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -51,6 +52,7 @@ import {
 import { useCandidates } from "@/hooks/useCandidates";
 
 export default function VoiceSettingsPage() {
+  const { t } = useTranslation("settingsVoice");
   const { data: state, isLoading } = useVoiceIntegration();
   const integration = state?.integration ?? null;
   const serviceActive = state?.serviceActive ?? true;
@@ -62,8 +64,8 @@ export default function VoiceSettingsPage() {
     return (
       <div className="space-y-6 animate-fade-in">
         <PageHeader
-          title="Voice & VoIP"
-          description="Verbind Twilio en bel kandidaten direct vanuit TalentFlow."
+          title={t("page.title")}
+          description={t("page.description")}
         />
         <NotActivatedCard />
       </div>
@@ -73,12 +75,12 @@ export default function VoiceSettingsPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Voice & VoIP"
-        description="Verbind Twilio en bel kandidaten direct vanuit TalentFlow."
+        title={t("page.title")}
+        description={t("page.description")}
         actions={
           integration?.status === "connected" && (
             <Button onClick={() => setTestOpen(true)} className="gap-1.5">
-              <Phone className="h-4 w-4" /> Test-bellen
+              <Phone className="h-4 w-4" /> {t("page.testCall")}
             </Button>
           )
         }
@@ -106,6 +108,7 @@ export default function VoiceSettingsPage() {
  * Eerlijke staat voor omgevingen waar Voice (nog) niet is geactiveerd.
  */
 function NotActivatedCard() {
+  const { t } = useTranslation("settingsVoice");
   return (
     <Card className="border-0 shadow-sm">
       <CardContent className="flex flex-col items-center gap-3 py-14 text-center">
@@ -113,12 +116,10 @@ function NotActivatedCard() {
           <Phone className="h-7 w-7 text-zinc-400" />
         </div>
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-          Voice is niet geactiveerd
+          {t("notActivated.title")}
         </h2>
         <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
-          Bellen via TalentFlow is in deze omgeving nog niet geactiveerd. Er
-          kunnen geen gesprekken worden gestart of getranscribeerd. Neem
-          contact op met je beheerder om Voice te activeren.
+          {t("notActivated.body")}
         </p>
       </CardContent>
     </Card>
@@ -130,6 +131,7 @@ function ConnectedCard({
 }: {
   integration: import("@/lib/types/voice").VoiceIntegration;
 }) {
+  const { t } = useTranslation("settingsVoice");
   const { toast } = useToast();
   const disconnect = useDisconnectVoice();
   return (
@@ -139,11 +141,11 @@ function ConnectedCard({
           <div className="flex items-center gap-2">
             <span className="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-500" />
             <Badge className="border-0 bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-              Verbonden
+              {t("connected.badge")}
             </Badge>
           </div>
           <p className="mt-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Telefoonnummer
+            {t("connected.phoneLabel")}
           </p>
           <p className="font-mono text-base font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
             {integration.phone_number}
@@ -151,13 +153,13 @@ function ConnectedCard({
         </div>
         <div className="sm:col-span-1">
           <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Twilio Account SID
+            {t("connected.accountSidLabel")}
           </p>
           <p className="mt-1 truncate font-mono text-xs text-zinc-700 dark:text-zinc-300">
             {integration.account_sid ?? "—"}
           </p>
           <p className="mt-2 text-[11px] text-muted-foreground">
-            Verbonden sinds{" "}
+            {t("connected.connectedSince")}{" "}
             {integration.connected_at
               ? new Date(integration.connected_at).toLocaleDateString("nl-NL", {
                   day: "numeric",
@@ -173,19 +175,19 @@ function ConnectedCard({
             target="_blank"
             className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:underline"
           >
-            Twilio console <ExternalLink className="h-3 w-3" />
+            {t("connected.twilioConsole")} <ExternalLink className="h-3 w-3" />
           </Link>
           <Button
             size="sm"
             variant="ghost"
             onClick={() =>
               disconnect.mutate(undefined, {
-                onSuccess: () => toast({ title: "Verbinding verbroken" }),
+                onSuccess: () => toast({ title: t("connected.disconnectedToast") }),
               })
             }
             className="text-red-600 hover:bg-red-50 hover:text-red-700"
           >
-            Ontkoppelen
+            {t("connected.disconnect")}
           </Button>
         </div>
       </CardContent>
@@ -194,6 +196,7 @@ function ConnectedCard({
 }
 
 function ConnectForm() {
+  const { t } = useTranslation("settingsVoice");
   const { toast } = useToast();
   const connect = useConnectVoice();
   const [accountSid, setAccountSid] = useState("");
@@ -209,33 +212,33 @@ function ConnectForm() {
           </div>
           <div>
             <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-              Verbind je Twilio-account
+              {t("connectForm.title")}
             </h2>
             <p className="text-xs text-muted-foreground">
-              Voer je Twilio-credentials in. Vind ze in de{" "}
+              {t("connectForm.introPrefix")}{" "}
               <Link
                 href="https://console.twilio.com"
                 target="_blank"
                 className="text-indigo-600 hover:underline"
               >
-                Twilio Console
+                {t("connectForm.consoleLinkText")}
               </Link>{" "}
-              onder Account → API keys.
+              {t("connectForm.introSuffix")}
             </p>
           </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="v-sid">Account SID</Label>
+            <Label htmlFor="v-sid">{t("connectForm.accountSidLabel")}</Label>
             <Input
               id="v-sid"
-              placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              placeholder={t("connectForm.accountSidPlaceholder")}
               value={accountSid}
               onChange={(e) => setAccountSid(e.target.value)}
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="v-token">Auth Token</Label>
+            <Label htmlFor="v-token">{t("connectForm.authTokenLabel")}</Label>
             <Input
               id="v-token"
               type="password"
@@ -245,10 +248,10 @@ function ConnectForm() {
             />
           </div>
           <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="v-phone">Telefoonnummer</Label>
+            <Label htmlFor="v-phone">{t("connectForm.phoneLabel")}</Label>
             <Input
               id="v-phone"
-              placeholder="+31 20 1234 5678"
+              placeholder={t("connectForm.phonePlaceholder")}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
             />
@@ -258,8 +261,8 @@ function ConnectForm() {
           onClick={() => {
             if (!accountSid || !authToken || !phone) {
               toast({
-                title: "Verplichte velden",
-                description: "Vul Account SID, Auth Token en telefoonnummer in.",
+                title: t("connectForm.requiredToast.title"),
+                description: t("connectForm.requiredToast.description"),
                 variant: "destructive",
               });
               return;
@@ -269,8 +272,8 @@ function ConnectForm() {
               {
                 onSuccess: () =>
                   toast({
-                    title: "Verbonden",
-                    description: "Twilio is nu actief.",
+                    title: t("connectForm.connectedToast.title"),
+                    description: t("connectForm.connectedToast.description"),
                   }),
               }
             );
@@ -279,7 +282,7 @@ function ConnectForm() {
           className="gap-1.5"
         >
           <Check className="h-4 w-4" />
-          {connect.isPending ? "Verbinden…" : "Verbinden"}
+          {connect.isPending ? t("connectForm.connecting") : t("connectForm.connect")}
         </Button>
       </CardContent>
     </Card>
@@ -287,6 +290,7 @@ function ConnectForm() {
 }
 
 function CallsList() {
+  const { t } = useTranslation("settingsVoice");
   const { data: calls, isLoading } = useVoiceCalls();
 
   return (
@@ -294,7 +298,7 @@ function CallsList() {
       <CardContent className="p-0">
         <div className="border-b border-border px-5 py-3">
           <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-            Recente gesprekken
+            {t("calls.title")}
           </h3>
         </div>
         {isLoading ? (
@@ -305,7 +309,7 @@ function CallsList() {
           </div>
         ) : !calls || calls.length === 0 ? (
           <p className="p-8 text-center text-sm text-muted-foreground">
-            Nog geen gesprekken gevoerd.
+            {t("calls.empty")}
           </p>
         ) : (
           <ul className="divide-y divide-border">
@@ -329,8 +333,8 @@ function CallsList() {
                     </p>
                     <p className="text-[11px] text-muted-foreground">
                       {c.direction === "inbound"
-                        ? `Inkomend van ${c.from_number}`
-                        : `Uitgaand naar ${c.to_number}`}{" "}
+                        ? t("calls.inboundFrom", { number: c.from_number })
+                        : t("calls.outboundTo", { number: c.to_number })}{" "}
                       · {new Date(c.created_at).toLocaleString("nl-NL", { dateStyle: "short", timeStyle: "short" })}
                     </p>
                   </div>
@@ -349,6 +353,7 @@ function CallsList() {
 }
 
 function TestCallDialog({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation("settingsVoice");
   const { toast } = useToast();
   const initiate = useInitiateCall();
   const [candidateId, setCandidateId] = useState("");
@@ -372,27 +377,27 @@ function TestCallDialog({ onClose }: { onClose: () => void }) {
       candidate_name: c?.name,
     });
     setActiveCallId(call.id);
-    toast({ title: "Test-call gestart", description: c?.name });
+    toast({ title: t("testDialog.startedToast"), description: c?.name });
   };
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Test-bellen</DialogTitle>
+          <DialogTitle>{t("testDialog.title")}</DialogTitle>
         </DialogHeader>
         {!activeCallId ? (
           <div className="space-y-3">
-            <Label>Bel kandidaat</Label>
+            <Label>{t("testDialog.candidateLabel")}</Label>
             <Select value={candidateId} onValueChange={setCandidateId}>
               <SelectTrigger>
                 <SelectValue
                   placeholder={
                     candidatesLoading
-                      ? "Kandidaten laden..."
+                      ? t("testDialog.candidatesLoading")
                       : !candidates || candidates.length === 0
-                        ? "Geen kandidaten beschikbaar"
-                        : "Kies een kandidaat…"
+                        ? t("testDialog.noCandidates")
+                        : t("testDialog.selectCandidate")
                   }
                 />
               </SelectTrigger>
@@ -410,11 +415,11 @@ function TestCallDialog({ onClose }: { onClose: () => void }) {
         )}
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Sluiten
+            {t("testDialog.close")}
           </Button>
           {!activeCallId && (
             <Button onClick={handleStart} disabled={!candidateId}>
-              <Phone className="mr-1 h-4 w-4" /> Bellen
+              <Phone className="mr-1 h-4 w-4" /> {t("testDialog.call")}
             </Button>
           )}
         </DialogFooter>
@@ -424,6 +429,7 @@ function TestCallDialog({ onClose }: { onClose: () => void }) {
 }
 
 function LiveCallView({ call }: { call: VoiceCallType | null }) {
+  const { t } = useTranslation("settingsVoice");
   if (!call) return <Skeleton className="h-24 rounded-lg" />;
   return (
     <div className="space-y-3 rounded-lg border border-border bg-zinc-50/60 p-4 dark:bg-zinc-800/30">
@@ -450,13 +456,12 @@ function LiveCallView({ call }: { call: VoiceCallType | null }) {
       </p>
       {call.status === "completed" && call.transcription_status === "pending" && (
         <p className="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-300">
-          <Sparkles className="h-3 w-3 animate-pulse" /> Transcriptie wordt
-          gegenereerd…
+          <Sparkles className="h-3 w-3 animate-pulse" /> {t("liveCall.transcriptionPending")}
         </p>
       )}
       {call.transcription_status === "done" && call.transcription_text && (
         <p className="rounded bg-white p-2 text-[11px] leading-relaxed text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
-          <strong>Transcriptie:</strong> {call.transcription_text}
+          <strong>{t("liveCall.transcriptionLabel")}</strong> {call.transcription_text}
         </p>
       )}
     </div>

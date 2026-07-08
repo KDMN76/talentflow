@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useTranslation } from "react-i18next";
 import {
+  Blocks,
   Building2,
   Users,
   Shield,
@@ -87,6 +88,14 @@ const SETTINGS_SUBPAGES = [
     iconColor: "text-blue-600 dark:text-blue-400",
     titleKey: "index.subpages.email.title",
     descKey: "index.subpages.email.description",
+  },
+  {
+    href: "/settings/modules",
+    icon: Blocks,
+    iconBg: "bg-violet-100 dark:bg-violet-950/40",
+    iconColor: "text-violet-600 dark:text-violet-400",
+    titleKey: "index.subpages.modules.title",
+    descKey: "index.subpages.modules.description",
   },
   {
     href: "/settings/custom-fields",

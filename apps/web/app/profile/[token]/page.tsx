@@ -7,12 +7,13 @@
  *   2. Loading → Skeleton.
  *   3. 404/410/401/403 → "Deze link is verlopen / ongeldig" — vraag nieuwe link.
  *   4. Netwerk-fout → retry-button + uitleg.
- *   5. Success → 5 secties op één pagina (geen tabs):
+ *   5. Success → 6 secties op één pagina (geen tabs):
  *       A. Mijn profiel        → ProfileSection
  *       B. Mijn sollicitaties  → ApplicationsSection
  *       C. Mijn communicatie   → CommunicationsSection
  *       D. Mijn toestemmingen  → ConsentSection
- *       E. Mijn data verwijderen → DeletionRequestFlow
+ *       E. Mijn gegevens downloaden → DataExportSection (AVG art. 15)
+ *       F. Mijn data verwijderen → DeletionRequestFlow (AVG art. 17)
  */
 
 "use client";
@@ -29,6 +30,7 @@ import { ProfileSection } from "@/components/self-service/ProfileSection";
 import { ApplicationsSection } from "@/components/self-service/ApplicationsSection";
 import { CommunicationsSection } from "@/components/self-service/CommunicationsSection";
 import { ConsentSection } from "@/components/self-service/ConsentSection";
+import { DataExportSection } from "@/components/self-service/DataExportSection";
 import { DeletionRequestFlow } from "@/components/self-service/DeletionRequestFlow";
 
 export default function SelfServicePage() {
@@ -79,6 +81,7 @@ export default function SelfServicePage() {
           retention={data.retention}
           token={token}
         />
+        <DataExportSection token={token} />
         <DeletionRequestFlow
           token={token}
           existingRequest={data.deletion_request}

@@ -1,0 +1,111 @@
+{
+  "header": {
+    "fallbackBrand": "Recruitment portaal",
+    "tagline": "Recruitment portaal",
+    "poweredByPrefix": "Powered by"
+  },
+  "footer": {
+    "copyrightWithBrand": "© {{year}} {{brand}} — recruitment portaal",
+    "copyright": "© {{year}} — recruitment portaal",
+    "secure": "Veilige, vertrouwelijke verbinding",
+    "poweredBy": "Powered by TalentFlow"
+  },
+  "states": {
+    "invalidTitle": "Deze link is ongeldig",
+    "invalidBody": "Deze portal-link bestaat niet of is ingetrokken. Vraag de recruiter om een nieuwe link.",
+    "expiredTitle": "Deze link is verlopen",
+    "expiredBody": "De toegang tot deze shortlist is verlopen. Vraag de recruiter om een nieuwe link als je de kandidaten opnieuw wilt bekijken.",
+    "rateLimitedTitle": "Te veel verzoeken",
+    "rateLimitedBody": "Je hebt tijdelijk te veel verzoeken gedaan. Wacht een paar minuten en probeer het dan opnieuw.",
+    "networkTitle": "Even niet bereikbaar",
+    "networkBody": "We konden de gegevens niet ophalen. Controleer je verbinding en probeer het opnieuw.",
+    "retry": "Opnieuw proberen"
+  },
+  "page": {
+    "eyebrow": "Recruitment shortlist",
+    "greeting": "Welkom — geef je feedback op deze shortlist.",
+    "greetingNamed": "Welkom, {{name}} — geef je feedback op deze shortlist.",
+    "sentBy": "Gedeeld door {{name}}.",
+    "bulkButton": "Bulk-feedback",
+    "stats": {
+      "total": "Kandidaten",
+      "decided": "Beoordeeld",
+      "pending": "Open"
+    },
+    "noAccessTitle": "Geen toegang tot kandidaten",
+    "noAccessBody": "Deze portal-link heeft geen toestemming om kandidaten te bekijken. Neem contact op met je recruiter voor toegang.",
+    "jobDescriptionTitle": "Vacaturebeschrijving",
+    "jobDescriptionCollapse": "Inklappen",
+    "jobDescriptionExpand": "Bekijk de volledige beschrijving",
+    "reviewerNameLabel": "Jouw naam (optioneel)",
+    "reviewerNamePlaceholder": "Hoe mogen we je noemen?",
+    "reviewerNameHelp": "Wordt getoond bij je reacties zodat de recruiter weet van wie ze komen.",
+    "candidateCount_one": "{{count}} kandidaat",
+    "candidateCount_other": "{{count}} kandidaten",
+    "emptyShortlist": "Er zijn nog geen kandidaten gedeeld voor deze vacature.",
+    "generalComments": {
+      "title": "Algemene opmerkingen",
+      "description": "Opmerkingen over de hele shortlist — niet gebonden aan één kandidaat.",
+      "placeholder": "Bijv. sterke selectie, graag meer senioriteit…",
+      "submit": "Plaats opmerking",
+      "empty": "Nog geen algemene opmerkingen.",
+      "anonymous": "Anoniem"
+    },
+    "bulkDialog": {
+      "title": "Markeer alle openstaande kandidaten",
+      "description": "Pas dezelfde feedback toe op alle {{count}} kandidaten zonder beoordeling. Dit kan niet ongedaan worden gemaakt.",
+      "approve": "Geschikt",
+      "doubt": "Twijfel",
+      "reject": "Niet geschikt",
+      "cancel": "Annuleren"
+    },
+    "toasts": {
+      "approveSent": "Geschikt verstuurd",
+      "rejectSent": "Niet geschikt verstuurd",
+      "doubtSent": "Twijfel genoteerd",
+      "commentSent": "Reactie verstuurd",
+      "generalCommentSent": "Opmerking verstuurd",
+      "feedbackDescription": "De recruiter is op de hoogte gebracht.",
+      "failTitle": "Niet gelukt",
+      "failForbidden": "Je hebt geen toestemming voor deze actie.",
+      "failGeneric": "Probeer het opnieuw — kon de actie niet versturen.",
+      "bulkDoneTitle": "Bulk-feedback verstuurd",
+      "bulkDoneDescription": "{{count}} kandidaten gemarkeerd.",
+      "bulkFailTitle": "Bulk-actie mislukte gedeeltelijk",
+      "bulkFailDescription": "Niet alle kandidaten konden worden verwerkt."
+    }
+  },
+  "card": {
+    "anonymousCandidate": "Kandidaat #{{index}}",
+    "contactHidden": "Contactgegevens worden in dit portaal niet gedeeld.",
+    "appliedOn": "Gesolliciteerd op {{date}}",
+    "resumeSummaryTitle": "Cv-samenvatting",
+    "viewCv": "CV bekijken",
+    "historyShow": "Toon pipeline-historie ({{count}})",
+    "historyHide": "Verberg pipeline-historie ({{count}})",
+    "approve": "Geschikt",
+    "reject": "Niet geschikt",
+    "doubt": "Twijfel",
+    "comment": "Reageer",
+    "commentPlaceholder": "Schrijf je reactie...",
+    "commentSubmit": "Plaats reactie",
+    "cancel": "Annuleren",
+    "anonymous": "Anoniem",
+    "aiScore": "AI score {{score}}",
+    "aiScoreTitle": "AI-match-score: {{score}}/100",
+    "sent": {
+      "approve": "Geschikt — verstuurd",
+      "reject": "Niet geschikt — verstuurd",
+      "doubt": "Twijfel — verstuurd"
+    }
+  },
+  "resume": {
+    "title": "CV — {{name}}",
+    "openTab": "Open in tab",
+    "download": "Downloaden",
+    "iframeTitle": "CV van {{name}}",
+    "noCv": "Geen CV beschikbaar voor deze kandidaat.",
+    "noPermissionTitle": "Geen toestemming",
+    "noPermissionBody": "Je hebt geen toestemming om CV's te downloaden."
+  }
+}

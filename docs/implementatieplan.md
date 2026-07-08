@@ -7,7 +7,7 @@
 
 ## Context
 
-Het bedrijf betaalt €1.000/maand voor Manatal. Manatal heeft structurele zwaktes:
+Het bedrijf betaalt ≈€620/maand voor Manatal (werkelijke factuur $674/mnd: 16 seats × $39 + $50 add-on, zie TCO_ROI.md; destijds geschat op €1.000/mnd). Manatal heeft structurele zwaktes:
 geen API op lagere plannen, slechte rapportage, geen WhatsApp/SMS, performance-
 degradatie bij schaal, beperkte career page builder, AI die slecht werkt voor
 niet-Engelse CV's. De markt mist een platform dat Manatal-prijs combineert met
@@ -773,7 +773,7 @@ git push → GitHub Actions → tests → Railway deployt API → Vercel deployt
 | Eigen domein career pages      | Vercel Pro ($20/maand) of eigen nginx | €18/maand    |
 
 **Totale kosten bij eerste betalende klant: ~€50-70/maand**
-(vs. Manatal €1.000/maand — break-even al bij 1 klant)
+(vs. Manatal ≈€620/maand — break-even al bij 1 klant)
 
 ### Monitoring
 - Sentry voor error tracking (gratis tier, 5k errors/maand)

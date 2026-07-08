@@ -277,7 +277,7 @@ Beschikbaar vanaf Enterprise tier.
 
 ## Strategische conclusie
 
-TalentFlow kan de €1.000/maand Manatal-licentie alleen verantwoord vervangen als de **P0**-categorieën volledig zitten:
+TalentFlow kan de ≈€620/maand Manatal-licentie (werkelijke factuur, zie TCO_ROI.md) alleen verantwoord vervangen als de **P0**-categorieën volledig zitten:
 - Kandidaten-DB + parsing + kanban (✅ grotendeels)
 - Career page (✅ grotendeels)
 - Email sync (❌ moet gebouwd)

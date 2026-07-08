@@ -1,0 +1,90 @@
+{
+  "status": {
+    "active": "Active",
+    "revoked": "Revoked",
+    "expired": "Expired"
+  },
+  "relative": {
+    "never": "Never used",
+    "justNow": "Just now",
+    "minutesAgo": "{{n}} min ago",
+    "hoursAgo": "{{n}} hr ago",
+    "daysAgo": "{{n}} days ago",
+    "weeksAgo": "{{n}} weeks ago"
+  },
+  "toasts": {
+    "errorTitle": "Error",
+    "createError": "Could not create API key.",
+    "rotateFailed": "Rotation failed",
+    "revoked": "API key revoked",
+    "revokeFailed": "Revocation failed",
+    "copied": "Copied"
+  },
+  "header": {
+    "title": "API keys",
+    "description": "Manage integration keys with granular scopes, rate limits and IP allowlists.",
+    "playground": "API Playground",
+    "newKey": "New key"
+  },
+  "list": {
+    "loading": "Loading keys...",
+    "empty": "No API keys yet. Create one to start integrating.",
+    "expires": "Expires {{date}}",
+    "copyPrefix": "Copy prefix",
+    "noScopes": "No scopes — this key can't do anything",
+    "lastUsed": "Last used: {{value}}",
+    "totalRequests": "{{total}} requests total",
+    "limit": "Limit {{limit}}/min",
+    "ipAllowlist": "IP allowlist: {{ips}}",
+    "details": "Details",
+    "rotate": "Rotate",
+    "revoke": "Revoke"
+  },
+  "createDialog": {
+    "title": "New API key — step {{step}} of 3",
+    "step1Description": "Give your key a name and description.",
+    "step2Description": "Choose exactly which actions this key may perform.",
+    "step3Description": "Set optional restrictions (rate limit, IP, expiry).",
+    "nameLabel": "Name",
+    "namePlaceholder": "E.g. Production integration",
+    "descriptionLabel": "Description (optional)",
+    "descriptionPlaceholder": "What will you use this key for?",
+    "fullAccess": "full access",
+    "rateLimitLabel": "Rate limit (per minute)",
+    "rateLimitHint": "Default 100 req/min. Increase when running large-scale bulk imports.",
+    "ipLabel": "IP allowlist (optional)",
+    "ipPlaceholder": "91.98.232.104, 81.20.10.10",
+    "ipHint": "Comma-separated list. Leave empty = no IP restriction.",
+    "expiresLabel": "Expiry date (optional)",
+    "cancel": "Cancel",
+    "previous": "Previous",
+    "next": "Next",
+    "create": "Create"
+  },
+  "createdDialog": {
+    "title": "Key created",
+    "description": "{{name}} — copy the key now, you won't see it again.",
+    "warning": "Store this key securely (in a password manager, not in git). If lost, you can rotate the key — the old one becomes invalid immediately.",
+    "keyLabel": "API key",
+    "close": "Close"
+  },
+  "rotatedDialog": {
+    "title": "Key rotated",
+    "description": "The old key became invalid immediately. Update your integration.",
+    "warning": "You'll see this new key only once. Copy it now.",
+    "keyLabel": "New API key",
+    "close": "Close"
+  },
+  "confirmRotate": {
+    "title": "Rotate key?",
+    "description": "The current key becomes invalid immediately. Integrations using the old key will get 401 errors until you update them.",
+    "cancel": "Cancel",
+    "confirm": "Rotate"
+  },
+  "confirmRevoke": {
+    "title": "Revoke key?",
+    "description": "This action is permanent — the key stops working immediately and cannot be restored.",
+    "cancel": "Cancel",
+    "confirm": "Revoke"
+  }
+}

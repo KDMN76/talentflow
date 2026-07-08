@@ -2,6 +2,8 @@ import crypto from 'crypto';
 import { pool, withTenant, withoutTenant } from '../../db/pool';
 import { AppError, logger } from '../../middleware/errorHandler';
 import { emailSenderQueue } from '../../queue/queues';
+import { logAudit, type AuditContext } from '../../lib/audit';
+import { mocksAllowed } from '../../lib/env';
 import { getBrandingForTenant, type TenantBranding } from '../tenants/branding.service';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -69,26 +71,48 @@ export interface PortalLinkInput {
   notification_frequency?: NotificationFrequency;
 }
 
+/**
+ * Canonieke feedback-acties zoals opgeslagen in guest_portal_feedback.
+ * De web-client stuurt UI-varianten (approve/reject/doubt/comment); die
+ * worden via `normalizeFeedbackAction()` naar dit canonieke schema gemapt.
+ */
+export type PortalFeedbackAction = 'approved' | 'rejected' | 'doubt' | 'commented';
+
 export interface PortalFeedback {
   id: string;
   tenant_id: string;
   portal_link_id: string;
-  application_id: string;
-  action: 'approved' | 'rejected' | 'commented';
+  application_id: string | null;
+  action: PortalFeedbackAction;
   comment: string | null;
   client_name: string | null;
   created_at: string;
 }
 
+export interface PortalApplicationComment {
+  id: string;
+  author: string | null;
+  body: string;
+  created_at: string;
+}
+
+/**
+ * Publieke shortlist-serialisatie — dit is wat een GAST (klant zonder login)
+ * te zien krijgt. Bevat bewust GEEN PII: geen e-mail, geen telefoonnummer,
+ * geen salaris-informatie. Zie `serializePortalApplication()`.
+ */
 export interface PortalApplication {
   id: string;
+  candidate_id: string;
   candidate_name: string;
-  candidate_email: string | null;
   ai_score: number | null;
-  stage_id: string | null;
   stage_name: string | null;
-  status: string | null;
   applied_at: string | null;
+  skills: string[];
+  resume_url: string | null;
+  resume_summary: string | null;
+  client_feedback: 'approved' | 'rejected' | 'doubt' | null;
+  comments: PortalApplicationComment[];
 }
 
 export interface PortalAccessResult {
@@ -97,11 +121,25 @@ export interface PortalAccessResult {
     title: string;
     description: string | null;
   };
+  recruiter: { name: string } | null;
   applications: PortalApplication[];
+  general_comments: PortalApplicationComment[];
   permissions: PortalPermissions;
   client_name: string | null;
   expires_at: string | null;
   branding: PortalBranding;
+}
+
+/** Feedback-rij verrijkt met kandidaatnaam voor de recruiter-dashboard-UI. */
+export interface PortalFeedbackItem {
+  id: string;
+  application_id: string | null;
+  candidate_id: string | null;
+  candidate_name: string | null;
+  action: PortalFeedbackAction;
+  comment: string | null;
+  client_name: string | null;
+  created_at: string;
 }
 
 export interface PortalActivity {
@@ -198,6 +236,184 @@ function parseBranding(value: unknown): PortalBranding {
     }
   }
   return value as PortalBranding;
+}
+
+/**
+ * Map UI/legacy feedback-acties naar het canonieke opslag-schema.
+ * Retourneert null bij onbekende input (controller → 400).
+ */
+export function normalizeFeedbackAction(input: unknown): PortalFeedbackAction | null {
+  switch (input) {
+    case 'approve':
+    case 'approved':
+      return 'approved';
+    case 'reject':
+    case 'rejected':
+      return 'rejected';
+    case 'doubt':
+    case 'doubted':
+      return 'doubt';
+    case 'comment':
+    case 'commented':
+      return 'commented';
+    default:
+      return null;
+  }
+}
+
+/**
+ * Compacte cv-samenvatting voor de publieke shortlist. Bewust een simpele
+ * tekst-truncatie (geen AI-call in het publieke pad): whitespace collapsen
+ * en afkappen op een woordgrens.
+ */
+export function buildResumeSummary(
+  resumeText: string | null | undefined,
+  maxLength = 400
+): string | null {
+  if (!resumeText) return null;
+  const collapsed = resumeText.replace(/\s+/g, ' ').trim();
+  if (!collapsed) return null;
+  if (collapsed.length <= maxLength) return collapsed;
+  const cut = collapsed.slice(0, maxLength);
+  const lastSpace = cut.lastIndexOf(' ');
+  return `${cut.slice(0, lastSpace > maxLength * 0.6 ? lastSpace : maxLength).trimEnd()}…`;
+}
+
+/** Feedback-status van één applicatie zoals de gast die terugziet. */
+export interface ApplicationFeedbackState {
+  decision: 'approved' | 'rejected' | 'doubt' | null;
+  comments: PortalApplicationComment[];
+}
+
+/**
+ * Rauwe DB-rij (applications ⋈ candidates ⋈ pipeline_stages) van de
+ * shortlist-query. E-mail/telefoon/salaris worden hier bewust NIET
+ * geselecteerd én NIET geserialiseerd.
+ */
+export interface RawPortalApplicationRow {
+  id: string;
+  candidate_id: string;
+  candidate_name: string;
+  ai_score: number | string | null;
+  skills: string[] | null;
+  resume_url: string | null;
+  resume_text: string | null;
+  stage_name: string | null;
+  applied_at: string | null;
+  [key: string]: unknown;
+}
+
+/**
+ * Serialiseer één shortlist-kandidaat voor de PUBLIEKE portal-respons.
+ *
+ * PII-beleid: de output bevat nooit e-mail, telefoonnummer of
+ * salaris-informatie — ongeacht permissions en ongeacht wat er in `row`
+ * meekomt. De velden worden expliciet opgebouwd (geen spread van de rij).
+ *
+ * Permission-gating:
+ *   - view_ai_scores       → anders ai_score = null
+ *   - view_resumes         → anders resume_url = null én resume_summary = null
+ *   - view_pipeline_history → anders stage_name = null
+ */
+export function serializePortalApplication(
+  row: RawPortalApplicationRow,
+  permissions: PortalPermissions,
+  feedback: ApplicationFeedbackState = { decision: null, comments: [] }
+): PortalApplication {
+  const aiScore =
+    typeof row.ai_score === 'number'
+      ? row.ai_score
+      : row.ai_score == null
+        ? null
+        : Number(row.ai_score) || null;
+
+  return {
+    id: row.id,
+    candidate_id: row.candidate_id,
+    candidate_name: row.candidate_name,
+    ai_score: permissions.view_ai_scores ? aiScore : null,
+    stage_name: permissions.view_pipeline_history ? (row.stage_name ?? null) : null,
+    applied_at: row.applied_at ?? null,
+    skills: Array.isArray(row.skills)
+      ? row.skills.filter((s): s is string => typeof s === 'string')
+      : [],
+    resume_url: permissions.view_resumes ? (row.resume_url ?? null) : null,
+    resume_summary: permissions.view_resumes
+      ? buildResumeSummary(row.resume_text)
+      : null,
+    client_feedback: feedback.decision,
+    comments: feedback.comments,
+  };
+}
+
+/**
+ * Groepeer feedback-rijen per application:
+ *   - laatste approved/rejected/doubt per applicatie = decision
+ *   - commented-rijen = comment-thread
+ *   - rijen zonder application_id = algemene opmerkingen over de shortlist
+ */
+export function groupFeedbackRows(
+  rows: Array<{
+    id: string;
+    application_id: string | null;
+    action: string;
+    comment: string | null;
+    client_name: string | null;
+    created_at: string;
+  }>
+): {
+  perApplication: Map<string, ApplicationFeedbackState>;
+  generalComments: PortalApplicationComment[];
+} {
+  const perApplication = new Map<string, ApplicationFeedbackState>();
+  const generalComments: PortalApplicationComment[] = [];
+
+  for (const row of rows) {
+    const action = normalizeFeedbackAction(row.action);
+    if (!action) continue;
+
+    if (!row.application_id) {
+      if (row.comment) {
+        generalComments.push({
+          id: row.id,
+          author: row.client_name,
+          body: row.comment,
+          created_at: row.created_at,
+        });
+      }
+      continue;
+    }
+
+    let state = perApplication.get(row.application_id);
+    if (!state) {
+      state = { decision: null, comments: [] };
+      perApplication.set(row.application_id, state);
+    }
+
+    if (action === 'commented') {
+      if (row.comment) {
+        state.comments.push({
+          id: row.id,
+          author: row.client_name,
+          body: row.comment,
+          created_at: row.created_at,
+        });
+      }
+    } else {
+      // Rijen komen chronologisch binnen — de laatste beslissing wint.
+      state.decision = action;
+      if (row.comment) {
+        state.comments.push({
+          id: row.id,
+          author: row.client_name,
+          body: row.comment,
+          created_at: row.created_at,
+        });
+      }
+    }
+  }
+
+  return { perApplication, generalComments };
 }
 
 function rowToLink(row: Record<string, unknown>): PortalLink {
@@ -302,7 +518,8 @@ export async function createPortalLink(
     branding?: PortalBranding;
     notify_email?: string;
     notification_frequency?: NotificationFrequency;
-  }
+  },
+  auditCtx: AuditContext = {}
 ): Promise<PortalLink> {
   // Crypto.randomBytes returns a Buffer; base64url is URL-safe (no +, /, =)
   const token = crypto.randomBytes(24).toString('base64url');
@@ -333,6 +550,27 @@ export async function createPortalLink(
           frequency,
         ]
       );
+
+      // Compliance-trail: link aangemaakt. Token bewust NIET in de audit-row
+      // (audit-lezers hoeven geen toegang tot het portaal te krijgen).
+      await logAudit(
+        client,
+        tenantId,
+        {
+          action: 'portal_link.created',
+          entityType: 'portal_link',
+          entityId: link.id as string,
+          after: {
+            job_id: data.job_id,
+            client_name: data.client_name ?? null,
+            permissions,
+            expires_at: data.expires_at ?? null,
+          },
+          userId,
+        },
+        auditCtx
+      );
+
       return rowToLink(link);
     });
   } catch (err) {
@@ -438,7 +676,9 @@ export async function updatePortalLink(
 
 export async function rotatePortalToken(
   tenantId: string,
-  portalId: string
+  portalId: string,
+  userId: string | null = null,
+  auditCtx: AuditContext = {}
 ): Promise<{ token: string }> {
   const newToken = crypto.randomBytes(24).toString('base64url');
   return withTenant(tenantId, async (client) => {
@@ -452,13 +692,28 @@ export async function rotatePortalToken(
     if (!row) {
       throw new AppError(404, 'PORTAL_LINK_NOT_FOUND', 'Portal-link niet gevonden');
     }
+
+    await logAudit(
+      client,
+      tenantId,
+      {
+        action: 'portal_link.token_rotated',
+        entityType: 'portal_link',
+        entityId: portalId,
+        userId,
+      },
+      auditCtx
+    );
+
     return { token: newToken };
   });
 }
 
 export async function deletePortalLink(
   tenantId: string,
-  linkId: string
+  linkId: string,
+  userId: string | null = null,
+  auditCtx: AuditContext = {}
 ): Promise<void> {
   try {
     await withTenant(tenantId, async (client) => {
@@ -466,13 +721,29 @@ export async function deletePortalLink(
         `UPDATE guest_portal_links
          SET deleted_at = now()
          WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
-         RETURNING id`,
+         RETURNING id, job_id, client_name`,
         [linkId, tenantId]
       );
 
       if (!link) {
         throw new AppError(404, 'PORTAL_LINK_NOT_FOUND', 'Portal-link niet gevonden');
       }
+
+      await logAudit(
+        client,
+        tenantId,
+        {
+          action: 'portal_link.revoked',
+          entityType: 'portal_link',
+          entityId: linkId,
+          before: {
+            job_id: link.job_id,
+            client_name: link.client_name,
+          },
+          userId,
+        },
+        auditCtx
+      );
     });
   } catch (err) {
     if (err instanceof AppError) {
@@ -606,96 +877,194 @@ export async function getPortalActivityLog(
 // ─────────────────────────────────────────────────────────────────────────────
 
 function buildMockAccess(_token: string): PortalAccessResult {
+  const permissions: PortalPermissions = {
+    ...DEFAULT_PERMISSIONS,
+    view_candidates: true,
+    view_resumes: true,
+    view_ai_scores: true,
+    accept_reject: true,
+    comment: true,
+    download_cv: true,
+    view_pipeline_history: true,
+  };
+  const mockRows: RawPortalApplicationRow[] = [
+    {
+      id: crypto.randomUUID(),
+      candidate_id: crypto.randomUUID(),
+      candidate_name: 'Anna de Vries',
+      ai_score: 88,
+      skills: ['React', 'TypeScript', 'Node.js'],
+      resume_url: null,
+      resume_text:
+        'Frontend-developer met 6 jaar ervaring in React en TypeScript, laatste 2 jaar als lead.',
+      stage_name: 'Interview',
+      applied_at: new Date(Date.now() - 86_400_000).toISOString(),
+    },
+    {
+      id: crypto.randomUUID(),
+      candidate_id: crypto.randomUUID(),
+      candidate_name: 'Mark Jansen',
+      ai_score: 76,
+      skills: ['Vue', 'JavaScript'],
+      resume_url: null,
+      resume_text: 'Allround developer, sterk in snelle MVP-bouw en klantcontact.',
+      stage_name: 'Screening',
+      applied_at: new Date(Date.now() - 2 * 86_400_000).toISOString(),
+    },
+  ];
   return {
     job: {
       id: crypto.randomUUID(),
       title: 'Senior Recruitment Consultant',
       description: 'Voorbeeldvacature voor demo-doeleinden.',
     },
-    applications: [
-      {
-        id: crypto.randomUUID(),
-        candidate_name: 'Anna de Vries',
-        candidate_email: 'anna@example.com',
-        ai_score: 88,
-        stage_id: null,
-        stage_name: 'Interview',
-        status: 'active',
-        applied_at: new Date(Date.now() - 86_400_000).toISOString(),
-      },
-      {
-        id: crypto.randomUUID(),
-        candidate_name: 'Mark Jansen',
-        candidate_email: 'mark@example.com',
-        ai_score: 76,
-        stage_id: null,
-        stage_name: 'Screening',
-        status: 'active',
-        applied_at: new Date(Date.now() - 2 * 86_400_000).toISOString(),
-      },
-    ],
-    permissions: {
-      ...DEFAULT_PERMISSIONS,
-      view_candidates: true,
-      view_resumes: true,
-      view_ai_scores: true,
-      view_contact_info: true,
-      accept_reject: true,
-      comment: true,
-      download_cv: true,
-      view_pipeline_history: true,
-    },
+    recruiter: { name: 'Demo Recruiter' },
+    applications: mockRows.map((row) => serializePortalApplication(row, permissions)),
+    general_comments: [],
+    permissions,
     client_name: 'Demo Klant B.V.',
     expires_at: null,
     branding: {},
   };
 }
 
-export async function getPortalAccess(token: string): Promise<PortalAccessResult> {
+/**
+ * Rauwe token-resolutie voor de publieke routes. Gooit nette AppErrors:
+ *   - 404 PORTAL_NOT_FOUND  → token onbekend of link ingetrokken
+ *   - 410 PORTAL_EXPIRED    → link bestond maar is verlopen
+ *
+ * De query is bewust NIET tenant-gescoped (het token ís de autorisatie);
+ * alle vervolg-queries gebruiken wél expliciet het tenant_id van de link,
+ * zodat data nooit tenant-grenzen kan kruisen.
+ */
+export async function resolvePortalToken(token: string): Promise<{
+  id: string;
+  tenant_id: string;
+  job_id: string;
+  client_name: string | null;
+  permissions: PortalPermissions;
+  expires_at: string | null;
+}> {
+  const link = await withoutTenant(async (client) => {
+    const { rows: [row] } = await client.query(
+      `SELECT id, tenant_id, job_id, client_name, permissions, expires_at
+       FROM guest_portal_links
+       WHERE token = $1 AND deleted_at IS NULL`,
+      [token]
+    );
+    return row ?? null;
+  });
+
+  if (!link) {
+    throw new AppError(
+      404,
+      'PORTAL_NOT_FOUND',
+      'Deze portal-link is ongeldig of ingetrokken'
+    );
+  }
+  if (link.expires_at && new Date(link.expires_at).getTime() <= Date.now()) {
+    throw new AppError(410, 'PORTAL_EXPIRED', 'Deze portal-link is verlopen');
+  }
+
+  return {
+    id: link.id,
+    tenant_id: link.tenant_id,
+    job_id: link.job_id,
+    client_name: link.client_name,
+    permissions: parsePermissions(link.permissions),
+    expires_at: link.expires_at,
+  };
+}
+
+export async function getPortalAccess(
+  token: string,
+  meta: { ipAddress?: string | null; userAgent?: string | null } = {}
+): Promise<PortalAccessResult> {
   try {
-    return await withoutTenant(async (client) => {
+    const result = await withoutTenant(async (client) => {
       // Look up the link + job. Token is the auth, so we query without tenant context.
       const { rows: [link] } = await client.query(
         `SELECT pl.id, pl.tenant_id, pl.job_id, pl.token, pl.client_name,
                 pl.permissions, pl.expires_at, pl.view_count, pl.last_viewed_at,
                 pl.branding,
-                j.title AS job_title, j.description AS job_description
+                j.title AS job_title, j.description AS job_description,
+                u.name AS recruiter_name
          FROM guest_portal_links pl
          JOIN jobs j ON j.id = pl.job_id
+         LEFT JOIN users u ON u.id = j.recruiter_id
          WHERE pl.token = $1
-           AND pl.deleted_at IS NULL
-           AND (pl.expires_at IS NULL OR pl.expires_at > now())`,
+           AND pl.deleted_at IS NULL`,
         [token]
       );
 
       if (!link) {
-        throw new AppError(404, 'PORTAL_NOT_FOUND', 'Portal-link niet gevonden of verlopen');
+        throw new AppError(
+          404,
+          'PORTAL_NOT_FOUND',
+          'Deze portal-link is ongeldig of ingetrokken'
+        );
+      }
+      if (link.expires_at && new Date(link.expires_at).getTime() <= Date.now()) {
+        throw new AppError(410, 'PORTAL_EXPIRED', 'Deze portal-link is verlopen');
       }
 
-      // Fetch applications for this job. Try a richer query first, fall back if columns differ.
-      let applications: PortalApplication[] = [];
+      const permissions = parsePermissions(link.permissions);
+
+      // Shortlist ophalen — bewust ZONDER e-mail/telefoon/salaris-kolommen.
+      // De serialisatie (serializePortalApplication) bouwt de publieke shape
+      // expliciet op, dus zelfs een toekomstige SELECT * lekt hier niet.
+      let rawRows: RawPortalApplicationRow[] = [];
       try {
         const { rows } = await client.query(
           `SELECT a.id,
+                  a.candidate_id,
                   c.name AS candidate_name,
-                  c.email AS candidate_email,
                   c.ai_score AS ai_score,
-                  a.stage_id,
+                  c.skills AS skills,
+                  c.resume_url AS resume_url,
+                  c.resume_text AS resume_text,
                   ps.name AS stage_name,
-                  a.status,
                   a.applied_at
            FROM applications a
            JOIN candidates c ON c.id = a.candidate_id
            LEFT JOIN pipeline_stages ps ON ps.id = a.stage_id
            WHERE a.job_id = $1
              AND a.tenant_id = $2
-           ORDER BY a.applied_at DESC NULLS LAST`,
+             AND c.deleted_at IS NULL
+           ORDER BY c.ai_score DESC NULLS LAST, a.applied_at DESC NULLS LAST`,
           [link.job_id, link.tenant_id]
         );
-        applications = rows;
+        rawRows = rows;
       } catch {
-        applications = [];
+        rawRows = [];
       }
+
+      // Eerder gegeven feedback zodat de gast ziet wat al beoordeeld is.
+      let feedbackRows: Array<{
+        id: string;
+        application_id: string | null;
+        action: string;
+        comment: string | null;
+        client_name: string | null;
+        created_at: string;
+      }> = [];
+      try {
+        const { rows } = await client.query(
+          `SELECT id, application_id, action, comment, client_name, created_at
+           FROM guest_portal_feedback
+           WHERE portal_link_id = $1 AND tenant_id = $2
+           ORDER BY created_at ASC`,
+          [link.id, link.tenant_id]
+        );
+        feedbackRows = rows;
+      } catch {
+        feedbackRows = [];
+      }
+      const { perApplication, generalComments } = groupFeedbackRows(feedbackRows);
+
+      const applications = rawRows.map((row) =>
+        serializePortalApplication(row, permissions, perApplication.get(row.id))
+      );
 
       // Increment view counter (best-effort — don't fail the request on this)
       try {
@@ -723,23 +1092,45 @@ export async function getPortalAccess(token: string): Promise<PortalAccessResult
       }
 
       return {
-        job: {
-          id: link.job_id,
-          title: link.job_title,
-          description: link.job_description,
-        },
-        applications,
-        permissions: parsePermissions(link.permissions),
-        client_name: link.client_name,
-        expires_at: link.expires_at,
-        branding: combinedBranding,
+        access: {
+          job: {
+            id: link.job_id,
+            title: link.job_title,
+            description: link.job_description,
+          },
+          recruiter: link.recruiter_name ? { name: link.recruiter_name } : null,
+          applications,
+          general_comments: generalComments,
+          permissions,
+          client_name: link.client_name,
+          expires_at: link.expires_at,
+          branding: combinedBranding,
+        } satisfies PortalAccessResult,
+        portalLinkId: link.id as string,
       };
     });
+
+    // Activity-feed voor de recruiter: "portaal geopend" (fire-and-forget).
+    void logPortalActivity(
+      result.portalLinkId,
+      'viewed_portal',
+      null,
+      {},
+      meta.ipAddress ?? null,
+      meta.userAgent ?? null
+    );
+
+    return result.access;
   } catch (err) {
     if (err instanceof AppError) {
       throw err;
     }
-    // Table missing or other DB-level error — return mock data
+    // Table missing of andere DB-fout: buiten productie geven we mock-data
+    // terug (demo/dev). In productie mag NOOIT een nep-shortlist verschijnen —
+    // gooi de echte fout door.
+    if (!mocksAllowed()) {
+      throw err;
+    }
     return buildMockAccess(token);
   }
 }
@@ -792,45 +1183,52 @@ function mergeBranding(a: TenantBranding | PortalBranding, b: PortalBranding): P
 export async function submitPortalFeedback(
   token: string,
   data: {
-    application_id: string;
-    action: 'approved' | 'rejected' | 'commented';
+    application_id?: string | null;
+    action: PortalFeedbackAction;
     comment?: string;
     client_name?: string;
-  }
+  },
+  meta: { ipAddress?: string | null; userAgent?: string | null } = {}
 ): Promise<PortalFeedback> {
+  // Algemene opmerking (zonder kandidaat) is alleen zinnig als comment-actie
+  // mét tekst — alle andere combinaties zijn een client-fout.
+  if (!data.application_id) {
+    if (data.action !== 'commented' || !data.comment?.trim()) {
+      throw new AppError(
+        400,
+        'INVALID_FEEDBACK',
+        'Een algemene opmerking vereist een tekstuele toelichting'
+      );
+    }
+  }
+
   // Validate the token first by re-loading the raw link record (we need
   // tenant_id + portal_link_id which the public access result hides).
   let portalLinkId: string;
   let tenantId: string;
+  let jobId: string | null = null;
   let permissions: PortalPermissions;
   let resolvedClientName: string | null = null;
+  let mockMode = false;
 
   try {
-    const result = await withoutTenant(async (client) => {
-      const { rows: [link] } = await client.query(
-        `SELECT id, tenant_id, client_name, permissions
-         FROM guest_portal_links
-         WHERE token = $1
-           AND deleted_at IS NULL
-           AND (expires_at IS NULL OR expires_at > now())`,
-        [token]
-      );
-      return link;
-    });
-
-    if (!result) {
-      throw new AppError(404, 'PORTAL_NOT_FOUND', 'Portal-link niet gevonden of verlopen');
-    }
-
-    portalLinkId = result.id;
-    tenantId = result.tenant_id;
-    permissions = parsePermissions(result.permissions);
-    resolvedClientName = result.client_name;
+    const link = await resolvePortalToken(token);
+    portalLinkId = link.id;
+    tenantId = link.tenant_id;
+    jobId = link.job_id;
+    permissions = link.permissions;
+    resolvedClientName = link.client_name;
   } catch (err) {
     if (err instanceof AppError) {
       throw err;
     }
-    // Mock fallback when DB / table is unavailable
+    // Mock fallback wanneer DB/tabel niet beschikbaar is — alleen buiten
+    // productie. In productie mag feedback nooit stilletjes in een nep-context
+    // verdwijnen; gooi de echte fout door.
+    if (!mocksAllowed()) {
+      throw err;
+    }
+    mockMode = true;
     portalLinkId = crypto.randomUUID();
     tenantId = crypto.randomUUID();
     permissions = {
@@ -841,11 +1239,10 @@ export async function submitPortalFeedback(
     };
   }
 
-  // Permission check
+  // Permission check: beslissingen (ook 'doubt') vallen onder accept_reject,
+  // opmerkingen onder comment.
   const requiredPermission =
-    data.action === 'approved' || data.action === 'rejected'
-      ? permissions.accept_reject
-      : permissions.comment;
+    data.action === 'commented' ? permissions.comment : permissions.accept_reject;
 
   if (!requiredPermission) {
     throw new AppError(
@@ -853,6 +1250,28 @@ export async function submitPortalFeedback(
       'PERMISSION_DENIED',
       `Deze portal-link heeft geen toestemming voor actie: ${data.action}`
     );
+  }
+
+  // Guard: de applicatie moet bij de vacature + tenant van deze link horen.
+  // Voorkomt dat een gast met een geldig token feedback injecteert op
+  // sollicitaties van andere vacatures of tenants.
+  if (!mockMode && data.application_id) {
+    const applicationOk = await withoutTenant(async (client) => {
+      const { rows } = await client.query(
+        `SELECT id FROM applications
+         WHERE id = $1 AND job_id = $2 AND tenant_id = $3`,
+        [data.application_id, jobId, tenantId]
+      );
+      return rows.length > 0;
+    }).catch(() => false);
+
+    if (!applicationOk) {
+      throw new AppError(
+        404,
+        'APPLICATION_NOT_FOUND',
+        'Deze kandidaat hoort niet bij deze shortlist'
+      );
+    }
   }
 
   const clientName = data.client_name ?? resolvedClientName ?? null;
@@ -867,7 +1286,7 @@ export async function submitPortalFeedback(
       [
         tenantId,
         portalLinkId,
-        data.application_id,
+        data.application_id ?? null,
         data.action,
         data.comment ?? null,
         clientName,
@@ -880,7 +1299,7 @@ export async function submitPortalFeedback(
       id: crypto.randomUUID(),
       tenant_id: tenantId,
       portal_link_id: portalLinkId,
-      application_id: data.application_id,
+      application_id: data.application_id ?? null,
       action: data.action,
       comment: data.comment ?? null,
       client_name: clientName,
@@ -889,16 +1308,72 @@ export async function submitPortalFeedback(
   }
 
   // Log activity (best-effort — don't fail the feedback if this trips).
-  await logPortalActivity(
-    portalLinkId,
+  const activityAction =
     data.action === 'approved' ? 'accepted'
       : data.action === 'rejected' ? 'rejected'
-      : 'commented',
+      : data.action === 'doubt' ? 'doubted'
+      : data.application_id ? 'commented'
+      : 'general_comment';
+
+  await logPortalActivity(
+    portalLinkId,
+    activityAction,
     null,
-    { application_id: data.application_id, comment: data.comment ?? null, client_name: clientName }
+    {
+      application_id: data.application_id ?? null,
+      comment: data.comment ?? null,
+      client_name: clientName,
+    },
+    meta.ipAddress ?? null,
+    meta.userAgent ?? null
   );
 
   return feedback;
+}
+
+/**
+ * Feedback-overzicht voor de recruiter-dashboard-UI: alle gast-feedback op
+ * één portal-link, verrijkt met kandidaatnaam (via applications⋈candidates).
+ */
+export async function getPortalFeedbackForLink(
+  tenantId: string,
+  portalId: string,
+  limit = 200
+): Promise<PortalFeedbackItem[]> {
+  return withTenant(tenantId, async (client) => {
+    const { rows: [link] } = await client.query(
+      `SELECT id FROM guest_portal_links
+       WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL`,
+      [portalId, tenantId]
+    );
+    if (!link) {
+      throw new AppError(404, 'PORTAL_LINK_NOT_FOUND', 'Portal-link niet gevonden');
+    }
+
+    const { rows } = await client.query(
+      `SELECT f.id, f.application_id, f.action, f.comment, f.client_name, f.created_at,
+              a.candidate_id AS candidate_id,
+              c.name AS candidate_name
+       FROM guest_portal_feedback f
+       LEFT JOIN applications a ON a.id = f.application_id
+       LEFT JOIN candidates c ON c.id = a.candidate_id
+       WHERE f.tenant_id = $1 AND f.portal_link_id = $2
+       ORDER BY f.created_at DESC
+       LIMIT $3`,
+      [tenantId, portalId, Math.min(Math.max(limit, 1), 500)]
+    );
+
+    return rows.map((r) => ({
+      id: r.id,
+      application_id: r.application_id ?? null,
+      candidate_id: r.candidate_id ?? null,
+      candidate_name: r.candidate_name ?? null,
+      action: (normalizeFeedbackAction(r.action) ?? 'commented') as PortalFeedbackAction,
+      comment: r.comment ?? null,
+      client_name: r.client_name ?? null,
+      created_at: r.created_at,
+    }));
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

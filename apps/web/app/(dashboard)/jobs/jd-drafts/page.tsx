@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import Link from "next/link";
 import {
   ExternalLink,
@@ -37,23 +38,24 @@ import type {
   JdDraftStatus,
 } from "@/lib/types/jdGenerator";
 
-const STATUS_OPTIONS: Array<{ value: "all" | JdDraftStatus; label: string }> = [
-  { value: "all", label: "Alle statussen" },
-  { value: "draft", label: "Concept" },
-  { value: "published", label: "Gepubliceerd" },
-  { value: "discarded", label: "Verwijderd" },
+const STATUS_OPTIONS: Array<{ value: "all" | JdDraftStatus; labelKey: string }> = [
+  { value: "all", labelKey: "status.all" },
+  { value: "draft", labelKey: "status.draft" },
+  { value: "published", labelKey: "status.published" },
+  { value: "discarded", labelKey: "status.discarded" },
 ];
 
 const STATUS_BADGE: Record<
   JdDraftStatus,
-  { variant: "default" | "secondary" | "success" | "destructive"; label: string }
+  { variant: "default" | "secondary" | "success" | "destructive"; labelKey: string }
 > = {
-  draft: { variant: "secondary", label: "Concept" },
-  published: { variant: "success", label: "Gepubliceerd" },
-  discarded: { variant: "destructive", label: "Verwijderd" },
+  draft: { variant: "secondary", labelKey: "status.draft" },
+  published: { variant: "success", labelKey: "status.published" },
+  discarded: { variant: "destructive", labelKey: "status.discarded" },
 };
 
 export default function JdDraftsPage() {
+  const { t } = useTranslation("jdDrafts");
   const { toast } = useToast();
   const [status, setStatus] = useState<"all" | JdDraftStatus>("all");
   const [dateFrom, setDateFrom] = useState("");
@@ -69,18 +71,18 @@ export default function JdDraftsPage() {
   const drafts = useMemo(() => data ?? [], [data]);
 
   const handleDiscard = async (id: string) => {
-    if (!confirm("Weet je zeker dat je deze draft wilt verwijderen?")) return;
+    if (!confirm(t("discard.confirm"))) return;
     try {
       await discard.mutateAsync(id);
       toast({
-        title: "Draft verwijderd",
-        description: "De draft is gemarkeerd als verwijderd.",
+        title: t("discard.successTitle"),
+        description: t("discard.successDescription"),
       });
     } catch {
       toast({
         variant: "destructive",
-        title: "Fout",
-        description: "Verwijderen mislukte.",
+        title: t("discard.errorTitle"),
+        description: t("discard.errorDescription"),
       });
     }
   };
@@ -88,8 +90,8 @@ export default function JdDraftsPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="AI Drafts"
-        description="Eerder gegenereerde vacatureteksten — kies een draft om af te maken of te publiceren."
+        title={t("header.title")}
+        description={t("header.description")}
         actions={
           <Button
             asChild
@@ -97,7 +99,7 @@ export default function JdDraftsPage() {
           >
             <Link href="/jobs/new/ai-generator">
               <Wand2 className="mr-2 h-4 w-4" />
-              Nieuwe draft
+              {t("header.newDraft")}
             </Link>
           </Button>
         }
@@ -108,7 +110,7 @@ export default function JdDraftsPage() {
           <div className="flex flex-wrap items-end gap-3">
             <div className="space-y-1.5 min-w-[180px]">
               <label className="text-xs font-medium text-muted-foreground">
-                Status
+                {t("filters.statusLabel")}
               </label>
               <Select
                 value={status}
@@ -120,7 +122,7 @@ export default function JdDraftsPage() {
                 <SelectContent>
                   {STATUS_OPTIONS.map((o) => (
                     <SelectItem key={o.value} value={o.value}>
-                      {o.label}
+                      {t(o.labelKey)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -128,7 +130,7 @@ export default function JdDraftsPage() {
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
-                Vanaf
+                {t("filters.from")}
               </label>
               <Input
                 type="date"
@@ -139,7 +141,7 @@ export default function JdDraftsPage() {
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
-                Tot
+                {t("filters.to")}
               </label>
               <Input
                 type="date"
@@ -158,7 +160,7 @@ export default function JdDraftsPage() {
                   setDateTo("");
                 }}
               >
-                Reset
+                {t("filters.reset")}
               </Button>
             )}
           </div>
@@ -180,19 +182,19 @@ export default function JdDraftsPage() {
               <thead className="bg-zinc-50 dark:bg-zinc-800/40 border-b border-border">
                 <tr className="text-left">
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Datum
+                    {t("table.date")}
                   </th>
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Functie
+                    {t("table.role")}
                   </th>
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Status
+                    {t("table.status")}
                   </th>
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Geselecteerd
+                    {t("table.selected")}
                   </th>
                   <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground text-right">
-                    Acties
+                    {t("table.actions")}
                   </th>
                 </tr>
               </thead>
@@ -223,6 +225,7 @@ function DraftRow({
   onDiscard: () => void;
   isDiscarding: boolean;
 }) {
+  const { t } = useTranslation("jdDrafts");
   const created = new Date(draft.created_at).toLocaleDateString("nl-NL", {
     day: "numeric",
     month: "short",
@@ -242,12 +245,15 @@ function DraftRow({
           {draft.role}
         </p>
         <p className="text-xs text-muted-foreground">
-          {draft.variants.length} varianten · {draft.input.language}
+          {t("row.variantsMeta", {
+            count: draft.variants.length,
+            language: draft.input.language,
+          })}
         </p>
       </td>
       <td className="px-4 py-3">
         <Badge variant={STATUS_BADGE[draft.status].variant}>
-          {STATUS_BADGE[draft.status].label}
+          {t(STATUS_BADGE[draft.status].labelKey)}
         </Badge>
       </td>
       <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
@@ -265,7 +271,7 @@ function DraftRow({
             <Button asChild variant="ghost" size="sm" className="text-xs">
               <Link href={`/jobs/${draft.published_job_id}`}>
                 <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-                Bekijk vacature
+                {t("row.viewJob")}
               </Link>
             </Button>
           ) : draft.status === "draft" ? (
@@ -279,7 +285,7 @@ function DraftRow({
                     "text-purple-500"
                   )}
                 />
-                {draft.selected_variant_id ? "Bewerken" : "Vervolg"}
+                {draft.selected_variant_id ? t("row.edit") : t("row.continue")}
               </Link>
             </Button>
           ) : null}
@@ -306,6 +312,7 @@ function DraftRow({
 }
 
 function EmptyState() {
+  const { t } = useTranslation("jdDrafts");
   return (
     <Card className="border-0 shadow-sm">
       <CardContent className="py-16 text-center">
@@ -313,11 +320,10 @@ function EmptyState() {
           <Wand2 className="h-5 w-5 text-purple-500" />
         </div>
         <p className="mt-3 text-base font-semibold text-zinc-900 dark:text-zinc-100">
-          Nog geen AI-drafts
+          {t("empty.title")}
         </p>
         <p className="mt-1 text-sm text-muted-foreground max-w-md mx-auto">
-          Genereer je eerste vacaturetekst met de AI-generator. De AI maakt
-          drie varianten — jij kiest, bewerkt en publiceert.
+          {t("empty.description")}
         </p>
         <Button
           asChild
@@ -325,7 +331,7 @@ function EmptyState() {
         >
           <Link href="/jobs/new/ai-generator">
             <Plus className="mr-2 h-4 w-4" />
-            Nieuwe AI-draft
+            {t("empty.newDraft")}
           </Link>
         </Button>
       </CardContent>

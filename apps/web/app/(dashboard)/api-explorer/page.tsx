@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ChevronDown,
   ChevronRight,
@@ -149,6 +150,7 @@ function buildCurl(
 // ────────────────────────────────────────────────────────────────────────────
 
 export default function ApiExplorerPage() {
+  const { t } = useTranslation("apiExplorer");
   const { toast } = useToast();
   const { data: spec, isLoading: specLoading } = useOpenApiSpec();
   const { data: apiKeys } = useApiKeys();
@@ -285,8 +287,8 @@ export default function ApiExplorerPage() {
         parsedBody = JSON.parse(body);
       } catch {
         toast({
-          title: "Body is geen geldig JSON",
-          description: "Controleer de body editor.",
+          title: t("toasts.invalidBodyTitle"),
+          description: t("toasts.invalidBodyDescription"),
           variant: "destructive",
         });
         return;
@@ -304,8 +306,8 @@ export default function ApiExplorerPage() {
       setResponse(result);
     } catch (err) {
       toast({
-        title: "Request mislukt",
-        description: err instanceof Error ? err.message : "Onbekende fout",
+        title: t("toasts.requestFailedTitle"),
+        description: err instanceof Error ? err.message : t("toasts.unknownError"),
         variant: "destructive",
       });
     }
@@ -314,7 +316,7 @@ export default function ApiExplorerPage() {
   function handleCopyResponseBody() {
     if (!response) return;
     navigator.clipboard.writeText(formatJson(response.body));
-    toast({ title: "Gekopieerd", description: "Response body is gekopieerd." });
+    toast({ title: t("toasts.copiedTitle"), description: t("toasts.copiedResponseBody") });
   }
 
   function handleSaveSnippet() {
@@ -335,7 +337,7 @@ export default function ApiExplorerPage() {
     saveSnippets(updated);
     setSnippetName("");
     setSaveOpen(false);
-    toast({ title: "Snippet opgeslagen", description: snippet.name });
+    toast({ title: t("toasts.snippetSavedTitle"), description: snippet.name });
   }
 
   function loadSnippet(s: SavedSnippet) {
@@ -347,7 +349,7 @@ export default function ApiExplorerPage() {
     setQueryParams(s.queryParams);
     setHeaders(s.headers);
     setBody(s.body);
-    toast({ title: "Snippet geladen", description: s.name });
+    toast({ title: t("toasts.snippetLoadedTitle"), description: s.name });
   }
 
   function deleteSnippet(id: string) {
@@ -372,8 +374,8 @@ export default function ApiExplorerPage() {
   return (
     <div className="space-y-4 animate-fade-in">
       <PageHeader
-        title="API Playground"
-        description="Probeer endpoints uit met je eigen API-keys, debug responses en deel snippets."
+        title={t("header.title")}
+        description={t("header.description")}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4">
@@ -384,7 +386,7 @@ export default function ApiExplorerPage() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
-                  placeholder="Zoek endpoint..."
+                  placeholder={t("tree.searchPlaceholder")}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-8 h-9"
@@ -393,11 +395,11 @@ export default function ApiExplorerPage() {
               <div className="max-h-[60vh] overflow-y-auto pr-1 space-y-1">
                 {specLoading ? (
                   <div className="py-8 text-center text-xs text-muted-foreground flex items-center justify-center gap-2">
-                    <Loader2 className="h-3 w-3 animate-spin" /> Spec laden...
+                    <Loader2 className="h-3 w-3 animate-spin" /> {t("tree.loading")}
                   </div>
                 ) : Object.keys(filteredGrouped).length === 0 ? (
                   <div className="py-8 text-center text-xs text-muted-foreground">
-                    Geen endpoints gevonden
+                    {t("tree.empty")}
                   </div>
                 ) : (
                   Object.entries(filteredGrouped).map(([tag, list]) => {
@@ -464,13 +466,13 @@ export default function ApiExplorerPage() {
             <CardHeader className="px-4 py-3">
               <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Bookmark className="h-3 w-3" />
-                Bewaarde snippets
+                {t("snippets.title")}
               </CardTitle>
             </CardHeader>
             <CardContent className="px-2 pb-3 space-y-1">
               {snippets.length === 0 ? (
                 <p className="px-2 py-3 text-[11px] text-muted-foreground">
-                  Nog geen snippets bewaard.
+                  {t("snippets.empty")}
                 </p>
               ) : (
                 snippets.map((s) => (
@@ -499,7 +501,7 @@ export default function ApiExplorerPage() {
                       type="button"
                       onClick={() => deleteSnippet(s.id)}
                       className="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-destructive"
-                      title="Verwijderen"
+                      title={t("snippets.deleteTitle")}
                     >
                       <Trash2 className="h-3 w-3" />
                     </button>
@@ -517,7 +519,7 @@ export default function ApiExplorerPage() {
               <CardContent className="py-16 text-center">
                 <Terminal className="h-10 w-10 mx-auto text-zinc-300 dark:text-zinc-700 mb-3" />
                 <p className="text-sm text-muted-foreground">
-                  Kies een endpoint links om te beginnen.
+                  {t("emptyState")}
                 </p>
               </CardContent>
             </Card>
@@ -554,7 +556,7 @@ export default function ApiExplorerPage() {
                       onClick={() => setSaveOpen(true)}
                       className="gap-1.5"
                     >
-                      <BookmarkPlus className="h-3.5 w-3.5" /> Snippet
+                      <BookmarkPlus className="h-3.5 w-3.5" /> {t("request.snippet")}
                     </Button>
                     <Button
                       size="sm"
@@ -575,7 +577,7 @@ export default function ApiExplorerPage() {
                       ) : (
                         <Play className="h-3.5 w-3.5" />
                       )}
-                      Run
+                      {t("request.run")}
                     </Button>
                   </div>
                 </CardHeader>
@@ -584,7 +586,7 @@ export default function ApiExplorerPage() {
                   {Object.keys(pathParams).length > 0 && (
                     <div className="space-y-2">
                       <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                        Path parameters
+                        {t("request.pathParamsLabel")}
                       </Label>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {Object.keys(pathParams).map((name) => (
@@ -598,7 +600,7 @@ export default function ApiExplorerPage() {
                               onChange={(e) =>
                                 setPathParams({ ...pathParams, [name]: e.target.value })
                               }
-                              placeholder={`waarde voor ${name}`}
+                              placeholder={t("request.pathParamPlaceholder", { name })}
                               className="h-9 text-xs font-mono"
                             />
                           </div>
@@ -611,7 +613,7 @@ export default function ApiExplorerPage() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                        Query parameters
+                        {t("request.queryParamsLabel")}
                       </Label>
                       <Button
                         type="button"
@@ -622,17 +624,17 @@ export default function ApiExplorerPage() {
                           setQueryParams([...queryParams, { key: "", value: "" }])
                         }
                       >
-                        + Toevoegen
+                        {t("request.addButton")}
                       </Button>
                     </div>
                     {queryParams.length === 0 ? (
-                      <p className="text-xs text-muted-foreground italic">Geen query params.</p>
+                      <p className="text-xs text-muted-foreground italic">{t("request.noQueryParams")}</p>
                     ) : (
                       <div className="space-y-1.5">
                         {queryParams.map((q, idx) => (
                           <div key={idx} className="flex items-center gap-2">
                             <Input
-                              placeholder="key"
+                              placeholder={t("request.keyPlaceholder")}
                               value={q.key}
                               onChange={(e) => {
                                 const next = [...queryParams];
@@ -642,7 +644,7 @@ export default function ApiExplorerPage() {
                               className="h-8 text-xs font-mono w-1/3"
                             />
                             <Input
-                              placeholder="value"
+                              placeholder={t("request.valuePlaceholder")}
                               value={q.value}
                               onChange={(e) => {
                                 const next = [...queryParams];
@@ -670,7 +672,7 @@ export default function ApiExplorerPage() {
                   {/* Auth */}
                   <div className="space-y-2">
                     <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                      Authenticatie
+                      {t("request.authLabel")}
                     </Label>
                     <div className="grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-2">
                       <Select value={authMode} onValueChange={(v) => setAuthMode(v as "jwt" | "apikey")}>
@@ -678,14 +680,14 @@ export default function ApiExplorerPage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="jwt">Eigen sessie (JWT)</SelectItem>
-                          <SelectItem value="apikey">API-sleutel</SelectItem>
+                          <SelectItem value="jwt">{t("request.authJwt")}</SelectItem>
+                          <SelectItem value="apikey">{t("request.authApiKey")}</SelectItem>
                         </SelectContent>
                       </Select>
                       {authMode === "apikey" && (
                         <Select value={selectedKeyId} onValueChange={setSelectedKeyId}>
                           <SelectTrigger className="h-9 text-xs">
-                            <SelectValue placeholder="Kies API-sleutel" />
+                            <SelectValue placeholder={t("request.selectApiKeyPlaceholder")} />
                           </SelectTrigger>
                           <SelectContent>
                             {(apiKeys ?? [])
@@ -706,7 +708,7 @@ export default function ApiExplorerPage() {
                     </div>
                     {authMode === "apikey" && selectedKeyId && (
                       <p className="text-[11px] text-amber-600 dark:text-amber-400">
-                        Let op: server-proxy gebruikt jouw sessie. De plain key is alleen zichtbaar in de gegenereerde cURL.
+                        {t("request.apiKeyWarning")}
                       </p>
                     )}
                   </div>
@@ -715,7 +717,7 @@ export default function ApiExplorerPage() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                        Headers
+                        {t("request.headersLabel")}
                       </Label>
                       <Button
                         type="button"
@@ -724,14 +726,14 @@ export default function ApiExplorerPage() {
                         className="text-xs h-7"
                         onClick={() => setHeaders([...headers, { key: "", value: "" }])}
                       >
-                        + Toevoegen
+                        {t("request.addButton")}
                       </Button>
                     </div>
                     <div className="space-y-1.5">
                       {headers.map((h, idx) => (
                         <div key={idx} className="flex items-center gap-2">
                           <Input
-                            placeholder="header"
+                            placeholder={t("request.headerPlaceholder")}
                             value={h.key}
                             onChange={(e) => {
                               const next = [...headers];
@@ -741,7 +743,7 @@ export default function ApiExplorerPage() {
                             className="h-8 text-xs font-mono w-1/3"
                           />
                           <Input
-                            placeholder="value"
+                            placeholder={t("request.valuePlaceholder")}
                             value={h.value}
                             onChange={(e) => {
                               const next = [...headers];
@@ -767,7 +769,7 @@ export default function ApiExplorerPage() {
                   {selected.methodUpper !== "GET" && (
                     <div className="space-y-2">
                       <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                        Request body (JSON)
+                        {t("request.bodyLabel")}
                       </Label>
                       <textarea
                         value={body}
@@ -790,7 +792,7 @@ export default function ApiExplorerPage() {
               <Card className="border-0 shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <CardTitle className="text-base">Response</CardTitle>
+                    <CardTitle className="text-base">{t("response.title")}</CardTitle>
                     {response && (
                       <>
                         <span
@@ -802,7 +804,7 @@ export default function ApiExplorerPage() {
                           {response.status}
                         </span>
                         <span className="text-xs text-muted-foreground">
-                          {response.duration_ms} ms
+                          {t("response.durationMs", { duration: response.duration_ms })}
                         </span>
                       </>
                     )}
@@ -814,14 +816,14 @@ export default function ApiExplorerPage() {
                       onClick={handleCopyResponseBody}
                       className="gap-1.5"
                     >
-                      <Copy className="h-3.5 w-3.5" /> Kopieer body
+                      <Copy className="h-3.5 w-3.5" /> {t("response.copyBody")}
                     </Button>
                   )}
                 </CardHeader>
                 <CardContent>
                   {!response ? (
                     <p className="text-sm text-muted-foreground py-4 italic">
-                      Voer een request uit om hier de response te zien.
+                      {t("response.empty")}
                     </p>
                   ) : (
                     <div className="space-y-3">
@@ -835,7 +837,7 @@ export default function ApiExplorerPage() {
                         ) : (
                           <ChevronRight className="h-3 w-3" />
                         )}
-                        Headers ({Object.keys(response.headers).length})
+                        {t("response.headersToggle", { count: Object.keys(response.headers).length })}
                       </button>
                       {showResponseHeaders && (
                         <pre className="rounded-md bg-zinc-50 dark:bg-zinc-900 px-3 py-2 text-[11px] font-mono text-zinc-600 dark:text-zinc-400 max-h-40 overflow-auto">
@@ -846,7 +848,7 @@ export default function ApiExplorerPage() {
                       )}
                       <div>
                         <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                          Body
+                          {t("response.bodyLabel")}
                         </Label>
                         <pre className="mt-1 rounded-md bg-zinc-950 text-zinc-100 dark:bg-zinc-900 px-4 py-3 text-xs font-mono max-h-[420px] overflow-auto">
                           {formatJson(response.body)}
@@ -865,7 +867,7 @@ export default function ApiExplorerPage() {
       <Dialog open={curlOpen} onOpenChange={setCurlOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>cURL command</DialogTitle>
+            <DialogTitle>{t("curlDialog.title")}</DialogTitle>
           </DialogHeader>
           <pre className="rounded-md bg-zinc-950 text-zinc-100 px-4 py-3 text-xs font-mono overflow-auto whitespace-pre-wrap">
             {selected
@@ -898,13 +900,13 @@ export default function ApiExplorerPage() {
                     body
                   )
                 );
-                toast({ title: "cURL gekopieerd" });
+                toast({ title: t("toasts.curlCopiedTitle") });
               }}
             >
-              <Copy className="mr-2 h-4 w-4" /> Kopieer
+              <Copy className="mr-2 h-4 w-4" /> {t("curlDialog.copy")}
             </Button>
             <DialogClose asChild>
-              <Button>Sluiten</Button>
+              <Button>{t("curlDialog.close")}</Button>
             </DialogClose>
           </DialogFooter>
         </DialogContent>
@@ -914,27 +916,27 @@ export default function ApiExplorerPage() {
       <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Snippet bewaren</DialogTitle>
+            <DialogTitle>{t("saveDialog.title")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-2 py-2">
-            <Label htmlFor="snip-name">Naam</Label>
+            <Label htmlFor="snip-name">{t("saveDialog.nameLabel")}</Label>
             <Input
               id="snip-name"
               value={snippetName}
               onChange={(e) => setSnippetName(e.target.value)}
-              placeholder="Bijv. Lijst kandidaten — debug"
+              placeholder={t("saveDialog.namePlaceholder")}
             />
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Annuleren</Button>
+              <Button variant="outline">{t("saveDialog.cancel")}</Button>
             </DialogClose>
             <Button
               disabled={!snippetName.trim()}
               onClick={handleSaveSnippet}
               className="bg-indigo-600 hover:bg-indigo-700 border-0"
             >
-              <Save className="mr-2 h-4 w-4" /> Opslaan
+              <Save className="mr-2 h-4 w-4" /> {t("saveDialog.save")}
             </Button>
           </DialogFooter>
         </DialogContent>

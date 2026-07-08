@@ -18,12 +18,12 @@ import { cn } from "@/lib/utils";
 import {
   BLOCK_TYPE_LABELS,
   type BlockResult,
-  type ReportBlock,
+  type ReportBlockEntry,
 } from "@/lib/types/reports";
 import { BlockRenderer } from "./blocks/BlockRenderer";
 
 export interface CanvasBlockProps {
-  block: ReportBlock;
+  entry: ReportBlockEntry;
   result?: BlockResult;
   selected: boolean;
   onSelect: () => void;
@@ -31,7 +31,7 @@ export interface CanvasBlockProps {
 }
 
 export function CanvasBlock({
-  block,
+  entry,
   result,
   selected,
   onSelect,
@@ -44,7 +44,7 @@ export function CanvasBlock({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: block.id });
+  } = useSortable({ id: entry.id });
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -63,7 +63,7 @@ export function CanvasBlock({
           ? "border-indigo-500 ring-2 ring-indigo-500/30"
           : "border-zinc-200 hover:border-indigo-300 dark:border-zinc-800"
       )}
-      data-block-id={block.id}
+      data-block-id={entry.id}
     >
       {/* Top toolbar */}
       <div className="flex items-center gap-2 border-b border-zinc-100 bg-zinc-50/80 px-3 py-2 text-xs dark:border-zinc-800 dark:bg-zinc-900/60">
@@ -78,11 +78,11 @@ export function CanvasBlock({
           <GripVertical className="h-4 w-4" />
         </button>
         <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">
-          {BLOCK_TYPE_LABELS[block.type]}
+          {BLOCK_TYPE_LABELS[entry.block.type]}
         </span>
-        {block.title && (
+        {entry.title && (
           <span className="truncate text-xs text-muted-foreground">
-            · {block.title}
+            · {entry.title}
           </span>
         )}
         <span className="ml-auto" />
@@ -102,7 +102,7 @@ export function CanvasBlock({
       {/* Renderer (no border/shadow so the canvas wrapper provides it) */}
       <div className="p-3">
         <div className="pointer-events-none [&>div]:!border-0 [&>div]:!shadow-none [&>div]:!p-3">
-          <BlockRenderer block={block} result={result} />
+          <BlockRenderer entry={entry} result={result} />
         </div>
       </div>
     </div>

@@ -289,6 +289,9 @@ export async function processWorkflowEvent(
               entityId,
               payload,
               userId: ctxUserId,
+              // Human-oversight-gate (EU AI Act art. 14): gated acties
+              // schrijven een proposal met deze workflow als bron.
+              workflowId: workflow.id,
             });
           }
 

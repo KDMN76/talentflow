@@ -29,13 +29,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
+import { Switch } from "@/components/ui/switch";
 import {
   useTwoFactorStatus,
   useSetup2fa,
   useVerify2fa,
   useDisable2fa,
   useRegenerateBackupCodes,
+  useTwoFactorPolicy,
+  useUpdateTwoFactorPolicy,
 } from "@/hooks/useSecurity";
+import { useCurrentUser } from "@/hooks/useUsers";
 import { cn } from "@/lib/utils";
 
 const APP_LINKS = [
@@ -79,9 +83,25 @@ export default function TwoFactorPage() {
   const [verifyCode, setVerifyCode] = useState("");
   const [savedConfirmed, setSavedConfirmed] = useState(false);
 
-  // Disable-flow
+  // Disable-flow — wachtwoord + TOTP/backup-code vereist.
   const [disableOpen, setDisableOpen] = useState(false);
   const [disableCode, setDisableCode] = useState("");
+  const [disablePassword, setDisablePassword] = useState("");
+
+  // Tenant-policy (alleen admin/owner)
+  const { data: me } = useCurrentUser();
+  const isAdmin = me?.role === "admin" || me?.role === "owner";
+  const { data: policy } = useTwoFactorPolicy(isAdmin);
+  const updatePolicy = useUpdateTwoFactorPolicy();
+  const [policyRequiredAll, setPolicyRequiredAll] = useState(false);
+  const [policyGraceDays, setPolicyGraceDays] = useState(7);
+
+  useEffect(() => {
+    if (policy) {
+      setPolicyRequiredAll(policy.required_for_all);
+      setPolicyGraceDays(policy.grace_period_days);
+    }
+  }, [policy]);
 
   // Regenerate-flow
   const [regenOpen, setRegenOpen] = useState(false);
@@ -138,9 +158,13 @@ export default function TwoFactorPage() {
 
   const handleDisable = async () => {
     try {
-      await disableMutation.mutateAsync({ code: disableCode });
+      await disableMutation.mutateAsync({
+        code: disableCode,
+        password: disablePassword,
+      });
       setDisableOpen(false);
       setDisableCode("");
+      setDisablePassword("");
       toast({ title: t("twofa.toasts.disabled.title") });
     } catch (err) {
       toast({
@@ -493,6 +517,81 @@ export default function TwoFactorPage() {
         </Card>
       )}
 
+      {/* TENANT POLICY — alleen admin/owner */}
+      {isAdmin && (
+        <Card className="border-0 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-base">
+              {t("twofa.policy.title")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              {t("twofa.policy.description")}
+            </p>
+            <div className="flex items-center justify-between gap-4 rounded-lg border border-border px-4 py-3">
+              <div>
+                <p className="text-sm font-medium">
+                  {t("twofa.policy.requireAll")}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {t("twofa.policy.requireAllHint")}
+                </p>
+              </div>
+              <Switch
+                checked={policyRequiredAll}
+                onCheckedChange={setPolicyRequiredAll}
+              />
+            </div>
+            <div className="space-y-1.5 max-w-[240px]">
+              <Label>{t("twofa.policy.graceLabel")}</Label>
+              <Input
+                type="number"
+                min={0}
+                max={90}
+                value={policyGraceDays}
+                onChange={(e) =>
+                  setPolicyGraceDays(
+                    Math.max(0, Math.min(90, Number(e.target.value) || 0))
+                  )
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                {t("twofa.policy.graceHint")}
+              </p>
+            </div>
+            <Button
+              onClick={async () => {
+                try {
+                  await updatePolicy.mutateAsync({
+                    required_for_all: policyRequiredAll,
+                    required_for_roles: policy?.required_for_roles ?? [],
+                    grace_period_days: policyGraceDays,
+                  });
+                  toast({ title: t("twofa.policy.saved") });
+                } catch (err) {
+                  toast({
+                    title: t("twofa.policy.saveFailed"),
+                    description:
+                      err instanceof Error
+                        ? err.message
+                        : t("twofa.toasts.unknownError"),
+                    variant: "destructive",
+                  });
+                }
+              }}
+              disabled={updatePolicy.isPending}
+              className="bg-indigo-600 hover:bg-indigo-700 border-0"
+            >
+              {updatePolicy.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {t("twofa.policy.save")}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Disable dialog */}
       <Dialog open={disableOpen} onOpenChange={setDisableOpen}>
         <DialogContent className="sm:max-w-md">
@@ -503,6 +602,14 @@ export default function TwoFactorPage() {
             <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
               {t("twofa.disableDialog.warning")}
             </div>
+            <Label>{t("twofa.disableDialog.passwordLabel")}</Label>
+            <Input
+              type="password"
+              autoComplete="current-password"
+              placeholder={t("twofa.disableDialog.passwordPlaceholder")}
+              value={disablePassword}
+              onChange={(e) => setDisablePassword(e.target.value)}
+            />
             <Label>{t("twofa.disableDialog.codeLabel")}</Label>
             <Input
               placeholder={t("twofa.disableDialog.codePlaceholder")}
@@ -517,7 +624,9 @@ export default function TwoFactorPage() {
             </Button>
             <Button
               onClick={handleDisable}
-              disabled={disableMutation.isPending || !disableCode}
+              disabled={
+                disableMutation.isPending || !disableCode || !disablePassword
+              }
               variant="destructive"
             >
               {disableMutation.isPending && (

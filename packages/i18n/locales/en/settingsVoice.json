@@ -1,0 +1,61 @@
+{
+  "page": {
+    "title": "Voice & VoIP",
+    "description": "Connect Twilio and call candidates directly from TalentFlow.",
+    "testCall": "Test call"
+  },
+  "notActivated": {
+    "title": "Voice is not activated",
+    "body": "Calling through TalentFlow is not yet activated in this environment. No calls can be started or transcribed. Contact your administrator to activate Voice."
+  },
+  "connected": {
+    "badge": "Connected",
+    "phoneLabel": "Phone number",
+    "accountSidLabel": "Twilio Account SID",
+    "connectedSince": "Connected since",
+    "twilioConsole": "Twilio console",
+    "disconnect": "Disconnect",
+    "disconnectedToast": "Connection closed"
+  },
+  "connectForm": {
+    "title": "Connect your Twilio account",
+    "introPrefix": "Enter your Twilio credentials. Find them in the",
+    "consoleLinkText": "Twilio Console",
+    "introSuffix": "under Account → API keys.",
+    "accountSidLabel": "Account SID",
+    "accountSidPlaceholder": "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "authTokenLabel": "Auth Token",
+    "phoneLabel": "Phone number",
+    "phonePlaceholder": "+31 20 1234 5678",
+    "connecting": "Connecting…",
+    "connect": "Connect",
+    "requiredToast": {
+      "title": "Required fields",
+      "description": "Enter Account SID, Auth Token and phone number."
+    },
+    "connectedToast": {
+      "title": "Connected",
+      "description": "Twilio is now active."
+    }
+  },
+  "calls": {
+    "title": "Recent calls",
+    "empty": "No calls made yet.",
+    "inboundFrom": "Inbound from {{number}}",
+    "outboundTo": "Outbound to {{number}}"
+  },
+  "testDialog": {
+    "startedToast": "Test call started",
+    "title": "Test call",
+    "candidateLabel": "Call candidate",
+    "candidatesLoading": "Loading candidates...",
+    "noCandidates": "No candidates available",
+    "selectCandidate": "Choose a candidate…",
+    "close": "Close",
+    "call": "Call"
+  },
+  "liveCall": {
+    "transcriptionPending": "Transcription is being generated…",
+    "transcriptionLabel": "Transcript:"
+  }
+}

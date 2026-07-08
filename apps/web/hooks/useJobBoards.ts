@@ -195,3 +195,43 @@ export function useRetractPosting() {
     },
   });
 }
+
+// ─── Auto-post on publish (tenant opt-in) ────────────────────────────────────
+
+export interface JobBoardAutoPostSettings {
+  /** Master switch — default OFF. */
+  enabled: boolean;
+  /** Board ids that a job is auto-posted to when it becomes 'open'. */
+  boards: string[];
+}
+
+export function useJobBoardAutoPostSettings() {
+  return useQuery({
+    queryKey: ["job-boards", "auto-post-settings"],
+    queryFn: async (): Promise<JobBoardAutoPostSettings> => {
+      const { data } = await api.get<{ data: JobBoardAutoPostSettings }>(
+        "/job-boards/auto-post-settings"
+      );
+      return data.data ?? { enabled: false, boards: [] };
+    },
+    staleTime: 60_000,
+  });
+}
+
+export function useUpdateJobBoardAutoPostSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      input: JobBoardAutoPostSettings
+    ): Promise<JobBoardAutoPostSettings> => {
+      const { data } = await api.put<{ data: JobBoardAutoPostSettings }>(
+        "/job-boards/auto-post-settings",
+        input
+      );
+      return data.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["job-boards", "auto-post-settings"] });
+    },
+  });
+}

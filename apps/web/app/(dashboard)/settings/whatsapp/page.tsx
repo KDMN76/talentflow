@@ -14,6 +14,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import {
   Check,
   ChevronDown,
@@ -83,35 +84,35 @@ import { useCandidates } from "@/hooks/useCandidates";
 
 const TEMPLATE_STATUS_PILL: Record<
   WhatsAppTemplateStatus,
-  { label: string; className: string }
+  { labelKey: string; className: string }
 > = {
   draft: {
-    label: "Concept",
+    labelKey: "templateStatus.draft",
     className:
       "bg-zinc-100 text-zinc-700 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-700",
   },
   submitted: {
-    label: "Wacht op goedkeuring",
+    labelKey: "templateStatus.submitted",
     className:
       "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:ring-amber-900/40",
   },
   approved: {
-    label: "Goedgekeurd",
+    labelKey: "templateStatus.approved",
     className:
       "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:ring-emerald-900/40",
   },
   rejected: {
-    label: "Afgewezen",
+    labelKey: "templateStatus.rejected",
     className:
       "bg-red-50 text-red-700 ring-red-200 dark:bg-red-950/30 dark:text-red-400 dark:ring-red-900/40",
   },
   paused: {
-    label: "Gepauzeerd",
+    labelKey: "templateStatus.paused",
     className:
       "bg-orange-50 text-orange-700 ring-orange-200 dark:bg-orange-950/30 dark:text-orange-400 dark:ring-orange-900/40",
   },
   disabled: {
-    label: "Uitgeschakeld",
+    labelKey: "templateStatus.disabled",
     className:
       "bg-zinc-100 text-zinc-500 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:ring-zinc-700",
   },
@@ -119,31 +120,32 @@ const TEMPLATE_STATUS_PILL: Record<
 
 const CONSENT_STATUS_PILL: Record<
   ConsentStatus,
-  { label: string; className: string }
+  { labelKey: string; className: string }
 > = {
   granted: {
-    label: "Toestemming",
+    labelKey: "consentStatus.granted",
     className:
       "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:ring-emerald-900/40",
   },
   pending: {
-    label: "In afwachting",
+    labelKey: "consentStatus.pending",
     className:
       "bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:ring-amber-900/40",
   },
   withdrawn: {
-    label: "Ingetrokken",
+    labelKey: "consentStatus.withdrawn",
     className:
       "bg-zinc-100 text-zinc-700 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-700",
   },
   blocked: {
-    label: "Geblokkeerd",
+    labelKey: "consentStatus.blocked",
     className:
       "bg-red-50 text-red-700 ring-red-200 dark:bg-red-950/30 dark:text-red-400 dark:ring-red-900/40",
   },
 };
 
 export default function WhatsAppSettingsPage() {
+  const { t } = useTranslation("settingsWhatsapp");
   const { data: state, isLoading } = useWhatsAppIntegration();
   const integration = state?.integration ?? null;
   const serviceActive = state?.serviceActive ?? true;
@@ -154,8 +156,8 @@ export default function WhatsAppSettingsPage() {
     return (
       <div className="space-y-6 animate-fade-in">
         <PageHeader
-          title="WhatsApp Business"
-          description="Beheer je WhatsApp-integratie, templates en kandidaat-toestemmingen."
+          title={t("header.title")}
+          description={t("header.description")}
         />
         <NotActivatedCard />
       </div>
@@ -165,8 +167,8 @@ export default function WhatsAppSettingsPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="WhatsApp Business"
-        description="Beheer je WhatsApp-integratie, templates en kandidaat-toestemmingen."
+        title={t("header.title")}
+        description={t("header.description")}
       />
 
       {isLoading ? (
@@ -181,13 +183,13 @@ export default function WhatsAppSettingsPage() {
         <Tabs defaultValue="templates" className="space-y-4">
           <TabsList>
             <TabsTrigger value="templates" className="gap-1.5">
-              <FileText className="h-3.5 w-3.5" /> Templates
+              <FileText className="h-3.5 w-3.5" /> {t("tabs.templates")}
             </TabsTrigger>
             <TabsTrigger value="consent" className="gap-1.5">
-              <Shield className="h-3.5 w-3.5" /> Consent
+              <Shield className="h-3.5 w-3.5" /> {t("tabs.consent")}
             </TabsTrigger>
             <TabsTrigger value="messages" className="gap-1.5">
-              <MessageCircle className="h-3.5 w-3.5" /> Berichten
+              <MessageCircle className="h-3.5 w-3.5" /> {t("tabs.messages")}
             </TabsTrigger>
           </TabsList>
           <TabsContent value="templates">
@@ -212,6 +214,7 @@ export default function WhatsAppSettingsPage() {
  * Geen nep-verbindformulier: de feature staat bewust uit.
  */
 function NotActivatedCard() {
+  const { t } = useTranslation("settingsWhatsapp");
   return (
     <Card className="border-0 shadow-sm">
       <CardContent className="flex flex-col items-center gap-3 py-14 text-center">
@@ -219,13 +222,10 @@ function NotActivatedCard() {
           <MessageCircle className="h-7 w-7 text-zinc-400" />
         </div>
         <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-          WhatsApp is niet geactiveerd
+          {t("notActivated.title")}
         </h2>
         <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
-          WhatsApp Business is in deze omgeving nog niet geactiveerd. Er kunnen
-          geen berichten worden verstuurd en templates kunnen niet ter
-          goedkeuring worden ingediend. Neem contact op met je beheerder om
-          WhatsApp te activeren.
+          {t("notActivated.description")}
         </p>
       </CardContent>
     </Card>
@@ -239,6 +239,7 @@ function ConnectedCard({
 }: {
   integration: import("@/lib/types/whatsapp").WhatsAppIntegration;
 }) {
+  const { t } = useTranslation("settingsWhatsapp");
   const { toast } = useToast();
   const healthCheck = useWhatsAppHealthCheck();
   const disconnect = useDisconnectWhatsApp();
@@ -250,13 +251,13 @@ function ConnectedCard({
           <div className="flex items-center gap-2">
             <span className="inline-flex h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-500" />
             <Badge className="border-0 bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-              Verbonden
+              {t("connected.connected")}
             </Badge>
             <QualityRatingBadge rating={integration.quality_rating} />
           </div>
           <div>
             <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              Telefoonnummer
+              {t("connected.phoneLabel")}
             </p>
             <p className="font-mono text-base font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
               {integration.phone_number}
@@ -270,25 +271,26 @@ function ConnectedCard({
 
         <div className="sm:col-span-1">
           <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Messaging-limiet
+            {t("connected.messagingLimitLabel")}
           </p>
           <p className="mt-1 font-mono text-base font-semibold text-zinc-900 dark:text-zinc-100">
             {integration.messaging_limit ?? "—"}
           </p>
           <p className="mt-1 text-[11px] text-muted-foreground">
-            Verhoogt automatisch bij goede quality-rating.
+            {t("connected.messagingLimitHint")}
           </p>
         </div>
 
         <div className="flex flex-col items-end justify-between gap-2 sm:col-span-1">
           <p className="text-[11px] text-muted-foreground">
-            Laatste check:{" "}
-            {integration.last_health_check_at
-              ? new Date(integration.last_health_check_at).toLocaleString("nl-NL", {
-                  dateStyle: "short",
-                  timeStyle: "short",
-                })
-              : "—"}
+            {t("connected.lastCheck", {
+              date: integration.last_health_check_at
+                ? new Date(integration.last_health_check_at).toLocaleString("nl-NL", {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  })
+                : "—",
+            })}
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <Button
@@ -296,7 +298,7 @@ function ConnectedCard({
               variant="outline"
               onClick={() =>
                 healthCheck.mutate(undefined, {
-                  onSuccess: () => toast({ title: "Health-check geslaagd" }),
+                  onSuccess: () => toast({ title: t("connected.toasts.healthCheckOk") }),
                 })
               }
               disabled={healthCheck.isPending}
@@ -305,19 +307,19 @@ function ConnectedCard({
               <RefreshCw
                 className={cn("h-3.5 w-3.5", healthCheck.isPending && "animate-spin")}
               />
-              Health-check
+              {t("connected.healthCheck")}
             </Button>
             <Button
               size="sm"
               variant="ghost"
               onClick={() =>
                 disconnect.mutate(undefined, {
-                  onSuccess: () => toast({ title: "Verbinding verbroken" }),
+                  onSuccess: () => toast({ title: t("connected.toasts.disconnected") }),
                 })
               }
               className="text-red-600 hover:bg-red-50 hover:text-red-700"
             >
-              Ontkoppelen
+              {t("connected.disconnect")}
             </Button>
           </div>
         </div>
@@ -329,6 +331,7 @@ function ConnectedCard({
 // ─── Connect form ────────────────────────────────────────────────────────────
 
 function ConnectForm() {
+  const { t } = useTranslation("settingsWhatsapp");
   const { toast } = useToast();
   const connect = useConnectWhatsApp();
   const [phone, setPhone] = useState("");
@@ -345,24 +348,24 @@ function ConnectForm() {
           </div>
           <div>
             <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-              Verbind je WhatsApp Business-account
+              {t("connect.title")}
             </h2>
             <p className="text-xs text-muted-foreground">
-              Voer je Meta WhatsApp Business API-credentials in. Zie{" "}
+              {t("connect.descriptionPrefix")}{" "}
               <Link
                 href="https://developers.facebook.com/docs/whatsapp"
                 target="_blank"
                 className="text-indigo-600 hover:underline"
               >
-                Meta-documentatie
+                {t("connect.docLink")}
               </Link>{" "}
-              voor hoe je je WABA-ID en API-key vindt.
+              {t("connect.descriptionSuffix")}
             </p>
           </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="wa-phone">Telefoonnummer</Label>
+            <Label htmlFor="wa-phone">{t("connect.phoneLabel")}</Label>
             <Input
               id="wa-phone"
               placeholder="+31 6 1234 5678"
@@ -371,7 +374,7 @@ function ConnectForm() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="wa-waba">WABA-ID</Label>
+            <Label htmlFor="wa-waba">{t("connect.wabaLabel")}</Label>
             <Input
               id="wa-waba"
               placeholder="waba_xxxxxxxxxxxxxx"
@@ -380,7 +383,7 @@ function ConnectForm() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="wa-key">API-key</Label>
+            <Label htmlFor="wa-key">{t("connect.apiKeyLabel")}</Label>
             <Input
               id="wa-key"
               type="password"
@@ -390,7 +393,7 @@ function ConnectForm() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="wa-name">Weergavenaam (optioneel)</Label>
+            <Label htmlFor="wa-name">{t("connect.displayNameLabel")}</Label>
             <Input
               id="wa-name"
               placeholder="TechRecruit"
@@ -403,8 +406,8 @@ function ConnectForm() {
           onClick={() => {
             if (!phone || !apiKey || !wabaId) {
               toast({
-                title: "Verplichte velden",
-                description: "Vul telefoonnummer, WABA-ID en API-key in.",
+                title: t("connect.toasts.requiredTitle"),
+                description: t("connect.toasts.requiredDescription"),
                 variant: "destructive",
               });
               return;
@@ -419,8 +422,8 @@ function ConnectForm() {
               {
                 onSuccess: () =>
                   toast({
-                    title: "Verbonden",
-                    description: "WhatsApp Business is nu actief.",
+                    title: t("connect.toasts.connectedTitle"),
+                    description: t("connect.toasts.connectedDescription"),
                   }),
               }
             );
@@ -429,7 +432,7 @@ function ConnectForm() {
           className="gap-1.5"
         >
           <Check className="h-4 w-4" />
-          {connect.isPending ? "Verbinden…" : "Verbinden"}
+          {connect.isPending ? t("connect.submitting") : t("connect.submit")}
         </Button>
       </CardContent>
     </Card>
@@ -439,6 +442,7 @@ function ConnectForm() {
 // ─── Templates tab ───────────────────────────────────────────────────────────
 
 function TemplatesTab() {
+  const { t } = useTranslation("settingsWhatsapp");
   const { data: templates, isLoading } = useWhatsAppTemplates();
   const [editing, setEditing] = useState<WhatsAppTemplate | null>(null);
   const [creating, setCreating] = useState(false);
@@ -447,11 +451,10 @@ function TemplatesTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {templates?.length ?? 0} templates · Meta keurt goed binnen ~5min — in
-          mock-mode 4s.
+          {t("templates.countLine", { count: templates?.length ?? 0 })}
         </p>
         <Button onClick={() => setCreating(true)} className="gap-1.5">
-          <Plus className="h-4 w-4" /> Nieuwe template
+          <Plus className="h-4 w-4" /> {t("templates.new")}
         </Button>
       </div>
       {isLoading ? (
@@ -462,8 +465,8 @@ function TemplatesTab() {
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {(templates ?? []).map((t) => (
-            <TemplateCard key={t.id} template={t} onEdit={() => setEditing(t)} />
+          {(templates ?? []).map((tpl) => (
+            <TemplateCard key={tpl.id} template={tpl} onEdit={() => setEditing(tpl)} />
           ))}
         </div>
       )}
@@ -488,6 +491,7 @@ function TemplateCard({
   template: WhatsAppTemplate;
   onEdit: () => void;
 }) {
+  const { t } = useTranslation("settingsWhatsapp");
   const { toast } = useToast();
   const submit = useSubmitTemplate();
   const del = useDeleteTemplate();
@@ -513,7 +517,7 @@ function TemplateCard({
               pill.className
             )}
           >
-            {pill.label}
+            {t(pill.labelKey)}
           </span>
         </div>
 
@@ -560,7 +564,7 @@ function TemplateCard({
               onClick={onEdit}
               className="h-7 gap-1 text-[11px]"
             >
-              <Edit className="h-3 w-3" /> Bewerken
+              <Edit className="h-3 w-3" /> {t("templateCard.edit")}
             </Button>
           )}
           {(template.status === "draft" || template.status === "rejected") && (
@@ -570,26 +574,25 @@ function TemplateCard({
                 submit.mutate(template.id, {
                   onSuccess: () =>
                     toast({
-                      title: "Ingediend",
-                      description: "De template is ter beoordeling naar Meta gestuurd.",
+                      title: t("templateCard.toasts.submittedTitle"),
+                      description: t("templateCard.toasts.submittedDescription"),
                     }),
                   onError: () =>
                     toast({
-                      title: "Indienen mislukt",
-                      description:
-                        "WhatsApp is niet geactiveerd in deze omgeving of Meta is niet bereikbaar.",
+                      title: t("templateCard.toasts.submitErrorTitle"),
+                      description: t("templateCard.toasts.submitErrorDescription"),
                       variant: "destructive",
                     }),
                 })
               }
               className="h-7 gap-1 text-[11px]"
             >
-              <Send className="h-3 w-3" /> Verzenden ter goedkeuring
+              <Send className="h-3 w-3" /> {t("templateCard.submit")}
             </Button>
           )}
           {template.status === "submitted" && (
             <span className="inline-flex items-center gap-1 text-[11px] text-amber-700 dark:text-amber-300">
-              <Sparkles className="h-3 w-3 animate-pulse" /> Meta beoordeelt…
+              <Sparkles className="h-3 w-3 animate-pulse" /> {t("templateCard.reviewing")}
             </span>
           )}
           {template.status === "draft" && (
@@ -598,11 +601,11 @@ function TemplateCard({
               variant="ghost"
               onClick={() =>
                 del.mutate(template.id, {
-                  onSuccess: () => toast({ title: "Verwijderd" }),
+                  onSuccess: () => toast({ title: t("templateCard.toasts.deletedTitle") }),
                 })
               }
               className="ml-auto h-7 px-1.5 text-red-600 hover:bg-red-50 hover:text-red-700"
-              title="Verwijderen"
+              title={t("templateCard.deleteTitle")}
             >
               <Trash2 className="h-3 w-3" />
             </Button>
@@ -624,6 +627,7 @@ function TemplateEditor({
   open: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation("settingsWhatsapp");
   const { toast } = useToast();
   const create = useCreateTemplate();
   const update = useUpdateTemplate();
@@ -666,7 +670,10 @@ function TemplateEditor({
       ...bs,
       {
         type,
-        text: type === "quick_reply" ? "Snel antwoord" : "Open link",
+        text:
+          type === "quick_reply"
+            ? t("editor.defaultReply")
+            : t("editor.defaultUrl"),
         url: type === "url" ? "https://" : undefined,
       },
     ]);
@@ -689,8 +696,8 @@ function TemplateEditor({
   const handleSave = async () => {
     if (!name || !body) {
       toast({
-        title: "Verplichte velden",
-        description: "Naam en body zijn verplicht.",
+        title: t("editor.toasts.requiredTitle"),
+        description: t("editor.toasts.requiredDescription"),
         variant: "destructive",
       });
       return;
@@ -710,10 +717,10 @@ function TemplateEditor({
     };
     if (template) {
       await update.mutateAsync({ id: template.id, patch: payload });
-      toast({ title: "Template bijgewerkt" });
+      toast({ title: t("editor.toasts.updated") });
     } else {
       await create.mutateAsync(payload);
-      toast({ title: "Template opgeslagen als concept" });
+      toast({ title: t("editor.toasts.savedDraft") });
     }
     onClose();
   };
@@ -723,7 +730,9 @@ function TemplateEditor({
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>
-            {template ? `Template bewerken: ${template.name}` : "Nieuwe template"}
+            {template
+              ? t("editor.editTitle", { name: template.name })
+              : t("editor.newTitle")}
           </DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 md:grid-cols-2">
@@ -731,7 +740,7 @@ function TemplateEditor({
           <div className="space-y-4">
             <div className="grid gap-2 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="t-name">Naam</Label>
+                <Label htmlFor="t-name">{t("editor.nameLabel")}</Label>
                 <Input
                   id="t-name"
                   value={name}
@@ -740,35 +749,35 @@ function TemplateEditor({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Taal</Label>
+                <Label>{t("editor.languageLabel")}</Label>
                 <Select value={language} onValueChange={setLanguage}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="nl">Nederlands</SelectItem>
-                    <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="de">Deutsch</SelectItem>
-                    <SelectItem value="fr">Français</SelectItem>
+                    <SelectItem value="nl">{t("editor.languages.nl")}</SelectItem>
+                    <SelectItem value="en">{t("editor.languages.en")}</SelectItem>
+                    <SelectItem value="de">{t("editor.languages.de")}</SelectItem>
+                    <SelectItem value="fr">{t("editor.languages.fr")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>Categorie</Label>
+              <Label>{t("editor.categoryLabel")}</Label>
               <Select value={category} onValueChange={(v) => setCategory(v as WhatsAppTemplate["category"])}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="utility">Utility (transactioneel)</SelectItem>
-                  <SelectItem value="marketing">Marketing</SelectItem>
-                  <SelectItem value="authentication">Authentication</SelectItem>
+                  <SelectItem value="utility">{t("editor.categories.utility")}</SelectItem>
+                  <SelectItem value="marketing">{t("editor.categories.marketing")}</SelectItem>
+                  <SelectItem value="authentication">{t("editor.categories.authentication")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Header</Label>
+              <Label>{t("editor.headerLabel")}</Label>
               <div className="grid grid-cols-5 gap-1">
                 {(["none", "text", "image", "video", "document"] as const).map(
                   (h) => (
@@ -783,9 +792,7 @@ function TemplateEditor({
                           : "border-border text-zinc-600 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-800/50"
                       )}
                     >
-                      {h === "none"
-                        ? "Geen"
-                        : h.charAt(0).toUpperCase() + h.slice(1)}
+                      {t(`editor.headerTypes.${h}`)}
                     </button>
                   )
                 )}
@@ -794,7 +801,7 @@ function TemplateEditor({
                 <Input
                   value={headerText}
                   onChange={(e) => setHeaderText(e.target.value)}
-                  placeholder="Header tekst (max 60 tekens)"
+                  placeholder={t("editor.headerTextPlaceholder")}
                   maxLength={60}
                 />
               )}
@@ -803,13 +810,13 @@ function TemplateEditor({
                   {headerType === "image" && <ImageIcon className="h-3 w-3" />}
                   {headerType === "video" && <Video className="h-3 w-3" />}
                   {headerType === "document" && <FileText className="h-3 w-3" />}
-                  Bij verzenden upload je een {headerType}.
+                  {t("editor.headerUploadHint", { type: headerType })}
                 </p>
               )}
             </div>
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label htmlFor="t-body">Body</Label>
+                <Label htmlFor="t-body">{t("editor.bodyLabel")}</Label>
                 <Button
                   type="button"
                   size="sm"
@@ -817,19 +824,19 @@ function TemplateEditor({
                   onClick={insertVariable}
                   className="h-6 gap-1 text-[10px]"
                 >
-                  <Plus className="h-3 w-3" /> Variabele {`{{${variableCount + 1}}}`}
+                  <Plus className="h-3 w-3" /> {t("editor.variableButton")} {`{{${variableCount + 1}}}`}
                 </Button>
               </div>
               <Textarea
                 id="t-body"
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
-                placeholder="Hoi {{1}}, …"
+                placeholder={t("editor.bodyPlaceholder", { token: "{{1}}" })}
                 className="min-h-[120px]"
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="t-footer">Footer (optioneel)</Label>
+              <Label htmlFor="t-footer">{t("editor.footerLabel")}</Label>
               <Input
                 id="t-footer"
                 value={footer}
@@ -840,7 +847,7 @@ function TemplateEditor({
             </div>
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label>Knoppen (max 3)</Label>
+                <Label>{t("editor.buttonsLabel")}</Label>
                 <div className="flex gap-1">
                   <Button
                     type="button"
@@ -850,7 +857,7 @@ function TemplateEditor({
                     disabled={buttons.length >= 3}
                     className="h-6 gap-1 text-[10px]"
                   >
-                    <Plus className="h-3 w-3" /> Antwoord
+                    <Plus className="h-3 w-3" /> {t("editor.addReply")}
                   </Button>
                   <Button
                     type="button"
@@ -860,7 +867,7 @@ function TemplateEditor({
                     disabled={buttons.length >= 3}
                     className="h-6 gap-1 text-[10px]"
                   >
-                    <Plus className="h-3 w-3" /> Link
+                    <Plus className="h-3 w-3" /> {t("editor.addUrl")}
                   </Button>
                 </div>
               </div>
@@ -871,7 +878,7 @@ function TemplateEditor({
                     className="flex items-center gap-1.5 rounded-md border border-border bg-white p-1.5 dark:bg-zinc-900"
                   >
                     <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-                      {b.type === "url" ? "link" : "antwoord"}
+                      {b.type === "url" ? t("editor.typeLink") : t("editor.typeReply")}
                     </span>
                     <Input
                       value={b.text}
@@ -902,7 +909,7 @@ function TemplateEditor({
                       type="button"
                       onClick={() => moveButton(i, -1)}
                       className="rounded p-1 text-muted-foreground hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                      aria-label="Omhoog"
+                      aria-label={t("editor.moveUp")}
                     >
                       <ChevronUp className="h-3 w-3" />
                     </button>
@@ -910,7 +917,7 @@ function TemplateEditor({
                       type="button"
                       onClick={() => moveButton(i, 1)}
                       className="rounded p-1 text-muted-foreground hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                      aria-label="Omlaag"
+                      aria-label={t("editor.moveDown")}
                     >
                       <ChevronDown className="h-3 w-3" />
                     </button>
@@ -927,7 +934,7 @@ function TemplateEditor({
             </div>
             {variableCount > 0 && (
               <div className="space-y-1.5">
-                <Label>Voorbeelden voor variabelen</Label>
+                <Label>{t("editor.examplesLabel")}</Label>
                 <div className="space-y-1">
                   {Array.from({ length: variableCount }).map((_, i) => (
                     <div key={i} className="flex items-center gap-2">
@@ -955,7 +962,7 @@ function TemplateEditor({
           {/* Right: preview */}
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Voorbeeld
+              {t("editor.previewLabel")}
             </p>
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-4 dark:border-emerald-900/40 dark:bg-emerald-950/20">
               {headerType === "text" && headerText && (
@@ -971,7 +978,7 @@ function TemplateEditor({
               <p className="mt-1 whitespace-pre-wrap text-sm text-zinc-900 dark:text-zinc-100">
                 {body || (
                   <span className="text-muted-foreground">
-                    De body verschijnt hier.
+                    {t("editor.bodyPreviewPlaceholder")}
                   </span>
                 )}
               </p>
@@ -994,16 +1001,16 @@ function TemplateEditor({
               )}
             </div>
             <p className="mt-2 text-[10px] italic text-muted-foreground">
-              Voorbeeldweergave zoals WhatsApp die toont op een telefoon.
+              {t("editor.previewNote")}
             </p>
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Annuleren
+            {t("editor.cancel")}
           </Button>
           <Button onClick={handleSave} disabled={create.isPending || update.isPending}>
-            {template ? "Opslaan" : "Aanmaken"}
+            {template ? t("editor.save") : t("editor.create")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1014,6 +1021,7 @@ function TemplateEditor({
 // ─── Consent tab ─────────────────────────────────────────────────────────────
 
 function ConsentTab() {
+  const { t } = useTranslation("settingsWhatsapp");
   const { data: consents, isLoading } = useWhatsAppConsents();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [withdrawing, setWithdrawing] = useState<{
@@ -1025,11 +1033,10 @@ function ConsentTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {consents?.length ?? 0} kandidaten · Verwerk alleen kandidaten met
-          status &quot;Toestemming&quot;.
+          {t("consent.countLine", { count: consents?.length ?? 0 })}
         </p>
         <Button onClick={() => setInviteOpen(true)} className="gap-1.5">
-          <Plus className="h-4 w-4" /> Uitnodigen
+          <Plus className="h-4 w-4" /> {t("consent.invite")}
         </Button>
       </div>
       {isLoading ? (
@@ -1041,12 +1048,12 @@ function ConsentTab() {
               <table className="w-full text-sm">
                 <thead className="bg-zinc-50 text-left text-[11px] uppercase tracking-wide text-muted-foreground dark:bg-zinc-800/40">
                   <tr>
-                    <th className="px-4 py-2">Kandidaat</th>
-                    <th className="px-4 py-2">Telefoon</th>
-                    <th className="px-4 py-2">Status</th>
-                    <th className="px-4 py-2">Bron</th>
-                    <th className="px-4 py-2">Sinds</th>
-                    <th className="px-4 py-2 text-right">Acties</th>
+                    <th className="px-4 py-2">{t("consent.table.candidate")}</th>
+                    <th className="px-4 py-2">{t("consent.table.phone")}</th>
+                    <th className="px-4 py-2">{t("consent.table.status")}</th>
+                    <th className="px-4 py-2">{t("consent.table.source")}</th>
+                    <th className="px-4 py-2">{t("consent.table.since")}</th>
+                    <th className="px-4 py-2 text-right">{t("consent.table.actions")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -1072,7 +1079,7 @@ function ConsentTab() {
                               pill.className
                             )}
                           >
-                            {pill.label}
+                            {t(pill.labelKey)}
                           </span>
                         </td>
                         <td className="px-4 py-2.5 text-xs text-muted-foreground">
@@ -1100,7 +1107,7 @@ function ConsentTab() {
                               }
                               className="h-7 text-red-600 hover:bg-red-50 hover:text-red-700"
                             >
-                              Intrekken
+                              {t("consent.withdraw")}
                             </Button>
                           )}
                           {(c.status === "pending" || c.status === "withdrawn") && (
@@ -1110,7 +1117,7 @@ function ConsentTab() {
                               onClick={() => setInviteOpen(true)}
                               className="h-7 text-xs"
                             >
-                              Opnieuw uitnodigen
+                              {t("consent.reinvite")}
                             </Button>
                           )}
                         </td>
@@ -1136,6 +1143,7 @@ function ConsentTab() {
 }
 
 function InviteConsentDialog({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation("settingsWhatsapp");
   const { toast } = useToast();
   const invite = useInviteWhatsAppConsent();
   const [candidateId, setCandidateId] = useState("");
@@ -1148,11 +1156,11 @@ function InviteConsentDialog({ onClose }: { onClose: () => void }) {
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Opt-in uitnodigen</DialogTitle>
+          <DialogTitle>{t("invite.title")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label>Kandidaat</Label>
+            <Label>{t("invite.candidateLabel")}</Label>
             <Select value={candidateId} onValueChange={(v) => {
               setCandidateId(v);
               const c = (candidates ?? []).find((x) => x.id === v);
@@ -1162,10 +1170,10 @@ function InviteConsentDialog({ onClose }: { onClose: () => void }) {
                 <SelectValue
                   placeholder={
                     candidatesLoading
-                      ? "Kandidaten laden..."
+                      ? t("invite.candidatesLoading")
                       : !candidates || candidates.length === 0
-                        ? "Geen kandidaten beschikbaar"
-                        : "Kies een kandidaat…"
+                        ? t("invite.noCandidates")
+                        : t("invite.selectCandidate")
                   }
                 />
               </SelectTrigger>
@@ -1179,7 +1187,7 @@ function InviteConsentDialog({ onClose }: { onClose: () => void }) {
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="invite-phone">Telefoonnummer</Label>
+            <Label htmlFor="invite-phone">{t("invite.phoneLabel")}</Label>
             <Input
               id="invite-phone"
               value={phone}
@@ -1193,15 +1201,13 @@ function InviteConsentDialog({ onClose }: { onClose: () => void }) {
           <div className="flex items-start gap-2 rounded-lg border border-border bg-zinc-50/70 p-3 dark:bg-zinc-800/40">
             <Mail className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" />
             <p className="text-[11px] leading-relaxed text-muted-foreground">
-              Er wordt een persoonlijke opt-in link aangemaakt (72 uur geldig).
-              TalentFlow verstuurt deze niet automatisch — deel de link zelf
-              met de kandidaat, bijvoorbeeld via e-mail of telefoon.
+              {t("invite.info")}
             </p>
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Annuleren
+            {t("invite.cancel")}
           </Button>
           <Button
             disabled={!candidateId || !phone || invite.isPending}
@@ -1220,22 +1226,22 @@ function InviteConsentDialog({ onClose }: { onClose: () => void }) {
                   /* clipboard niet beschikbaar — link staat in de toast */
                 }
                 toast({
-                  title: "Opt-in link aangemaakt",
+                  title: t("invite.toasts.createdTitle"),
                   description: copied
-                    ? "De link staat op je klembord — deel hem met de kandidaat."
-                    : `Deel deze link met de kandidaat: ${result.token_url}`,
+                    ? t("invite.toasts.createdCopied")
+                    : t("invite.toasts.createdShare", { url: result.token_url }),
                 });
                 onClose();
               } catch {
                 toast({
-                  title: "Aanmaken mislukt",
-                  description: "De opt-in link kon niet worden aangemaakt.",
+                  title: t("invite.toasts.errorTitle"),
+                  description: t("invite.toasts.errorDescription"),
                   variant: "destructive",
                 });
               }
             }}
           >
-            {invite.isPending ? "Bezig…" : "Link aanmaken"}
+            {invite.isPending ? t("invite.submitting") : t("invite.submit")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1252,6 +1258,7 @@ function WithdrawConsentDialog({
   candidateName?: string;
   onClose: () => void;
 }) {
+  const { t } = useTranslation("settingsWhatsapp");
   const { toast } = useToast();
   const withdraw = useWithdrawWhatsAppConsent();
   const [reason, setReason] = useState("");
@@ -1260,20 +1267,21 @@ function WithdrawConsentDialog({
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Toestemming intrekken</DialogTitle>
+          <DialogTitle>{t("withdraw.title")}</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
-          Intrekken voor <strong>{candidateName ?? candidateId}</strong>. Dit
-          wordt vastgelegd in de audit-trail.
+          {t("withdraw.descriptionPrefix")}
+          <strong>{candidateName ?? candidateId}</strong>
+          {t("withdraw.descriptionSuffix")}
         </p>
         <Textarea
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          placeholder="Reden (verplicht)"
+          placeholder={t("withdraw.reasonPlaceholder")}
         />
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Annuleren
+            {t("withdraw.cancel")}
           </Button>
           <Button
             disabled={!reason.trim()}
@@ -1283,11 +1291,11 @@ function WithdrawConsentDialog({
                 candidate_id: candidateId,
                 reason: reason.trim(),
               });
-              toast({ title: "Toestemming ingetrokken" });
+              toast({ title: t("withdraw.toast") });
               onClose();
             }}
           >
-            Intrekken
+            {t("withdraw.submit")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1298,6 +1306,7 @@ function WithdrawConsentDialog({
 // ─── Messages tab ────────────────────────────────────────────────────────────
 
 function MessagesTab() {
+  const { t } = useTranslation("settingsWhatsapp");
   const { data: messages, isLoading } = useWhatsAppMessages();
   return (
     <Card className="border-0 shadow-sm">
@@ -1310,7 +1319,7 @@ function MessagesTab() {
           </div>
         ) : !messages || messages.length === 0 ? (
           <p className="p-8 text-center text-sm text-muted-foreground">
-            Nog geen WhatsApp-berichten verzonden.
+            {t("messages.empty")}
           </p>
         ) : (
           <ul className="divide-y divide-border">
@@ -1323,7 +1332,7 @@ function MessagesTab() {
                       {m.candidate_name ?? m.candidate_id}
                     </span>
                     <span className="text-muted-foreground">
-                      {m.direction === "outbound" ? "→ Verzonden" : "← Ontvangen"} ·{" "}
+                      {m.direction === "outbound" ? t("messages.sent") : t("messages.received")} ·{" "}
                       {new Date(m.created_at).toLocaleString("nl-NL", {
                         dateStyle: "short",
                         timeStyle: "short",

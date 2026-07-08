@@ -1,0 +1,71 @@
+{
+  "backToSettings": "Terug naar instellingen",
+  "title": "Custom velden",
+  "description": "Definieer extra velden per entiteit. Custom velden worden automatisch in formulieren en CSV-import getoond.",
+  "entities": {
+    "candidate": "Kandidaten",
+    "job": "Vacatures",
+    "application": "Sollicitaties"
+  },
+  "types": {
+    "text": "Tekst",
+    "number": "Nummer",
+    "date": "Datum",
+    "dropdown": "Dropdown (één keuze)",
+    "multiselect": "Multiselect",
+    "boolean": "Ja/Nee"
+  },
+  "tab": {
+    "cardTitle": "Velden voor {{entity}}",
+    "cardDescription": "Sleep om de volgorde aan te passen. Verwijderde velden blijven historisch zichtbaar.",
+    "newField": "Nieuw veld",
+    "loading": "Laden...",
+    "empty": "Nog geen custom velden voor {{entity}}.",
+    "moveUp": "Omhoog",
+    "moveDown": "Omlaag",
+    "requiredBadge": "Verplicht",
+    "optionsCount_one": "{{count}} opties:",
+    "optionsCount_other": "{{count}} opties:"
+  },
+  "deleteDialog": {
+    "title": "Veld verwijderen?",
+    "description": "Bestaande waarden voor dit veld blijven historisch beschikbaar maar worden niet meer in nieuwe formulieren getoond.",
+    "cancel": "Annuleren",
+    "confirm": "Verwijderen"
+  },
+  "toasts": {
+    "fieldDeleted": "Veld verwijderd",
+    "deleteError": {
+      "title": "Fout",
+      "description": "Kon veld niet verwijderen."
+    },
+    "optionsRequired": {
+      "title": "Opties vereist",
+      "description": "Voeg minimaal één optie toe voor dit veldtype."
+    },
+    "fieldUpdated": "Veld bijgewerkt",
+    "fieldAdded": "Veld toegevoegd",
+    "saveError": {
+      "title": "Fout",
+      "description": "Kon veld niet opslaan."
+    }
+  },
+  "dialog": {
+    "editTitle": "Veld bewerken",
+    "createTitle": "Nieuw custom veld",
+    "labelLabel": "Label",
+    "labelPlaceholder": "Bijv. LinkedIn URL",
+    "keyLabel": "Key (snake_case)",
+    "keyPlaceholder": "bijv. linkedin_url",
+    "keyHintEditing": "Key kan niet meer gewijzigd worden na aanmaken.",
+    "keyHintNew": "Wordt automatisch afgeleid uit het label, maar je kunt het aanpassen.",
+    "fieldTypeLabel": "Veldtype",
+    "optionsLabel": "Opties",
+    "optionPlaceholder": "Nieuwe optie",
+    "noOptions": "Nog geen opties toegevoegd.",
+    "requiredField": "Verplicht veld",
+    "cancel": "Annuleren",
+    "save": "Opslaan",
+    "create": "Aanmaken"
+  }
+}

@@ -1,23 +1,25 @@
 /**
- * Portal page — klant-facing shortlist-review.
+ * Portal page — klant-facing shortlist-review (publiek, token-based).
  *
  * Werkstroom:
- *   1. Token uit URL → usePortalAccess() haalt {portal, applications, branding}
- *   2. Permission-aware rendering per kandidaat-kaart
+ *   1. Token uit URL → usePortalAccess() haalt {job, applications, branding}
+ *   2. Permission-aware rendering per kandidaat-kaart (PII-vrij contract:
+ *      geen e-mail/telefoon/salaris — zie serializePortalApplication in de API)
  *   3. Per kandidaat: ✓ Geschikt / ✗ Niet geschikt / ? Twijfel + comment
- *   4. Bulk-feedback bij ≥5 kandidaten via floating action button (mobile) /
+ *   4. Algemene opmerking over de hele shortlist (zonder kandidaat)
+ *   5. Bulk-feedback bij ≥5 kandidaten via floating action button (mobile) /
  *      header-knop (desktop)
- *   5. View-tracking via intersection-observer in PortalCandidateCard
+ *   6. View-tracking via intersection-observer in PortalCandidateCard
  *
- * Mobile-strategy: kaart-stack overal (single column). De `sm:` breakpoint
- * (640px) gebruiken we om de header-actie-knoppen + contact-info inline te
- * leggen. FAB toont alleen op <sm.
+ * Teksten via i18n (portalPublic-namespace, NL + EN). Nette meldingen per
+ * fout-status: 404 ongeldig, 410 verlopen, 429 rate-limited, anders netwerk.
  */
 
 "use client";
 
 import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import {
   Briefcase,
   ChevronDown,
@@ -28,6 +30,8 @@ import {
   Loader2,
   CircleSlash,
   ListChecks,
+  MessagesSquare,
+  Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -48,16 +52,27 @@ import {
   usePortalLogView,
   type FeedbackAction,
 } from "@/hooks/usePortal";
+import { formatDate } from "@/lib/utils";
 import { PortalCandidateCard } from "@/components/portal/PortalCandidateCard";
 import { PortalResumeViewer } from "@/components/portal/PortalResumeViewer";
 import {
   PortalErrorScreen,
   PortalSkeleton,
+  portalErrorVariantFromStatus,
 } from "@/components/portal/PortalStateScreens";
+
+function statusFromError(err: unknown): number | undefined {
+  return typeof err === "object" &&
+    err !== null &&
+    "response" in (err as Record<string, unknown>)
+    ? (err as { response?: { status?: number } }).response?.status
+    : undefined;
+}
 
 export default function PortalAccessPage() {
   const params = useParams();
   const token = (params?.token as string) ?? "";
+  const { t } = useTranslation("portalPublic");
   const { toast } = useToast();
 
   const { data, isLoading, isError, refetch, error } = usePortalAccess(token);
@@ -74,6 +89,8 @@ export default function PortalAccessPage() {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkPending, setBulkPending] = useState<FeedbackAction | null>(null);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
+  const [generalComment, setGeneralComment] = useState("");
+  const [generalSubmitting, setGeneralSubmitting] = useState(false);
 
   const counts = useMemo(() => {
     if (!data) return { total: 0, pending: 0, decided: 0 };
@@ -85,19 +102,13 @@ export default function PortalAccessPage() {
   if (isLoading) return <PortalSkeleton />;
 
   if (isError || !data) {
-    // Onderscheid: 404-achtige statuscodes → "ongeldig", anders → "netwerk".
-    const errObj = error as unknown;
-    const status =
-      typeof errObj === "object" &&
-      errObj !== null &&
-      "response" in (errObj as Record<string, unknown>)
-        ? (errObj as { response?: { status?: number } }).response?.status
-        : undefined;
-    const variant = status === 404 || status === 410 ? "invalid" : "network";
+    // 404 → ongeldig/ingetrokken, 410 → verlopen, 429 → rate-limit, rest → netwerk.
+    const variant = portalErrorVariantFromStatus(statusFromError(error));
     return <PortalErrorScreen variant={variant} onRetry={() => refetch()} />;
   }
 
-  const { permissions, applications, job, recruiter, client_name } = data;
+  const { permissions, applications, general_comments, job, recruiter, client_name } =
+    data;
 
   // Geen view_candidates? → toon vergrendelde state.
   if (!permissions.view_candidates) {
@@ -107,15 +118,23 @@ export default function PortalAccessPage() {
           <CircleSlash className="h-7 w-7 text-zinc-500" />
         </div>
         <h1 className="mt-4 text-xl font-bold text-zinc-900 dark:text-zinc-100">
-          Geen toegang tot kandidaten
+          {t("page.noAccessTitle")}
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Deze portal-link heeft geen toestemming om kandidaten te bekijken. Neem
-          contact op met je recruiter voor toegang.
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">{t("page.noAccessBody")}</p>
       </div>
     );
   }
+
+  const feedbackFailToast = (err: unknown) => {
+    toast({
+      title: t("page.toasts.failTitle"),
+      description:
+        statusFromError(err) === 403
+          ? t("page.toasts.failForbidden")
+          : t("page.toasts.failGeneric"),
+      variant: "destructive",
+    });
+  };
 
   const handleFeedback = async (
     applicationId: string,
@@ -133,33 +152,42 @@ export default function PortalAccessPage() {
       toast({
         title:
           action === "approve"
-            ? "Geschikt verstuurd"
+            ? t("page.toasts.approveSent")
             : action === "reject"
-            ? "Niet geschikt verstuurd"
+            ? t("page.toasts.rejectSent")
             : action === "doubt"
-            ? "Twijfel genoteerd"
-            : "Reactie verstuurd",
-        description: "De recruiter is op de hoogte gebracht.",
+            ? t("page.toasts.doubtSent")
+            : t("page.toasts.commentSent"),
+        description: t("page.toasts.feedbackDescription"),
       });
     } catch (err) {
-      const errObj = err as unknown;
-      const status =
-        typeof errObj === "object" &&
-        errObj !== null &&
-        "response" in (errObj as Record<string, unknown>)
-          ? (errObj as { response?: { status?: number } }).response?.status
-          : undefined;
-      toast({
-        title: "Niet gelukt",
-        description:
-          status === 403
-            ? "Je hebt geen toestemming voor deze actie."
-            : "Probeer het opnieuw — kon de actie niet versturen.",
-        variant: "destructive",
-      });
+      feedbackFailToast(err);
       throw err;
     } finally {
       setSubmittingId(null);
+    }
+  };
+
+  /** Algemene opmerking over de hele shortlist (geen application_id). */
+  const handleGeneralComment = async () => {
+    const body = generalComment.trim();
+    if (!body) return;
+    setGeneralSubmitting(true);
+    try {
+      await submitFeedback.mutateAsync({
+        action: "comment",
+        comment: body,
+        client_name: reviewerName || client_name || undefined,
+      });
+      setGeneralComment("");
+      toast({
+        title: t("page.toasts.generalCommentSent"),
+        description: t("page.toasts.feedbackDescription"),
+      });
+    } catch (err) {
+      feedbackFailToast(err);
+    } finally {
+      setGeneralSubmitting(false);
     }
   };
 
@@ -167,7 +195,7 @@ export default function PortalAccessPage() {
     setBulkPending(action);
     try {
       const targets = applications.filter((a) => !a.client_feedback);
-      // Sequentieel: backend heeft mogelijk rate-limiting + we willen de
+      // Sequentieel: backend heeft rate-limiting + we willen de
       // optimistic-updates één-voor-één in de cache zetten.
       for (const app of targets) {
         // eslint-disable-next-line no-await-in-loop
@@ -178,14 +206,14 @@ export default function PortalAccessPage() {
         });
       }
       toast({
-        title: "Bulk-feedback verstuurd",
-        description: `${targets.length} kandidaten gemarkeerd.`,
+        title: t("page.toasts.bulkDoneTitle"),
+        description: t("page.toasts.bulkDoneDescription", { count: targets.length }),
       });
       setBulkOpen(false);
     } catch {
       toast({
-        title: "Bulk-actie mislukte gedeeltelijk",
-        description: "Niet alle kandidaten konden worden verwerkt.",
+        title: t("page.toasts.bulkFailTitle"),
+        description: t("page.toasts.bulkFailDescription"),
         variant: "destructive",
       });
     } finally {
@@ -202,26 +230,16 @@ export default function PortalAccessPage() {
         <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-              Recruitment shortlist
+              {t("page.eyebrow")}
             </p>
             <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 sm:text-3xl">
               {job.title}
             </h1>
             <p className="mt-1.5 text-sm text-muted-foreground">
-              Welkom{client_name ? `, ${client_name}` : ""} — geef ons feedback op
-              deze shortlist
-              {recruiter ? (
-                <>
-                  {" "}
-                  (verstuurd door{" "}
-                  <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                    {recruiter.name}
-                  </span>
-                  ).
-                </>
-              ) : (
-                "."
-              )}
+              {client_name
+                ? t("page.greetingNamed", { name: client_name })
+                : t("page.greeting")}
+              {recruiter && <> {t("page.sentBy", { name: recruiter.name })}</>}
             </p>
           </div>
           {canBulk && (
@@ -232,16 +250,20 @@ export default function PortalAccessPage() {
               className="hidden sm:inline-flex"
             >
               <ListChecks className="mr-1.5 h-3.5 w-3.5" />
-              Bulk-feedback
+              {t("page.bulkButton")}
             </Button>
           )}
         </div>
 
         {/* Stats */}
         <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px]">
-          <StatPill label="Kandidaten" value={counts.total} />
-          <StatPill label="Beoordeeld" value={counts.decided} tone="emerald" />
-          <StatPill label="Open" value={counts.pending} tone="amber" />
+          <StatPill label={t("page.stats.total")} value={counts.total} />
+          <StatPill
+            label={t("page.stats.decided")}
+            value={counts.decided}
+            tone="emerald"
+          />
+          <StatPill label={t("page.stats.pending")} value={counts.pending} tone="amber" />
         </div>
       </section>
 
@@ -266,12 +288,12 @@ export default function PortalAccessPage() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                    Vacaturebeschrijving
+                    {t("page.jobDescriptionTitle")}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {descriptionOpen
-                      ? "Inklappen"
-                      : "Bekijk de volledige beschrijving"}
+                      ? t("page.jobDescriptionCollapse")
+                      : t("page.jobDescriptionExpand")}
                   </p>
                 </div>
               </div>
@@ -306,17 +328,17 @@ export default function PortalAccessPage() {
               htmlFor="reviewer-name"
               className="text-xs font-medium text-zinc-700 dark:text-zinc-300"
             >
-              Jouw naam (optioneel)
+              {t("page.reviewerNameLabel")}
             </Label>
             <Input
               id="reviewer-name"
-              placeholder="Hoe mogen we je noemen?"
+              placeholder={t("page.reviewerNamePlaceholder")}
               value={reviewerName}
               onChange={(e) => setReviewerName(e.target.value)}
               className="mt-1.5 bg-white dark:bg-zinc-900"
             />
             <p className="mt-1.5 text-[11px] text-muted-foreground">
-              Wordt getoond bij je reacties zodat de recruiter weet van wie ze komen.
+              {t("page.reviewerNameHelp")}
             </p>
           </CardContent>
         </Card>
@@ -325,13 +347,12 @@ export default function PortalAccessPage() {
       {/* Candidate list */}
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-          {applications.length}{" "}
-          {applications.length === 1 ? "kandidaat" : "kandidaten"}
+          {t("page.candidateCount", { count: applications.length })}
         </h2>
         {applications.length === 0 ? (
           <Card className="border-0 shadow-sm">
             <CardContent className="p-8 text-center text-sm text-muted-foreground">
-              Er zijn nog geen kandidaten gedeeld voor deze vacature.
+              {t("page.emptyShortlist")}
             </CardContent>
           </Card>
         ) : (
@@ -352,6 +373,76 @@ export default function PortalAccessPage() {
         )}
       </section>
 
+      {/* Algemene opmerkingen over de hele shortlist */}
+      {permissions.comment && (
+        <section className="mt-8">
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex items-center gap-2">
+                <MessagesSquare className="h-4 w-4 text-zinc-500" />
+                <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                  {t("page.generalComments.title")}
+                </h2>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t("page.generalComments.description")}
+              </p>
+
+              {general_comments.length > 0 ? (
+                <ul className="mt-3 space-y-2">
+                  {general_comments.map((c) => (
+                    <li
+                      key={c.id}
+                      className="rounded-md bg-zinc-50 p-2.5 text-xs dark:bg-zinc-900/50"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-zinc-800 dark:text-zinc-200">
+                          {c.author ?? t("page.generalComments.anonymous")}
+                        </span>
+                        <span className="text-[10px] text-zinc-400">
+                          {formatDate(c.created_at)}
+                        </span>
+                      </div>
+                      <p className="mt-1 whitespace-pre-line text-zinc-700 dark:text-zinc-300">
+                        {c.body}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-3 text-xs italic text-muted-foreground">
+                  {t("page.generalComments.empty")}
+                </p>
+              )}
+
+              <div className="mt-3 space-y-2">
+                <textarea
+                  value={generalComment}
+                  onChange={(e) => setGeneralComment(e.target.value)}
+                  placeholder={t("page.generalComments.placeholder")}
+                  rows={3}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+                />
+                <Button
+                  size="sm"
+                  onClick={handleGeneralComment}
+                  disabled={!generalComment.trim() || generalSubmitting}
+                  className="border-0 text-white"
+                  style={{ backgroundColor: "var(--brand-primary)" }}
+                >
+                  {generalSubmitting ? (
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Send className="mr-1.5 h-3.5 w-3.5" />
+                  )}
+                  {t("page.generalComments.submit")}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      )}
+
       {/* Floating Action Button — alleen op mobile, alleen als bulk mogelijk is */}
       {canBulk && (
         <Button
@@ -363,7 +454,7 @@ export default function PortalAccessPage() {
           }}
         >
           <ListChecks className="h-4 w-4" />
-          Bulk-feedback
+          {t("page.bulkButton")}
         </Button>
       )}
 
@@ -382,10 +473,9 @@ export default function PortalAccessPage() {
       <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Markeer alle openstaande kandidaten</DialogTitle>
+            <DialogTitle>{t("page.bulkDialog.title")}</DialogTitle>
             <DialogDescription>
-              Pas dezelfde feedback toe op alle {counts.pending} kandidaten zonder
-              beoordeling. Dit kan niet ongedaan worden gemaakt.
+              {t("page.bulkDialog.description", { count: counts.pending })}
             </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -399,7 +489,7 @@ export default function PortalAccessPage() {
               ) : (
                 <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
               )}
-              Geschikt
+              {t("page.bulkDialog.approve")}
             </Button>
             <Button
               onClick={() => handleBulk("doubt")}
@@ -412,7 +502,7 @@ export default function PortalAccessPage() {
               ) : (
                 <HelpCircle className="mr-1.5 h-3.5 w-3.5" />
               )}
-              Twijfel
+              {t("page.bulkDialog.doubt")}
             </Button>
             <Button
               onClick={() => handleBulk("reject")}
@@ -425,12 +515,12 @@ export default function PortalAccessPage() {
               ) : (
                 <XCircle className="mr-1.5 h-3.5 w-3.5" />
               )}
-              Niet geschikt
+              {t("page.bulkDialog.reject")}
             </Button>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setBulkOpen(false)}>
-              Annuleren
+              {t("page.bulkDialog.cancel")}
             </Button>
           </DialogFooter>
         </DialogContent>

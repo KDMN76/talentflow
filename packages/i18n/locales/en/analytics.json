@@ -6,7 +6,8 @@
   "tabs": {
     "overview": "Overview",
     "recruiters": "Recruiters",
-    "trends": "Trends"
+    "trends": "Trends",
+    "aiBias": "AI & Bias"
   },
   "filters": {
     "allRecruiters": "All recruiters",
@@ -69,6 +70,59 @@
     "applications": {
       "title": "Applications per Week",
       "tooltipUnit": "applications"
+    }
+  },
+  "aiBias": {
+    "intro": "Bias monitoring on automated decision-making (EU AI Act). Aggregates only — never individual candidates.",
+    "adverseImpact": {
+      "title": "Adverse impact — four-fifths rule",
+      "hint": "The selection rate (hired ÷ applications) of every group must be at least 80% of the best scoring group (EEOC four-fifths rule). Groups smaller than {{min}} are statistically too small for a verdict.",
+      "basis_one": "Based on {{count}} application · selected = hired",
+      "basis_other": "Based on {{count}} applications · selected = hired",
+      "empty": "No applications in the selected period.",
+      "dimension": {
+        "gender": "Gender",
+        "age_bracket": "Age bracket",
+        "nationality": "Nationality"
+      },
+      "columns": {
+        "group": "Group",
+        "total": "Applications",
+        "selected": "Hired",
+        "selectionRate": "Selection rate",
+        "impactRatio": "Impact ratio"
+      },
+      "pass": "≥ 0.80",
+      "fail": "< 0.80",
+      "insufficientBadge": "insufficient data",
+      "insufficientHint": "Fewer than {{min}} applications — too small for a statistically reliable verdict, therefore suppressed.",
+      "referenceBadge": "reference",
+      "noReference": "No group reaches the minimum group size of {{min}} — impact ratios cannot be determined.",
+      "group": {
+        "male": "Male",
+        "female": "Female",
+        "other": "Other",
+        "prefer_not": "Prefer not to say",
+        "unknown": "Unknown",
+        "NL": "Dutch",
+        "EU-other": "EU (other)",
+        "non-EU": "Non-EU"
+      }
+    },
+    "aiUsage": {
+      "title": "AI usage per month",
+      "hint": "Number of AI operations per month from the append-only AI register (ai_events), broken down by feature. Counts only — no content.",
+      "empty": "No AI usage logged in the selected period.",
+      "tooltipUnit": "operations"
+    },
+    "matchScores": {
+      "title": "Match score distribution",
+      "hint": "Histogram of all AI match scores (0–100%). A healthy distribution is broad; a peak on one side may indicate a data issue or bias.",
+      "empty": "No match scores computed in the selected period.",
+      "avg": "Average score",
+      "total": "Score count",
+      "tooltipUnit": "matches",
+      "axisLabel": "score (%)"
     }
   },
   "backOffice": {

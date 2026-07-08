@@ -9,11 +9,13 @@
  *   │ (w-72)   │     (flex-1)     │  (w-96)  │
  *   └──────────┴──────────────────┴──────────┘
  *
- * Header strip: name (inline edit), date-range, Save, Run, Embed dropdown.
- * Run-result is stored locally and passed to each block-renderer.
+ * Header strip: name (inline edit), date-range, Run, Save, CSV-export,
+ * Embed dropdown (token + optionele expiry). Run-result is stored locally
+ * and passed to each block-renderer. Run saves eerst als er niet-opgeslagen
+ * wijzigingen zijn — de backend draait altijd de opgeslagen config.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -22,6 +24,7 @@ import {
   ArrowLeft,
   Check,
   Copy,
+  Download,
   Link as LinkIcon,
   Loader2,
   Play,
@@ -63,12 +66,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { api } from "@/lib/api";
+import { downloadBlob } from "@/lib/downloadHelper";
 import { BlockPalette } from "@/components/reports/BlockPalette";
 import { CanvasBlock } from "@/components/reports/CanvasBlock";
 import { EditPanel } from "@/components/reports/EditPanel";
 import { TemplateLoader } from "@/components/reports/TemplateLoader";
 import { DateRangeSelector } from "@/components/reports/DateRangeSelector";
-import { makeBlock } from "@/components/reports/defaults";
+import { makeBlock, makeBlockId } from "@/components/reports/defaults";
 import {
   useGenerateEmbedToken,
   useReport,
@@ -80,13 +85,23 @@ import {
   useUpdateReport,
 } from "@/hooks/useReports";
 import type {
-  BlockConfig,
   BlockResult,
+  BlockSize,
   BlockType,
   ReportBlock,
   ReportConfig,
   SystemTemplate,
 } from "@/lib/types/reports";
+
+/** Bouw de publieke web-URL voor een embed-token. */
+function embedPageUrl(token: string): string {
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}/embed/reports/${token}`;
+  }
+  return `/embed/reports/${token}`;
+}
+
+const EMBED_EXPIRY_CHOICES = [7, 30, 90] as const;
 
 export default function ReportBuilderPage() {
   const { t } = useTranslation("reportsPage");
@@ -108,7 +123,7 @@ export default function ReportBuilderPage() {
   // Local mutable state — hydrated from server.
   const [name, setName] = useState("");
   const [config, setConfig] = useState<ReportConfig>({
-    date_range: { preset: "last_30_days" },
+    date_range: { type: "last_n_days", days: 30 },
     blocks: [],
   });
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -120,12 +135,20 @@ export default function ReportBuilderPage() {
   const [pendingTemplate, setPendingTemplate] = useState<SystemTemplate | null>(null);
   const [embedDialogOpen, setEmbedDialogOpen] = useState(false);
   const [embedUrl, setEmbedUrl] = useState<string | null>(null);
+  const [embedExpiresAt, setEmbedExpiresAt] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  // Refs zodat doRun altijd de actuele naam/config/dirty ziet (ook bij de
+  // auto-run vanuit ?view=run die vóór de eerstvolgende render triggert).
+  const stateRef = useRef({ name, config, dirty });
+  stateRef.current = { name, config, dirty };
 
   // Hydrate from server.
   useEffect(() => {
     if (report && !hydrated) {
       setName(report.name);
       setConfig(report.config);
+      setEmbedExpiresAt(report.embed_expires_at ?? null);
       setHydrated(true);
       // Auto-run when ?view=run
       if (searchParams.get("view") === "run") {
@@ -148,14 +171,22 @@ export default function ReportBuilderPage() {
       await updateReport.mutateAsync({ id, name, config });
       setDirty(false);
       toast({ title: t("builder.toasts.saved") });
+      return true;
     } catch {
       toast({ title: t("builder.toasts.saveError"), variant: "destructive" });
+      return false;
     }
   };
 
   const doRun = async () => {
     try {
-      const res = await runReport.mutateAsync();
+      // De backend draait de OPGESLAGEN config — sla eerst op bij wijzigingen.
+      const cur = stateRef.current;
+      if (cur.dirty) {
+        await updateReport.mutateAsync({ id, name: cur.name, config: cur.config });
+        setDirty(false);
+      }
+      const res = await runReport.mutateAsync(undefined);
       const map: Record<string, BlockResult> = {};
       res.blocks.forEach((b) => {
         map[b.block_id] = b;
@@ -170,9 +201,9 @@ export default function ReportBuilderPage() {
   // ── Block manipulation ────────────────────────────────────────────────────
 
   const handleAddBlock = (type: BlockType) => {
-    const b = makeBlock(type);
-    markDirty(() => setConfig((c) => ({ ...c, blocks: [...c.blocks, b] })));
-    setSelectedId(b.id);
+    const entry = makeBlock(type);
+    markDirty(() => setConfig((c) => ({ ...c, blocks: [...c.blocks, entry] })));
+    setSelectedId(entry.id);
   };
 
   const handleDeleteBlock = (blockId: string) => {
@@ -194,29 +225,36 @@ export default function ReportBuilderPage() {
     );
   };
 
-  const handleUpdateConfig = (blockId: string, blockConfig: BlockConfig) => {
+  const handleUpdateSize = (blockId: string, size: BlockSize) => {
     markDirty(() =>
       setConfig((c) => ({
         ...c,
-        blocks: c.blocks.map((b) =>
-          b.id === blockId ? ({ ...b, config: blockConfig } as ReportBlock) : b
-        ),
+        blocks: c.blocks.map((b) => (b.id === blockId ? { ...b, size } : b)),
+      }))
+    );
+  };
+
+  const handleUpdateBlock = (blockId: string, block: ReportBlock) => {
+    markDirty(() =>
+      setConfig((c) => ({
+        ...c,
+        blocks: c.blocks.map((b) => (b.id === blockId ? { ...b, block } : b)),
       }))
     );
   };
 
   const handleApplyTemplate = (tpl: SystemTemplate) => {
     markDirty(() => {
-      // Re-id blocks so they don't collide with previous results / drag IDs.
+      // Re-id entries so they don't collide with previous results / drag IDs.
       const reidBlocks = tpl.config.blocks.map((b) => ({
         ...b,
-        id: `blk-${Math.random().toString(36).slice(2, 10)}`,
-        config: { ...b.config },
+        id: makeBlockId(),
+        block: { ...b.block },
       }));
       setConfig({
         date_range: tpl.config.date_range,
         blocks: reidBlocks,
-        filters: tpl.config.filters,
+        filters_global: tpl.config.filters_global,
       });
     });
     setResults({});
@@ -248,10 +286,14 @@ export default function ReportBuilderPage() {
 
   // ── Embed ─────────────────────────────────────────────────────────────────
 
-  const handleGenerateEmbed = async () => {
+  const handleGenerateEmbed = async (expiresInDays: number | null) => {
     try {
-      const res = await generateEmbed.mutateAsync(id);
-      setEmbedUrl(res.url);
+      const res = await generateEmbed.mutateAsync({
+        id,
+        expires_in_days: expiresInDays,
+      });
+      setEmbedUrl(embedPageUrl(res.token));
+      setEmbedExpiresAt(res.expires_at);
       setEmbedDialogOpen(true);
     } catch {
       toast({ title: t("builder.toasts.embedError"), variant: "destructive" });
@@ -262,15 +304,40 @@ export default function ReportBuilderPage() {
     try {
       await revokeEmbed.mutateAsync(id);
       setEmbedDialogOpen(false);
+      setEmbedUrl(null);
+      setEmbedExpiresAt(null);
       toast({ title: t("builder.toasts.revoked") });
     } catch {
       toast({ title: t("builder.toasts.revokeError"), variant: "destructive" });
     }
   };
 
+  // ── CSV-export ────────────────────────────────────────────────────────────
+
+  const handleExportCsv = async () => {
+    setExporting(true);
+    try {
+      // Bij unsaved changes eerst opslaan — de export draait de opgeslagen config.
+      if (stateRef.current.dirty) {
+        await updateReport.mutateAsync({ id, name, config });
+        setDirty(false);
+      }
+      const { data } = await api.get<Blob>(`/reports/${id}/export/csv`, {
+        responseType: "blob",
+      });
+      const safe = (name || "rapport").replace(/[^\w-]+/g, "_").slice(0, 64);
+      const today = new Date().toISOString().slice(0, 10);
+      downloadBlob(data, `${safe}-${today}.csv`);
+    } catch {
+      toast({ title: t("builder.toasts.exportError"), variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   // ── Selectors ─────────────────────────────────────────────────────────────
 
-  const selectedBlock = useMemo(
+  const selectedEntry = useMemo(
     () => config.blocks.find((b) => b.id === selectedId) ?? null,
     [config.blocks, selectedId]
   );
@@ -341,7 +408,11 @@ export default function ReportBuilderPage() {
 
         <Button
           onClick={doRun}
-          disabled={runReport.isPending || config.blocks.length === 0}
+          disabled={
+            runReport.isPending ||
+            updateReport.isPending ||
+            config.blocks.length === 0
+          }
           variant="outline"
           className="gap-2"
         >
@@ -364,6 +435,21 @@ export default function ReportBuilderPage() {
             : t("builder.header.save")}
         </Button>
 
+        <Button
+          onClick={handleExportCsv}
+          disabled={exporting || config.blocks.length === 0}
+          variant="outline"
+          className="gap-2"
+          title={t("builder.header.exportCsvTitle")}
+        >
+          {exporting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Download className="h-4 w-4" />
+          )}
+          {t("builder.header.exportCsv")}
+        </Button>
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="gap-2">
@@ -378,11 +464,8 @@ export default function ReportBuilderPage() {
               <>
                 <DropdownMenuItem
                   onClick={() => {
-                    const url =
-                      typeof window !== "undefined"
-                        ? `${window.location.origin}/embed/reports/${report.embed_token}`
-                        : `/embed/reports/${report.embed_token}`;
-                    setEmbedUrl(url);
+                    setEmbedUrl(embedPageUrl(report.embed_token!));
+                    setEmbedExpiresAt(report.embed_expires_at ?? null);
                     setEmbedDialogOpen(true);
                   }}
                 >
@@ -398,10 +481,21 @@ export default function ReportBuilderPage() {
                 </DropdownMenuItem>
               </>
             ) : (
-              <DropdownMenuItem onClick={handleGenerateEmbed}>
-                <LinkIcon className="mr-2 h-3.5 w-3.5" />
-                {t("builder.embedMenu.generate")}
-              </DropdownMenuItem>
+              <>
+                <DropdownMenuItem onClick={() => handleGenerateEmbed(null)}>
+                  <LinkIcon className="mr-2 h-3.5 w-3.5" />
+                  {t("builder.embedMenu.generate")}
+                </DropdownMenuItem>
+                {EMBED_EXPIRY_CHOICES.map((days) => (
+                  <DropdownMenuItem
+                    key={days}
+                    onClick={() => handleGenerateEmbed(days)}
+                  >
+                    <LinkIcon className="mr-2 h-3.5 w-3.5" />
+                    {t("builder.embedMenu.generateExpiry", { days })}
+                  </DropdownMenuItem>
+                ))}
+              </>
             )}
           </DropdownMenuContent>
         </DropdownMenu>
@@ -429,14 +523,14 @@ export default function ReportBuilderPage() {
                 strategy={verticalListSortingStrategy}
               >
                 <div className="mx-auto flex max-w-4xl flex-col gap-4">
-                  {config.blocks.map((block) => (
+                  {config.blocks.map((entry) => (
                     <CanvasBlock
-                      key={block.id}
-                      block={block}
-                      result={results[block.id]}
-                      selected={selectedId === block.id}
-                      onSelect={() => setSelectedId(block.id)}
-                      onDelete={() => handleDeleteBlock(block.id)}
+                      key={entry.id}
+                      entry={entry}
+                      result={results[entry.id]}
+                      selected={selectedId === entry.id}
+                      onSelect={() => setSelectedId(entry.id)}
+                      onDelete={() => handleDeleteBlock(entry.id)}
                     />
                   ))}
                 </div>
@@ -446,16 +540,19 @@ export default function ReportBuilderPage() {
         </main>
 
         <EditPanel
-          block={selectedBlock}
+          entry={selectedEntry}
           metrics={metrics ?? []}
           dimensions={dimensions ?? []}
-          onChangeTitle={(t) =>
-            selectedBlock && handleUpdateTitle(selectedBlock.id, t)
+          onChangeTitle={(title) =>
+            selectedEntry && handleUpdateTitle(selectedEntry.id, title)
           }
-          onChangeConfig={(c) =>
-            selectedBlock && handleUpdateConfig(selectedBlock.id, c)
+          onChangeSize={(size) =>
+            selectedEntry && handleUpdateSize(selectedEntry.id, size)
           }
-          onDelete={() => selectedBlock && handleDeleteBlock(selectedBlock.id)}
+          onChangeBlock={(block) =>
+            selectedEntry && handleUpdateBlock(selectedEntry.id, block)
+          }
+          onDelete={() => selectedEntry && handleDeleteBlock(selectedEntry.id)}
           onClose={() => setSelectedId(null)}
         />
       </div>
@@ -481,22 +578,31 @@ export default function ReportBuilderPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           {embedUrl && (
-            <div className="flex items-center gap-2 rounded-md border bg-zinc-50 px-3 py-2 text-xs dark:bg-zinc-900">
-              <LinkIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-              <code className="flex-1 truncate font-mono">{embedUrl}</code>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 text-xs"
-                onClick={() => {
-                  if (typeof navigator !== "undefined" && navigator.clipboard) {
-                    navigator.clipboard.writeText(embedUrl);
-                    toast({ title: t("builder.toasts.copied") });
-                  }
-                }}
-              >
-                {t("builder.embedDialog.copy")}
-              </Button>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 rounded-md border bg-zinc-50 px-3 py-2 text-xs dark:bg-zinc-900">
+                <LinkIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <code className="flex-1 truncate font-mono">{embedUrl}</code>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs"
+                  onClick={() => {
+                    if (typeof navigator !== "undefined" && navigator.clipboard) {
+                      navigator.clipboard.writeText(embedUrl);
+                      toast({ title: t("builder.toasts.copied") });
+                    }
+                  }}
+                >
+                  {t("builder.embedDialog.copy")}
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                {embedExpiresAt
+                  ? t("builder.embedDialog.expires", {
+                      date: new Date(embedExpiresAt).toLocaleDateString("nl-NL"),
+                    })
+                  : t("builder.embedDialog.neverExpires")}
+              </p>
             </div>
           )}
           <AlertDialogFooter>

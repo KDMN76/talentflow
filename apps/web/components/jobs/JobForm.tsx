@@ -27,7 +27,23 @@ import { JobTemplatePicker } from "@/components/jobs/JobTemplatePicker";
 import { CustomFieldsRenderer } from "@/components/common/CustomFieldsRenderer";
 import { usePaySettings } from "@/hooks/useCompliance";
 import type { CustomFieldValue } from "@/lib/types/atsExtensions";
-import { JobCreateInputSchema } from "@talentflow/contracts";
+import {
+  JOB_SALARY_FREQUENCY_VALUES,
+  JobCreateInputSchema,
+  type JobSalaryFrequency,
+} from "@talentflow/contracts";
+
+/**
+ * Haal de gestructureerde API-error (`{ error: { code, message } }`) uit een
+ * axios-rejectie. Nodig om de 422 PAY_TRANSPARENCY_REQUIRED van de
+ * publiceer-gate met de échte NL-melding te tonen i.p.v. "Request failed
+ * with status code 422".
+ */
+function extractApiError(err: unknown): { code?: string; message?: string } {
+  const resp = (err as { response?: { data?: { error?: { code?: string; message?: string } } } })
+    ?.response;
+  return resp?.data?.error ?? {};
+}
 
 /**
  * Form-schema = shared `JobCreateInputSchema` met form-specifieke layer:
@@ -58,6 +74,10 @@ const buildJobSchema = (t: TFunction) =>
       location: z.string().min(1, t("form.validation.locationRequired")),
       salary_min: salaryPreprocess,
       salary_max: salaryPreprocess,
+      compensation_criteria: z
+        .string()
+        .max(2000, t("form.validation.compensationCriteriaTooLong"))
+        .optional(),
       requirements_raw: z.string().optional(),
     });
 
@@ -92,9 +112,25 @@ export function JobForm({ showTemplatePicker = false }: JobFormProps) {
 
   const watchedMin = watch("salary_min");
   const watchedMax = watch("salary_max");
-  // Na de preprocess in jobSchema zijn deze `number | undefined`.
-  const salaryMissing = watchedMin === undefined || watchedMax === undefined;
-  const showPayWarning = !!paySettings?.enforce_salary_range && salaryMissing;
+  const watchedFrequency = watch("salary_frequency");
+  const enforced = !!paySettings?.pay_transparency_enforced;
+
+  // Prefill de frequentie met de tenant-default (migration 044) zodra de
+  // settings binnen zijn — alleen zolang de gebruiker nog niets koos.
+  useEffect(() => {
+    if (paySettings?.default_salary_frequency && watchedFrequency === undefined) {
+      setValue("salary_frequency", paySettings.default_salary_frequency);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paySettings?.default_salary_frequency]);
+
+  // Na de preprocess in jobSchema zijn min/max `number | undefined`. De
+  // volledige band = min + max + frequentie (EU 2023/970 art. 5).
+  const bandIncomplete =
+    watchedMin === undefined ||
+    watchedMax === undefined ||
+    !watchedFrequency;
+  const showPayWarning = enforced && bandIncomplete;
 
   const handlePickTemplate = (
     jobData: Record<string, unknown>,
@@ -117,10 +153,15 @@ export function JobForm({ showTemplatePicker = false }: JobFormProps) {
     }
   }, [pickerDone, showTemplatePicker]);
 
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async (data: FormData, publish: boolean) => {
+    // Client-side publiceer-gate (server dwingt hetzelfde af met een 422):
+    // een vacature mag alleen live (status 'open') met volledige band.
     if (
-      paySettings?.enforce_salary_range &&
-      (data.salary_min === undefined || data.salary_max === undefined)
+      publish &&
+      enforced &&
+      (data.salary_min === undefined ||
+        data.salary_max === undefined ||
+        !data.salary_frequency)
     ) {
       toast({
         variant: "destructive",
@@ -132,17 +173,40 @@ export function JobForm({ showTemplatePicker = false }: JobFormProps) {
     try {
       // Strip UI-only `requirements_raw` (backend kent het veld niet).
       // `data` is al door Zod gevalideerd via resolver — salary_min/max
-      // zijn nu numbers of undefined, niet null.
+      // zijn nu numbers of undefined, niet null. Lege compensation_criteria
+      // niet meesturen (DB laat het veld dan NULL).
       const { requirements_raw: _requirements_raw, ...createInput } = data;
-      const newJob = await createJob.mutateAsync(createInput);
+      if (!createInput.compensation_criteria?.trim()) {
+        delete createInput.compensation_criteria;
+      }
+      const newJob = await createJob.mutateAsync({
+        ...createInput,
+        status: publish ? "open" : "draft",
+      });
       toast({
-        title: t("form.toasts.created.title"),
-        description: t("form.toasts.created.description", { title: data.title }),
+        title: publish
+          ? t("form.toasts.published.title")
+          : t("form.toasts.created.title"),
+        description: publish
+          ? t("form.toasts.published.description", { title: data.title })
+          : t("form.toasts.created.description", { title: data.title }),
       });
       router.push(`/jobs/${newJob.id}`);
     } catch (err) {
+      const apiError = extractApiError(err);
+      if (apiError.code === "PAY_TRANSPARENCY_REQUIRED") {
+        // Server-side gate (middleware enforcePayTransparency) — toon de
+        // NL-melding met de ontbrekende velden uit de API.
+        toast({
+          variant: "destructive",
+          title: t("form.toasts.salaryRequired.title"),
+          description: apiError.message ?? t("form.toasts.salaryRequired.description"),
+        });
+        return;
+      }
       const message =
-        err instanceof Error ? err.message : t("form.toasts.createError.fallback");
+        apiError.message ??
+        (err instanceof Error ? err.message : t("form.toasts.createError.fallback"));
       toast({
         variant: "destructive",
         title: t("form.toasts.createError.title"),
@@ -164,7 +228,7 @@ export function JobForm({ showTemplatePicker = false }: JobFormProps) {
         </Card>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit((d) => onSubmit(d, false))} className="space-y-6">
         {showPayWarning && (
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/50 dark:bg-amber-950/30">
             <div className="flex items-start gap-3">
@@ -301,19 +365,19 @@ export function JobForm({ showTemplatePicker = false }: JobFormProps) {
           <CardHeader>
             <CardTitle className="text-base flex items-center justify-between">
               {t("form.sections.salary")}
-              {paySettings?.enforce_salary_range && (
+              {enforced && (
                 <span className="text-[10px] font-medium uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 px-1.5 py-0.5 rounded">
                   {t("form.euRequiredBadge")}
                 </span>
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="salary_min">
                   {t("form.salaryMinLabel")}
-                  {paySettings?.enforce_salary_range && " *"}
+                  {enforced && " *"}
                 </Label>
                 <Input
                   id="salary_min"
@@ -327,7 +391,7 @@ export function JobForm({ showTemplatePicker = false }: JobFormProps) {
               <div className="space-y-2">
                 <Label htmlFor="salary_max">
                   {t("form.salaryMaxLabel")}
-                  {paySettings?.enforce_salary_range && " *"}
+                  {enforced && " *"}
                 </Label>
                 <Input
                   id="salary_max"
@@ -338,6 +402,52 @@ export function JobForm({ showTemplatePicker = false }: JobFormProps) {
                   {...register("salary_max")}
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="salary_frequency">
+                  {t("form.salaryFrequencyLabel")}
+                  {enforced && " *"}
+                </Label>
+                <Select
+                  value={watchedFrequency ?? ""}
+                  onValueChange={(v) =>
+                    setValue("salary_frequency", v as JobSalaryFrequency)
+                  }
+                >
+                  <SelectTrigger id="salary_frequency">
+                    <SelectValue
+                      placeholder={t("form.salaryFrequencyPlaceholder")}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {JOB_SALARY_FREQUENCY_VALUES.map((f) => (
+                      <SelectItem key={f} value={f}>
+                        {t(`form.salaryFrequencies.${f}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="compensation_criteria">
+                {t("form.compensationCriteriaLabel")}
+              </Label>
+              <textarea
+                id="compensation_criteria"
+                rows={3}
+                placeholder={t("form.compensationCriteriaPlaceholder")}
+                {...register("compensation_criteria")}
+                className={`flex min-h-[80px] w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 resize-none ${errors.compensation_criteria ? "border-destructive" : ""}`}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                {t("form.compensationCriteriaHelp")}
+              </p>
+              {errors.compensation_criteria && (
+                <p className="text-xs text-destructive">
+                  {errors.compensation_criteria.message}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -364,13 +474,27 @@ export function JobForm({ showTemplatePicker = false }: JobFormProps) {
           </Button>
           <Button
             type="submit"
-            className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 border-0"
+            variant="outline"
             disabled={createJob.isPending}
           >
             {createJob.isPending && (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             )}
             {t("form.submit")}
+          </Button>
+          <Button
+            type="button"
+            onClick={handleSubmit((d) => onSubmit(d, true))}
+            className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 border-0"
+            disabled={createJob.isPending || showPayWarning}
+            title={
+              showPayWarning ? t("form.publishBlockedTooltip") : undefined
+            }
+          >
+            {createJob.isPending && (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            )}
+            {t("form.publish")}
           </Button>
         </div>
       </form>

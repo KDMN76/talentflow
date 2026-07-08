@@ -11,7 +11,7 @@
 
 Dit document beschrijft de **toekomstige werkwijze (to-be)** waarmee IT Proposal recruitment uitvoert nadat **TalentFlow** in productie is genomen. Het is de spiegel van [`As_Is_Proces.md`](As_Is_Proces.md): zelfde bedrijf, zelfde stakeholders, zelfde zes kernprocessen, dezelfde negen-stappen-pipeline van *New Candidates* tot *Probation passed* — maar gedragen door een eigen platform in plaats van een externe SaaS-licentie.
 
-De aanleiding voor de overstap is **niet** ontevredenheid met Manatal. IT Proposal is tevreden over Manatal en de recruiters werken er productief mee. De zakelijke driver is **kostenbesparing bij gelijkblijvende functionaliteit**: de jaarlijkse Manatal-licentie van ~€12.000 kan worden vervangen door een eigen platform met een geschatte run-rate van ~€1.450/jaar (zie sectie 8). TalentFlow positioneert zich uitdrukkelijk als "feature-pariteit met Manatal, lagere TCO" — niet als magisch beter alternatief.
+De aanleiding voor de overstap is **niet** ontevredenheid met Manatal. IT Proposal is tevreden over Manatal en de recruiters werken er productief mee. De zakelijke driver is **kostenbesparing bij gelijkblijvende functionaliteit**: de jaarlijkse Manatal-licentie van ~€7.440 (werkelijke factuur ≈€620/mnd, zie `TCO_ROI.md`) kan worden vervangen door een eigen platform met een geschatte run-rate van ~€1.450/jaar (zie sectie 8). TalentFlow positioneert zich uitdrukkelijk als "feature-pariteit met Manatal, lagere TCO" — niet als magisch beter alternatief.
 
 Voor de negen recruiters (**Angelo**, **Laura Mpiana**, **Lorraine**, **Kasaday**, **Bellinah**, **Reavin**, **Zanda**, **Angel Ha** en **Jerome**) verandert de dagelijkse werkstroom op detailniveau (UI-elementen, sneltoetsen, exacte schermposities), maar de procesvolgorde en de begrippen blijven identiek. De scope blijft bewust beperkt tot de operationele recruitmentstroom; financiele administratie en HR-zaken van IT Proposal zelf vallen erbuiten.
 
@@ -225,7 +225,7 @@ Daaromheen draait een kleine ring van diensten met expliciet **lage marginale ko
 | Custom rapportage | Enterprise Plus tier | Standaard beschikbaar | Geen paywall |
 | Hiring Manager interface | Beperkte mobiele view | Mobiele PWA (Hiring Manager-module) | Mobiel-first feedbacken |
 | GDPR consent + retentie | Deels handmatig | Velden + retentie-cron standaard | Compliance-by-design |
-| Licentiekosten | €1.000/mnd × 12 = €12.000/jr | ~€121/mnd ≈ €1.450/jr | ~€10.550/jr besparing |
+| Licentiekosten | ≈€620/mnd × 12 = ~€7.440/jr | ~€121/mnd ≈ €1.450/jr | ~€5.990/jr besparing |
 | Open API-toegang | Enterprise Plus only | Standaard vanaf dag 1 | Eigen integraties mogelijk |
 | Probation-tracking | Verspreid over Pipeline + Placements | Binnen kanban + Activities | Eén beeld voor recruiter |
 
@@ -257,7 +257,7 @@ De overstap gebeurt **niet big-bang**. Het migratiepad bestaat uit drie fases:
 
 | Voordeel | Kwantificering | Toelichting |
 |---|---|---|
-| Kostenbesparing op licentie | **~€10.550/jaar** | Manatal €12.000/jr → TalentFlow ~€1.450/jr (Anthropic API ~€1.200, Resend ~€216, domein ~€25, hosting gedeeld met KDMN) |
+| Kostenbesparing op licentie | **~€5.990/jaar** | Manatal ~€7.440/jr (werkelijke factuur ≈€620/mnd) → TalentFlow ~€1.450/jr (Anthropic API ~€1.200, Resend ~€216, domein ~€25, hosting gedeeld met KDMN) |
 | Data-soevereiniteit | Kwalitatief | Alle kandidaat- en klantdata op eigen Hetzner-VPS in EU; geen externe vendor met ongelimiteerde dataretentie |
 | Aanpasbaarheid | Kwalitatief | Eigen UI, eigen workflows, eigen rapporten zonder paywall — stage-changes, custom fields en nieuwe modules zijn directe code-wijzigingen |
 | Geen vendor lock-in | Kwalitatief | CSV-export en database-export op elk moment; geen afhankelijkheid van Manatal API V3-schema |
@@ -286,7 +286,7 @@ Eerlijkheid is hier op zijn plaats — TalentFlow is geen gratis lunch.
 
 ## 10. Conclusie
 
-TalentFlow vervangt Manatal niet **omdat** Manatal slecht is, maar **omdat** dezelfde operatie binnen IT Proposal jaarlijks ~€10.550 goedkoper kan draaien zonder functionele regressie. De negen-stappen-pipeline blijft, de stakeholders blijven, de werkstroom blijft herkenbaar voor de negen recruiters. Wat verandert is de leverancier, het kostenmodel, en de mate waarin IT Proposal eigen aanpassingen kan doen zonder vendor-paywall.
+TalentFlow vervangt Manatal niet **omdat** Manatal slecht is, maar **omdat** dezelfde operatie binnen IT Proposal jaarlijks ~€5.990 goedkoper kan draaien zonder functionele regressie. De negen-stappen-pipeline blijft, de stakeholders blijven, de werkstroom blijft herkenbaar voor de negen recruiters. Wat verandert is de leverancier, het kostenmodel, en de mate waarin IT Proposal eigen aanpassingen kan doen zonder vendor-paywall.
 
 De business-case staat of valt met drie randvoorwaarden: (1) feature-pariteit op P0 (kandidaten, jobs, pipeline, career page, e-mail, GDPR, AI-scoring, semantisch zoeken) moet aantoonbaar geleverd zijn voor cutover, (2) het migratiepad moet zonder verlies van kandidaten, skills of consent-status verlopen, en (3) bus-factor-mitigatie (documentatie, runbooks, backup-restore-procedure) moet er staan voordat Manatal wordt opgezegd.
 

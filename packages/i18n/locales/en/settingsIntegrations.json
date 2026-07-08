@@ -1,0 +1,90 @@
+{
+  "header": {
+    "title": "Integrations — connect your mailbox to TalentFlow",
+    "description": "Connect Gmail or Outlook to send emails directly from TalentFlow and automatically read in replies.",
+    "refresh": "Refresh"
+  },
+  "stats": {
+    "connectedLabel": "Connected mailboxes",
+    "connectedEmpty": "No mailboxes connected yet",
+    "connectedActive": "Active and ready to send",
+    "syncedLabel": "Emails synced (24h)",
+    "syncedHint": "Incoming + outgoing emails via connected accounts"
+  },
+  "errorState": {
+    "title": "Integrations could not be loaded",
+    "description": "Check your connection and try again."
+  },
+  "errorReasons": {
+    "access_denied": "Permission denied. Try again and allow the requested permissions.",
+    "invalid_state": "OAuth session expired. Start the connection again.",
+    "token_exchange_failed": "Token exchange with the provider failed.",
+    "scope_missing": "Not all required permissions were granted.",
+    "unknown": "Something went wrong while connecting."
+  },
+  "providers": {
+    "gmailDescription": "Connect your Gmail to send emails directly from TalentFlow and automatically read in replies.",
+    "outlookDescription": "Connect your Microsoft 365 / Outlook mailbox to correspond from TalentFlow."
+  },
+  "toasts": {
+    "connected": {
+      "title": "Mailbox connected",
+      "description": "Your email account is connected to TalentFlow and can now be used for sending."
+    },
+    "connectFailed": {
+      "title": "Connection failed"
+    },
+    "oauthFailed": {
+      "title": "Could not start OAuth",
+      "description": "Try again later or contact support."
+    },
+    "disconnected": {
+      "title": "Mailbox disconnected",
+      "description": "{{email}} is no longer connected."
+    },
+    "disconnectFailed": {
+      "title": "Disconnect failed",
+      "description": "Try again."
+    }
+  },
+  "disclosure": {
+    "title": "We only get access to send + read emails",
+    "description": "No calendar, no contacts, no Drive files. Tokens are stored encrypted and you can revoke them at any time.",
+    "details": "Details"
+  },
+  "scopes": {
+    "gmailTitle": "Gmail scopes",
+    "outlookTitle": "Outlook scopes",
+    "gmailSend": "— send on behalf of your account",
+    "gmailReadonly": "— read-only to link replies from candidates",
+    "outlookSend": "— send on behalf of your account",
+    "outlookRead": "— read-only to link replies from candidates",
+    "footer": "Tokens are stored encrypted (AES-256-GCM) and never shared with third parties. On \"Disconnect\" we remove the token immediately from our database."
+  },
+  "disconnectDialog": {
+    "title": "Disconnect mailbox?",
+    "body": "will be disconnected. Ongoing campaigns via this account will be paused. You can reconnect later.",
+    "cancel": "Cancel",
+    "confirm": "Disconnect"
+  },
+  "providerCard": {
+    "limit": "Limit: {{limit}} emails/hour",
+    "connectedBadge_one": "{{count}} connected",
+    "connectedBadge_other": "{{count}} connected",
+    "loading": "Loading…",
+    "emptyAccount": "No {{name}} account connected yet.",
+    "lastSync": "Last sync:",
+    "notYet": "not yet",
+    "disconnect": "Disconnect",
+    "connectButton": "Connect {{name}} account"
+  },
+  "relative": {
+    "justNow": "just now",
+    "minutesAgo_one": "{{count}} min ago",
+    "minutesAgo_other": "{{count}} min ago",
+    "hoursAgo_one": "{{count}} hour ago",
+    "hoursAgo_other": "{{count}} hours ago",
+    "daysAgo_one": "{{count}} day ago",
+    "daysAgo_other": "{{count}} days ago"
+  }
+}

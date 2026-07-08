@@ -6,6 +6,7 @@ import {
 } from '../pipeline/pipeline.service';
 import { emitWorkflowEvent } from '../workflows/workflowEmitter';
 import { queueEmbedding } from '../matching/matchingEmitter';
+import { autoPostJobToBoards } from '../job-boards/autoPost.service';
 import { logAudit, type AuditContext } from '../../lib/audit';
 import { AuditActions } from '../../lib/auditActions';
 
@@ -51,6 +52,13 @@ const MUTABLE_JOB_COLUMNS = [
   'salary_frequency',
   'required_skills',
   'nice_to_have_skills',
+
+  // Pay Transparency (021_pay_transparency_dei.sql) — `salary_band_disclosed`
+  // is GENERATED en bewust NIET muteerbaar; deze twee wél. Zonder deze
+  // entries werden compensation_criteria/pay_transparency_required door
+  // create/update stilletjes gedropt terwijl de contracts ze accepteren.
+  'pay_transparency_required',
+  'compensation_criteria',
 ] as const;
 
 type MutableJobColumn = (typeof MUTABLE_JOB_COLUMNS)[number];
@@ -203,6 +211,10 @@ export interface CreateJobInput {
   required_skills?: string[] | null;
   nice_to_have_skills?: string[] | null;
 
+  // Pay Transparency (021)
+  pay_transparency_required?: boolean | null;
+  compensation_criteria?: string | null;
+
   /**
    * Optional. Defaults to the system "Bureau Pipeline" template
    * (resolved by `resolvePipelineTemplateId`).
@@ -327,6 +339,13 @@ export async function createJob(
   // Slice 4: queue embedding-generatie zodat matching direct werkt na create.
   await queueEmbedding(tenantId, 'job', job.id);
 
+  // Auto-post: een vacature die direct als 'open' wordt aangemaakt is óók een
+  // publicatie. De pay-transparency-gate (enforcePayTransparency middleware)
+  // is dan al gepasseerd, dus de band is compleet. Faalt nooit hard.
+  if (job.status === 'open') {
+    await autoPostJobToBoards(tenantId, job.id, userId);
+  }
+
   return job;
 }
 
@@ -406,7 +425,7 @@ export async function updateJob(
   data: UpdateJobInput,
   ctx: AuditContext = {}
 ) {
-  const { job, becameFilled } = await withTenant(tenantId, async (client) => {
+  const { job, becameFilled, becameOpen } = await withTenant(tenantId, async (client) => {
     // Volledig before-snapshot voor audit; we hadden alleen `id, status` —
     // dat is niet genoeg voor een diff in audit_events.
     const { rows: [existing] } = await client.query(
@@ -452,6 +471,11 @@ export async function updateJob(
     const becameFilled =
       data.status === 'filled' && existing.status !== 'filled';
 
+    // Detect status → 'open' transition (publiceren) voor auto-post. De
+    // pay-transparency-gate zit vóór deze service (enforcePayTransparency in
+    // jobs.router), dus bij het bereiken van dit punt is de band compleet.
+    const becameOpen = data.status === 'open' && existing.status !== 'open';
+
     // Use 'filled' actie wanneer de status daarheen kantelt — geeft compliance
     // duidelijker signaal dan de generieke 'updated'. Anders: gewoon updated.
     await logAudit(
@@ -468,7 +492,7 @@ export async function updateJob(
       ctx
     );
 
-    return { job, becameFilled };
+    return { job, becameFilled, becameOpen };
   });
 
   if (becameFilled) {
@@ -476,6 +500,12 @@ export async function updateJob(
       job,
       user_id: userId,
     });
+  }
+
+  // Auto-post bij publiceren (opt-in per tenant). Post-commit zodat alleen
+  // daadwerkelijk gepersisteerde publicaties worden gedistribueerd.
+  if (becameOpen) {
+    await autoPostJobToBoards(tenantId, job.id, userId);
   }
 
   // Slice 4: regenereer embedding na een update — bepalen welke velden

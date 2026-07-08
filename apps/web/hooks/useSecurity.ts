@@ -22,6 +22,7 @@ import type {
   SsoTestResult,
   TwoFactorStatus,
   TwoFactorSetupChallenge,
+  TwoFactorTenantPolicy,
   Role,
   CreateRoleInput,
   UpdateRoleInput,
@@ -146,11 +147,52 @@ export function useVerify2fa() {
 export function useDisable2fa() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ code }: { code: string }): Promise<{ ok: true }> => {
-      await api.post("/auth/2fa/disable", { code });
+    mutationFn: async ({
+      code,
+      password,
+    }: {
+      code: string;
+      password: string;
+    }): Promise<{ ok: true }> => {
+      await api.post("/auth/2fa/disable", { code, password });
       return { ok: true };
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["security", "2fa"] }),
+  });
+}
+
+export function useTwoFactorPolicy(enabled = true) {
+  return useQuery({
+    queryKey: ["security", "2fa", "policy"],
+    enabled,
+    queryFn: async (): Promise<TwoFactorTenantPolicy> => {
+      const { data } = await api.get<TwoFactorTenantPolicy>("/auth/2fa/policy");
+      return data;
+    },
+  });
+}
+
+export function useUpdateTwoFactorPolicy() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      patch: Partial<
+        Pick<
+          TwoFactorTenantPolicy,
+          "required_for_all" | "required_for_roles" | "grace_period_days"
+        >
+      >
+    ): Promise<TwoFactorTenantPolicy> => {
+      const { data } = await api.put<TwoFactorTenantPolicy>(
+        "/auth/2fa/policy",
+        patch
+      );
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["security", "2fa"] });
+      qc.invalidateQueries({ queryKey: ["security", "settings"] });
+    },
   });
 }
 
@@ -266,11 +308,17 @@ export function useAssignRole() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: AssignRoleInput): Promise<RoleAssignment> => {
-      const { data } = await api.post<RoleAssignment>(
+      // Backend-zod (roles.controller assignBodySchema) eist `role_key`
+      // (verplicht) + optioneel `expires_at` als non-null string. `null`
+      // meesturen faalt de validatie → laat 'm weg als er geen datum is.
+      const { data } = await api.post<{ data: RoleAssignment }>(
         `/admin/users/${input.user_id}/roles`,
-        { role_id: input.role_id, expires_at: input.expires_at ?? null }
+        {
+          role_key: input.role_key,
+          ...(input.expires_at ? { expires_at: input.expires_at } : {}),
+        }
       );
-      return data;
+      return data.data;
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["security", "user-roles", data.user_id] });

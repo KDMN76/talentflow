@@ -11,6 +11,7 @@ import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import * as skillsService from './skills.service';
 import * as trendingService from './trending.service';
+import { auditCtxFromReq } from '../../lib/audit';
 
 // ────────────────────────────────────────────────────────────────────────────
 // ESCO search: GET /api/skills/esco
@@ -70,6 +71,45 @@ export async function syncCandidateEsco(
       req.params.id
     );
     res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// PATCH /api/candidates/:id/skill-profile — vervangt het skill-profiel met de
+// door de editor aangeleverde lijst. Zod valideert de shape; extra velden uit
+// de frontend (id, esco_uri, category) worden stilzwijgend gestript.
+export const updateCandidateProfileBody = z.object({
+  skills: z
+    .array(
+      z.object({
+        esco_id: z.string().min(1),
+        preferred_label: z.string().min(1).max(500),
+        proficiency: z.number().int().min(1).max(10),
+        confidence: z.number().min(0).max(1),
+        source: z
+          .enum(['ai_extracted', 'manual', 'esco_match', 'embedding_match'])
+          .optional(),
+      })
+    )
+    .max(500),
+});
+
+export async function updateCandidateProfile(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const body = updateCandidateProfileBody.parse(req.body);
+    const profile = await skillsService.updateCandidateSkillProfile(
+      req.user!.tenantId,
+      req.params.id,
+      req.user!.userId,
+      body.skills,
+      auditCtxFromReq(req)
+    );
+    res.json(profile);
   } catch (err) {
     next(err);
   }

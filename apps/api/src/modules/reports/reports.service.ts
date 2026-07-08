@@ -56,6 +56,7 @@ export interface Report {
   is_shared: boolean;
   embed_token: string | null;
   embed_enabled: boolean;
+  embed_expires_at: string | null;
   schedule: unknown | null;
   last_run_at: string | null;
   deleted_at: string | null;
@@ -115,6 +116,7 @@ function rowToReport(row: Record<string, unknown>): Report {
     is_shared: Boolean(row.is_shared),
     embed_token: (row.embed_token as string | null) ?? null,
     embed_enabled: Boolean(row.embed_enabled),
+    embed_expires_at: (row.embed_expires_at as string | null) ?? null,
     schedule: parseJson(row.schedule),
     last_run_at: (row.last_run_at as string | null) ?? null,
     deleted_at: (row.deleted_at as string | null) ?? null,
@@ -444,6 +446,9 @@ export async function runReport(
     const report = rowToReport(reportRow);
 
     // 1) Cache-check — recente succesvolle run met identieke parameters?
+    // Extra guard: de cached run moet NA de laatste config-wijziging van het
+    // rapport gedraaid zijn (ran_at >= updated_at), anders serveren we
+    // resultaten van een oude config na een edit + save.
     if (!parameters?.no_cache) {
       const cacheKey = paramsCacheKey(parameters);
       const ttlSeconds = Math.floor(CACHE_TTL_MS / 1000);
@@ -455,10 +460,11 @@ export async function runReport(
            AND status = 'success'
            AND result_data IS NOT NULL
            AND ran_at > now() - ($3 || ' seconds')::interval
+           AND ran_at >= $5
            AND COALESCE(parameters::text, 'null') = $4
          ORDER BY ran_at DESC
          LIMIT 1`,
-        [tenantId, reportId, ttlSeconds, cacheKey]
+        [tenantId, reportId, ttlSeconds, cacheKey, reportRow.updated_at]
       );
       if (cacheRows.length > 0) {
         const cached = cacheRows[0];
@@ -625,17 +631,27 @@ export async function generateEmbedToken(
   reportId: string,
   userId: string | null,
   baseUrl: string,
-  ctx: AuditContext = {}
-): Promise<{ token: string; url: string }> {
+  ctx: AuditContext = {},
+  /**
+   * Geldigheid in dagen. null/undefined = geen expiry (token blijft geldig
+   * tot handmatige revoke). Waarde wordt in de controller op 1..365 geclamped.
+   */
+  expiresInDays?: number | null
+): Promise<{ token: string; url: string; expires_at: string | null }> {
   return withTenant(tenantId, async (client) => {
     await fetchReportRow(client, tenantId, reportId);
 
     const token = generateRandomToken();
+    const expiresAt =
+      expiresInDays && expiresInDays > 0
+        ? new Date(Date.now() + expiresInDays * 86400000)
+        : null;
     await client.query(
       `UPDATE reports
-       SET embed_token = $1, embed_enabled = true, updated_at = now()
+       SET embed_token = $1, embed_enabled = true, embed_expires_at = $4,
+           updated_at = now()
        WHERE id = $2 AND tenant_id = $3`,
-      [token, reportId, tenantId]
+      [token, reportId, tenantId, expiresAt]
     );
     await logAudit(
       client,
@@ -644,6 +660,7 @@ export async function generateEmbedToken(
         action: AuditActions.REPORT_EMBED_ENABLED,
         entityType: 'report',
         entityId: reportId,
+        after: { expires_at: expiresAt ? expiresAt.toISOString() : null },
         userId,
       },
       ctx
@@ -652,6 +669,7 @@ export async function generateEmbedToken(
     return {
       token,
       url: `${cleanBase}/api/reports/embed/${token}/run`,
+      expires_at: expiresAt ? expiresAt.toISOString() : null,
     };
   });
 }
@@ -666,7 +684,8 @@ export async function revokeEmbedToken(
     await fetchReportRow(client, tenantId, reportId);
     await client.query(
       `UPDATE reports
-       SET embed_token = NULL, embed_enabled = false, updated_at = now()
+       SET embed_token = NULL, embed_enabled = false, embed_expires_at = NULL,
+           updated_at = now()
        WHERE id = $1 AND tenant_id = $2`,
       [reportId, tenantId]
     );
@@ -694,6 +713,7 @@ export async function revokeEmbedToken(
  *   - 64-char hex-token (256 bits entropie) met UNIQUE-index — guessing is
  *     statistisch onmogelijk.
  *   - embed_enabled moet TRUE zijn, anders 404.
+ *   - embed_expires_at (indien gezet) moet in de toekomst liggen, anders 404.
  *   - Reports met deleted_at gezet zijn niet vindbaar.
  *   - Eventuele rate-limit op token-lookup gebeurt op router-niveau (apiRateLimit).
  */
@@ -708,6 +728,7 @@ export async function getReportFromEmbedToken(
       `SELECT * FROM reports
        WHERE embed_token = $1
          AND embed_enabled = true
+         AND (embed_expires_at IS NULL OR embed_expires_at > now())
          AND deleted_at IS NULL`,
       [token]
     );

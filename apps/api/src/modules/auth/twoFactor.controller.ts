@@ -14,7 +14,7 @@ import * as authService from './auth.service';
 import { AppError } from '../../middleware/errorHandler';
 import { auditCtxFromReq, logAudit } from '../../lib/audit';
 import { AuditActions } from '../../lib/auditActions';
-import { withoutTenant } from '../../db/pool';
+import { withoutTenant, withTenant } from '../../db/pool';
 
 const REFRESH_COOKIE = 'refreshToken';
 const COOKIE_OPTIONS = {
@@ -121,40 +121,24 @@ export async function verify(req: Request, res: Response, next: NextFunction): P
       ctx
     );
 
-    if (usedBackup) {
-      // Audit-extra: backup-code used (de service logt 'm ook al in twoFactor.service)
-      await withoutTenant(async (client) => {
-        await client.query(`SET LOCAL app.tenant_id = '${partial.tenantId}'`);
-        await logAudit(
-          client,
-          partial.tenantId,
-          {
-            action: AuditActions.USER_2FA_VERIFIED,
-            entityType: 'user',
-            entityId: partial.userId,
-            after: { method: 'backup_code' },
-            userId: partial.userId,
-          },
-          ctx
-        );
-      });
-    } else {
-      await withoutTenant(async (client) => {
-        await client.query(`SET LOCAL app.tenant_id = '${partial.tenantId}'`);
-        await logAudit(
-          client,
-          partial.tenantId,
-          {
-            action: AuditActions.USER_2FA_VERIFIED,
-            entityType: 'user',
-            entityId: partial.userId,
-            after: { method: 'totp' },
-            userId: partial.userId,
-          },
-          ctx
-        );
-      });
-    }
+    // Audit-extra: 2fa.verified (de service logt de backup-code-consumptie
+    // ook al). withTenant zet de tenant-context binnen een transactie, zodat
+    // de audit-INSERT ook na de RLS-cutover overleeft en de UUID-guard klopt
+    // — een losse `SET LOCAL` buiten een transactie is een no-op.
+    await withTenant(partial.tenantId, (client) =>
+      logAudit(
+        client,
+        partial.tenantId,
+        {
+          action: AuditActions.USER_2FA_VERIFIED,
+          entityType: 'user',
+          entityId: partial.userId,
+          after: { method: usedBackup ? 'backup_code' : 'totp' },
+          userId: partial.userId,
+        },
+        ctx
+      )
+    );
 
     res.cookie(REFRESH_COOKIE, session.refreshToken, COOKIE_OPTIONS);
     res.json({
@@ -167,14 +151,19 @@ export async function verify(req: Request, res: Response, next: NextFunction): P
 }
 
 // ── /api/auth/2fa/disable ───────────────────────────────────────────────────
+// Vereist wachtwoord + tweede factor (TOTP of backup-code) — een gestolen
+// sessie alleen is niet genoeg om 2FA uit te schakelen.
 
-const disableSchema = z.object({ code: z.string().min(6).max(10) });
+const disableSchema = z.object({
+  code: z.string().min(6).max(10),
+  password: z.string().min(1),
+});
 
 export async function disable(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     if (!req.user) throw new AppError(401, 'UNAUTHORIZED', 'Authenticatie vereist');
-    const { code } = disableSchema.parse(req.body);
-    await twoFa.disable2fa(req.user.userId, code, auditCtxFromReq(req));
+    const { code, password } = disableSchema.parse(req.body);
+    await twoFa.disable2fa(req.user.userId, code, password, auditCtxFromReq(req));
     res.json({ disabled: true });
   } catch (err) {
     next(err);
@@ -183,10 +172,12 @@ export async function disable(req: Request, res: Response, next: NextFunction): 
 
 // ── /api/auth/2fa/backup-codes/regenerate ───────────────────────────────────
 
+const regenerateSchema = z.object({ code: z.string().min(6).max(10) });
+
 export async function regenerateBackupCodes(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     if (!req.user) throw new AppError(401, 'UNAUTHORIZED', 'Authenticatie vereist');
-    const { code } = disableSchema.parse(req.body);
+    const { code } = regenerateSchema.parse(req.body);
     const codes = await twoFa.regenerateBackupCodes(
       req.user.userId,
       code,

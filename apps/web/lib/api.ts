@@ -41,6 +41,25 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // 428 Precondition Required: tenant-policy verplicht 2FA en de user is
+    // (buiten de grace-period) nog niet enrolled. Stuur naar de setup-
+    // pagina — de 2FA-endpoints zelf zijn server-side gewhitelist zodat de
+    // wizard daar gewoon werkt.
+    if (
+      error.response?.status === 428 &&
+      error.response.data?.error?.code === "2FA_REQUIRED"
+    ) {
+      if (
+        typeof window !== "undefined" &&
+        !window.location.pathname.startsWith("/settings/security/2fa")
+      ) {
+        window.location.href =
+          error.response.data.error.details?.setup_url ??
+          "/settings/security/2fa";
+      }
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {

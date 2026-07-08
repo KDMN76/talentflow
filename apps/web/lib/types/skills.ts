@@ -131,14 +131,57 @@ export interface DemandSupplyResponse {
 
 // ─── Pay Transparency settings ───────────────────────────────────────────────
 
+export type SalaryFrequency = "monthly" | "annual" | "hourly";
+
+/**
+ * 1-op-1 met de API-shape van GET/PATCH /compliance/pay-settings
+ * (apps/api payTransparency.service.ts). De eerdere frontend-benamingen
+ * (enforce_salary_range e.d.) bestonden nooit backend-side — de settings-
+ * pagina schreef daardoor no-op-patches.
+ */
 export interface TenantPaySettings {
   tenant_id: string;
-  enforce_salary_range: boolean;
-  forbid_current_salary_question: boolean;
-  reporting_threshold_employees: number;
+  pay_transparency_enforced: boolean;
+  prohibit_current_salary_questions: boolean;
+  reporting_threshold: number;
   default_currency: string;
-  allow_anonymous_benchmark: boolean;
+  default_salary_frequency: SalaryFrequency;
+  benchmark_data_consent: boolean;
   updated_at: string;
+  created_at: string;
+}
+
+// ─── Pay Transparency rapport (EU 2023/970 art. 5) ───────────────────────────
+
+export type PayTransparencyMissingField =
+  | "salary_min"
+  | "salary_max"
+  | "salary_frequency";
+
+export interface PayTransparencyActionItem {
+  id: string;
+  title: string;
+  job_reference: string | null;
+  created_at: string;
+  pay_transparency_required: boolean;
+  missing: PayTransparencyMissingField[];
+}
+
+export interface PayTransparencyReport {
+  generated_at: string;
+  enforced: boolean;
+  default_salary_frequency: SalaryFrequency;
+  totals: {
+    open: number;
+    open_with_band: number;
+    open_without_band: number;
+    open_without_frequency: number;
+    draft: number;
+    draft_with_band: number;
+    /** % open vacatures met volledige salarisband; 100 bij 0 open vacatures. */
+    pct_open_with_band: number;
+  };
+  action_list: PayTransparencyActionItem[];
 }
 
 // ─── Pay Equity report ───────────────────────────────────────────────────────

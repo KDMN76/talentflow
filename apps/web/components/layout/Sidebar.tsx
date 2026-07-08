@@ -43,11 +43,15 @@ import { useState, type ComponentType } from "react";
 import { cn } from "@/lib/utils";
 import { useReactivationStats } from "@/hooks/useReactivation";
 import { useInboxThreads } from "@/hooks/useInbox";
+import { useTenantBranding } from "@/hooks/useTenantBranding";
+import { useModuleFlags, type ModuleKey } from "@/hooks/useTenantModules";
 
 interface NavSubItem {
   label: string;
   href: string;
   icon: ComponentType<{ className?: string; style?: React.CSSProperties }>;
+  /** Module-flag die dit item zichtbaar maakt (undefined = kern, altijd tonen). */
+  module?: ModuleKey;
 }
 
 interface NavItem {
@@ -58,6 +62,8 @@ interface NavItem {
   children?: NavSubItem[];
   /** Optional badge key — wired via custom data sources. */
   badge?: "reactivation" | "inbox_unread";
+  /** Module-flag die dit item zichtbaar maakt (undefined = kern, altijd tonen). */
+  module?: ModuleKey;
 }
 
 // Recruiter-vriendelijk menu: weinig items bovenaan (dagelijks werk), de rest in
@@ -73,7 +79,7 @@ const NAV_PRIMARY: NavItem[] = [
     children: [
       { label: "AI Generator", href: "/jobs/new/ai-generator", icon: Wand2 },
       { label: "AI Drafts", href: "/jobs/jd-drafts", icon: Sparkles },
-      { label: "Distributie", href: "/job-boards", icon: Megaphone },
+      { label: "Distributie", href: "/job-boards", icon: Megaphone, module: "job_boards" },
     ],
   },
   { label: "Klanten", href: "/crm", icon: Building2 },
@@ -88,7 +94,7 @@ const NAV_RECRUITMENT: NavItem[] = [
     icon: Calendar,
     children: [{ label: "Interview kits", href: "/interview-kits", icon: ClipboardList }],
   },
-  { label: "Sourcing", href: "/sourcing-agent", icon: Bot },
+  { label: "Sourcing", href: "/sourcing-agent", icon: Bot, module: "sourcing_ai" },
   {
     label: "Reactivatie",
     href: "/matching/reactivation",
@@ -99,6 +105,7 @@ const NAV_RECRUITMENT: NavItem[] = [
     label: "Benaderen",
     href: "/outreach",
     icon: Send,
+    module: "outreach",
     children: [
       { label: "Inbox", href: "/outreach/inbox", icon: Inbox },
       { label: "Opvolgreeks", href: "/outreach/sequences", icon: Workflow },
@@ -109,6 +116,7 @@ const NAV_RECRUITMENT: NavItem[] = [
     label: "Contracten",
     href: "/contracts",
     icon: FileSignature,
+    module: "recruit_to_cash",
     children: [
       { label: "Overzicht", href: "/contracts", icon: FileSignature },
       { label: "Uren", href: "/timesheets", icon: Clock },
@@ -119,8 +127,8 @@ const NAV_RECRUITMENT: NavItem[] = [
 ];
 
 const NAV_CLIENTS: NavItem[] = [
-  { label: "Career-pagina's", href: "/career-pages", icon: Globe },
-  { label: "Klantportaal", href: "/portal-links", icon: Share2 },
+  { label: "Career-pagina's", href: "/career-pages", icon: Globe, module: "career_pages" },
+  { label: "Klantportaal", href: "/portal-links", icon: Share2, module: "portals" },
   { label: "Beoordelaars", href: "/hm", icon: Smartphone },
 ];
 
@@ -129,6 +137,7 @@ const NAV_INSIGHTS: NavItem[] = [
     label: "Rapporten",
     href: "/analytics",
     icon: BarChart3,
+    module: "reports_analytics",
     children: [
       { label: "Cost-per-hire", href: "/analytics/cost-per-hire", icon: Coins },
       { label: "Bureau-overzicht", href: "/analytics/back-office", icon: PieChart },
@@ -144,7 +153,11 @@ const NAV_SYSTEM: NavItem[] = [
     label: "AVG / Privacy",
     href: "/gdpr",
     icon: Shield,
-    children: [{ label: "WORM-audit", href: "/compliance/audit-events", icon: History }],
+    module: "compliance_plus",
+    children: [
+      { label: "AI-toezicht", href: "/compliance/ai-oversight", icon: Bot },
+      { label: "WORM-audit", href: "/compliance/audit-events", icon: History },
+    ],
   },
   {
     label: "API & integraties",
@@ -180,7 +193,40 @@ export function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname();
   const { data: reactivationStats } = useReactivationStats();
   const { data: unreadThreads } = useInboxThreads({ unread: true });
+  const { data: branding } = useTenantBranding();
+  const moduleFlags = useModuleFlags();
   const inboxUnread = (unreadThreads ?? []).length;
+
+  // Module-zichtbaarheid: items zonder `module` zijn kern en blijven altijd
+  // staan. Zolang de flags nog laden (of de call faalt) tonen we ALLES —
+  // nette fallback zonder flikkerende menu-items.
+  const isModuleVisible = (module?: ModuleKey) =>
+    !module || !moduleFlags || moduleFlags[module] !== false;
+
+  const filterByModules = (items: NavItem[]): NavItem[] =>
+    items
+      .filter((item) => isModuleVisible(item.module))
+      .map((item) =>
+        item.children
+          ? {
+              ...item,
+              children: item.children.filter((c) => isModuleVisible(c.module)),
+            }
+          : item
+      );
+
+  const visiblePrimary = filterByModules(NAV_PRIMARY);
+  const visibleSections = NAV_SECTIONS.map((section) => ({
+    ...section,
+    items: filterByModules(section.items),
+  })).filter((section) => section.items.length > 0);
+
+  // White-label: tenant-logo + merknaam met TalentFlow-fallback. De accent-
+  // tegel gebruikt de brand-accent-tokens (fallback = indigo, zie globals.css);
+  // zonder eigen accentkleur behouden we de vertrouwde indigo→paars-gradient.
+  const brandName = branding?.brand_name?.trim() || "TalentFlow";
+  const logoUrl = branding?.logo_url ?? null;
+  const hasAccent = !!branding?.accent_color;
 
   // Welke item-children staan open (auto-open als een child actief is).
   const initiallyExpanded = allNavItems
@@ -356,23 +402,44 @@ export function Sidebar({ onClose }: SidebarProps) {
 
   return (
     <aside className="flex h-full w-64 flex-col bg-white dark:bg-zinc-900 border-r border-border">
-      {/* Logo */}
+      {/* Logo — tenant-logo (upload of URL) met TalentFlow-fallback */}
       <div className="flex h-16 items-center gap-2.5 px-5 border-b border-border">
-        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-sm shadow-indigo-200">
-          <Zap className="h-4 w-4 text-white" />
-        </div>
-        <span className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-          TalentFlow
+        {logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={logoUrl}
+            alt={brandName}
+            className="h-8 w-auto max-w-[10rem] shrink-0 object-contain"
+          />
+        ) : (
+          <div
+            className={cn(
+              "h-8 w-8 rounded-lg flex items-center justify-center shadow-sm",
+              hasAccent
+                ? "bg-brand-accent"
+                : "bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-200"
+            )}
+          >
+            <Zap
+              className={cn(
+                "h-4 w-4",
+                hasAccent ? "text-brand-accent-foreground" : "text-white"
+              )}
+            />
+          </div>
+        )}
+        <span className="truncate text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+          {brandName}
         </span>
       </div>
 
       {/* Navigatie */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         {/* Dagelijks — altijd zichtbaar */}
-        <div className="mb-4 space-y-1">{NAV_PRIMARY.map(renderItem)}</div>
+        <div className="mb-4 space-y-1">{visiblePrimary.map(renderItem)}</div>
 
         {/* Inklapbare secties (standaard dicht, behalve de actieve) */}
-        {NAV_SECTIONS.map((section) => {
+        {visibleSections.map((section) => {
           const open = openSections.includes(section.title);
           return (
             <div key={section.title} className="mb-1.5">

@@ -77,9 +77,25 @@
     "copyUrl": "Copy URL",
     "tabs": {
       "settings": "Settings",
+      "feedback": "Feedback",
       "activity": "Activity",
       "domain": "Domain",
       "token": "Token"
+    },
+    "feedback": {
+      "title": "Client feedback",
+      "description": "Reviews and comments the client submitted through the portal.",
+      "emptyTitle": "No feedback yet",
+      "emptyDescription": "As soon as your client reviews candidates or posts a comment, it will show up here.",
+      "generalComment": "General comment",
+      "unknownCandidate": "Unknown candidate",
+      "byClient": "by {{name}}",
+      "actions": {
+        "approved": "Suitable",
+        "rejected": "Not suitable",
+        "doubt": "Unsure",
+        "commented": "Comment"
+      }
     },
     "permissions": {
       "title": "Permissions",

@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import type { FunnelBlockConfig, FunnelResult } from "@/lib/types/reports";
+import type { FunnelBlock as FunnelBlockConfig, FunnelResult } from "@/lib/types/reports";
 
 export interface FunnelBlockProps {
   title?: string;
@@ -12,11 +12,18 @@ export interface FunnelBlockProps {
 
 /**
  * Vertical funnel — each stage is a horizontal bar whose width is proportional
- * to the count relative to the first stage. Conversion-% appears between bars.
+ * to the count relative to the first stage. Step-conversion (vs. previous
+ * stage) appears between bars; the backend's conversion_pct is relative to the
+ * FIRST stage and is shown as the overall number at the bottom.
  */
 export function FunnelBlock({ title, config, result, placeholder }: FunnelBlockProps) {
   const renderStages = result?.stages ?? [];
-  const max = renderStages[0]?.count ?? 1;
+  const max = renderStages[0]?.count || 1;
+  const lastStage = renderStages[renderStages.length - 1];
+  const overallPct =
+    lastStage && renderStages[0] && renderStages[0].count > 0
+      ? (lastStage.count / renderStages[0].count) * 100
+      : null;
 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
@@ -37,25 +44,32 @@ export function FunnelBlock({ title, config, result, placeholder }: FunnelBlockP
             </div>
           ))}
         </div>
+      ) : renderStages.length === 0 ? (
+        <div className="p-6 text-center text-sm text-muted-foreground">
+          Geen data in de gekozen periode
+        </div>
       ) : (
         <div className="space-y-1">
           {renderStages.map((stage, i) => {
             const pct = (stage.count / max) * 100;
+            const prev = i > 0 ? renderStages[i - 1] : null;
+            const stepConversion =
+              prev && prev.count > 0 ? stage.count / prev.count : null;
             return (
               <div key={i}>
-                {i > 0 && stage.conversion !== null && (
+                {i > 0 && stepConversion !== null && (
                   <div className="flex justify-center py-1">
                     <span
                       className={cn(
                         "rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                        stage.conversion >= 0.5
+                        stepConversion >= 0.5
                           ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400"
-                          : stage.conversion >= 0.2
+                          : stepConversion >= 0.2
                           ? "bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400"
                           : "bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-400"
                       )}
                     >
-                      ↓ {(stage.conversion * 100).toFixed(0)}%
+                      ↓ {(stepConversion * 100).toFixed(0)}%
                     </span>
                   </div>
                 )}
@@ -65,7 +79,7 @@ export function FunnelBlock({ title, config, result, placeholder }: FunnelBlockP
                     style={{ width: `${pct}%`, minWidth: "120px" }}
                   >
                     <span className="absolute inset-0 flex items-center px-3 text-sm font-medium text-white">
-                      {stage.name}
+                      {stage.stage}
                     </span>
                   </div>
                   <span className="shrink-0 text-sm font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
@@ -75,12 +89,14 @@ export function FunnelBlock({ title, config, result, placeholder }: FunnelBlockP
               </div>
             );
           })}
-          <div className="mt-4 border-t border-zinc-100 pt-3 text-xs text-muted-foreground dark:border-zinc-800">
-            Totale conversie:{" "}
-            <span className="font-semibold text-zinc-900 dark:text-zinc-100">
-              {(result.overall_conversion * 100).toFixed(1)}%
-            </span>
-          </div>
+          {overallPct !== null && (
+            <div className="mt-4 border-t border-zinc-100 pt-3 text-xs text-muted-foreground dark:border-zinc-800">
+              Totale conversie:{" "}
+              <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                {overallPct.toFixed(1)}%
+              </span>
+            </div>
+          )}
         </div>
       )}
     </div>

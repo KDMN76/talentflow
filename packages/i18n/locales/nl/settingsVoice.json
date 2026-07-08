@@ -1,0 +1,61 @@
+{
+  "page": {
+    "title": "Voice & VoIP",
+    "description": "Verbind Twilio en bel kandidaten direct vanuit TalentFlow.",
+    "testCall": "Test-bellen"
+  },
+  "notActivated": {
+    "title": "Voice is niet geactiveerd",
+    "body": "Bellen via TalentFlow is in deze omgeving nog niet geactiveerd. Er kunnen geen gesprekken worden gestart of getranscribeerd. Neem contact op met je beheerder om Voice te activeren."
+  },
+  "connected": {
+    "badge": "Verbonden",
+    "phoneLabel": "Telefoonnummer",
+    "accountSidLabel": "Twilio Account SID",
+    "connectedSince": "Verbonden sinds",
+    "twilioConsole": "Twilio console",
+    "disconnect": "Ontkoppelen",
+    "disconnectedToast": "Verbinding verbroken"
+  },
+  "connectForm": {
+    "title": "Verbind je Twilio-account",
+    "introPrefix": "Voer je Twilio-credentials in. Vind ze in de",
+    "consoleLinkText": "Twilio Console",
+    "introSuffix": "onder Account → API keys.",
+    "accountSidLabel": "Account SID",
+    "accountSidPlaceholder": "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "authTokenLabel": "Auth Token",
+    "phoneLabel": "Telefoonnummer",
+    "phonePlaceholder": "+31 20 1234 5678",
+    "connecting": "Verbinden…",
+    "connect": "Verbinden",
+    "requiredToast": {
+      "title": "Verplichte velden",
+      "description": "Vul Account SID, Auth Token en telefoonnummer in."
+    },
+    "connectedToast": {
+      "title": "Verbonden",
+      "description": "Twilio is nu actief."
+    }
+  },
+  "calls": {
+    "title": "Recente gesprekken",
+    "empty": "Nog geen gesprekken gevoerd.",
+    "inboundFrom": "Inkomend van {{number}}",
+    "outboundTo": "Uitgaand naar {{number}}"
+  },
+  "testDialog": {
+    "startedToast": "Test-call gestart",
+    "title": "Test-bellen",
+    "candidateLabel": "Bel kandidaat",
+    "candidatesLoading": "Kandidaten laden...",
+    "noCandidates": "Geen kandidaten beschikbaar",
+    "selectCandidate": "Kies een kandidaat…",
+    "close": "Sluiten",
+    "call": "Bellen"
+  },
+  "liveCall": {
+    "transcriptionPending": "Transcriptie wordt gegenereerd…",
+    "transcriptionLabel": "Transcriptie:"
+  }
+}

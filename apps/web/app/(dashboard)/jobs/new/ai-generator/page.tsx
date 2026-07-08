@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -45,6 +46,7 @@ import {
   useRegenerateVariant,
   useSelectVariant,
 } from "@/hooks/useJdGenerator";
+import { usePaySettings } from "@/hooks/useCompliance";
 import { cn } from "@/lib/utils";
 import type {
   JdDraftPublishOverrides,
@@ -58,46 +60,48 @@ import type {
 import type { BiasFlag } from "@/lib/types/jobDetail";
 
 // ─── Static option lists ────────────────────────────────────────────────────
+// Module-level consts can't call `t`; they hold i18n KEY strings that are
+// resolved with `t(...)` at each render site.
 
-const LEVEL_OPTIONS: Array<{ value: JdGeneratorLevel; label: string }> = [
-  { value: "junior", label: "Junior" },
-  { value: "medior", label: "Medior" },
-  { value: "senior", label: "Senior" },
-  { value: "lead", label: "Lead" },
-  { value: "director", label: "Director" },
+const LEVEL_OPTIONS: Array<{ value: JdGeneratorLevel; labelKey: string }> = [
+  { value: "junior", labelKey: "options.level.junior" },
+  { value: "medior", labelKey: "options.level.medior" },
+  { value: "senior", labelKey: "options.level.senior" },
+  { value: "lead", labelKey: "options.level.lead" },
+  { value: "director", labelKey: "options.level.director" },
 ];
 
-const TONE_OPTIONS: Array<{ value: JdGeneratorTone; label: string }> = [
-  { value: "formal", label: "Formeel" },
-  { value: "casual", label: "Informeel" },
-  { value: "direct", label: "Direct" },
-  { value: "enthusiastic", label: "Enthousiast" },
+const TONE_OPTIONS: Array<{ value: JdGeneratorTone; labelKey: string }> = [
+  { value: "formal", labelKey: "options.tone.formal" },
+  { value: "casual", labelKey: "options.tone.casual" },
+  { value: "direct", labelKey: "options.tone.direct" },
+  { value: "enthusiastic", labelKey: "options.tone.enthusiastic" },
 ];
 
-const LENGTH_OPTIONS: Array<{ value: JdGeneratorLength; label: string }> = [
-  { value: "short", label: "Kort (~80 woorden)" },
-  { value: "medium", label: "Gemiddeld (~150 woorden)" },
-  { value: "long", label: "Uitgebreid (~250 woorden)" },
+const LENGTH_OPTIONS: Array<{ value: JdGeneratorLength; labelKey: string }> = [
+  { value: "short", labelKey: "options.length.short" },
+  { value: "medium", labelKey: "options.length.medium" },
+  { value: "long", labelKey: "options.length.long" },
 ];
 
-const LANGUAGE_OPTIONS: Array<{ value: JdGeneratorLanguage; label: string }> = [
-  { value: "NL", label: "Nederlands" },
-  { value: "EN", label: "Engels" },
-  { value: "DE", label: "Duits" },
-  { value: "FR", label: "Frans" },
+const LANGUAGE_OPTIONS: Array<{ value: JdGeneratorLanguage; labelKey: string }> = [
+  { value: "NL", labelKey: "options.language.NL" },
+  { value: "EN", labelKey: "options.language.EN" },
+  { value: "DE", labelKey: "options.language.DE" },
+  { value: "FR", labelKey: "options.language.FR" },
 ];
 
-const SEVERITY_COPY: Record<BiasFlag["severity"], { label: string; cls: string }> = {
+const SEVERITY_COPY: Record<BiasFlag["severity"], { labelKey: string; cls: string }> = {
   low: {
-    label: "Laag",
+    labelKey: "options.severity.low",
     cls: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
   },
   medium: {
-    label: "Middel",
+    labelKey: "options.severity.medium",
     cls: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
   },
   high: {
-    label: "Hoog",
+    labelKey: "options.severity.high",
     cls: "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300",
   },
 };
@@ -121,6 +125,7 @@ type WizardStep = "brief" | "compare" | "publish";
 // ─── Page ───────────────────────────────────────────────────────────────────
 
 export default function JdGeneratorWizardPage() {
+  const { t } = useTranslation("aiGenerator");
   const searchParams = useSearchParams();
   const initialDraftId = searchParams.get("draft");
 
@@ -140,7 +145,7 @@ export default function JdGeneratorWizardPage() {
         >
           <Link href="/jobs">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Terug naar vacatures
+            {t("header.back")}
           </Link>
         </Button>
       </div>
@@ -148,11 +153,10 @@ export default function JdGeneratorWizardPage() {
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
           <Wand2 className="h-6 w-6 text-purple-500" />
-          AI Vacaturetekst-generator
+          {t("header.title")}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Genereer drie varianten en kies de beste — recruiter behoudt het
-          finale oordeel.
+          {t("header.subtitle")}
         </p>
       </div>
 
@@ -192,10 +196,11 @@ function StepIndicator({
   step: WizardStep;
   draftId: string | null;
 }) {
+  const { t } = useTranslation("aiGenerator");
   const steps: { id: WizardStep; label: string; sub: string }[] = [
-    { id: "brief", label: "Briefing", sub: "Wat moet de AI weten?" },
-    { id: "compare", label: "Vergelijk", sub: "Kies een winnaar" },
-    { id: "publish", label: "Publiceer", sub: "Bewerk en plaats" },
+    { id: "brief", label: t("steps.brief.label"), sub: t("steps.brief.sub") },
+    { id: "compare", label: t("steps.compare.label"), sub: t("steps.compare.sub") },
+    { id: "publish", label: t("steps.publish.label"), sub: t("steps.publish.sub") },
   ];
   const order: WizardStep[] = ["brief", "compare", "publish"];
   const currentIdx = order.indexOf(step);
@@ -246,6 +251,7 @@ function StepIndicator({
 // ─── STEP 1: Brief ──────────────────────────────────────────────────────────
 
 function BriefStep({ onCreated }: { onCreated: (draftId: string) => void }) {
+  const { t } = useTranslation("aiGenerator");
   const { toast } = useToast();
   const create = useCreateJdDraft();
   const [input, setInput] = useState<JdGeneratorInput>(DEFAULT_INPUT);
@@ -264,8 +270,8 @@ function BriefStep({ onCreated }: { onCreated: (draftId: string) => void }) {
     if (!isValid) {
       toast({
         variant: "destructive",
-        title: "Vul de basis in",
-        description: "Functietitel en minimaal één skill zijn verplicht.",
+        title: t("brief.toasts.invalidTitle"),
+        description: t("brief.toasts.invalidDescription"),
       });
       return;
     }
@@ -284,15 +290,15 @@ function BriefStep({ onCreated }: { onCreated: (draftId: string) => void }) {
         nice_to_haves,
       });
       toast({
-        title: "Drie varianten gegenereerd",
-        description: "Vergelijk en kies de beste.",
+        title: t("brief.toasts.successTitle"),
+        description: t("brief.toasts.successDescription"),
       });
       onCreated(draft.id);
     } catch {
       toast({
         variant: "destructive",
-        title: "Genereren mislukte",
-        description: "Probeer opnieuw of pas de input aan.",
+        title: t("brief.toasts.errorTitle"),
+        description: t("brief.toasts.errorDescription"),
       });
     }
   };
@@ -302,24 +308,24 @@ function BriefStep({ onCreated }: { onCreated: (draftId: string) => void }) {
       <div className="lg:col-span-2 space-y-6">
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base">Basis</CardTitle>
+            <CardTitle className="text-base">{t("brief.basics.title")}</CardTitle>
             <CardDescription>
-              Vertel de AI welke rol je wilt invullen.
+              {t("brief.basics.description")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="role">Functietitel *</Label>
+              <Label htmlFor="role">{t("brief.basics.roleLabel")}</Label>
               <Input
                 id="role"
-                placeholder="Senior Frontend Developer"
+                placeholder={t("brief.basics.rolePlaceholder")}
                 value={input.role}
                 onChange={(e) => set("role", e.target.value)}
               />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Niveau</Label>
+                <Label>{t("brief.basics.levelLabel")}</Label>
                 <Select
                   value={input.level}
                   onValueChange={(v) => set("level", v as JdGeneratorLevel)}
@@ -330,14 +336,14 @@ function BriefStep({ onCreated }: { onCreated: (draftId: string) => void }) {
                   <SelectContent>
                     {LEVEL_OPTIONS.map((o) => (
                       <SelectItem key={o.value} value={o.value}>
-                        {o.label}
+                        {t(o.labelKey)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Taal</Label>
+                <Label>{t("brief.basics.languageLabel")}</Label>
                 <Select
                   value={input.language}
                   onValueChange={(v) => set("language", v as JdGeneratorLanguage)}
@@ -348,7 +354,7 @@ function BriefStep({ onCreated }: { onCreated: (draftId: string) => void }) {
                   <SelectContent>
                     {LANGUAGE_OPTIONS.map((o) => (
                       <SelectItem key={o.value} value={o.value}>
-                        {o.label}
+                        {t(o.labelKey)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -356,14 +362,14 @@ function BriefStep({ onCreated }: { onCreated: (draftId: string) => void }) {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Kernvaardigheden *</Label>
+              <Label>{t("brief.basics.skillsLabel")}</Label>
               <TagInput
                 value={input.key_skills}
-                onChange={(t) => set("key_skills", t)}
-                placeholder="React, TypeScript, Next.js…"
+                onChange={(tags) => set("key_skills", tags)}
+                placeholder={t("brief.basics.skillsPlaceholder")}
               />
               <p className="text-xs text-muted-foreground">
-                Druk op Enter of komma om toe te voegen.
+                {t("brief.basics.skillsHint")}
               </p>
             </div>
           </CardContent>
@@ -371,29 +377,29 @@ function BriefStep({ onCreated }: { onCreated: (draftId: string) => void }) {
 
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base">Vereisten en pré</CardTitle>
-            <CardDescription>Eén punt per regel.</CardDescription>
+            <CardTitle className="text-base">{t("brief.requirements.title")}</CardTitle>
+            <CardDescription>{t("brief.requirements.description")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="must">Must-haves</Label>
+              <Label htmlFor="must">{t("brief.requirements.mustLabel")}</Label>
               <textarea
                 id="must"
                 rows={4}
                 value={mustText}
                 onChange={(e) => setMustText(e.target.value)}
-                placeholder="5+ jaar React-ervaring&#10;Sterke TypeScript-vaardigheden"
+                placeholder={t("brief.requirements.mustPlaceholder")}
                 className="flex min-h-[100px] w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 resize-none"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="nice">Nice-to-haves</Label>
+              <Label htmlFor="nice">{t("brief.requirements.niceLabel")}</Label>
               <textarea
                 id="nice"
                 rows={4}
                 value={niceText}
                 onChange={(e) => setNiceText(e.target.value)}
-                placeholder="Ervaring met Next.js App Router&#10;Web-performance kennis"
+                placeholder={t("brief.requirements.nicePlaceholder")}
                 className="flex min-h-[100px] w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 resize-none"
               />
             </div>
@@ -402,12 +408,12 @@ function BriefStep({ onCreated }: { onCreated: (draftId: string) => void }) {
 
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-base">Stijl en context</CardTitle>
+            <CardTitle className="text-base">{t("brief.style.title")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Tone-of-voice</Label>
+                <Label>{t("brief.style.toneLabel")}</Label>
                 <Select
                   value={input.tone}
                   onValueChange={(v) => set("tone", v as JdGeneratorTone)}
@@ -418,14 +424,14 @@ function BriefStep({ onCreated }: { onCreated: (draftId: string) => void }) {
                   <SelectContent>
                     {TONE_OPTIONS.map((o) => (
                       <SelectItem key={o.value} value={o.value}>
-                        {o.label}
+                        {t(o.labelKey)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Lengte</Label>
+                <Label>{t("brief.style.lengthLabel")}</Label>
                 <Select
                   value={input.length}
                   onValueChange={(v) => set("length", v as JdGeneratorLength)}
@@ -436,7 +442,7 @@ function BriefStep({ onCreated }: { onCreated: (draftId: string) => void }) {
                   <SelectContent>
                     {LENGTH_OPTIONS.map((o) => (
                       <SelectItem key={o.value} value={o.value}>
-                        {o.label}
+                        {t(o.labelKey)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -444,13 +450,13 @@ function BriefStep({ onCreated }: { onCreated: (draftId: string) => void }) {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="company">Bedrijfscontext</Label>
+              <Label htmlFor="company">{t("brief.style.contextLabel")}</Label>
               <textarea
                 id="company"
                 rows={4}
                 value={input.company_context ?? ""}
                 onChange={(e) => set("company_context", e.target.value)}
-                placeholder="Wie zijn jullie? Wat doen jullie? Hoe ziet het team eruit?"
+                placeholder={t("brief.style.contextPlaceholder")}
                 className="flex min-h-[100px] w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 resize-none"
               />
             </div>
@@ -459,7 +465,7 @@ function BriefStep({ onCreated }: { onCreated: (draftId: string) => void }) {
 
         <div className="flex justify-end gap-3">
           <Button variant="outline" asChild>
-            <Link href="/jobs/new">Standaard formulier</Link>
+            <Link href="/jobs/new">{t("brief.standardForm")}</Link>
           </Button>
           <Button
             onClick={handleSubmit}
@@ -471,7 +477,7 @@ function BriefStep({ onCreated }: { onCreated: (draftId: string) => void }) {
             ) : (
               <Sparkles className="mr-2 h-4 w-4" />
             )}
-            Genereer 3 varianten
+            {t("brief.generate")}
           </Button>
         </div>
       </div>
@@ -482,31 +488,29 @@ function BriefStep({ onCreated }: { onCreated: (draftId: string) => void }) {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-purple-500" />
-              Wat doet de AI?
+              {t("brief.aiInfo.title")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">
-              De generator schrijft drie varianten met dezelfde inhoud, maar in
-              verschillende toon en structuur. Je kiest één winnaar, kunt elke
-              variant regenereren, en bewerkt zelf voor publicatie.
+              {t("brief.aiInfo.body")}
             </p>
             <p className="mt-3 text-[11px] text-muted-foreground border-t border-purple-200/60 dark:border-purple-900/40 pt-2">
-              EU AI Act Art. 50 — recruiter behoudt het finale oordeel.
+              {t("brief.aiInfo.disclosure")}
             </p>
           </CardContent>
         </Card>
 
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Tips voor beste resultaat</CardTitle>
+            <CardTitle className="text-sm">{t("brief.tips.title")}</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="text-xs text-zinc-600 dark:text-zinc-400 space-y-1.5 list-disc ml-4">
-              <li>Schrijf must-haves concreet en meetbaar.</li>
-              <li>Vermeld team-grootte en werkmodel in de context.</li>
-              <li>Voeg minimaal 3 skills toe voor bruikbare output.</li>
-              <li>Tone "direct" werkt het best voor tech-rollen.</li>
+              <li>{t("brief.tips.tip1")}</li>
+              <li>{t("brief.tips.tip2")}</li>
+              <li>{t("brief.tips.tip3")}</li>
+              <li>{t("brief.tips.tip4")}</li>
             </ul>
           </CardContent>
         </Card>
@@ -526,6 +530,7 @@ function CompareStep({
   onBack: () => void;
   onSelected: () => void;
 }) {
+  const { t } = useTranslation("aiGenerator");
   const { toast } = useToast();
   const { data: draft, isLoading } = useJdDraft(draftId);
   const select = useSelectVariant(draftId);
@@ -553,15 +558,15 @@ function CompareStep({
     try {
       await select.mutateAsync({ variant_id: variantId });
       toast({
-        title: "Variant geselecteerd",
-        description: "Je kunt 'm nu bewerken en publiceren.",
+        title: t("compare.toasts.selectedTitle"),
+        description: t("compare.toasts.selectedDescription"),
       });
       onSelected();
     } catch {
       toast({
         variant: "destructive",
-        title: "Fout",
-        description: "Selecteren mislukte.",
+        title: t("compare.toasts.errorTitle"),
+        description: t("compare.toasts.selectFailed"),
       });
     }
   };
@@ -571,14 +576,14 @@ function CompareStep({
     try {
       await regenerate.mutateAsync({ variant_id: variantId });
       toast({
-        title: "Variant ververst",
-        description: "Een nieuwe versie is gegenereerd.",
+        title: t("compare.toasts.regeneratedTitle"),
+        description: t("compare.toasts.regeneratedDescription"),
       });
     } catch {
       toast({
         variant: "destructive",
-        title: "Fout",
-        description: "Regenereren mislukte.",
+        title: t("compare.toasts.errorTitle"),
+        description: t("compare.toasts.regenerateFailed"),
       });
     } finally {
       setBusyVariant(null);
@@ -590,12 +595,12 @@ function CompareStep({
       <div className="flex items-center justify-between gap-3">
         <Button variant="ghost" size="sm" onClick={onBack}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Pas briefing aan
+          {t("compare.adjustBriefing")}
         </Button>
         <div className="flex items-center gap-2">
-          <AIBadge label="Drie AI-gegenereerde varianten — recruiter behoudt het finale oordeel." />
+          <AIBadge label={t("compare.aiBadgeLabel")} />
           <p className="text-xs text-muted-foreground">
-            Door AI gegenereerd — kies of bewerk handmatig.
+            {t("compare.aiHint")}
           </p>
         </div>
       </div>
@@ -605,7 +610,7 @@ function CompareStep({
           <VariantColumn
             key={variant.id}
             variant={variant}
-            label={`Variant ${idx + 1}`}
+            label={t("compare.variantLabel", { number: idx + 1 })}
             isSelected={draft.selected_variant_id === variant.id}
             isBusy={busyVariant === variant.id || regenerate.isPending}
             onSelect={() => handleSelect(variant.id)}
@@ -637,6 +642,7 @@ function VariantColumn({
   onSelect: () => void;
   onRegenerate: () => void;
 }) {
+  const { t } = useTranslation("aiGenerator");
   return (
     <Card
       className={cn(
@@ -654,7 +660,7 @@ function VariantColumn({
           {isSelected && (
             <Badge variant="success" className="text-[10px]">
               <CheckCircle2 className="mr-1 h-3 w-3" />
-              Geselecteerd
+              {t("variant.selected")}
             </Badge>
           )}
         </div>
@@ -664,14 +670,14 @@ function VariantColumn({
       <CardContent className="flex-1 space-y-4">
         {/* Score gauges + word count */}
         <div className="flex items-start justify-around gap-2 rounded-lg bg-zinc-50/60 dark:bg-zinc-800/40 p-3">
-          <ScoreGauge label="Helderheid" value={variant.clarity_score} />
-          <ScoreGauge label="Inclusief" value={variant.inclusivity_score} />
+          <ScoreGauge label={t("variant.clarity")} value={variant.clarity_score} />
+          <ScoreGauge label={t("variant.inclusive")} value={variant.inclusivity_score} />
           <div className="flex flex-col items-center gap-1">
             <div className="flex h-[60px] w-[60px] items-center justify-center text-sm font-bold text-zinc-700 dark:text-zinc-200">
               {variant.word_count}
             </div>
             <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              Woorden
+              {t("variant.words")}
             </p>
           </div>
         </div>
@@ -680,7 +686,7 @@ function VariantColumn({
         {variant.bias_flags.length > 0 ? (
           <div>
             <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Aandachtspunten ({variant.bias_flags.length})
+              {t("variant.attentionPoints", { count: variant.bias_flags.length })}
             </p>
             <div className="flex flex-wrap gap-1">
               {variant.bias_flags.map((flag, i) => (
@@ -692,7 +698,7 @@ function VariantColumn({
                   )}
                   title={flag.suggestion}
                 >
-                  {flag.label} · {SEVERITY_COPY[flag.severity].label}
+                  {flag.label} · {t(SEVERITY_COPY[flag.severity].labelKey)}
                 </span>
               ))}
             </div>
@@ -700,7 +706,7 @@ function VariantColumn({
         ) : (
           <div className="flex items-center gap-1.5 text-[11px] text-emerald-700 dark:text-emerald-400">
             <CheckCircle2 className="h-3.5 w-3.5" />
-            Geen bias-vlaggen
+            {t("variant.noBiasFlags")}
           </div>
         )}
 
@@ -724,7 +730,7 @@ function VariantColumn({
           ) : (
             <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
           )}
-          Regenereer
+          {t("variant.regenerate")}
         </Button>
         <Button
           type="button"
@@ -740,11 +746,11 @@ function VariantColumn({
           {isSelected ? (
             <>
               <Check className="mr-1.5 h-3.5 w-3.5" />
-              Geselecteerd
+              {t("variant.selected")}
             </>
           ) : (
             <>
-              Selecteer
+              {t("variant.select")}
               <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
             </>
           )}
@@ -763,6 +769,7 @@ function PublishStep({
   draftId: string;
   onBack: () => void;
 }) {
+  const { t } = useTranslation("aiGenerator");
   const router = useRouter();
   const { toast } = useToast();
   const { data: draft, isLoading } = useJdDraft(draftId);
@@ -775,7 +782,9 @@ function PublishStep({
     );
   }, [draft]);
 
+  const { data: paySettings } = usePaySettings();
   const [overrides, setOverrides] = useState<JdDraftPublishOverrides>({});
+  const [publishStatus, setPublishStatus] = useState<"draft" | "open">("draft");
   const [titleEdit, setTitleEdit] = useState("");
   const [descEdit, setDescEdit] = useState("");
 
@@ -796,10 +805,10 @@ function PublishStep({
       <Card className="border-0 shadow-sm">
         <CardContent className="py-10 text-center space-y-3">
           <p className="text-sm text-muted-foreground">
-            Selecteer eerst een variant in stap 2.
+            {t("publish.noVariant")}
           </p>
           <Button onClick={onBack} variant="outline">
-            Ga terug
+            {t("publish.goBack")}
           </Button>
         </CardContent>
       </Card>
@@ -811,26 +820,54 @@ function PublishStep({
     value: JdDraftPublishOverrides[K]
   ) => setOverrides((cur) => ({ ...cur, [key]: value }));
 
+  // Publiceer-gate (EU 2023/970): live zetten vereist een volledige
+  // salarisband wanneer de tenant afdwingt. Frequentie valt zonder keuze
+  // terug op de DB-default 'monthly' en is dus nooit "leeg" in deze flow.
+  const enforced = !!paySettings?.pay_transparency_enforced;
+  const bandIncomplete =
+    overrides.salary_min == null || overrides.salary_max == null;
+  const publishBlocked = publishStatus === "open" && enforced && bandIncomplete;
+
   const handlePublish = async () => {
     try {
       const resp = await publish.mutateAsync({
         overrides: {
           ...overrides,
+          status: publishStatus,
           title: titleEdit.trim() || selectedVariant.title,
           description: descEdit.trim() || selectedVariant.description,
+          // Frequentie expliciet meesturen: de Select toont zonder keuze de
+          // tenant-default (kan 'annual' zijn), maar zonder dit veld zou de
+          // DB-default 'monthly' opslaan — WYSIWYG-mismatch.
+          salary_frequency:
+            overrides.salary_frequency ??
+            paySettings?.default_salary_frequency ??
+            "monthly",
         },
       });
       toast({
-        title: "Vacature aangemaakt",
-        description: `"${resp.job.title}" staat als concept in je lijst.`,
+        title: t("publish.toasts.createdTitle"),
+        description:
+          publishStatus === "open"
+            ? t("publish.toasts.createdOpen", { title: resp.job.title })
+            : t("publish.toasts.createdDraft", { title: resp.job.title }),
       });
       router.push(`/jobs/${resp.job.id}`);
     } catch (err) {
+      const apiError = (
+        err as {
+          response?: { data?: { error?: { code?: string; message?: string } } };
+        }
+      )?.response?.data?.error;
       toast({
         variant: "destructive",
-        title: "Publiceren mislukte",
+        title:
+          apiError?.code === "PAY_TRANSPARENCY_REQUIRED"
+            ? t("publish.toasts.payRequiredTitle")
+            : t("publish.toasts.errorTitle"),
         description:
-          err instanceof Error ? err.message : "Probeer het opnieuw.",
+          apiError?.message ??
+          (err instanceof Error ? err.message : t("publish.toasts.errorFallback")),
       });
     }
   };
@@ -840,7 +877,7 @@ function PublishStep({
       <div className="flex items-center justify-between gap-3">
         <Button variant="ghost" size="sm" onClick={onBack}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Wissel variant
+          {t("publish.switchVariant")}
         </Button>
       </div>
 
@@ -850,16 +887,16 @@ function PublishStep({
           <Card className="border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
-                Bewerk de vacaturetekst
+                {t("publish.editTitle")}
                 <AIBadge />
               </CardTitle>
               <CardDescription>
-                De AI-output is een startpunt — finetune naar wens.
+                {t("publish.editDescription")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="pub-title">Functietitel *</Label>
+                <Label htmlFor="pub-title">{t("publish.roleLabel")}</Label>
                 <Input
                   id="pub-title"
                   value={titleEdit}
@@ -867,7 +904,7 @@ function PublishStep({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="pub-desc">Functieomschrijving (Markdown)</Label>
+                <Label htmlFor="pub-desc">{t("publish.descriptionLabel")}</Label>
                 <textarea
                   id="pub-desc"
                   rows={16}
@@ -881,27 +918,27 @@ function PublishStep({
 
           <Card className="border-0 shadow-sm">
             <CardHeader>
-              <CardTitle className="text-base">Vacature-details</CardTitle>
+              <CardTitle className="text-base">{t("publish.details.title")}</CardTitle>
               <CardDescription>
-                Operationele velden die de AI niet invult.
+                {t("publish.details.description")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="dept">Afdeling</Label>
+                  <Label htmlFor="dept">{t("publish.details.departmentLabel")}</Label>
                   <Input
                     id="dept"
-                    placeholder="Engineering"
+                    placeholder={t("publish.details.departmentPlaceholder")}
                     value={overrides.department ?? ""}
                     onChange={(e) => setOverride("department", e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="loc">Locatie</Label>
+                  <Label htmlFor="loc">{t("publish.details.locationLabel")}</Label>
                   <Input
                     id="loc"
-                    placeholder="Amsterdam"
+                    placeholder={t("publish.details.locationPlaceholder")}
                     value={overrides.location ?? ""}
                     onChange={(e) => setOverride("location", e.target.value)}
                   />
@@ -910,36 +947,36 @@ function PublishStep({
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Werklocatie</Label>
+                  <Label>{t("publish.details.remoteLabel")}</Label>
                   <Select
                     value={overrides.remote_type ?? ""}
                     onValueChange={(v) => setOverride("remote_type", v)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Kies…" />
+                      <SelectValue placeholder={t("publish.details.selectPlaceholder")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="onsite">Op kantoor</SelectItem>
-                      <SelectItem value="hybrid">Hybride</SelectItem>
-                      <SelectItem value="remote">Remote</SelectItem>
+                      <SelectItem value="onsite">{t("publish.details.remoteOnsite")}</SelectItem>
+                      <SelectItem value="hybrid">{t("publish.details.remoteHybrid")}</SelectItem>
+                      <SelectItem value="remote">{t("publish.details.remoteRemote")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Contracttype</Label>
+                  <Label>{t("publish.details.employmentLabel")}</Label>
                   <Select
                     value={overrides.employment_type ?? ""}
                     onValueChange={(v) => setOverride("employment_type", v)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Kies…" />
+                      <SelectValue placeholder={t("publish.details.selectPlaceholder")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="fulltime">Fulltime</SelectItem>
-                      <SelectItem value="parttime">Parttime</SelectItem>
-                      <SelectItem value="contract">Contract</SelectItem>
-                      <SelectItem value="freelance">Freelance</SelectItem>
-                      <SelectItem value="internship">Stage</SelectItem>
+                      <SelectItem value="fulltime">{t("publish.details.employmentFulltime")}</SelectItem>
+                      <SelectItem value="parttime">{t("publish.details.employmentParttime")}</SelectItem>
+                      <SelectItem value="contract">{t("publish.details.employmentContract")}</SelectItem>
+                      <SelectItem value="freelance">{t("publish.details.employmentFreelance")}</SelectItem>
+                      <SelectItem value="internship">{t("publish.details.employmentInternship")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -979,7 +1016,11 @@ function PublishStep({
                 <div className="space-y-2">
                   <Label>Frequentie</Label>
                   <Select
-                    value={overrides.salary_frequency ?? "yearly"}
+                    value={
+                      overrides.salary_frequency ??
+                      paySettings?.default_salary_frequency ??
+                      "monthly"
+                    }
                     onValueChange={(v) => setOverride("salary_frequency", v)}
                   >
                     <SelectTrigger>
@@ -988,10 +1029,33 @@ function PublishStep({
                     <SelectContent>
                       <SelectItem value="hourly">per uur</SelectItem>
                       <SelectItem value="monthly">per maand</SelectItem>
-                      <SelectItem value="yearly">per jaar</SelectItem>
+                      <SelectItem value="annual">per jaar</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="comp-criteria">
+                  Beloningscriteria (EU-loontransparantie)
+                </Label>
+                <textarea
+                  id="comp-criteria"
+                  rows={3}
+                  placeholder="Bijv. inschaling op basis van ervaring, cao-schaal 8-10, jaarlijkse beoordelingscyclus…"
+                  value={overrides.compensation_criteria ?? ""}
+                  onChange={(e) =>
+                    setOverride(
+                      "compensation_criteria",
+                      e.target.value || null
+                    )
+                  }
+                  className="flex min-h-[80px] w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 resize-none"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Beschrijf hoe de beloning wordt bepaald — kandidaten zien
+                  dit op de vacature (EU-richtlijn 2023/970).
+                </p>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
@@ -1050,13 +1114,33 @@ function PublishStep({
             </CardContent>
           </Card>
 
-          <div className="flex justify-end gap-3">
+          {publishBlocked && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300">
+              Direct live zetten vereist een volledige salarisband (minimum
+              én maximum) — verplicht volgens de EU-loontransparantie-
+              richtlijn (2023/970). Vul de band in of kies “Als concept”.
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center justify-end gap-3">
             <Button variant="outline" onClick={onBack}>
               Terug
             </Button>
+            <Select
+              value={publishStatus}
+              onValueChange={(v) => setPublishStatus(v as "draft" | "open")}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="draft">Als concept opslaan</SelectItem>
+                <SelectItem value="open">Direct live (Open)</SelectItem>
+              </SelectContent>
+            </Select>
             <Button
               onClick={handlePublish}
-              disabled={publish.isPending}
+              disabled={publish.isPending || publishBlocked}
               className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 border-0"
             >
               {publish.isPending ? (
@@ -1064,7 +1148,7 @@ function PublishStep({
               ) : (
                 <Send className="mr-2 h-4 w-4" />
               )}
-              Publiceer als concept
+              {publishStatus === "open" ? "Publiceer live" : "Publiceer als concept"}
             </Button>
           </div>
         </div>

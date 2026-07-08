@@ -39,6 +39,13 @@ export default {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
         },
+        // Tenant branding accent (white-label). Raw color vars (hex) set at
+        // runtime by BrandingTheme.tsx, with indigo fallbacks in globals.css.
+        // Raw values (not HSL triplets) — no opacity modifiers, solid fills only.
+        "brand-accent": {
+          DEFAULT: "var(--brand-accent)",
+          foreground: "var(--brand-accent-foreground)",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

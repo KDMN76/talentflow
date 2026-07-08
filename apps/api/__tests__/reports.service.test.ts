@@ -9,6 +9,7 @@ import {
   generateEmbedToken,
   revokeEmbedToken,
   getReportFromEmbedToken,
+  runReport,
   listSystemTemplates,
   getSystemTemplate,
 } from '../src/modules/reports/reports.service';
@@ -239,10 +240,78 @@ describe('reports.service embed-tokens', () => {
     );
     expect(r.token).toMatch(/^[a-f0-9]{64}$/);
     expect(r.url).toContain(r.token);
+    // Zonder expiresInDays: geen expiry.
+    expect(r.expires_at).toBeNull();
   });
 
-  it('revokeEmbedToken updates row', async () => {
+  it('generateEmbedToken with expiresInDays sets embed_expires_at', async () => {
+    let capturedParams: unknown[] = [];
+    client = mockClient({
+      __matcher: (sql, params) => {
+        if (/^\s*(BEGIN|COMMIT|ROLLBACK|SET)/i.test(sql)) {
+          return { rows: [], rowCount: 0 };
+        }
+        if (/SELECT \* FROM reports/i.test(sql)) {
+          return { rows: [baseRow], rowCount: 1 };
+        }
+        if (/UPDATE reports[\s\S]*embed_expires_at/i.test(sql)) {
+          capturedParams = params;
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    teardown = installPoolMock(client);
+
+    const before = Date.now();
+    const r = await generateEmbedToken(
+      TENANT,
+      REPORT,
+      USER,
+      'http://localhost:4000',
+      {},
+      7
+    );
+    expect(r.expires_at).not.toBeNull();
+    const expiresMs = new Date(r.expires_at!).getTime();
+    // ~7 dagen vanaf nu (ruime marge van 1 min voor test-runtime).
+    expect(expiresMs).toBeGreaterThan(before + 7 * 86400000 - 60000);
+    expect(expiresMs).toBeLessThan(before + 7 * 86400000 + 60000);
+    // De UPDATE kreeg de expiry-date als parameter mee ($4).
+    expect(capturedParams[3]).toBeInstanceOf(Date);
+  });
+
+  it('generateEmbedToken with null expiry stores NULL', async () => {
+    let capturedParams: unknown[] = [];
+    client = mockClient({
+      __matcher: (sql, params) => {
+        if (/^\s*(BEGIN|COMMIT|ROLLBACK|SET)/i.test(sql)) {
+          return { rows: [], rowCount: 0 };
+        }
+        if (/SELECT \* FROM reports/i.test(sql)) {
+          return { rows: [baseRow], rowCount: 1 };
+        }
+        if (/UPDATE reports[\s\S]*embed_expires_at/i.test(sql)) {
+          capturedParams = params;
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    teardown = installPoolMock(client);
+    const r = await generateEmbedToken(
+      TENANT,
+      REPORT,
+      USER,
+      'http://localhost:4000',
+      {},
+      null
+    );
+    expect(r.expires_at).toBeNull();
+    expect(capturedParams[3]).toBeNull();
+  });
+
+  it('revokeEmbedToken updates row and clears expiry', async () => {
     let revokeCount = 0;
+    let clearsExpiry = false;
     client = mockClient({
       __matcher: (sql) => {
         if (/^\s*(BEGIN|COMMIT|ROLLBACK|SET)/i.test(sql)) {
@@ -253,6 +322,7 @@ describe('reports.service embed-tokens', () => {
         }
         if (/UPDATE reports[\s\S]*embed_token = NULL/i.test(sql)) {
           revokeCount++;
+          clearsExpiry = /embed_expires_at = NULL/i.test(sql);
         }
         return { rows: [], rowCount: 0 };
       },
@@ -260,6 +330,7 @@ describe('reports.service embed-tokens', () => {
     teardown = installPoolMock(client);
     await revokeEmbedToken(TENANT, REPORT, USER);
     expect(revokeCount).toBe(1);
+    expect(clearsExpiry).toBe(true);
   });
 
   it('getReportFromEmbedToken rejects malformed tokens', async () => {
@@ -272,11 +343,13 @@ describe('reports.service embed-tokens', () => {
 
   it('getReportFromEmbedToken returns report on valid hex', async () => {
     const validToken = 'a'.repeat(64);
+    let lookupSql = '';
     client = mockClient({
       __matcher: (sql) => {
         if (/^\s*(BEGIN|COMMIT|ROLLBACK|SET)/i.test(sql)) {
           return { rows: [], rowCount: 0 };
         }
+        if (/FROM reports/i.test(sql)) lookupSql = sql;
         return {
           rows: [{ ...baseRow, embed_token: validToken, embed_enabled: true }],
           rowCount: 1,
@@ -287,6 +360,10 @@ describe('reports.service embed-tokens', () => {
     const r = await getReportFromEmbedToken(validToken);
     expect(r.report.id).toBe(REPORT);
     expect(r.tenant_id).toBe(TENANT);
+    // De public lookup MOET verlopen tokens uitsluiten.
+    expect(lookupSql).toMatch(
+      /embed_expires_at IS NULL OR embed_expires_at > now\(\)/i
+    );
   });
 
   it('getReportFromEmbedToken throws when token not found', async () => {
@@ -298,6 +375,83 @@ describe('reports.service embed-tokens', () => {
     await expect(getReportFromEmbedToken(validToken)).rejects.toMatchObject({
       code: 'EMBED_TOKEN_INVALID',
     });
+  });
+});
+
+describe('reports.service runReport cache', () => {
+  let client: MockClient;
+  let teardown: () => void;
+
+  afterEach(() => {
+    teardown?.();
+    vi.clearAllMocks();
+  });
+
+  it('serves cache-hit alleen voor runs ná de laatste config-wijziging', async () => {
+    const cachedRun = {
+      id: 'run-cached-1',
+      result_data: JSON.stringify({ blocks: [] }),
+      ran_at: '2025-01-02T00:00:00Z',
+    };
+    let cacheSql = '';
+    let cacheParams: unknown[] = [];
+    client = mockClient({
+      __matcher: (sql, params) => {
+        if (/^\s*(BEGIN|COMMIT|ROLLBACK|SET)/i.test(sql)) {
+          return { rows: [], rowCount: 0 };
+        }
+        if (/SELECT \* FROM reports/i.test(sql)) {
+          return { rows: [baseRow], rowCount: 1 };
+        }
+        if (/FROM report_runs/i.test(sql)) {
+          cacheSql = sql;
+          cacheParams = params;
+          return { rows: [cachedRun], rowCount: 1 };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    teardown = installPoolMock(client);
+
+    const res = await runReport(TENANT, REPORT, undefined, 'manual', USER);
+    expect(res.cache_hit).toBe(true);
+    expect(res.report_run_id).toBe('run-cached-1');
+    // Guard: cache-query eist ran_at >= updated_at van het rapport, zodat
+    // een edit + save nooit oude resultaten uit de cache serveert.
+    expect(cacheSql).toMatch(/ran_at >= \$5/);
+    expect(cacheParams[4]).toBe(baseRow.updated_at);
+  });
+
+  it('no_cache slaat de cache-lookup over en draait fresh', async () => {
+    let cacheQueried = false;
+    client = mockClient({
+      __matcher: (sql) => {
+        if (/^\s*(BEGIN|COMMIT|ROLLBACK|SET)/i.test(sql)) {
+          return { rows: [], rowCount: 0 };
+        }
+        if (/SELECT \* FROM reports/i.test(sql)) {
+          return { rows: [baseRow], rowCount: 1 };
+        }
+        if (/SELECT id, result_data, ran_at[\s\S]*FROM report_runs/i.test(sql)) {
+          cacheQueried = true;
+        }
+        // Aggregatie-query van het kpi-block + INSERT report_runs.
+        return { rows: [{ value: 42 }], rowCount: 1 };
+      },
+    });
+    teardown = installPoolMock(client);
+
+    const res = await runReport(
+      TENANT,
+      REPORT,
+      { no_cache: true },
+      'manual',
+      USER
+    );
+    expect(cacheQueried).toBe(false);
+    expect(res.cache_hit).toBe(false);
+    expect(res.blocks.length).toBe(1);
+    expect(res.blocks[0].block_type).toBe('kpi');
   });
 });
 

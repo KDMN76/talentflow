@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import Link from "next/link";
 import {
   Key,
@@ -59,18 +61,18 @@ import {
   type ApiScope,
 } from "@/hooks/useApiKeys";
 
-const STATUS_BADGE: Record<ApiKey["status"], { label: string; className: string }> = {
+const STATUS_BADGE: Record<ApiKey["status"], { labelKey: string; className: string }> = {
   active: {
-    label: "Actief",
+    labelKey: "status.active",
     className:
       "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-0",
   },
   revoked: {
-    label: "Ingetrokken",
+    labelKey: "status.revoked",
     className: "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400 border-0",
   },
   expired: {
-    label: "Verlopen",
+    labelKey: "status.expired",
     className: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-0",
   },
 };
@@ -81,18 +83,18 @@ function formatDate(iso: string | null): string {
   return d.toLocaleString("nl-NL", { dateStyle: "medium", timeStyle: "short" });
 }
 
-function relative(iso: string | null): string {
-  if (!iso) return "Nooit gebruikt";
+function relative(iso: string | null, t: TFunction): string {
+  if (!iso) return t("relative.never");
   const diff = Date.now() - new Date(iso).getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 1) return "Net";
-  if (m < 60) return `${m} min geleden`;
+  if (m < 1) return t("relative.justNow");
+  if (m < 60) return t("relative.minutesAgo", { n: m });
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h} uur geleden`;
+  if (h < 24) return t("relative.hoursAgo", { n: h });
   const d = Math.floor(h / 24);
-  if (d < 7) return `${d} dagen geleden`;
+  if (d < 7) return t("relative.daysAgo", { n: d });
   const w = Math.floor(d / 7);
-  if (w < 5) return `${w} weken geleden`;
+  if (w < 5) return t("relative.weeksAgo", { n: w });
   return formatDate(iso);
 }
 
@@ -117,6 +119,7 @@ const INIT_CREATE: CreateState = {
 };
 
 export default function ApiKeysPage() {
+  const { t } = useTranslation("apiKeys");
   const { toast } = useToast();
   const { data: keys, isLoading } = useApiKeys();
   const { data: scopes } = useApiScopes();
@@ -168,8 +171,8 @@ export default function ApiKeysPage() {
       resetCreate();
     } catch {
       toast({
-        title: "Fout",
-        description: "Kon API-sleutel niet aanmaken.",
+        title: t("toasts.errorTitle"),
+        description: t("toasts.createError"),
         variant: "destructive",
       });
     }
@@ -183,7 +186,7 @@ export default function ApiKeysPage() {
       setShowRotated({ name: meta?.name ?? "Sleutel", key: result.key });
       setRotateConfirmId(null);
     } catch {
-      toast({ title: "Roteren mislukt", variant: "destructive" });
+      toast({ title: t("toasts.rotateFailed"), variant: "destructive" });
     }
   }
 
@@ -191,29 +194,29 @@ export default function ApiKeysPage() {
     if (!revokeId) return;
     try {
       await revokeMutation.mutateAsync(revokeId);
-      toast({ title: "API-sleutel ingetrokken" });
+      toast({ title: t("toasts.revoked") });
       setRevokeId(null);
     } catch {
-      toast({ title: "Intrekken mislukt", variant: "destructive" });
+      toast({ title: t("toasts.revokeFailed"), variant: "destructive" });
     }
   }
 
   function copyToClipboard(value: string) {
     navigator.clipboard.writeText(value);
-    toast({ title: "Gekopieerd" });
+    toast({ title: t("toasts.copied") });
   }
 
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="API-sleutels"
-        description="Beheer integratie-sleutels met granulaire scopes, rate limits en IP-allowlists."
+        title={t("header.title")}
+        description={t("header.description")}
         actions={
           <div className="flex items-center gap-2">
             <Link href="/api-explorer">
               <Button variant="outline" size="sm" className="gap-1.5">
                 <Activity className="h-3.5 w-3.5" />
-                API Playground
+                {t("header.playground")}
               </Button>
             </Link>
             <Button
@@ -225,7 +228,7 @@ export default function ApiKeysPage() {
               className="bg-indigo-600 hover:bg-indigo-700 border-0 gap-1.5"
             >
               <Plus className="h-3.5 w-3.5" />
-              Nieuwe sleutel
+              {t("header.newKey")}
             </Button>
           </div>
         }
@@ -237,7 +240,7 @@ export default function ApiKeysPage() {
           <Card className="border-0 shadow-sm">
             <CardContent className="py-12 text-center text-sm text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
-              Sleutels laden...
+              {t("list.loading")}
             </CardContent>
           </Card>
         ) : !keys || keys.length === 0 ? (
@@ -245,7 +248,7 @@ export default function ApiKeysPage() {
             <CardContent className="py-12 text-center">
               <Key className="h-10 w-10 mx-auto text-zinc-300 dark:text-zinc-700 mb-3" />
               <p className="text-sm text-muted-foreground">
-                Nog geen API-sleutels. Maak er een aan om te integreren.
+                {t("list.empty")}
               </p>
             </CardContent>
           </Card>
@@ -263,12 +266,12 @@ export default function ApiKeysPage() {
                         {key.name}
                       </Link>
                       <Badge className={STATUS_BADGE[key.status].className}>
-                        {STATUS_BADGE[key.status].label}
+                        {t(STATUS_BADGE[key.status].labelKey)}
                       </Badge>
                       {key.expires_at && (
                         <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
                           <Clock className="h-3 w-3" />
-                          Verloopt {formatDate(key.expires_at)}
+                          {t("list.expires", { date: formatDate(key.expires_at) })}
                         </span>
                       )}
                     </div>
@@ -285,7 +288,7 @@ export default function ApiKeysPage() {
                         type="button"
                         onClick={() => copyToClipboard(key.key_prefix)}
                         className="text-muted-foreground hover:text-zinc-700"
-                        title="Kopieer prefix"
+                        title={t("list.copyPrefix")}
                       >
                         <Copy className="h-3 w-3" />
                       </button>
@@ -294,7 +297,7 @@ export default function ApiKeysPage() {
                     <div className="flex flex-wrap gap-1.5">
                       {key.scopes.length === 0 ? (
                         <span className="text-[11px] text-muted-foreground italic">
-                          Geen scopes — sleutel kan niets doen
+                          {t("list.noScopes")}
                         </span>
                       ) : (
                         key.scopes.map((s) => (
@@ -315,11 +318,11 @@ export default function ApiKeysPage() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
-                      <span>Laatst gebruikt: {relative(key.last_used_at)}</span>
-                      <span>Totaal {key.usage_count.toLocaleString("nl-NL")} requests</span>
-                      <span>Limit {key.rate_limit_per_minute}/min</span>
+                      <span>{t("list.lastUsed", { value: relative(key.last_used_at, t) })}</span>
+                      <span>{t("list.totalRequests", { total: key.usage_count.toLocaleString("nl-NL") })}</span>
+                      <span>{t("list.limit", { limit: key.rate_limit_per_minute })}</span>
                       {key.allowed_ips && key.allowed_ips.length > 0 && (
-                        <span>IP-allowlist: {key.allowed_ips.join(", ")}</span>
+                        <span>{t("list.ipAllowlist", { ips: key.allowed_ips.join(", ") })}</span>
                       )}
                     </div>
                   </div>
@@ -327,7 +330,7 @@ export default function ApiKeysPage() {
                   <div className="flex items-center gap-1.5 shrink-0">
                     <Link href={`/api-keys/${key.id}`}>
                       <Button size="sm" variant="outline" className="gap-1">
-                        Details
+                        {t("list.details")}
                         <ChevronRight className="h-3 w-3" />
                       </Button>
                     </Link>
@@ -340,7 +343,7 @@ export default function ApiKeysPage() {
                           className="gap-1"
                         >
                           <RefreshCw className="h-3 w-3" />
-                          Roteren
+                          {t("list.rotate")}
                         </Button>
                         <Button
                           size="sm"
@@ -349,7 +352,7 @@ export default function ApiKeysPage() {
                           className="border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive gap-1"
                         >
                           <Trash2 className="h-3 w-3" />
-                          Intrekken
+                          {t("list.revoke")}
                         </Button>
                       </>
                     )}
@@ -371,11 +374,11 @@ export default function ApiKeysPage() {
       >
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Nieuwe API-sleutel — stap {createState.step} van 3</DialogTitle>
+            <DialogTitle>{t("createDialog.title", { step: createState.step })}</DialogTitle>
             <DialogDescription>
-              {createState.step === 1 && "Geef je sleutel een naam en omschrijving."}
-              {createState.step === 2 && "Kies precies welke acties deze sleutel mag uitvoeren."}
-              {createState.step === 3 && "Stel optionele beperkingen in (rate limit, IP, expiry)."}
+              {createState.step === 1 && t("createDialog.step1Description")}
+              {createState.step === 2 && t("createDialog.step2Description")}
+              {createState.step === 3 && t("createDialog.step3Description")}
             </DialogDescription>
           </DialogHeader>
 

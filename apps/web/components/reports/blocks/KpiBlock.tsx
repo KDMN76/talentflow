@@ -2,7 +2,7 @@
 
 import { ArrowDown, ArrowUp, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { KpiBlockConfig, KpiResult } from "@/lib/types/reports";
+import type { KpiBlock as KpiBlockConfig, KpiResult } from "@/lib/types/reports";
 
 export interface KpiBlockProps {
   title?: string;
@@ -13,17 +13,24 @@ export interface KpiBlockProps {
   placeholder?: boolean;
 }
 
-function formatValue(value: number, unit?: KpiResult["unit"]): string {
+function formatValue(value: number, unit?: string): string {
   if (unit === "days") return `${Math.round(value)} dgn`;
-  if (unit === "percentage") return `${value.toFixed(1)}%`;
+  if (unit === "%") return `${value.toFixed(1)}%`;
+  if (unit === "EUR")
+    return new Intl.NumberFormat("nl-NL", {
+      style: "currency",
+      currency: "EUR",
+      maximumFractionDigits: 0,
+    }).format(value);
   return new Intl.NumberFormat("nl-NL").format(Math.round(value));
 }
 
-export function KpiBlock({ title, result, placeholder }: KpiBlockProps) {
+export function KpiBlock({ title, config, result, placeholder }: KpiBlockProps) {
   const value = result?.value ?? 0;
-  const unit = result?.unit ?? "count";
-  const change = result?.change_percentage ?? null;
+  const unit = result?.metric_unit;
+  const change = result?.comparison_delta_pct ?? null;
   const compare = result?.comparison_value ?? null;
+  const label = title || result?.metric_label || config.metric.label;
 
   const trend: "up" | "down" | "flat" =
     change === null || Math.abs(change) < 0.1
@@ -43,19 +50,19 @@ export function KpiBlock({ title, result, placeholder }: KpiBlockProps) {
 
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-      {title && (
+      {label && (
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {title}
+          {label}
         </p>
       )}
-      {placeholder ? (
+      {placeholder || !result ? (
         <p className="text-3xl font-bold text-zinc-300 dark:text-zinc-700">—</p>
       ) : (
         <p className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
           {formatValue(value, unit)}
         </p>
       )}
-      {!placeholder && change !== null && compare !== null && (
+      {!placeholder && result && change !== null && compare !== null && (
         <div className="flex items-center gap-2">
           <span
             className={cn(

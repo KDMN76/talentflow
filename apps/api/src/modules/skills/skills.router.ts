@@ -10,8 +10,9 @@
  *       GET  /demand-supply
  *
  *   - candidatesSkillsRouter  → mount op /api/candidates
- *       GET  /:id/skill-profile
- *       POST /:id/sync-esco
+ *       GET   /:id/skill-profile
+ *       PATCH /:id/skill-profile
+ *       POST  /:id/sync-esco
  *
  *   - jobsSkillsRouter        → mount op /api/jobs
  *       GET  /:id/skill-profile
@@ -37,6 +38,7 @@ export const candidatesSkillsRouter = Router({ mergeParams: true });
 candidatesSkillsRouter.use(requireAuth, tenantMiddleware);
 
 candidatesSkillsRouter.get('/:id/skill-profile', controller.getCandidateProfile);
+candidatesSkillsRouter.patch('/:id/skill-profile', controller.updateCandidateProfile);
 candidatesSkillsRouter.post('/:id/sync-esco', controller.syncCandidateEsco);
 
 // ─── /api/jobs/:id/skill-profile + /sync-esco + skills-gap ────────────────

@@ -1,0 +1,187 @@
+{
+  "header": {
+    "back": "Terug naar vacatures",
+    "title": "AI Vacaturetekst-generator",
+    "subtitle": "Genereer drie varianten en kies de beste — recruiter behoudt het finale oordeel."
+  },
+  "steps": {
+    "brief": {
+      "label": "Briefing",
+      "sub": "Wat moet de AI weten?"
+    },
+    "compare": {
+      "label": "Vergelijk",
+      "sub": "Kies een winnaar"
+    },
+    "publish": {
+      "label": "Publiceer",
+      "sub": "Bewerk en plaats"
+    }
+  },
+  "options": {
+    "level": {
+      "junior": "Junior",
+      "medior": "Medior",
+      "senior": "Senior",
+      "lead": "Lead",
+      "director": "Director"
+    },
+    "tone": {
+      "formal": "Formeel",
+      "casual": "Informeel",
+      "direct": "Direct",
+      "enthusiastic": "Enthousiast"
+    },
+    "length": {
+      "short": "Kort (~80 woorden)",
+      "medium": "Gemiddeld (~150 woorden)",
+      "long": "Uitgebreid (~250 woorden)"
+    },
+    "language": {
+      "NL": "Nederlands",
+      "EN": "Engels",
+      "DE": "Duits",
+      "FR": "Frans"
+    },
+    "severity": {
+      "low": "Laag",
+      "medium": "Middel",
+      "high": "Hoog"
+    }
+  },
+  "brief": {
+    "toasts": {
+      "invalidTitle": "Vul de basis in",
+      "invalidDescription": "Functietitel en minimaal één skill zijn verplicht.",
+      "successTitle": "Drie varianten gegenereerd",
+      "successDescription": "Vergelijk en kies de beste.",
+      "errorTitle": "Genereren mislukte",
+      "errorDescription": "Probeer opnieuw of pas de input aan."
+    },
+    "basics": {
+      "title": "Basis",
+      "description": "Vertel de AI welke rol je wilt invullen.",
+      "roleLabel": "Functietitel *",
+      "rolePlaceholder": "Senior Frontend Developer",
+      "levelLabel": "Niveau",
+      "languageLabel": "Taal",
+      "skillsLabel": "Kernvaardigheden *",
+      "skillsPlaceholder": "React, TypeScript, Next.js…",
+      "skillsHint": "Druk op Enter of komma om toe te voegen."
+    },
+    "requirements": {
+      "title": "Vereisten en pré",
+      "description": "Eén punt per regel.",
+      "mustLabel": "Must-haves",
+      "mustPlaceholder": "5+ jaar React-ervaring\nSterke TypeScript-vaardigheden",
+      "niceLabel": "Nice-to-haves",
+      "nicePlaceholder": "Ervaring met Next.js App Router\nWeb-performance kennis"
+    },
+    "style": {
+      "title": "Stijl en context",
+      "toneLabel": "Tone-of-voice",
+      "lengthLabel": "Lengte",
+      "contextLabel": "Bedrijfscontext",
+      "contextPlaceholder": "Wie zijn jullie? Wat doen jullie? Hoe ziet het team eruit?"
+    },
+    "standardForm": "Standaard formulier",
+    "generate": "Genereer 3 varianten",
+    "aiInfo": {
+      "title": "Wat doet de AI?",
+      "body": "De generator schrijft drie varianten met dezelfde inhoud, maar in verschillende toon en structuur. Je kiest één winnaar, kunt elke variant regenereren, en bewerkt zelf voor publicatie.",
+      "disclosure": "EU AI Act Art. 50 — recruiter behoudt het finale oordeel."
+    },
+    "tips": {
+      "title": "Tips voor beste resultaat",
+      "tip1": "Schrijf must-haves concreet en meetbaar.",
+      "tip2": "Vermeld team-grootte en werkmodel in de context.",
+      "tip3": "Voeg minimaal 3 skills toe voor bruikbare output.",
+      "tip4": "Tone \"direct\" werkt het best voor tech-rollen."
+    }
+  },
+  "compare": {
+    "toasts": {
+      "selectedTitle": "Variant geselecteerd",
+      "selectedDescription": "Je kunt 'm nu bewerken en publiceren.",
+      "errorTitle": "Fout",
+      "selectFailed": "Selecteren mislukte.",
+      "regeneratedTitle": "Variant ververst",
+      "regeneratedDescription": "Een nieuwe versie is gegenereerd.",
+      "regenerateFailed": "Regenereren mislukte."
+    },
+    "adjustBriefing": "Pas briefing aan",
+    "aiBadgeLabel": "Drie AI-gegenereerde varianten — recruiter behoudt het finale oordeel.",
+    "aiHint": "Door AI gegenereerd — kies of bewerk handmatig.",
+    "variantLabel": "Variant {{number}}"
+  },
+  "variant": {
+    "selected": "Geselecteerd",
+    "clarity": "Helderheid",
+    "inclusive": "Inclusief",
+    "words": "Woorden",
+    "attentionPoints": "Aandachtspunten ({{count}})",
+    "noBiasFlags": "Geen bias-vlaggen",
+    "regenerate": "Regenereer",
+    "select": "Selecteer"
+  },
+  "publish": {
+    "toasts": {
+      "createdTitle": "Vacature aangemaakt",
+      "createdOpen": "\"{{title}}\" staat live op status Open.",
+      "createdDraft": "\"{{title}}\" staat als concept in je lijst.",
+      "payRequiredTitle": "Salarisband verplicht",
+      "errorTitle": "Publiceren mislukte",
+      "errorFallback": "Probeer het opnieuw."
+    },
+    "noVariant": "Selecteer eerst een variant in stap 2.",
+    "goBack": "Ga terug",
+    "switchVariant": "Wissel variant",
+    "editTitle": "Bewerk de vacaturetekst",
+    "editDescription": "De AI-output is een startpunt — finetune naar wens.",
+    "roleLabel": "Functietitel *",
+    "descriptionLabel": "Functieomschrijving (Markdown)",
+    "details": {
+      "title": "Vacature-details",
+      "description": "Operationele velden die de AI niet invult.",
+      "departmentLabel": "Afdeling",
+      "departmentPlaceholder": "Engineering",
+      "locationLabel": "Locatie",
+      "locationPlaceholder": "Amsterdam",
+      "remoteLabel": "Werklocatie",
+      "selectPlaceholder": "Kies…",
+      "remoteOnsite": "Op kantoor",
+      "remoteHybrid": "Hybride",
+      "remoteRemote": "Remote",
+      "employmentLabel": "Contracttype",
+      "employmentFulltime": "Fulltime",
+      "employmentParttime": "Parttime",
+      "employmentContract": "Contract",
+      "employmentFreelance": "Freelance",
+      "employmentInternship": "Stage",
+      "salaryMinLabel": "Salaris min",
+      "salaryMinPlaceholder": "65000",
+      "salaryMaxLabel": "Salaris max",
+      "salaryMaxPlaceholder": "85000",
+      "frequencyLabel": "Frequentie",
+      "frequencyHourly": "per uur",
+      "frequencyMonthly": "per maand",
+      "frequencyAnnual": "per jaar",
+      "criteriaLabel": "Beloningscriteria (EU-loontransparantie)",
+      "criteriaPlaceholder": "Bijv. inschaling op basis van ervaring, cao-schaal 8-10, jaarlijkse beoordelingscyclus…",
+      "criteriaHint": "Beschrijf hoe de beloning wordt bepaald — kandidaten zien dit op de vacature (EU-richtlijn 2023/970).",
+      "openDateLabel": "Open vanaf",
+      "closeDateLabel": "Sluitingsdatum",
+      "referenceLabel": "Referentie",
+      "referencePlaceholder": "ENG-FE-2026-04",
+      "headcountLabel": "Aantal posities",
+      "headcountPlaceholder": "1"
+    },
+    "payWarning": "Direct live zetten vereist een volledige salarisband (minimum én maximum) — verplicht volgens de EU-loontransparantie- richtlijn (2023/970). Vul de band in of kies “Als concept”.",
+    "back": "Terug",
+    "statusDraft": "Als concept opslaan",
+    "statusOpen": "Direct live (Open)",
+    "publishLive": "Publiceer live",
+    "publishDraft": "Publiceer als concept",
+    "preview": "Voorvertoning"
+  }
+}

@@ -10,7 +10,7 @@
  *   - "live postings" table with click-to-open detail dialog (events timeline)
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import {
@@ -31,12 +31,15 @@ import {
   Inbox,
   LayoutGrid,
   List,
+  Rocket,
+  Check,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -49,6 +52,8 @@ import {
   useJobPostings,
   useJobPosting,
   useRetractPosting,
+  useJobBoardAutoPostSettings,
+  useUpdateJobBoardAutoPostSettings,
 } from "@/hooks/useJobBoards";
 import { useToast } from "@/components/ui/use-toast";
 import type {
@@ -278,6 +283,12 @@ export default function JobBoardsHubPage() {
         />
       </div>
 
+      {/* Auto-post on publish */}
+      <AutoPostSettingsCard
+        catalog={catalog ?? []}
+        integrations={integrations ?? []}
+      />
+
       {/* Catalog */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
@@ -457,6 +468,153 @@ function StatCard({
             {value}
           </p>
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function AutoPostSettingsCard({
+  catalog,
+  integrations,
+}: {
+  catalog: JobBoardCatalogEntry[];
+  integrations: JobBoardIntegration[];
+}) {
+  const { data: settings } = useJobBoardAutoPostSettings();
+  const update = useUpdateJobBoardAutoPostSettings();
+  const { toast } = useToast();
+
+  const connectedBoards = useMemo(
+    () => integrations.filter((i) => i.status === "connected"),
+    [integrations]
+  );
+
+  const [enabled, setEnabled] = useState(false);
+  const [boards, setBoards] = useState<string[]>([]);
+  const [dirty, setDirty] = useState(false);
+
+  // Hydrate local state from the server once (and whenever it refetches).
+  useEffect(() => {
+    if (settings) {
+      setEnabled(settings.enabled);
+      setBoards(settings.boards);
+      setDirty(false);
+    }
+  }, [settings]);
+
+  const boardName = (id: string) =>
+    catalog.find((b) => b.id === id)?.display_name ?? id;
+
+  const toggleBoard = (id: string) => {
+    setBoards((prev) =>
+      prev.includes(id) ? prev.filter((b) => b !== id) : [...prev, id]
+    );
+    setDirty(true);
+  };
+
+  const handleSave = async () => {
+    // Only persist boards that are still connected.
+    const clean = boards.filter((b) =>
+      connectedBoards.some((c) => c.board_id === b)
+    );
+    try {
+      await update.mutateAsync({ enabled, boards: clean });
+      setBoards(clean);
+      setDirty(false);
+      toast({ title: "Auto-plaatsing opgeslagen" });
+    } catch {
+      toast({ title: "Opslaan mislukt", variant: "destructive" });
+    }
+  };
+
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardContent className="space-y-4 p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-fuchsia-500 to-purple-600 text-white shadow-sm">
+              <Rocket className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                Automatisch posten bij publiceren
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Zodra een vacature op <span className="font-medium">open</span>{" "}
+                wordt gezet, plaatsen we hem automatisch op de gekozen
+                vacaturebanken. Standaard uit.
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={enabled}
+            onCheckedChange={(v) => {
+              setEnabled(v);
+              setDirty(true);
+            }}
+            aria-label="Automatisch posten bij publiceren aan/uit"
+          />
+        </div>
+
+        {enabled && (
+          <div className="rounded-lg border border-border bg-zinc-50/60 p-4 dark:bg-zinc-800/30">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Standaard vacaturebanken
+            </p>
+            {connectedBoards.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Verbind eerst een vacaturebank hieronder om deze te kunnen
+                selecteren.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {connectedBoards.map((c) => {
+                  const active = boards.includes(c.board_id);
+                  return (
+                    <button
+                      key={c.board_id}
+                      type="button"
+                      onClick={() => toggleBoard(c.board_id)}
+                      aria-pressed={active}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                        active
+                          ? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-500 dark:bg-indigo-950/40 dark:text-indigo-300"
+                          : "border-border bg-background text-muted-foreground hover:border-zinc-400"
+                      }`}
+                    >
+                      {active && <Check className="h-3 w-3" />}
+                      {boardName(c.board_id)}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {enabled && boards.length === 0 && connectedBoards.length > 0 && (
+              <p className="mt-3 flex items-start gap-1.5 text-[11px] text-amber-600 dark:text-amber-400">
+                <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
+                Kies minstens één vacaturebank, anders wordt er niets geplaatst.
+              </p>
+            )}
+          </div>
+        )}
+
+        {dirty && (
+          <div className="flex justify-end">
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={update.isPending}
+              className="border-0 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
+            >
+              {update.isPending ? (
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="mr-1.5 h-4 w-4" />
+              )}
+              Opslaan
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

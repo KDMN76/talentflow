@@ -5,6 +5,7 @@ import fs from 'fs';
 import * as candidatesController from './candidates.controller';
 import { requireAuth } from '../../middleware/auth';
 import { tenantMiddleware } from '../../middleware/tenant';
+import { requirePermission } from '../../middleware/permissions';
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(process.cwd(), 'uploads', 'resumes');
@@ -57,37 +58,43 @@ router.get('/pipeline-templates', candidatesController.listPipelineTemplates);
 
 // Bulk actions (Q1.2) — MUST come BEFORE /:id routes om collisie met
 // `:id = "bulk-actions"` te voorkomen.
-router.post('/bulk-actions', candidatesController.bulkActionsHandler);
+// Mutaties vereisen `candidates:write` — read-only rollen (viewer) konden
+// hier eerst zonder check schrijven/verwijderen (viewer-gap gedicht).
+// Bewust 'write' (niet 'delete') op DELETE zodat recruiter-gedrag intact blijft.
+router.post('/bulk-actions', requirePermission('candidates', 'write'), candidatesController.bulkActionsHandler);
 
 // Candidates CRUD
 router.get('/', candidatesController.listCandidates);
-router.post('/', candidatesController.createCandidate);
+router.post('/', requirePermission('candidates', 'write'), candidatesController.createCandidate);
 router.get('/:id', candidatesController.getCandidate);
-router.patch('/:id', candidatesController.updateCandidate);
-router.delete('/:id', candidatesController.deleteCandidate);
+router.patch('/:id', requirePermission('candidates', 'write'), candidatesController.updateCandidate);
+router.delete('/:id', requirePermission('candidates', 'write'), candidatesController.deleteCandidate);
 
 // Resume (legacy single-file path)
-router.post('/:id/resume', upload.single('resume'), candidatesController.uploadResume);
+router.post('/:id/resume', requirePermission('candidates', 'write'), upload.single('resume'), candidatesController.uploadResume);
 
 // Skills
 router.get('/:id/skills', candidatesController.listCandidateSkills);
-router.post('/:id/skills', candidatesController.addCandidateSkill);
-router.delete('/:id/skills/:skillId', candidatesController.deleteCandidateSkill);
+router.post('/:id/skills', requirePermission('candidates', 'write'), candidatesController.addCandidateSkill);
+router.delete('/:id/skills/:skillId', requirePermission('candidates', 'write'), candidatesController.deleteCandidateSkill);
 
 // Resumes — multi-CV per kandidaat. Specific routes BEFORE :id-only routes
 // to avoid conflicts with `/candidates/:id` patterns.
 router.get('/:id/resumes', candidatesController.listCandidateResumes);
 router.post(
   '/:id/resumes',
+  requirePermission('candidates', 'write'),
   uploadMulti.array('files', 5),
   candidatesController.uploadCandidateResumes
 );
 router.delete(
   '/:id/resumes/:resumeId',
+  requirePermission('candidates', 'write'),
   candidatesController.deleteCandidateResume
 );
 router.patch(
   '/:id/resumes/:resumeId/primary',
+  requirePermission('candidates', 'write'),
   candidatesController.setPrimaryResume
 );
 router.get(

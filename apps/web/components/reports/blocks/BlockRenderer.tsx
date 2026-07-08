@@ -1,18 +1,12 @@
 "use client";
 
 import type {
-  BarBlockConfig,
-  BarLineResult,
   BlockResult,
-  FunnelBlockConfig,
+  ChartResult,
   FunnelResult,
-  KpiBlockConfig,
   KpiResult,
-  LineBlockConfig,
-  PieBlockConfig,
   PieResult,
-  ReportBlock,
-  TableBlockConfig,
+  ReportBlockEntry,
   TableResult,
 } from "@/lib/types/reports";
 import { BarBlock } from "./BarBlock";
@@ -23,24 +17,25 @@ import { PieBlock } from "./PieBlock";
 import { TableBlock } from "./TableBlock";
 
 export interface BlockRendererProps {
-  block: ReportBlock;
+  entry: ReportBlockEntry;
   result?: BlockResult;
 }
 
 /**
- * Single dispatcher that renders the right block-type for the given config.
+ * Single dispatcher that renders the right block-type for the given entry.
  * Used both inside the builder (with a placeholder when no result) and inside
  * the embed/run views (with a real result).
  */
-export function BlockRenderer({ block, result }: BlockRendererProps) {
+export function BlockRenderer({ entry, result }: BlockRendererProps) {
   const placeholder = !result;
+  const block = entry.block;
 
   switch (block.type) {
     case "kpi":
       return (
         <KpiBlock
-          title={block.title}
-          config={block.config as KpiBlockConfig}
+          title={entry.title}
+          config={block}
           result={result as KpiResult | undefined}
           placeholder={placeholder}
         />
@@ -48,8 +43,8 @@ export function BlockRenderer({ block, result }: BlockRendererProps) {
     case "table":
       return (
         <TableBlock
-          title={block.title}
-          config={block.config as TableBlockConfig}
+          title={entry.title}
+          config={block}
           result={result as TableResult | undefined}
           placeholder={placeholder}
         />
@@ -57,26 +52,26 @@ export function BlockRenderer({ block, result }: BlockRendererProps) {
     case "bar":
       return (
         <BarBlock
-          title={block.title}
-          config={block.config as BarBlockConfig}
-          result={result as BarLineResult | undefined}
+          title={entry.title}
+          config={block}
+          result={result as ChartResult | undefined}
           placeholder={placeholder}
         />
       );
     case "line":
       return (
         <LineBlock
-          title={block.title}
-          config={block.config as LineBlockConfig}
-          result={result as BarLineResult | undefined}
+          title={entry.title}
+          config={block}
+          result={result as ChartResult | undefined}
           placeholder={placeholder}
         />
       );
     case "funnel":
       return (
         <FunnelBlock
-          title={block.title}
-          config={block.config as FunnelBlockConfig}
+          title={entry.title}
+          config={block}
           result={result as FunnelResult | undefined}
           placeholder={placeholder}
         />
@@ -84,8 +79,8 @@ export function BlockRenderer({ block, result }: BlockRendererProps) {
     case "pie":
       return (
         <PieBlock
-          title={block.title}
-          config={block.config as PieBlockConfig}
+          title={entry.title}
+          config={block}
           result={result as PieResult | undefined}
           placeholder={placeholder}
         />
@@ -93,7 +88,7 @@ export function BlockRenderer({ block, result }: BlockRendererProps) {
     default:
       return (
         <div className="rounded-xl border border-dashed border-zinc-200 p-6 text-sm text-muted-foreground">
-          Onbekend bloktype: {(block as ReportBlock).type}
+          Onbekend bloktype
         </div>
       );
   }

@@ -6,7 +6,8 @@
   "tabs": {
     "overview": "Overzicht",
     "recruiters": "Recruiters",
-    "trends": "Trends"
+    "trends": "Trends",
+    "aiBias": "AI & Bias"
   },
   "filters": {
     "allRecruiters": "Alle recruiters",
@@ -69,6 +70,59 @@
     "applications": {
       "title": "Sollicitaties per Week",
       "tooltipUnit": "sollicitaties"
+    }
+  },
+  "aiBias": {
+    "intro": "Bias-monitoring op geautomatiseerde besluitvorming (EU AI Act). Alleen aggregaten — nooit individuele kandidaten.",
+    "adverseImpact": {
+      "title": "Adverse impact — 4/5-regel",
+      "hint": "De selectieratio (aangenomen ÷ sollicitaties) van elke groep moet minimaal 80% zijn van de best scorende groep (EEOC four-fifths rule). Groepen kleiner dan {{min}} zijn statistisch te klein voor een uitspraak.",
+      "basis_one": "Gebaseerd op {{count}} sollicitatie · geselecteerd = aangenomen",
+      "basis_other": "Gebaseerd op {{count}} sollicitaties · geselecteerd = aangenomen",
+      "empty": "Geen sollicitaties in de gekozen periode.",
+      "dimension": {
+        "gender": "Geslacht",
+        "age_bracket": "Leeftijdsgroep",
+        "nationality": "Nationaliteit"
+      },
+      "columns": {
+        "group": "Groep",
+        "total": "Sollicitaties",
+        "selected": "Aangenomen",
+        "selectionRate": "Selectieratio",
+        "impactRatio": "Impact-ratio"
+      },
+      "pass": "≥ 0,80",
+      "fail": "< 0,80",
+      "insufficientBadge": "onvoldoende data",
+      "insufficientHint": "Minder dan {{min}} sollicitaties — te klein voor een statistisch betrouwbare uitspraak, daarom onderdrukt.",
+      "referenceBadge": "referentie",
+      "noReference": "Geen enkele groep haalt de minimale groepsgrootte van {{min}} — impact-ratio's zijn niet te bepalen.",
+      "group": {
+        "male": "Man",
+        "female": "Vrouw",
+        "other": "Anders",
+        "prefer_not": "Zegt liever niet",
+        "unknown": "Onbekend",
+        "NL": "Nederlands",
+        "EU-other": "EU (overig)",
+        "non-EU": "Buiten EU"
+      }
+    },
+    "aiUsage": {
+      "title": "AI-gebruik per maand",
+      "hint": "Aantal AI-verwerkingen per maand uit het append-only AI-register (ai_events), uitgesplitst per feature. Alleen aantallen — geen inhoud.",
+      "empty": "Nog geen AI-gebruik gelogd in de gekozen periode.",
+      "tooltipUnit": "verwerkingen"
+    },
+    "matchScores": {
+      "title": "Match-score-verdeling",
+      "hint": "Histogram van alle AI-match-scores (0–100%). Een gezonde verdeling is breed; een piek aan één kant kan op een dataprobleem of bias duiden.",
+      "empty": "Nog geen match-scores berekend in de gekozen periode.",
+      "avg": "Gemiddelde score",
+      "total": "Aantal scores",
+      "tooltipUnit": "matches",
+      "axisLabel": "score (%)"
     }
   },
   "backOffice": {

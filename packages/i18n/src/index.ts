@@ -34,6 +34,8 @@ import nlHm from "../locales/nl/hm.json";
 import enHm from "../locales/en/hm.json";
 import nlAnalytics from "../locales/nl/analytics.json";
 import enAnalytics from "../locales/en/analytics.json";
+import nlAiCompliance from "../locales/nl/aiCompliance.json";
+import enAiCompliance from "../locales/en/aiCompliance.json";
 import nlOutreach from "../locales/nl/outreach.json";
 import enOutreach from "../locales/en/outreach.json";
 import nlContracts from "../locales/nl/contracts.json";
@@ -66,6 +68,26 @@ import nlMiscDev from "../locales/nl/miscDev.json";
 import enMiscDev from "../locales/en/miscDev.json";
 import nlMiscPortals from "../locales/nl/miscPortals.json";
 import enMiscPortals from "../locales/en/miscPortals.json";
+import nlPortalPublic from "../locales/nl/portalPublic.json";
+import enPortalPublic from "../locales/en/portalPublic.json";
+import nlTimesheets from "../locales/nl/timesheets.json";
+import enTimesheets from "../locales/en/timesheets.json";
+import nlAiGenerator from "../locales/nl/aiGenerator.json";
+import enAiGenerator from "../locales/en/aiGenerator.json";
+import nlApiExplorer from "../locales/nl/apiExplorer.json";
+import enApiExplorer from "../locales/en/apiExplorer.json";
+import nlApiKeys from "../locales/nl/apiKeys.json";
+import enApiKeys from "../locales/en/apiKeys.json";
+import nlJdDrafts from "../locales/nl/jdDrafts.json";
+import enJdDrafts from "../locales/en/jdDrafts.json";
+import nlSettingsCustomFields from "../locales/nl/settingsCustomFields.json";
+import enSettingsCustomFields from "../locales/en/settingsCustomFields.json";
+import nlSettingsIntegrations from "../locales/nl/settingsIntegrations.json";
+import enSettingsIntegrations from "../locales/en/settingsIntegrations.json";
+import nlSettingsNotifications from "../locales/nl/settingsNotifications.json";
+import enSettingsNotifications from "../locales/en/settingsNotifications.json";
+import nlSettingsVoice from "../locales/nl/settingsVoice.json";
+import enSettingsVoice from "../locales/en/settingsVoice.json";
 
 export const SUPPORTED_LOCALES = ["nl", "en"] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
@@ -99,6 +121,7 @@ export const resources = {
     comms: nlComms,
     hm: nlHm,
     analytics: nlAnalytics,
+    aiCompliance: nlAiCompliance,
     outreach: nlOutreach,
     contracts: nlContracts,
     invoices: nlInvoices,
@@ -115,6 +138,16 @@ export const resources = {
     miscHome: nlMiscHome,
     miscDev: nlMiscDev,
     miscPortals: nlMiscPortals,
+    portalPublic: nlPortalPublic,
+    timesheets: nlTimesheets,
+    aiGenerator: nlAiGenerator,
+    apiExplorer: nlApiExplorer,
+    apiKeys: nlApiKeys,
+    jdDrafts: nlJdDrafts,
+    settingsCustomFields: nlSettingsCustomFields,
+    settingsIntegrations: nlSettingsIntegrations,
+    settingsNotifications: nlSettingsNotifications,
+    settingsVoice: nlSettingsVoice,
   },
   en: {
     common: enCommon,
@@ -128,6 +161,7 @@ export const resources = {
     comms: enComms,
     hm: enHm,
     analytics: enAnalytics,
+    aiCompliance: enAiCompliance,
     outreach: enOutreach,
     contracts: enContracts,
     invoices: enInvoices,
@@ -144,6 +178,16 @@ export const resources = {
     miscHome: enMiscHome,
     miscDev: enMiscDev,
     miscPortals: enMiscPortals,
+    portalPublic: enPortalPublic,
+    timesheets: enTimesheets,
+    aiGenerator: enAiGenerator,
+    apiExplorer: enApiExplorer,
+    apiKeys: enApiKeys,
+    jdDrafts: enJdDrafts,
+    settingsCustomFields: enSettingsCustomFields,
+    settingsIntegrations: enSettingsIntegrations,
+    settingsNotifications: enSettingsNotifications,
+    settingsVoice: enSettingsVoice,
   },
 } as const;
 

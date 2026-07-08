@@ -31,6 +31,11 @@ const listFiltersSchema = z.object({
 
 const publishOverridesSchema = z
   .object({
+    // De wizard laat de recruiter titel + tekst van de gekozen variant
+    // bijschaven vóór publicatie — zonder deze twee velden bounce't de
+    // `.strict()`-check elke publish uit de UI met een Zod-400.
+    title: z.string().min(1).max(200).optional(),
+    description: z.string().max(50000).optional(),
     status: z.enum(['draft', 'open', 'filled', 'closed', 'archived']).optional(),
     employment_type: z
       .enum(['fulltime', 'parttime', 'contract', 'freelance', 'internship'])
@@ -39,6 +44,7 @@ const publishOverridesSchema = z
     location: z.string().max(200).nullable().optional(),
     salary_min: z.number().int().min(0).nullable().optional(),
     salary_max: z.number().int().min(0).nullable().optional(),
+    job_reference: z.string().min(1).max(50).nullable().optional(),
     recruiter_id: z.string().uuid().nullable().optional(),
     headcount: z.number().int().min(1).max(999).nullable().optional(),
     experience_level: z.enum(['junior', 'medior', 'senior', 'lead']).nullable().optional(),
@@ -54,6 +60,9 @@ const publishOverridesSchema = z
     salary_frequency: z.enum(['monthly', 'annual', 'hourly']).nullable().optional(),
     required_skills: z.array(z.string().min(1).max(120)).max(50).nullable().optional(),
     nice_to_have_skills: z.array(z.string().min(1).max(120)).max(50).nullable().optional(),
+    // Pay Transparency (EU 2023/970) — beloningscriteria + per-job opt-out.
+    pay_transparency_required: z.boolean().nullable().optional(),
+    compensation_criteria: z.string().max(2000).nullable().optional(),
     pipeline_template_id: z.string().uuid().optional(),
   })
   .strict();

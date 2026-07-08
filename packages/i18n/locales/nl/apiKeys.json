@@ -1,0 +1,90 @@
+{
+  "status": {
+    "active": "Actief",
+    "revoked": "Ingetrokken",
+    "expired": "Verlopen"
+  },
+  "relative": {
+    "never": "Nooit gebruikt",
+    "justNow": "Net",
+    "minutesAgo": "{{n}} min geleden",
+    "hoursAgo": "{{n}} uur geleden",
+    "daysAgo": "{{n}} dagen geleden",
+    "weeksAgo": "{{n}} weken geleden"
+  },
+  "toasts": {
+    "errorTitle": "Fout",
+    "createError": "Kon API-sleutel niet aanmaken.",
+    "rotateFailed": "Roteren mislukt",
+    "revoked": "API-sleutel ingetrokken",
+    "revokeFailed": "Intrekken mislukt",
+    "copied": "Gekopieerd"
+  },
+  "header": {
+    "title": "API-sleutels",
+    "description": "Beheer integratie-sleutels met granulaire scopes, rate limits en IP-allowlists.",
+    "playground": "API Playground",
+    "newKey": "Nieuwe sleutel"
+  },
+  "list": {
+    "loading": "Sleutels laden...",
+    "empty": "Nog geen API-sleutels. Maak er een aan om te integreren.",
+    "expires": "Verloopt {{date}}",
+    "copyPrefix": "Kopieer prefix",
+    "noScopes": "Geen scopes — sleutel kan niets doen",
+    "lastUsed": "Laatst gebruikt: {{value}}",
+    "totalRequests": "Totaal {{total}} requests",
+    "limit": "Limit {{limit}}/min",
+    "ipAllowlist": "IP-allowlist: {{ips}}",
+    "details": "Details",
+    "rotate": "Roteren",
+    "revoke": "Intrekken"
+  },
+  "createDialog": {
+    "title": "Nieuwe API-sleutel — stap {{step}} van 3",
+    "step1Description": "Geef je sleutel een naam en omschrijving.",
+    "step2Description": "Kies precies welke acties deze sleutel mag uitvoeren.",
+    "step3Description": "Stel optionele beperkingen in (rate limit, IP, expiry).",
+    "nameLabel": "Naam",
+    "namePlaceholder": "Bijv. Productie integratie",
+    "descriptionLabel": "Omschrijving (optioneel)",
+    "descriptionPlaceholder": "Waar gebruik je deze sleutel voor?",
+    "fullAccess": "volledige toegang",
+    "rateLimitLabel": "Rate limit (per minuut)",
+    "rateLimitHint": "Standaard 100 req/min. Verhogen wanneer je grootschalige bulk-imports draait.",
+    "ipLabel": "IP-allowlist (optioneel)",
+    "ipPlaceholder": "91.98.232.104, 81.20.10.10",
+    "ipHint": "Komma-gescheiden lijst. Leeglaten = geen IP-restrictie.",
+    "expiresLabel": "Verloopdatum (optioneel)",
+    "cancel": "Annuleren",
+    "previous": "Vorige",
+    "next": "Volgende",
+    "create": "Aanmaken"
+  },
+  "createdDialog": {
+    "title": "Sleutel aangemaakt",
+    "description": "{{name}} — kopieer de sleutel nu, je ziet hem niet meer terug.",
+    "warning": "Bewaar deze sleutel veilig (in een password manager, niet in git). Bij verlies kun je de sleutel roteren — de oude wordt direct ongeldig.",
+    "keyLabel": "API-sleutel",
+    "close": "Sluiten"
+  },
+  "rotatedDialog": {
+    "title": "Sleutel geroteerd",
+    "description": "De oude sleutel is direct ongeldig geworden. Update je integratie.",
+    "warning": "Deze nieuwe sleutel zie je eenmalig. Kopieer hem nu.",
+    "keyLabel": "Nieuwe API-sleutel",
+    "close": "Sluiten"
+  },
+  "confirmRotate": {
+    "title": "Sleutel roteren?",
+    "description": "De huidige sleutel wordt direct ongeldig. Integraties die de oude sleutel gebruiken, krijgen 401-fouten totdat je ze updatet.",
+    "cancel": "Annuleren",
+    "confirm": "Roteer"
+  },
+  "confirmRevoke": {
+    "title": "Sleutel intrekken?",
+    "description": "Deze actie is permanent — de sleutel werkt direct niet meer en kan niet hersteld worden.",
+    "cancel": "Annuleren",
+    "confirm": "Intrekken"
+  }
+}

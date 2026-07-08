@@ -15,9 +15,13 @@ import cookieParser from 'cookie-parser';
 
 import { logger, errorHandler } from './middleware/errorHandler';
 import { apiRateLimit } from './middleware/rateLimit';
+import { enforce2faPolicy } from './middleware/auth';
 
 import authRouter from './modules/auth/auth.router';
 import tenantsRouter from './modules/tenants/tenants.router';
+// White-label branding: publiek logo-serve-endpoint (e-mails/portalen
+// embedden de URL langdurig, dus geen presigned URL's). Zie migration 045.
+import brandingPublicRouter from './modules/tenants/brandingPublic.router';
 import usersRouter from './modules/users/users.router';
 import candidatesRouter from './modules/candidates/candidates.router';
 import jobsRouter from './modules/jobs/jobs.router';
@@ -50,6 +54,7 @@ import {
 import complianceRouter from './modules/compliance/compliance.router';
 import candidatesComplianceRouter from './modules/compliance/candidates-compliance.router';
 import selfServiceRouter from './modules/compliance/self-service.router';
+import gdprExportRouter from './modules/compliance/gdpr-export.router';
 import notificationsRouter from './modules/notifications/notifications.router';
 import integrationsRouter from './modules/integrations/integrations.router';
 import {
@@ -70,6 +75,10 @@ import {
   permissionsRouter,
 } from './modules/roles/roles.router';
 import { enforceIpAllowlist } from './middleware/ipAllowlist';
+// Per-tenant module-zichtbaarheid (migration 050): 403 op routers van modules
+// die voor de tenant uit staan. Publieke webhook-/token-routes bewust NIET
+// geguard (geen tenant-context vóór parsing; guard is JWT-gebaseerd).
+import { requireModule } from './middleware/moduleGuard';
 
 // ─── Sprint Q4.2 — SSO/SAML + SCIM (Agent NNN) ─────────────────────────────
 import { ssoPublicRouter, ssoAdminRouter } from './modules/auth/sso.controller';
@@ -296,6 +305,11 @@ app.use(
 );
 
 // ── API routes ────────────────────────────────────────────────────────────────
+// 2FA-policy afdwinging (Sprint Q4.2): globaal vóór alle routers. Decodeert
+// de Bearer-JWT zelf; ongeauthenticeerde/public requests passeren ongemoeid.
+// Geeft 428 + setup-URL wanneer de tenant-policy 2FA verplicht en de user
+// (buiten de grace-period) nog niet enrolled is.
+app.use(enforce2faPolicy);
 app.use('/api/auth', authRouter);
 app.use('/api/tenants', tenantsRouter);
 app.use('/api/users', usersRouter);
@@ -303,7 +317,7 @@ app.use('/api/candidates', candidatesRouter);
 app.use('/api/jobs', jobsRouter);
 app.use('/api/pipeline', pipelineRouter);
 app.use('/api/dashboard', dashboardRouter);
-app.use('/api/analytics', analyticsRouter);
+app.use('/api/analytics', requireModule('reports_analytics'), analyticsRouter);
 app.use('/api/communications', communicationsRouter);
 app.use('/api/api-keys', apiKeysRouter);
 app.use('/api/api-explorer', apiExplorerRouter);
@@ -316,10 +330,12 @@ app.use('/api/webhooks', outreachInboundWebhookRouter);
 app.use('/api/webhooks', webhooksRouter);
 app.use('/api/workflows', workflowsRouter);
 app.use('/api/crm', crmRouter);
-app.use('/api/portals', portalRouter);
-app.use('/api/career-pages', careerPagesRouter);
+// Module-guard: portal-beheer (JWT) 403't als de module uit staat; publieke
+// token-based portal-routes hebben geen Bearer-JWT en passeren de guard.
+app.use('/api/portals', requireModule('portals'), portalRouter);
+app.use('/api/career-pages', requireModule('career_pages'), careerPagesRouter);
 app.use('/api/hm', hmRouter);
-app.use('/api/job-boards', jobBoardsRouter);
+app.use('/api/job-boards', requireModule('job_boards'), jobBoardsRouter);
 // Public XML feeds (Vacaturebank). Mount BEFORE auth-gated routers so the
 // scraper hits an anonymous endpoint. Path matches existing /api/public/*
 // convention used by career-pages.
@@ -329,6 +345,10 @@ app.use('/api/public', jobBoardsPublicFeedRouter);
 // Public token-based timesheet portal — kandidaat vult uren in zonder login.
 // Strict rate-limit in router zelf. Mount BEFORE de authenticated /api/timesheets.
 app.use('/api/public/timesheets', publicTimesheetsRouter);
+// Publiek tenant-logo (white-label branding, migration 045). Geen auth —
+// e-mailfooters en klantportalen embedden deze URL. Strikte serve-headers
+// (nosniff + SVG-CSP) zitten in de router zelf.
+app.use('/api/public/branding', brandingPublicRouter);
 app.use('/api/email-templates', emailTemplatesRouter);
 app.use('/api/matching', matchingRouter);
 app.use('/api/exports', exportsRouter);
@@ -343,6 +363,9 @@ app.use('/api/applications', applicationsScorecardsRouter);
 // ── Sprint Q2.3 (Compliance platformlaag) ────────────────────────────────────
 // Public — geen auth — kandidaat self-portal:
 app.use('/api/self-service', selfServiceRouter);
+// Public — geen auth — AVG art. 15 export-download via kort-levende token
+// (data_export_tokens, migration 046). Rate-limited in de router zelf.
+app.use('/api/gdpr-export', gdprExportRouter);
 // Authenticated:
 app.use('/api/compliance', complianceRouter);
 // Extra candidate-routes (anonymize / self-token / retention-exclude /
@@ -371,7 +394,7 @@ app.use('/api/applications', applicationsAgreementMatrixRouter);
 // Public embed-router MOET voor de auth-protected reportsRouter mounten zodat
 // /embed/:token/run niet door requireAuth wordt geblokkeerd.
 app.use('/api/reports', reportsPublicRouter);
-app.use('/api/reports', reportsRouter);
+app.use('/api/reports', requireModule('reports_analytics'), reportsRouter);
 
 // ── Sprint Q3.6 (Skills Graph + ESCO — Agent HHH) ────────────────────────────
 // candidatesSkillsRouter en jobsSkillsRouter mounten OP /api/candidates en
@@ -395,37 +418,37 @@ app.use('/api/sso', ssoPublicRouter);
 app.use('/api/admin/sso', ssoAdminRouter);
 // ── Sprint Q4.4 (Temp/contract back-office — Agent TTT) ────────────────────
 // Plaatsings-contracten + per-week timesheets met approval-flow.
-app.use('/api/contracts', contractsRouter);
-app.use('/api/timesheets', timesheetsRouter);
+app.use('/api/contracts', requireModule('recruit_to_cash'), contractsRouter);
+app.use('/api/timesheets', requireModule('recruit_to_cash'), timesheetsRouter);
 
 // ── Sprint Q4.4 (Billing/Accounting/Commissions/Forecasting — Agent UUU) ───
 // Facturatie, Exact/Twinfield/SnelStart, recruiter-commissies, forecast.
-app.use('/api/invoices', invoicingRouter);
-app.use('/api/accounting', accountingRouter);
-app.use('/api/commissions', commissionsRouter);
-app.use('/api/forecasting', forecastingRouter);
+app.use('/api/invoices', requireModule('recruit_to_cash'), invoicingRouter);
+app.use('/api/accounting', requireModule('recruit_to_cash'), accountingRouter);
+app.use('/api/commissions', requireModule('recruit_to_cash'), commissionsRouter);
+app.use('/api/forecasting', requireModule('recruit_to_cash'), forecastingRouter);
 
 // ── Sprint Q4.5 (Agentic AI Sourcing — Agent WWW) ──────────────────────────
-app.use('/api/sourcing', sourcingRouter);
+app.use('/api/sourcing', requireModule('sourcing_ai'), sourcingRouter);
 
 // ── Sprint Q4.5 (Outreach orchestration — Agent XXX) ───────────────────────
 // Outreach drafting, approval, send-orchestration, quotas, replies, signals.
 // Inbound reply webhook is mounted earlier on /api/webhooks (public).
-app.use('/api/outreach', outreachRouter);
-app.use('/api/nurture', nurtureRouter);
+app.use('/api/outreach', requireModule('outreach'), outreachRouter);
+app.use('/api/nurture', requireModule('outreach'), nurtureRouter);
 
 // ── Sprint Q4.6 (Omni-channel inbox + voice — Agent AAAA) ──────────────────
 // Twilio webhook is public (HMAC-verified) — mount BEFORE auth-gated /api.
 app.use('/api/webhooks', twilioWebhookRouter);
 app.use('/api/inbox', inboxRouter);
-app.use('/api/voice', voiceRouter);
+app.use('/api/voice', requireModule('voice'), voiceRouter);
 
 // ── Sprint Q4.6 (WhatsApp Business — Agent ZZZ) ────────────────────────────
 // Public webhook + public opt-in routes BEFORE the authenticated router so
 // they aren't gated by JWT.
 app.use('/api/webhooks', whatsappWebhookRouter);
 app.use('/api/public/whatsapp', whatsappPublicConsentRouter);
-app.use('/api/whatsapp', whatsappRouter);
+app.use('/api/whatsapp', requireModule('whatsapp'), whatsappRouter);
 
 // SCIM 2.0 (RFC 7644). Auth via tenant SCIM bearer-token in router zelf —
 // daarom buiten /api gemount zodat noch enforceIpAllowlist noch JWT-checks

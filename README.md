@@ -1,6 +1,6 @@
 # TalentFlow
 
-TalentFlow is een recruitment SaaS-platform gebouwd als directe vervanging voor Manatal (€1.000/maand). Het biedt een volledig ATS (Applicant Tracking System) met Kanban-pipeline, kandidaatbeheer, vacaturebeheer en dashboardanalytics — klaar voor uitbreiding naar omni-channel communicatie, AI-matching en white-label klantportalen. Multi-tenant vanaf dag één via PostgreSQL Row-Level Security.
+TalentFlow is een recruitment SaaS-platform gebouwd als directe vervanging voor Manatal (werkelijke factuur ≈€620/maand, zie docs/TCO_ROI.md). Het biedt een volledig ATS (Applicant Tracking System) met Kanban-pipeline, kandidaatbeheer, vacaturebeheer en dashboardanalytics — klaar voor uitbreiding naar omni-channel communicatie, AI-matching en white-label klantportalen. Multi-tenant vanaf dag één via PostgreSQL Row-Level Security.
 
 ## Tech stack
 
@@ -84,6 +84,20 @@ npm run dev       # start op http://localhost:3000
 |-----------------------------|----------------------------------------------------|-------------------------------|
 | `NEXT_PUBLIC_API_URL`       | Backend API basis-URL                              | `http://localhost:4000/api`   |
 | `NEXT_PUBLIC_USE_MOCK_DATA` | Gebruik mock data i.p.v. echte API (`true`/`false`)| `false`                       |
+
+### Laadvolgorde (Next.js)
+
+Next.js laadt env-bestanden in `apps/web/` in deze volgorde (hoogste prioriteit eerst):
+
+1. `process.env` (shell/Docker-omgeving)
+2. `.env.$(NODE_ENV).local` (bijv. `.env.development.local` — niet in gebruik in dit project)
+3. `.env.local` (niet geladen bij `NODE_ENV=test`)
+4. `.env.$(NODE_ENV)` (bijv. `.env.development` — niet in gebruik in dit project)
+5. `.env`
+
+Lokaal bestaat alleen `apps/web/.env.local`; in productie komen de waarden uit `infra/.env.prod`, geïnjecteerd door `./infra/deploy.sh` (docker compose `--env-file`).
+
+> **`NEXT_PUBLIC_*` is build-time, niet runtime.** Deze variabelen worden bij `next build` in de client-bundle gebakken. Een wijziging in `.env.local` of `infra/.env.prod` heeft dus pas effect na een **rebuild** (lokaal: dev-server herstarten; productie: web-image opnieuw bouwen) — alleen een container-restart is niet genoeg.
 
 ## Faseringsplan
 

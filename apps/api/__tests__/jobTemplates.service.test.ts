@@ -204,4 +204,111 @@ describe('jobTemplates.service', () => {
     expect((job as { id: string }).id).toBe('job-new');
     expect(lastInsertSql).toContain('INSERT INTO jobs');
   });
+
+  it('instantiate met status=open zonder salarisband → 422 PAY_TRANSPARENCY_REQUIRED', async () => {
+    let jobInsertSeen = false;
+    client = mockClient({
+      __matcher: (sql) => {
+        if (/SELECT \* FROM job_templates/i.test(sql)) {
+          return {
+            rows: [
+              {
+                id: TEMPLATE_ID,
+                tenant_id: TENANT_ID,
+                name: 'Backend Engineer',
+                description: null,
+                job_data: JSON.stringify({
+                  title: 'Backend Engineer',
+                  department: 'Engineering',
+                }),
+                is_system: false,
+                created_by: USER_ID,
+                deleted_at: null,
+                created_at: 'a',
+                updated_at: 'a',
+              },
+            ],
+            rowCount: 1,
+          };
+        }
+        if (/FROM tenant_pay_settings/i.test(sql)) {
+          return {
+            rows: [{ pay_transparency_enforced: true }],
+            rowCount: 1,
+          };
+        }
+        if (/INSERT INTO jobs/i.test(sql)) {
+          jobInsertSeen = true;
+          return { rows: [{ id: 'job-x' }], rowCount: 1 };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    teardown = installPoolMock(client);
+
+    await expect(
+      instantiateFromTemplate(TENANT_ID, USER_ID, TEMPLATE_ID, {
+        status: 'open',
+      })
+    ).rejects.toMatchObject({
+      statusCode: 422,
+      code: 'PAY_TRANSPARENCY_REQUIRED',
+    });
+
+    // Gate zit vóór createJob — er mag géén job-INSERT gebeuren.
+    expect(jobInsertSeen).toBe(false);
+  });
+
+  it('instantiate met status=open MET volledige band publiceert gewoon', async () => {
+    let jobInsertSeen = false;
+    client = mockClient({
+      __matcher: (sql) => {
+        if (/SELECT \* FROM job_templates/i.test(sql)) {
+          return {
+            rows: [
+              {
+                id: TEMPLATE_ID,
+                tenant_id: TENANT_ID,
+                name: 'Backend Engineer',
+                description: null,
+                job_data: JSON.stringify({
+                  title: 'Backend Engineer',
+                  salary_min: 55000,
+                  salary_max: 75000,
+                  salary_frequency: 'annual',
+                }),
+                is_system: false,
+                created_by: USER_ID,
+                deleted_at: null,
+                created_at: 'a',
+                updated_at: 'a',
+              },
+            ],
+            rowCount: 1,
+          };
+        }
+        if (/FROM tenant_pay_settings/i.test(sql)) {
+          return {
+            rows: [{ pay_transparency_enforced: true }],
+            rowCount: 1,
+          };
+        }
+        if (/INSERT INTO jobs/i.test(sql)) {
+          jobInsertSeen = true;
+          return {
+            rows: [{ id: 'job-live', tenant_id: TENANT_ID }],
+            rowCount: 1,
+          };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    teardown = installPoolMock(client);
+
+    const job = await instantiateFromTemplate(TENANT_ID, USER_ID, TEMPLATE_ID, {
+      status: 'open',
+    });
+    expect((job as { id: string }).id).toBe('job-live');
+    expect(jobInsertSeen).toBe(true);
+  });
 });

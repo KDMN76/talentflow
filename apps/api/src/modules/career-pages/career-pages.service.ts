@@ -37,6 +37,11 @@ export interface PublicCareerPageJob {
   employment_type: string | null;
   salary_min: number | null;
   salary_max: number | null;
+  /** monthly / annual / hourly — nodig om de band correct te tonen (EU 2023/970). */
+  salary_frequency: string | null;
+  currency: string | null;
+  /** Criteria waarmee de beloning bepaald wordt (EU 2023/970 art. 5). */
+  compensation_criteria: string | null;
   description: string | null;
   created_at: string;
 }
@@ -105,6 +110,9 @@ function buildMockCareerPage(slug: string): PublicCareerPage {
         employment_type: 'fulltime',
         salary_min: 60000,
         salary_max: 85000,
+        salary_frequency: 'annual',
+        currency: 'EUR',
+        compensation_criteria: null,
         description: 'Wij zoeken een ervaren ontwikkelaar.',
         created_at: now,
       },
@@ -116,6 +124,9 @@ function buildMockCareerPage(slug: string): PublicCareerPage {
         employment_type: 'fulltime',
         salary_min: 50000,
         salary_max: 70000,
+        salary_frequency: 'annual',
+        currency: 'EUR',
+        compensation_criteria: null,
         description: 'Help ons mooie producten te bouwen.',
         created_at: now,
       },
@@ -437,7 +448,8 @@ export async function getPublicCareerPage(slug: string): Promise<PublicCareerPag
       // Fetch active jobs for this tenant (no tenant context — explicit filter)
       const { rows: jobs } = await client.query(
         `SELECT j.id, j.title, j.department, j.location, j.employment_type,
-                j.salary_min, j.salary_max, j.description, j.created_at
+                j.salary_min, j.salary_max, j.salary_frequency, j.currency,
+                j.compensation_criteria, j.description, j.created_at
          FROM jobs j
          WHERE j.tenant_id = $1
            AND j.status = 'open'

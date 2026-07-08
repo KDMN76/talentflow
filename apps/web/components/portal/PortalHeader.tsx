@@ -10,6 +10,7 @@
 
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface PortalHeaderProps {
   brandName?: string | null;
@@ -22,7 +23,8 @@ export function PortalHeader({
   logoUrl,
   showPoweredBy = true,
 }: PortalHeaderProps) {
-  const displayName = brandName ?? "Recruitment portaal";
+  const { t } = useTranslation("portalPublic");
+  const displayName = brandName ?? t("header.fallbackBrand");
 
   return (
     <header className="sticky top-0 z-30 w-full border-b border-zinc-200/80 dark:border-zinc-800/80 bg-white/85 dark:bg-zinc-950/85 backdrop-blur supports-[backdrop-filter]:bg-white/70">
@@ -53,7 +55,7 @@ export function PortalHeader({
               {displayName}
             </p>
             <p className="hidden text-[11px] text-zinc-500 dark:text-zinc-400 sm:block">
-              Recruitment portaal
+              {t("header.tagline")}
             </p>
           </div>
         </div>
@@ -67,7 +69,7 @@ export function PortalHeader({
           >
             <Sparkles className="h-3 w-3" aria-hidden="true" />
             <span>
-              Powered by{" "}
+              {t("header.poweredByPrefix")}{" "}
               <span className="font-semibold text-zinc-700 dark:text-zinc-200">
                 TalentFlow
               </span>

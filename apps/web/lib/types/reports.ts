@@ -1,278 +1,261 @@
 /**
  * Report Builder — type definitions.
  *
- * Mirrors the contract delivered by Agent EEE (backend) for Sprint Q3.5.
- * Every block has a `type` discriminator + a typed `config` object.
+ * Mirrors the REAL backend contract 1:1:
+ *   apps/api/src/lib/reports/configSchema.ts   (config + AggregateResult)
+ *   apps/api/src/modules/reports/reports.service.ts (Report, run, embed)
  *
- * Block types: kpi | table | bar | line | funnel | pie
+ * Key shape facts (do NOT drift from these):
+ *   - A saved config is { date_range, blocks: ReportBlockEntry[], filters_global? }.
+ *   - Each entry wraps the actual block: { id, title?, size, block: ReportBlock }.
+ *   - Metrics/dimensions are OBJECTS ({ key, entity, label }), not bare keys.
+ *   - Run results discriminate on `block_type` (not `type`).
  */
 
-// ─── Dimensions & metrics (catalogue) ────────────────────────────────────────
+// ─── Entities, dimensions & metrics (catalogue) ──────────────────────────────
 
-export type DimensionKey =
-  | "stage"
-  | "source"
-  | "recruiter"
-  | "department"
-  | "job"
-  | "location"
-  | "month"
-  | "week"
-  | "day"
-  | "rejection_reason"
-  | "tag";
+export type ReportEntity =
+  | "candidates"
+  | "jobs"
+  | "applications"
+  | "interviews"
+  | "communications"
+  | "recruiters";
 
-export type MetricKey =
-  | "applications_count"
-  | "candidates_count"
-  | "hires_count"
-  | "interviews_count"
-  | "offers_count"
-  | "rejections_count"
-  | "avg_time_to_hire_days"
-  | "avg_time_in_stage_days"
-  | "conversion_rate"
-  | "open_jobs_count";
-
-export interface DimensionDef {
-  key: DimensionKey;
+export interface ReportDimension {
+  key: string;
+  entity: ReportEntity;
   label: string;
-  description?: string;
 }
 
-export interface MetricDef {
-  key: MetricKey;
+export interface ReportMetric {
+  key: string;
+  entity: ReportEntity;
   label: string;
-  unit?: "count" | "percentage" | "days";
-  description?: string;
+  unit?: string;
 }
+
+// Aliases used by hooks/components for the /dimensions and /metrics catalogue.
+export type DimensionDef = ReportDimension;
+export type MetricDef = ReportMetric;
 
 // ─── Filters ─────────────────────────────────────────────────────────────────
 
 export type FilterOperator =
-  | "eq"
-  | "neq"
-  | "gt"
-  | "gte"
-  | "lt"
-  | "lte"
+  | "equals"
   | "in"
-  | "nin"
+  | "between"
+  | "gt"
+  | "lt"
   | "contains";
 
 export interface ReportFilter {
   field: string;
   operator: FilterOperator;
-  value: string | number | string[] | number[] | null;
+  value: unknown;
 }
 
-// ─── Block-type config shapes ────────────────────────────────────────────────
+// ─── Blocks (config-side) ────────────────────────────────────────────────────
 
-export interface KpiBlockConfig {
-  metric: MetricKey;
-  label?: string;
-  comparison?: "previous_period" | "previous_year" | "none";
+export interface KpiBlock {
+  type: "kpi";
+  metric: ReportMetric;
   filters?: ReportFilter[];
+  comparison?: "previous_period" | "previous_year" | null;
 }
 
-export interface TableBlockConfig {
-  rows: DimensionKey[];
-  cols?: DimensionKey[];
-  metric: MetricKey;
-  sort_by?: "metric_desc" | "metric_asc" | "label_asc";
-  show_totals?: boolean;
+export interface TableBlock {
+  type: "table";
+  rows: ReportDimension[];
+  cols?: ReportDimension[];
+  metric: ReportMetric;
   filters?: ReportFilter[];
-}
-
-export interface BarBlockConfig {
-  x: DimensionKey;
-  series: MetricKey[];
-  group_by?: DimensionKey;
-  stacked?: boolean;
-  filters?: ReportFilter[];
-}
-
-export interface LineBlockConfig {
-  x: DimensionKey;
-  series: MetricKey[];
-  group_by?: DimensionKey;
-  filters?: ReportFilter[];
-}
-
-export interface FunnelBlockConfig {
-  stages: string[]; // pipeline stage IDs (or names)
-  metric?: MetricKey; // defaults to candidates_count
-  filters?: ReportFilter[];
-}
-
-export interface PieBlockConfig {
-  metric: MetricKey;
-  group_by: DimensionKey;
+  sort?: { key: string; direction: "asc" | "desc" };
   limit?: number;
+}
+
+export interface ChartBlock {
+  type: "bar" | "line";
+  x: ReportDimension;
+  series: ReportMetric[];
+  filters?: ReportFilter[];
+  group_by?: ReportDimension;
+}
+
+export interface FunnelBlock {
+  type: "funnel";
+  entity: "applications";
+  stages: string[];
   filters?: ReportFilter[];
 }
 
-export type BlockConfig =
-  | KpiBlockConfig
-  | TableBlockConfig
-  | BarBlockConfig
-  | LineBlockConfig
-  | FunnelBlockConfig
-  | PieBlockConfig;
+export interface PieBlock {
+  type: "pie";
+  metric: ReportMetric;
+  group_by: ReportDimension;
+  filters?: ReportFilter[];
+  limit?: number;
+}
 
-export type BlockType = "kpi" | "table" | "bar" | "line" | "funnel" | "pie";
+export type ReportBlock =
+  | KpiBlock
+  | TableBlock
+  | ChartBlock
+  | FunnelBlock
+  | PieBlock;
 
-// ─── Block (config-side, not run-result) ─────────────────────────────────────
+export type BlockType = ReportBlock["type"];
 
-export interface ReportBlock<T extends BlockConfig = BlockConfig> {
+export type BlockSize = "sm" | "md" | "lg";
+
+/** One canvas entry: id + presentational meta + the actual block. */
+export interface ReportBlockEntry {
   id: string;
-  type: BlockType;
   title?: string;
-  config: T;
+  description?: string;
+  size: BlockSize;
+  block: ReportBlock;
 }
 
-// ─── Report config ───────────────────────────────────────────────────────────
+// ─── Date range ──────────────────────────────────────────────────────────────
 
-export type DateRangePreset =
-  | "last_7_days"
-  | "last_30_days"
-  | "this_quarter"
-  | "this_year"
-  | "custom";
+export type ReportDateRange =
+  | { type: "last_n_days"; days: number }
+  | { type: "this_quarter" | "last_quarter" | "this_year" | "last_year" }
+  | { type: "custom"; from: string; to: string };
 
-export interface ReportDateRange {
-  preset: DateRangePreset;
-  /** ISO string; only used when preset = "custom". */
-  from?: string;
-  /** ISO string; only used when preset = "custom". */
-  to?: string;
-}
+// ─── Report config + saved report ────────────────────────────────────────────
 
 export interface ReportConfig {
-  blocks: ReportBlock[];
   date_range: ReportDateRange;
-  filters?: ReportFilter[]; // global filters applied to every block
+  blocks: ReportBlockEntry[];
+  filters_global?: ReportFilter[];
 }
 
-// ─── Report (saved) ──────────────────────────────────────────────────────────
-
-export type SystemTemplateKey =
-  | "executive_summary"
-  | "recruiter_performance"
-  | "pipeline_health"
-  | "diversity_inclusion"
-  | "source_efficiency";
+export type TemplateKey =
+  | "recruiter"
+  | "manager"
+  | "chro"
+  | "source_of_hire"
+  | "dei_funnel"
+  | "custom";
 
 export interface Report {
   id: string;
   tenant_id?: string;
+  user_id?: string | null;
   name: string;
-  description?: string;
+  description?: string | null;
   config: ReportConfig;
-  template_key?: SystemTemplateKey | null;
+  template_key?: TemplateKey | null;
   is_template?: boolean;
   is_shared?: boolean;
   embed_token?: string | null;
   embed_enabled?: boolean;
+  embed_expires_at?: string | null;
+  schedule?: unknown | null;
   last_run_at?: string | null;
   created_at: string;
   updated_at: string;
-  created_by?: string;
-  created_by_name?: string;
 }
 
 export interface SystemTemplate {
-  key: SystemTemplateKey;
+  key: Exclude<TemplateKey, "custom">;
   name: string;
   description: string;
   config: ReportConfig;
 }
 
-// ─── Run result (per block) ──────────────────────────────────────────────────
+// ─── Run results (per block) — discriminated on block_type ──────────────────
 
 export interface KpiResult {
   block_id: string;
-  type: "kpi";
-  value: number;
-  label?: string;
+  block_type: "kpi";
+  title?: string;
+  metric_label: string;
+  metric_unit?: string;
+  value: number | null;
   comparison_value?: number | null;
-  change_percentage?: number | null;
-  unit?: "count" | "percentage" | "days";
-}
-
-export interface TableResultRow {
-  /** Row group dimension(s). */
-  group: Record<string, string>;
-  /** Column dimension → metric value. Empty key means "no col-grouping". */
-  values: Record<string, number>;
-  /** Optional row-total. */
-  total?: number;
+  comparison_delta_pct?: number | null;
 }
 
 export interface TableResult {
   block_id: string;
-  type: "table";
-  columns: string[];
-  rows: TableResultRow[];
-  total?: Record<string, number>;
+  block_type: "table";
+  title?: string;
+  /** Header labels in render order (row-dims, cols, metric last). */
+  headers: string[];
+  rows: ReadonlyArray<ReadonlyArray<string | number | null>>;
 }
 
-export interface BarLineResult {
+export interface ChartSeriesPoint {
+  x: string | number;
+  values: Record<string, number | null>;
+}
+
+export interface ChartResult {
   block_id: string;
-  type: "bar" | "line";
-  /** One row per x-axis value. */
-  data: Array<Record<string, number | string>>;
-  /** Series keys (each is a metric). */
-  series: string[];
-  /** x-axis dataKey. */
-  x_key: string;
+  block_type: "bar" | "line";
+  title?: string;
+  x_label: string;
+  series_labels: string[];
+  points: ChartSeriesPoint[];
 }
 
-export interface FunnelResultStage {
-  name: string;
+export interface FunnelStageRow {
+  stage: string;
   count: number;
-  /** Conversion from previous stage (0–1). null for first stage. */
-  conversion: number | null;
+  /** Percentage (0–100) relative to the FIRST stage; 100 for stage 1. */
+  conversion_pct: number | null;
 }
 
 export interface FunnelResult {
   block_id: string;
-  type: "funnel";
-  stages: FunnelResultStage[];
-  overall_conversion: number;
-}
-
-export interface PieSlice {
-  name: string;
-  value: number;
-  percentage: number;
+  block_type: "funnel";
+  title?: string;
+  stages: FunnelStageRow[];
 }
 
 export interface PieResult {
   block_id: string;
-  type: "pie";
-  slices: PieSlice[];
-  total: number;
+  block_type: "pie";
+  title?: string;
+  metric_label: string;
+  slices: Array<{ label: string; value: number; pct: number | null }>;
 }
 
 export type BlockResult =
   | KpiResult
   | TableResult
-  | BarLineResult
+  | ChartResult
   | FunnelResult
   | PieResult;
+
+// ─── API responses ───────────────────────────────────────────────────────────
 
 export interface RunReportResponse {
   blocks: BlockResult[];
   ran_at: string;
+  report_run_id: string;
+  cache_hit: boolean;
 }
 
 export interface EmbedTokenResponse {
   token: string;
+  /** Backend API run-URL — the web app builds its own /embed/reports/:token page URL. */
   url: string;
+  expires_at: string | null;
 }
 
-// ─── Catalogue ───────────────────────────────────────────────────────────────
+/** Payload of the public GET /reports/embed/:token endpoint (unwrapped). */
+export interface EmbedReportData {
+  report: { id: string; name: string; description: string | null };
+  config: ReportConfig;
+  results: BlockResult[];
+  ran_at: string;
+}
+
+// ─── Labels (NL UI) ──────────────────────────────────────────────────────────
 
 export const BLOCK_TYPE_LABELS: Record<BlockType, string> = {
   kpi: "KPI",
@@ -292,10 +275,38 @@ export const BLOCK_TYPE_DESCRIPTIONS: Record<BlockType, string> = {
   pie: "Verdeling per categorie",
 };
 
-export const TEMPLATE_LABELS: Record<SystemTemplateKey, string> = {
-  executive_summary: "Executive samenvatting",
-  recruiter_performance: "Recruiter prestaties",
-  pipeline_health: "Pipeline gezondheid",
-  diversity_inclusion: "Diversiteit & inclusie",
-  source_efficiency: "Bron-efficiëntie",
+export const TEMPLATE_LABELS: Record<TemplateKey, string> = {
+  recruiter: "Recruiter Dashboard",
+  manager: "Manager Dashboard",
+  chro: "CHRO Dashboard",
+  source_of_hire: "Source of Hire",
+  dei_funnel: "DEI Funnel",
+  custom: "Eigen rapport",
 };
+
+/**
+ * Filterable fields per entity — mirror of FILTERABLE_FIELDS in the backend
+ * (apps/api/src/lib/reports/configSchema.ts). The backend silently drops
+ * anything not on this list, so the UI only offers these.
+ */
+export const FILTER_FIELD_OPTIONS: Array<{
+  value: string;
+  label: string;
+  entity: ReportEntity;
+}> = [
+  { value: "source", label: "Bron (kandidaat)", entity: "candidates" },
+  { value: "gender", label: "Geslacht", entity: "candidates" },
+  { value: "address_country", label: "Land (kandidaat)", entity: "candidates" },
+  { value: "industry", label: "Branche", entity: "candidates" },
+  {
+    value: "years_of_experience",
+    label: "Jaren ervaring",
+    entity: "candidates",
+  },
+  { value: "status", label: "Status", entity: "jobs" },
+  { value: "department", label: "Afdeling", entity: "jobs" },
+  { value: "location", label: "Locatie", entity: "jobs" },
+  { value: "employment_type", label: "Dienstverband", entity: "jobs" },
+  { value: "stage_id", label: "Pipeline-stap (ID)", entity: "applications" },
+  { value: "job_id", label: "Vacature (ID)", entity: "applications" },
+];

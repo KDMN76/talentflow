@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import {
   AlertCircle,
   CheckCircle2,
@@ -48,22 +50,12 @@ import {
   type MailboxProvider,
 } from "@/hooks/useMailboxIntegrations";
 
-// ─── OAuth callback reasons ─────────────────────────────────────────────────
-
-const ERROR_REASONS: Record<string, string> = {
-  access_denied: "Toestemming geweigerd. Probeer het opnieuw en sta de gevraagde rechten toe.",
-  invalid_state: "OAuth-sessie verlopen. Start de koppeling opnieuw.",
-  token_exchange_failed: "Token-uitwisseling met de provider mislukte.",
-  scope_missing: "Niet alle benodigde rechten zijn verleend.",
-  unknown: "Er ging iets mis bij het verbinden.",
-};
-
 // ─── Provider metadata ──────────────────────────────────────────────────────
 
 interface ProviderMeta {
   id: MailboxProvider;
   name: string;
-  description: string;
+  descriptionKey: string;
   hourlyLimit: number;
   Logo: React.FC<{ className?: string }>;
   accent: string;
@@ -73,8 +65,7 @@ const PROVIDERS: ProviderMeta[] = [
   {
     id: "gmail",
     name: "Gmail",
-    description:
-      "Verbind je Gmail om mails direct vanuit TalentFlow te versturen en replies automatisch in te lezen.",
+    descriptionKey: "providers.gmailDescription",
     hourlyLimit: 250,
     Logo: GmailLogo,
     accent: "from-red-500 to-amber-500",
@@ -82,8 +73,7 @@ const PROVIDERS: ProviderMeta[] = [
   {
     id: "outlook",
     name: "Outlook",
-    description:
-      "Verbind je Microsoft 365 / Outlook-postvak om vanuit TalentFlow te corresponderen.",
+    descriptionKey: "providers.outlookDescription",
     hourlyLimit: 100,
     Logo: OutlookLogo,
     accent: "from-blue-500 to-indigo-600",
@@ -93,6 +83,7 @@ const PROVIDERS: ProviderMeta[] = [
 // ─── Page component ─────────────────────────────────────────────────────────
 
 export default function IntegrationsPage() {
+  const { t } = useTranslation("settingsIntegrations");
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -121,16 +112,15 @@ export default function IntegrationsPage() {
 
     if (status === "success") {
       toast({
-        title: "Mailbox verbonden",
-        description:
-          "Je e-mailaccount is gekoppeld aan TalentFlow en kan nu gebruikt worden voor verzending.",
+        title: t("toasts.connected.title"),
+        description: t("toasts.connected.description"),
       });
       refetch();
     } else if (status === "error") {
       const reason = searchParams.get("reason") ?? "unknown";
       toast({
-        title: "Verbinden mislukt",
-        description: ERROR_REASONS[reason] ?? ERROR_REASONS.unknown,
+        title: t("toasts.connectFailed.title"),
+        description: t([`errorReasons.${reason}`, "errorReasons.unknown"]),
         variant: "destructive",
       });
     }
@@ -170,8 +160,8 @@ export default function IntegrationsPage() {
       window.location.href = result.url;
     } catch {
       toast({
-        title: "Kon OAuth niet starten",
-        description: "Probeer het later opnieuw of neem contact op met support.",
+        title: t("toasts.oauthFailed.title"),
+        description: t("toasts.oauthFailed.description"),
         variant: "destructive",
       });
       setPendingProvider(null);
@@ -182,13 +172,15 @@ export default function IntegrationsPage() {
     try {
       await disconnect.mutateAsync(integ.id);
       toast({
-        title: "Mailbox losgekoppeld",
-        description: `${integ.account_email} is niet meer verbonden.`,
+        title: t("toasts.disconnected.title"),
+        description: t("toasts.disconnected.description", {
+          email: integ.account_email,
+        }),
       });
     } catch {
       toast({
-        title: "Loskoppelen mislukt",
-        description: "Probeer het opnieuw.",
+        title: t("toasts.disconnectFailed.title"),
+        description: t("toasts.disconnectFailed.description"),
         variant: "destructive",
       });
     } finally {
@@ -200,8 +192,8 @@ export default function IntegrationsPage() {
   return (
     <div className="max-w-4xl space-y-6 animate-fade-in">
       <PageHeader
-        title="Integraties — koppel je mailbox aan TalentFlow"
-        description="Verbind Gmail of Outlook om mails direct vanuit TalentFlow te versturen en replies automatisch in te lezen."
+        title={t("header.title")}
+        description={t("header.description")}
         actions={
           <Button
             variant="outline"
@@ -212,7 +204,7 @@ export default function IntegrationsPage() {
             <RefreshCw
               className={`h-3.5 w-3.5 mr-1.5 ${isRefetching ? "animate-spin" : ""}`}
             />
-            Vernieuwen
+            {t("header.refresh")}
           </Button>
         }
       />
@@ -222,15 +214,15 @@ export default function IntegrationsPage() {
         <Card className="border-0 shadow-sm">
           <CardContent className="p-5">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Verbonden mailboxes
+              {t("stats.connectedLabel")}
             </p>
             <p className="mt-2 text-3xl font-bold text-zinc-900 dark:text-zinc-100">
               {isLoading ? "—" : stats.connected}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
               {stats.connected === 0
-                ? "Nog geen mailboxes gekoppeld"
-                : "Actief en klaar voor verzending"}
+                ? t("stats.connectedEmpty")
+                : t("stats.connectedActive")}
             </p>
           </CardContent>
         </Card>
@@ -238,13 +230,13 @@ export default function IntegrationsPage() {
         <Card className="border-0 shadow-sm">
           <CardContent className="p-5">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Emails gesynced (24u)
+              {t("stats.syncedLabel")}
             </p>
             <p className="mt-2 text-3xl font-bold text-zinc-900 dark:text-zinc-100">
               {isLoading ? "—" : stats.synced24h}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Inkomende + uitgaande mails via gekoppelde accounts
+              {t("stats.syncedHint")}
             </p>
           </CardContent>
         </Card>
@@ -257,10 +249,10 @@ export default function IntegrationsPage() {
             <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
             <div className="space-y-1">
               <p className="text-sm font-semibold text-destructive">
-                Integraties konden niet worden geladen
+                {t("errorState.title")}
               </p>
               <p className="text-xs text-muted-foreground">
-                Controleer je verbinding en probeer het opnieuw.
+                {t("errorState.description")}
               </p>
             </div>
           </CardContent>
@@ -291,16 +283,15 @@ export default function IntegrationsPage() {
             <ShieldCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-500 mt-0.5 shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                We krijgen alleen toegang tot mails versturen + lezen
+                {t("disclosure.title")}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Geen agenda, geen contacten, geen Drive-bestanden. Tokens worden
-                versleuteld opgeslagen en kun je elk moment intrekken.
+                {t("disclosure.description")}
               </p>
             </div>
             <CollapsibleTrigger asChild>
               <Button variant="ghost" size="sm" className="shrink-0">
-                Details
+                {t("disclosure.details")}
                 <ChevronDown className="h-3.5 w-3.5 ml-1" />
               </Button>
             </CollapsibleTrigger>
@@ -309,46 +300,44 @@ export default function IntegrationsPage() {
             <div className="border-t border-border px-5 py-4 space-y-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                  Gmail-scopes
+                  {t("scopes.gmailTitle")}
                 </p>
                 <ul className="text-xs text-zinc-700 dark:text-zinc-300 space-y-1 font-mono">
                   <li>
                     <code className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded">
                       gmail.send
                     </code>{" "}
-                    — versturen namens jouw account
+                    {t("scopes.gmailSend")}
                   </li>
                   <li>
                     <code className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded">
                       gmail.readonly
                     </code>{" "}
-                    — alleen lezen om replies van kandidaten te koppelen
+                    {t("scopes.gmailReadonly")}
                   </li>
                 </ul>
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                  Outlook-scopes
+                  {t("scopes.outlookTitle")}
                 </p>
                 <ul className="text-xs text-zinc-700 dark:text-zinc-300 space-y-1 font-mono">
                   <li>
                     <code className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded">
                       Mail.Send
                     </code>{" "}
-                    — versturen namens jouw account
+                    {t("scopes.outlookSend")}
                   </li>
                   <li>
                     <code className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded">
                       Mail.Read
                     </code>{" "}
-                    — alleen lezen om replies van kandidaten te koppelen
+                    {t("scopes.outlookRead")}
                   </li>
                 </ul>
               </div>
               <p className="text-xs text-muted-foreground pt-1">
-                Tokens worden versleuteld opgeslagen (AES-256-GCM) en
-                nooit gedeeld met derden. Bij &quot;Disconnect&quot; verwijderen we het
-                token onmiddellijk uit onze database.
+                {t("scopes.footer")}
               </p>
             </div>
           </CollapsibleContent>
@@ -362,24 +351,23 @@ export default function IntegrationsPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Mailbox loskoppelen?</AlertDialogTitle>
+            <AlertDialogTitle>{t("disconnectDialog.title")}</AlertDialogTitle>
             <AlertDialogDescription>
               {confirmDelete && (
                 <>
                   <span className="font-medium">{confirmDelete.account_email}</span>{" "}
-                  wordt losgekoppeld. Lopende campagnes via dit account worden
-                  gepauzeerd. Je kunt later opnieuw verbinden.
+                  {t("disconnectDialog.body")}
                 </>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogCancel>{t("disconnectDialog.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => confirmDelete && handleDisconnect(confirmDelete)}
               className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
             >
-              Loskoppelen
+              {t("disconnectDialog.confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -407,6 +395,7 @@ function ProviderCard({
   onConnect,
   onDisconnect,
 }: ProviderCardProps) {
+  const { t } = useTranslation("settingsIntegrations");
   const { Logo } = meta;
   return (
     <Card className="border-0 shadow-sm overflow-hidden">
@@ -420,29 +409,29 @@ function ProviderCard({
           <div className="min-w-0">
             <CardTitle className="text-base">{meta.name}</CardTitle>
             <CardDescription className="text-xs">
-              Limiet: {meta.hourlyLimit} mails/uur
+              {t("providerCard.limit", { limit: meta.hourlyLimit })}
             </CardDescription>
           </div>
           {accounts.length > 0 && (
             <Badge className="ml-auto bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-0 text-[10px]">
-              {accounts.length} verbonden
+              {t("providerCard.connectedBadge", { count: accounts.length })}
             </Badge>
           )}
         </div>
-        <p className="text-sm text-muted-foreground">{meta.description}</p>
+        <p className="text-sm text-muted-foreground">{t(meta.descriptionKey)}</p>
       </CardHeader>
 
       <CardContent className="space-y-3">
         {/* Account list */}
         {isLoading ? (
           <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-xs text-muted-foreground">
-            Laden…
+            {t("providerCard.loading")}
           </div>
         ) : accounts.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center">
             <Mail className="h-5 w-5 text-muted-foreground/60 mx-auto mb-2" />
             <p className="text-xs text-muted-foreground">
-              Nog geen {meta.name}-account verbonden.
+              {t("providerCard.emptyAccount", { name: meta.name })}
             </p>
           </div>
         ) : (
@@ -463,10 +452,10 @@ function ProviderCard({
                     {acc.account_name && (
                       <span className="mr-2">{acc.account_name}</span>
                     )}
-                    Laatste sync:{" "}
+                    {t("providerCard.lastSync")}{" "}
                     {acc.last_sync_at
-                      ? formatRelative(acc.last_sync_at)
-                      : "nog niet"}
+                      ? formatRelative(acc.last_sync_at, t)
+                      : t("providerCard.notYet")}
                   </p>
                 </div>
                 <Button
@@ -476,7 +465,7 @@ function ProviderCard({
                   className="shrink-0 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
                 >
                   <Trash2 className="h-3 w-3 mr-1.5" />
-                  Disconnect
+                  {t("providerCard.disconnect")}
                 </Button>
               </div>
             ))}
@@ -494,7 +483,7 @@ function ProviderCard({
           ) : (
             <Plus className="h-4 w-4 mr-2" />
           )}
-          Verbind {meta.name}-account
+          {t("providerCard.connectButton", { name: meta.name })}
           <ExternalLink className="h-3 w-3 ml-auto opacity-60" />
         </Button>
       </CardContent>
@@ -504,16 +493,16 @@ function ProviderCard({
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function formatRelative(dateStr: string): string {
+function formatRelative(dateStr: string, t: TFunction): string {
   const date = new Date(dateStr);
   const diff = Date.now() - date.getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "zojuist";
-  if (mins < 60) return `${mins} min geleden`;
+  if (mins < 1) return t("relative.justNow");
+  if (mins < 60) return t("relative.minutesAgo", { count: mins });
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours} uur geleden`;
+  if (hours < 24) return t("relative.hoursAgo", { count: hours });
   const days = Math.floor(hours / 24);
-  if (days < 30) return `${days} dag${days === 1 ? "" : "en"} geleden`;
+  if (days < 30) return t("relative.daysAgo", { count: days });
   return date.toLocaleDateString("nl-NL", {
     day: "numeric",
     month: "short",

@@ -12,6 +12,7 @@
 "use client";
 
 import { Download, ExternalLink } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -36,13 +37,14 @@ export function PortalResumeViewer({
   candidateName,
   canDownload,
 }: PortalResumeViewerProps) {
+  const { t } = useTranslation("portalPublic");
   const { toast } = useToast();
 
   const handleDownload = () => {
     if (!canDownload) {
       toast({
-        title: "Geen toestemming",
-        description: "Je hebt geen toestemming om CV's te downloaden.",
+        title: t("resume.noPermissionTitle"),
+        description: t("resume.noPermissionBody"),
         variant: "destructive",
       });
       return;
@@ -64,7 +66,7 @@ export function PortalResumeViewer({
       <DialogContent className="flex h-[90vh] max-h-[900px] max-w-4xl flex-col gap-3 p-4 sm:p-5">
         <DialogHeader className="flex-row items-center justify-between gap-3 space-y-0">
           <DialogTitle className="text-base sm:text-lg">
-            CV — {candidateName}
+            {t("resume.title", { name: candidateName })}
           </DialogTitle>
           <div className="flex items-center gap-2 pr-7">
             {resumeUrl && (
@@ -74,7 +76,7 @@ export function PortalResumeViewer({
                 onClick={() => window.open(resumeUrl, "_blank", "noopener,noreferrer")}
               >
                 <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-                Open in tab
+                {t("resume.openTab")}
               </Button>
             )}
             {canDownload && resumeUrl && (
@@ -85,7 +87,7 @@ export function PortalResumeViewer({
                 style={{ backgroundColor: "var(--brand-primary)" }}
               >
                 <Download className="mr-1.5 h-3.5 w-3.5" />
-                Download
+                {t("resume.download")}
               </Button>
             )}
           </div>
@@ -95,12 +97,12 @@ export function PortalResumeViewer({
           {resumeUrl ? (
             <iframe
               src={`${resumeUrl}#toolbar=0&navpanes=0`}
-              title={`CV van ${candidateName}`}
+              title={t("resume.iframeTitle", { name: candidateName })}
               className="h-full w-full"
             />
           ) : (
             <div className="flex h-full items-center justify-center p-8 text-center text-sm text-muted-foreground">
-              Geen CV beschikbaar voor deze kandidaat.
+              {t("resume.noCv")}
             </div>
           )}
         </div>

@@ -98,7 +98,7 @@ export function TemplateLoader({
                         key={b.id}
                         className={cn("flex-1 rounded-sm", colors[i % colors.length])}
                         style={{ height: `${heightPct}%` }}
-                        title={b.type}
+                        title={b.block.type}
                       />
                     );
                   })}

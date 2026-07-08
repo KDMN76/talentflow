@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import {
   AlertCircle,
+  AlertTriangle,
   Clock,
   Download,
   FileText,
@@ -11,6 +12,7 @@ import {
   Plus,
   Search,
   CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -142,16 +144,34 @@ interface FulfillDialogProps {
 
 function FulfillDialog({ request, onClose, onConfirm, pending }: FulfillDialogProps) {
   const [notes, setNotes] = useState("");
+  const isDeletion = request?.request_type === "deletion";
   return (
     <Dialog open={!!request} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle>DSAR-verzoek vervullen</DialogTitle>
+          <DialogTitle>
+            {isDeletion ? "Verwijderverzoek goedkeuren" : "DSAR-verzoek vervullen"}
+          </DialogTitle>
           <DialogDescription>
-            Bevestig dat je dit verzoek hebt uitgevoerd. Voeg notities toe voor
-            de audit-trail.
+            {isDeletion
+              ? "Goedkeuren voert direct de anonimisatie uit. Voeg notities toe voor de audit-trail."
+              : "Bevestig dat je dit verzoek hebt uitgevoerd. Voeg notities toe voor de audit-trail."}
           </DialogDescription>
         </DialogHeader>
+        {isDeletion && request?.candidate_id && (
+          <div className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50/70 p-3 text-xs text-red-800 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-300">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <div className="space-y-1">
+              <p className="font-semibold">
+                Onomkeerbaar: de kandidaat wordt permanent geanonimiseerd (AVG art. 17).
+              </p>
+              <p className="opacity-90">
+                Naam, contactgegevens en CV-inhoud worden gewist. De audit-trail en
+                geaggregeerde statistieken blijven bewaard.
+              </p>
+            </div>
+          </div>
+        )}
         {request && (
           <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs space-y-1">
             <div>
@@ -190,12 +210,84 @@ function FulfillDialog({ request, onClose, onConfirm, pending }: FulfillDialogPr
           </Button>
           <Button
             disabled={!notes.trim() || pending}
+            className={cn(isDeletion && "bg-red-600 hover:bg-red-700 text-white")}
             onClick={() => {
               onConfirm(notes.trim());
               setNotes("");
             }}
           >
-            {pending ? "Vervullen…" : "Markeer als vervuld"}
+            {pending
+              ? "Verwerken…"
+              : isDeletion
+              ? "Goedkeuren en anonimiseren"
+              : "Markeer als vervuld"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Reject dialog ───────────────────────────────────────────────────────────
+
+interface RejectDialogProps {
+  request: DsarRequest | null;
+  onClose: () => void;
+  onConfirm: (reason: string) => void;
+  pending: boolean;
+}
+
+function RejectDialog({ request, onClose, onConfirm, pending }: RejectDialogProps) {
+  const [reason, setReason] = useState("");
+  return (
+    <Dialog open={!!request} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[480px]">
+        <DialogHeader>
+          <DialogTitle>DSAR-verzoek weigeren</DialogTitle>
+          <DialogDescription>
+            Geef een reden op. De betrokkene heeft recht op een motivatie
+            (AVG art. 12 lid 4) — de reden komt in de audit-trail.
+          </DialogDescription>
+        </DialogHeader>
+        {request && (
+          <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs space-y-1">
+            <div>
+              <span className="text-muted-foreground">Type: </span>
+              <span className="font-medium">
+                {DSAR_TYPE_LABELS[request.request_type]}
+              </span>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Aanvrager: </span>
+              <span className="font-medium">{request.requester_email}</span>
+            </div>
+          </div>
+        )}
+        <div className="space-y-2">
+          <Label htmlFor="reject-reason">
+            Reden van weigering <span className="text-destructive">*</span>
+          </Label>
+          <textarea
+            id="reject-reason"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="Bijv. identiteit kon niet worden geverifieerd, of wettelijke bewaarplicht verhindert verwijdering…"
+            className="w-full min-h-[100px] rounded-md border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={pending}>
+            Annuleren
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={!reason.trim() || pending}
+            onClick={() => {
+              onConfirm(reason.trim());
+              setReason("");
+            }}
+          >
+            {pending ? "Weigeren…" : "Verzoek weigeren"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -399,6 +491,7 @@ export function DsarManagement() {
   const exportUrl = useDsarExportUrl();
   const [newOpen, setNewOpen] = useState(false);
   const [fulfillRequest, setFulfillRequest] = useState<DsarRequest | null>(null);
+  const [rejectRequest, setRejectRequest] = useState<DsarRequest | null>(null);
 
   const handleStart = (req: DsarRequest) => {
     update.mutate(
@@ -416,17 +509,65 @@ export function DsarManagement() {
 
   const handleFulfill = async (notes: string) => {
     if (!fulfillRequest) return;
-    await fulfill.mutateAsync({ id: fulfillRequest.id, notes });
-    toast({
-      title: "DSAR vervuld",
-      description: fulfillRequest.requester_email,
-    });
-    setFulfillRequest(null);
+    try {
+      await fulfill.mutateAsync({ id: fulfillRequest.id, notes });
+      toast({
+        title:
+          fulfillRequest.request_type === "deletion"
+            ? "Verzoek goedgekeurd — kandidaat geanonimiseerd"
+            : "DSAR vervuld",
+        description: fulfillRequest.requester_email,
+      });
+      setFulfillRequest(null);
+    } catch {
+      toast({
+        title: "Vervullen mislukt",
+        description: "Het verzoek kon niet worden afgehandeld. Probeer het opnieuw.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleReject = async (reason: string) => {
+    if (!rejectRequest) return;
+    try {
+      await update.mutateAsync({
+        id: rejectRequest.id,
+        status: "rejected",
+        notes: reason,
+      });
+      toast({
+        title: "DSAR geweigerd",
+        description: rejectRequest.requester_email,
+      });
+      setRejectRequest(null);
+    } catch {
+      toast({
+        title: "Weigeren mislukt",
+        description: "Het verzoek kon niet worden geweigerd. Probeer het opnieuw.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDownload = async (req: DsarRequest) => {
-    const result = await exportUrl.mutateAsync(req.id);
-    window.open(result.url, "_blank", "noopener,noreferrer");
+    try {
+      const result = await exportUrl.mutateAsync(req.id);
+      window.open(result.url, "_blank", "noopener,noreferrer");
+      toast({
+        title: "Download-link aangemaakt",
+        description: `Geldig tot ${new Date(result.expires_at).toLocaleString(
+          "nl-NL"
+        )} — maximaal 3 downloads.`,
+      });
+    } catch {
+      toast({
+        title: "Export mislukt",
+        description:
+          "Kon geen download-link aanmaken. Is de kandidaat al geanonimiseerd?",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -580,20 +721,34 @@ export function DsarManagement() {
                       className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 border-0"
                     >
                       <CheckCircle2 className="h-3.5 w-3.5" />
-                      Vervullen
+                      {req.request_type === "deletion" ? "Goedkeuren" : "Vervullen"}
+                    </Button>
+                  )}
+                  {(req.status === "pending" || req.status === "in_progress") && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setRejectRequest(req)}
+                      className="gap-1.5 border-red-200 text-red-700 hover:bg-red-50 dark:border-red-900/40 dark:text-red-400 dark:hover:bg-red-950/30"
+                    >
+                      <XCircle className="h-3.5 w-3.5" />
+                      Weigeren
                     </Button>
                   )}
                   {(req.request_type === "export" ||
                     req.request_type === "access") &&
-                    req.status === "fulfilled" && (
+                    req.status !== "rejected" &&
+                    !!req.candidate_id && (
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleDownload(req)}
+                        disabled={exportUrl.isPending}
                         className="gap-1.5"
+                        title="Maakt een kort-levende download-link (24u, max 3 downloads) en opent de ZIP"
                       >
                         <Download className="h-3.5 w-3.5" />
-                        Download export
+                        {exportUrl.isPending ? "Link maken…" : "Download export"}
                       </Button>
                     )}
                 </div>
@@ -608,6 +763,12 @@ export function DsarManagement() {
         onClose={() => setFulfillRequest(null)}
         onConfirm={handleFulfill}
         pending={fulfill.isPending}
+      />
+      <RejectDialog
+        request={rejectRequest}
+        onClose={() => setRejectRequest(null)}
+        onConfirm={handleReject}
+        pending={update.isPending}
       />
       <NewDsarDialog open={newOpen} onClose={() => setNewOpen(false)} />
     </div>

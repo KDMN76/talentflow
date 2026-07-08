@@ -55,12 +55,12 @@ export default function EmbedReportPage() {
     );
   }
 
-  const { report, result } = data;
-  const ts = new Date(result.ran_at).toLocaleString("nl-NL");
+  const { report, config, results, ran_at } = data;
+  const ts = new Date(ran_at).toLocaleString("nl-NL");
 
   // Build a result-by-block map for the renderer.
   const byId: Record<string, BlockResult> = {};
-  result.blocks.forEach((b) => {
+  results.forEach((b) => {
     byId[b.block_id] = b;
   });
 
@@ -98,20 +98,34 @@ export default function EmbedReportPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {report.config.blocks.map((block) => (
+          {config.blocks.map((entry) => (
             <div
-              key={block.id}
+              key={entry.id}
               className={
-                // KPIs are compact; charts/tables/funnels span more cols.
-                block.type === "kpi"
+                // Entry-size bepaalt de breedte: sm = 1 kolom (KPI's),
+                // md = 2, lg = volle breedte (charts/tabellen/funnels).
+                entry.size === "sm"
                   ? "col-span-1"
-                  : "md:col-span-2 xl:col-span-3"
+                  : entry.size === "md"
+                    ? "md:col-span-2 xl:col-span-2"
+                    : "md:col-span-2 xl:col-span-3"
               }
             >
-              <BlockRenderer block={block} result={byId[block.id]} />
+              <BlockRenderer entry={entry} result={byId[entry.id]} />
             </div>
           ))}
         </div>
+
+        {config.blocks.length === 0 && (
+          <div className="rounded-xl border border-dashed border-zinc-300 bg-white/60 p-12 text-center dark:border-zinc-700 dark:bg-zinc-900/40">
+            <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+              Dit rapport bevat nog geen blokken
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              De eigenaar heeft het rapport nog niet ingericht.
+            </p>
+          </div>
+        )}
 
         {/* Footer */}
         <footer className="mt-12 border-t border-zinc-200 pt-6 text-center dark:border-zinc-800">

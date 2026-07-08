@@ -46,7 +46,9 @@ import { CandidateMatchesWidget } from "@/components/matching/CandidateMatchesWi
 import { ScorecardForm } from "@/components/scorecards/ScorecardForm";
 import { SkillProfileEditor } from "@/components/skills/SkillProfileEditor";
 import { SkillsGapViewer } from "@/components/skills/SkillsGapViewer";
-import { Merge, AlertCircle } from "lucide-react";
+import { Merge, AlertCircle, ShieldCheck } from "lucide-react";
+import { useCandidateExportLink } from "@/hooks/useCompliance";
+import { CandidateAiSummary } from "@/components/compliance/CandidateAiSummary";
 import type { Application, PipelineStage } from "@/lib/mockData";
 import { cn, getInitials, getScoreColor, formatDate } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
@@ -108,6 +110,33 @@ export default function CandidateProfilePage() {
   const sendWhatsApp = useSendWhatsAppMessage();
   const [waOpen, setWaOpen] = useState(false);
   const [waBody, setWaBody] = useState("");
+
+  // AVG art. 15 — data-export via kort-levende download-link (admin/owner).
+  const exportLink = useCandidateExportLink();
+  const handleGdprExport = async () => {
+    try {
+      const link = await exportLink.mutateAsync(id);
+      window.open(link.url, "_blank", "noopener,noreferrer");
+      toast({
+        title: "AVG-export gestart",
+        description: `Download-link geldig tot ${new Date(
+          link.expires_at
+        ).toLocaleString("nl-NL")} — maximaal 3 downloads.`,
+      });
+    } catch (err) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      toast({
+        title: "AVG-export mislukt",
+        description:
+          status === 403
+            ? "Alleen admins kunnen een data-export aanmaken."
+            : status === 409
+            ? "Deze kandidaat is al geanonimiseerd — er zijn geen persoonsgegevens meer."
+            : "Kon geen download-link aanmaken. Probeer het opnieuw.",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -290,6 +319,17 @@ export default function CandidateProfilePage() {
             <ScrollText className="h-4 w-4" />
             Audit-historie
           </Link>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleGdprExport}
+            disabled={exportLink.isPending}
+            title="AVG art. 15 — download het complete dossier (JSON + leesbare samenvatting + CV's) via een kort-levende link"
+            className="gap-1.5"
+          >
+            <ShieldCheck className="h-4 w-4 text-indigo-600" />
+            {exportLink.isPending ? "Export…" : "AVG-export"}
+          </Button>
         </div>
       </div>
 
@@ -437,6 +477,9 @@ export default function CandidateProfilePage() {
               />
             </CardContent>
           </Card>
+          {/* Q4.6: AI-transparantie (EU AI Act art. 13) — welke AI-verwerkingen
+              zijn op deze kandidaat toegepast. */}
+          <CandidateAiSummary candidateId={candidate.id} />
           {/* Q4.6: Communicatie-tab (omni-channel timeline) */}
           <CandidateCommunicationTab
             candidateId={candidate.id}

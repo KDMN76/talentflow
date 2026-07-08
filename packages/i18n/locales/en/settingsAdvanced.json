@@ -132,6 +132,10 @@
         "label": "Default currency",
         "help": "Currency used by default for salary ranges."
       },
+      "defaultFrequency": {
+        "label": "Default salary frequency",
+        "help": "Frequency the job form pre-fills for new vacancies."
+      },
       "save": "Save"
     },
     "currencies": {
@@ -139,6 +143,34 @@
       "gbp": "British pound (GBP)",
       "usd": "US dollar (USD)",
       "chf": "Swiss franc (CHF)"
+    },
+    "frequencies": {
+      "monthly": "Per month",
+      "annual": "Per year",
+      "hourly": "Per hour"
+    },
+    "report": {
+      "title": "Pay transparency report",
+      "description": "How many of your open vacancies comply with the EU directive (complete salary range).",
+      "enforcedOn": "Enforcement on",
+      "enforcedOff": "Enforcement off",
+      "pctLabel": "Open vacancies with salary range",
+      "stats": {
+        "open": "Open vacancies",
+        "withBand": "With range",
+        "withoutBand": "Without range",
+        "withoutFrequency": "Without frequency"
+      },
+      "actionList": {
+        "title": "Action list — vacancies without a complete range",
+        "empty": "All open vacancies have a complete salary range. Well done!"
+      },
+      "missing": {
+        "salary_min": "Minimum missing",
+        "salary_max": "Maximum missing",
+        "salary_frequency": "Frequency missing"
+      },
+      "payEquityLink": "View the pay-equity dashboard"
     },
     "toast": {
       "saved": {

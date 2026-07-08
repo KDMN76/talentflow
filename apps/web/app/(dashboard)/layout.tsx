@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
+import { BrandingTheme } from "@/components/layout/BrandingTheme";
 import { isAuthenticated } from "@/lib/auth";
 import { useLanguageSync } from "@/hooks/useLanguageSync";
 import { cn } from "@/lib/utils";
@@ -37,6 +38,9 @@ export default function DashboardLayout({
 
   return (
     <div className="flex h-screen overflow-hidden bg-white dark:bg-zinc-950">
+      {/* Tenant-accentkleur → --brand-accent CSS-vars op :root (rendert niets) */}
+      <BrandingTheme />
+
       {/* Desktop Sidebar */}
       <div className="hidden lg:flex lg:shrink-0">
         <Sidebar />

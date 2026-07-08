@@ -11,6 +11,7 @@ import { Router, type Request, type Response, type NextFunction } from 'express'
 import { z } from 'zod';
 import { requireAuth } from '../../middleware/auth';
 import { tenantMiddleware } from '../../middleware/tenant';
+import { requirePermission } from '../../middleware/permissions';
 import { auditCtxFromReq } from '../../lib/audit';
 import { AppError } from '../../middleware/errorHandler';
 import { getStorage } from '../../lib/storage';
@@ -49,7 +50,10 @@ const createBody = z.object({
   notes: z.string().max(2000).nullable().optional(),
 });
 
-router.post('/', async (req: Request, res: Response, next: NextFunction) => {
+// Factuur-mutaties vereisen `billing:write` (admin-niveau) — read-only
+// rollen (viewer) konden eerst zonder check facturen genereren/uitgeven/
+// voldaan-markeren/annuleren (viewer-gap gedicht).
+router.post('/', requirePermission('billing', 'write'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const body = createBody.parse(req.body);
     const result = await service.generateInvoiceFromContract(
@@ -90,6 +94,7 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
 // ── POST /:id/issue ───────────────────────────────────────────────────────
 router.post(
   '/:id/issue',
+  requirePermission('billing', 'write'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const invoice = await service.issueInvoice(
@@ -110,6 +115,7 @@ const markPaidBody = z.object({
 });
 router.post(
   '/:id/mark-paid',
+  requirePermission('billing', 'write'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const body = markPaidBody.parse(req.body);
@@ -132,6 +138,7 @@ const voidBody = z.object({
 });
 router.post(
   '/:id/void',
+  requirePermission('billing', 'write'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const body = voidBody.parse(req.body);
@@ -212,6 +219,7 @@ router.get(
 // ── POST /:id/sync-accounting ─────────────────────────────────────────────
 router.post(
   '/:id/sync-accounting',
+  requirePermission('billing', 'write'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await accounting.syncInvoiceToAccounting(

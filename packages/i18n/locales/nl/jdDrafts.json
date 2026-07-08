@@ -1,0 +1,44 @@
+{
+  "header": {
+    "title": "AI Drafts",
+    "description": "Eerder gegenereerde vacatureteksten — kies een draft om af te maken of te publiceren.",
+    "newDraft": "Nieuwe draft"
+  },
+  "status": {
+    "all": "Alle statussen",
+    "draft": "Concept",
+    "published": "Gepubliceerd",
+    "discarded": "Verwijderd"
+  },
+  "filters": {
+    "statusLabel": "Status",
+    "from": "Vanaf",
+    "to": "Tot",
+    "reset": "Reset"
+  },
+  "table": {
+    "date": "Datum",
+    "role": "Functie",
+    "status": "Status",
+    "selected": "Geselecteerd",
+    "actions": "Acties"
+  },
+  "row": {
+    "variantsMeta": "{{count}} varianten · {{language}}",
+    "viewJob": "Bekijk vacature",
+    "edit": "Bewerken",
+    "continue": "Vervolg"
+  },
+  "discard": {
+    "confirm": "Weet je zeker dat je deze draft wilt verwijderen?",
+    "successTitle": "Draft verwijderd",
+    "successDescription": "De draft is gemarkeerd als verwijderd.",
+    "errorTitle": "Fout",
+    "errorDescription": "Verwijderen mislukte."
+  },
+  "empty": {
+    "title": "Nog geen AI-drafts",
+    "description": "Genereer je eerste vacaturetekst met de AI-generator. De AI maakt drie varianten — jij kiest, bewerkt en publiceert.",
+    "newDraft": "Nieuwe AI-draft"
+  }
+}

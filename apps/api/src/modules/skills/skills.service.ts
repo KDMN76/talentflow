@@ -18,6 +18,8 @@
 import type { PoolClient } from 'pg';
 import { withTenant, withoutTenant } from '../../db/pool';
 import { AppError } from '../../middleware/errorHandler';
+import { logAudit, type AuditContext } from '../../lib/audit';
+import { AuditActions } from '../../lib/auditActions';
 import {
   mapManySkillsToEsco,
   type SkillMappingResult,
@@ -166,6 +168,44 @@ export async function searchEscoSkills(
 // Candidate skill profile
 // ────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Leest het skill-profiel binnen een bestaande transactie-client. Gedeeld door
+ * de GET-read en de PATCH-write (read-back) zodat beide EXACT dezelfde vorm
+ * teruggeven (`esco_skills`-array + category-aggregatie).
+ */
+async function readCandidateProfile(
+  client: PoolClient,
+  tenantId: string,
+  candidateId: string
+): Promise<CandidateSkillProfile> {
+  const { rows } = await client.query<CandidateEscoSkillEntry>(
+    `SELECT m.esco_skill_id,
+            s.preferred_label,
+            s.category,
+            m.proficiency,
+            m.confidence::float AS confidence,
+            m.source_skill_text,
+            m.matched_via
+       FROM candidate_skill_mappings m
+       JOIN esco_skills s ON s.id = m.esco_skill_id
+      WHERE m.candidate_id = $1 AND m.tenant_id = $2
+      ORDER BY s.preferred_label ASC`,
+    [candidateId, tenantId]
+  );
+
+  const skill_categories: Record<string, number> = {};
+  for (const r of rows) {
+    const cat = r.category ?? 'Other';
+    skill_categories[cat] = (skill_categories[cat] ?? 0) + 1;
+  }
+  return {
+    candidate_id: candidateId,
+    esco_skills: rows,
+    total_skills: rows.length,
+    skill_categories,
+  };
+}
+
 export async function getCandidateSkillProfile(
   tenantId: string,
   candidateId: string
@@ -180,32 +220,155 @@ export async function getCandidateSkillProfile(
       throw new AppError(404, 'CANDIDATE_NOT_FOUND', 'Kandidaat niet gevonden');
     }
 
-    const { rows } = await client.query<CandidateEscoSkillEntry>(
-      `SELECT m.esco_skill_id,
-              s.preferred_label,
-              s.category,
-              m.proficiency,
-              m.confidence::float AS confidence,
-              m.source_skill_text,
-              m.matched_via
-         FROM candidate_skill_mappings m
-         JOIN esco_skills s ON s.id = m.esco_skill_id
-        WHERE m.candidate_id = $1 AND m.tenant_id = $2
-        ORDER BY s.preferred_label ASC`,
+    return readCandidateProfile(client, tenantId, candidateId);
+  });
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Candidate skill profile — write (PATCH /candidates/:id/skill-profile)
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Eén skill zoals de editor 'm aanlevert. `esco_id` is verplicht: deze tabel
+ * (candidate_skill_mappings) slaat uitsluitend ESCO-gekoppelde skills op
+ * (esco_skill_id is NOT NULL + FK). De frontend voegt skills alleen toe via de
+ * ESCO-autocomplete, dus elke skill heeft altijd een esco_id.
+ */
+export interface CandidateSkillInput {
+  esco_id: string;
+  preferred_label: string;
+  proficiency: number;
+  confidence: number;
+  source?: string;
+}
+
+/**
+ * Mapt de frontend-`source` naar de DB-`matched_via`-constraint
+ * (exact | alt_label | embedding | manual). Onbekend/afwezig → 'manual', want
+ * een handmatige editor-save is per definitie een handmatige koppeling.
+ */
+function sourceToMatchedVia(
+  source?: string
+): 'exact' | 'alt_label' | 'embedding' | 'manual' {
+  switch (source) {
+    case 'embedding_match':
+      return 'embedding';
+    case 'esco_match':
+      return 'exact';
+    case 'manual':
+    case 'ai_extracted':
+      return 'manual';
+    default:
+      return 'manual';
+  }
+}
+
+/**
+ * Vervangt het volledige ESCO-skill-profiel van een kandidaat met de
+ * aangeleverde set (de editor bewaart de complete lijst). Tenant-scoped,
+ * atomair (delete + insert binnen de withTenant-transactie), met audit-trail.
+ *
+ * Retourneert het profiel in EXACT dezelfde vorm als GET /skill-profile.
+ */
+export async function updateCandidateSkillProfile(
+  tenantId: string,
+  candidateId: string,
+  userId: string,
+  skills: CandidateSkillInput[],
+  ctx: AuditContext = {}
+): Promise<CandidateSkillProfile> {
+  return withTenant(tenantId, async (client) => {
+    // 1. Verifieer dat de kandidaat bestaat (RLS-veilige, tenant-scoped read).
+    const { rows: existsRows } = await client.query<{ id: string }>(
+      `SELECT id FROM candidates WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL LIMIT 1`,
+      [candidateId, tenantId]
+    );
+    if (existsRows.length === 0) {
+      throw new AppError(404, 'CANDIDATE_NOT_FOUND', 'Kandidaat niet gevonden');
+    }
+
+    // 2. Dedupe op esco_id (laatste wint) — de unieke index staat geen dubbele
+    //    (tenant, candidate, esco) toe.
+    const byEsco = new Map<string, CandidateSkillInput>();
+    for (const s of skills) {
+      byEsco.set(s.esco_id, s);
+    }
+    const deduped = [...byEsco.values()];
+
+    // 3. Valideer dat elke esco_id in de taxonomie bestaat. De FK is NOT NULL →
+    //    een onbekende id zou de INSERT hard laten falen; we geven liever een
+    //    nette 400 met de exacte ontbrekende id's.
+    if (deduped.length > 0) {
+      const ids = deduped.map((s) => s.esco_id);
+      const { rows: found } = await client.query<{ id: string }>(
+        `SELECT id FROM esco_skills WHERE id = ANY($1::text[])`,
+        [ids]
+      );
+      const foundSet = new Set(found.map((r) => r.id));
+      const unknown = ids.filter((id) => !foundSet.has(id));
+      if (unknown.length > 0) {
+        throw new AppError(
+          400,
+          'UNKNOWN_ESCO_SKILL',
+          `Onbekende ESCO-skill(s): ${unknown.join(', ')}`
+        );
+      }
+    }
+
+    // 4. Volledige replace binnen de transactie (withTenant = BEGIN/COMMIT).
+    await client.query(
+      `DELETE FROM candidate_skill_mappings WHERE candidate_id = $1 AND tenant_id = $2`,
       [candidateId, tenantId]
     );
 
-    const skill_categories: Record<string, number> = {};
-    for (const r of rows) {
-      const cat = r.category ?? 'Other';
-      skill_categories[cat] = (skill_categories[cat] ?? 0) + 1;
+    for (const s of deduped) {
+      const confidence = Math.max(0, Math.min(1, s.confidence));
+      const proficiency = Math.max(1, Math.min(10, Math.round(s.proficiency)));
+      await client.query(
+        `INSERT INTO candidate_skill_mappings
+           (tenant_id, candidate_id, esco_skill_id,
+            source_skill_text, confidence, proficiency, matched_via)
+         VALUES (current_setting('app.tenant_id', true)::uuid, $1, $2, $3, $4, $5, $6)`,
+        [
+          candidateId,
+          s.esco_id,
+          s.preferred_label,
+          confidence.toFixed(4),
+          proficiency,
+          sourceToMatchedVia(s.source),
+        ]
+      );
     }
-    return {
-      candidate_id: candidateId,
-      esco_skills: rows,
-      total_skills: rows.length,
-      skill_categories,
-    };
+
+    // 5. User-facing activity-feed + append-only compliance-audit.
+    await client.query(
+      `INSERT INTO activities (tenant_id, entity_type, entity_id, user_id, action, payload)
+       VALUES ($1, 'candidate', $2, $3, 'skill_profile_updated', $4)`,
+      [
+        tenantId,
+        candidateId,
+        userId,
+        JSON.stringify({ skill_count: deduped.length }),
+      ]
+    );
+    await logAudit(
+      client,
+      tenantId,
+      {
+        action: AuditActions.CANDIDATE_SKILL_PROFILE_UPDATED,
+        entityType: 'candidate',
+        entityId: candidateId,
+        after: {
+          skill_count: deduped.length,
+          esco_skill_ids: deduped.map((s) => s.esco_id),
+        },
+        userId,
+      },
+      ctx
+    );
+
+    // 6. Read-back in exact dezelfde vorm als GET /skill-profile.
+    return readCandidateProfile(client, tenantId, candidateId);
   });
 }
 

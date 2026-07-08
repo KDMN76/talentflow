@@ -1,0 +1,89 @@
+{
+  "page": {
+    "title": "Notifications",
+    "description": "Choose which push notifications you receive and when."
+  },
+  "master": {
+    "title": "Push notifications",
+    "description": "Get a nudge on your phone or desktop.",
+    "unsupported": "This browser does not support push notifications.",
+    "denied": "Notifications are blocked in your browser. Change this in your site settings to enable them again.",
+    "testButton": "Send test notification"
+  },
+  "events": {
+    "title": "By type",
+    "description": "Turn off specific event types if you get too many.",
+    "types": {
+      "new_candidate_review": {
+        "title": "New candidate to review",
+        "description": "Instant heads-up when an application is waiting for you."
+      },
+      "scorecard_deadline": {
+        "title": "Scorecard deadline",
+        "description": "Reminder before a scorecard is overdue."
+      },
+      "interview_reminder": {
+        "title": "Interview reminder",
+        "description": "15 minutes before a scheduled interview."
+      },
+      "application_status_change": {
+        "title": "Application status changes",
+        "description": "On approval, rejection or advancing to the next stage."
+      },
+      "daily_digest": {
+        "title": "Daily digest",
+        "description": "One summary message per day (instead of separate notifications)."
+      }
+    }
+  },
+  "quietHours": {
+    "title": "Quiet hours",
+    "description": "During these hours notifications are not sent (critical exceptions only).",
+    "startLabel": "Start",
+    "endLabel": "End",
+    "timezoneLabel": "Time zone"
+  },
+  "devices": {
+    "title": "Registered devices",
+    "description": "Devices that receive notifications. Remove lost or no longer used devices.",
+    "loading": "Loading...",
+    "empty": "No devices registered yet.",
+    "unknownDevice": "Unknown device",
+    "lastActive": "Last active: {{date}}",
+    "active": "Active",
+    "revokeAria": "Revoke device {{label}}"
+  },
+  "toasts": {
+    "saved": {
+      "title": "Preferences saved"
+    },
+    "saveError": {
+      "title": "Save failed",
+      "description": "Please try again."
+    },
+    "pushEnabled": {
+      "title": "Push enabled",
+      "description": "You will now receive notifications on this device."
+    },
+    "enableError": {
+      "title": "Enabling failed"
+    },
+    "pushDisabled": {
+      "title": "Push disabled"
+    },
+    "testSent": {
+      "title": "Test notification sent",
+      "description": "You should see it within a few seconds."
+    },
+    "testError": {
+      "title": "Test notification failed"
+    },
+    "deviceRevoked": {
+      "title": "Device revoked"
+    },
+    "revokeError": {
+      "title": "Revoke failed"
+    },
+    "unknownError": "Unknown error"
+  }
+}

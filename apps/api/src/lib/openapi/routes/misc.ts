@@ -203,14 +203,54 @@ registry.registerPath({
   responses: { 200: jsonResponse('OK', z.array(z.unknown())) },
 });
 
+// NB: er bestaat GEEN GET /api/hm/jobs/{id}/applications — dat was een spook-pad
+// in de spec. HM-sollicitaties lopen via /api/hm/reviews/pending +
+// /api/hm/applications/{id} (zie hm.router.ts).
+
 registry.registerPath({
   method: 'get',
-  path: '/api/hm/jobs/{id}/applications',
+  path: '/api/hm/stats',
   tags: ['Hiring Manager'],
-  summary: 'Applications for HM-review',
+  summary: 'HM swipe-deck header-stats (te reviewen, scorecard-deadlines, vandaag goedgekeurd)',
   security: authSecurity,
-  request: { params: idParam },
-  responses: { 200: jsonResponse('OK', z.array(z.unknown())) },
+  responses: {
+    200: jsonResponse(
+      'OK',
+      z.object({
+        to_review: z.number().int(),
+        scorecards_due_today: z.number().int(),
+        scorecards_overdue: z.number().int(),
+        approved_today: z.number().int(),
+      })
+    ),
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/hm/scorecards/deadlines',
+  tags: ['Hiring Manager', 'Scorecards'],
+  summary: 'Openstaande scorecard-deadlines voor deze hiring-manager, gebucketeerd',
+  security: authSecurity,
+  responses: {
+    200: jsonResponse(
+      'OK',
+      z.object({
+        data: z.array(
+          z.object({
+            application_id: z.string().uuid(),
+            candidate_name: z.string(),
+            job_id: z.string().uuid(),
+            job_title: z.string(),
+            stage_id: z.string().uuid().nullable(),
+            stage_name: z.string().nullable(),
+            due_at: z.string().datetime(),
+            bucket: z.enum(['overdue', 'today', 'this_week', 'later']),
+          })
+        ),
+      })
+    ),
+  },
 });
 
 // ─── Job boards: see ./job-boards.ts (Sprint Q4.3) ────────────────────────

@@ -8,8 +8,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/components/ui/use-toast";
+import { useOrganizations } from "@/hooks/useCrm";
 import { useJobFunnel, useJobHealth } from "@/hooks/useJobDetail";
+import { useUpdateJob } from "@/hooks/useJobs";
 import { cn } from "@/lib/utils";
 import type { JobDetail as Job } from "@talentflow/contracts";
 
@@ -362,9 +372,9 @@ export function JobOverzichtTab({ job }: { job: Job }) {
           <CardContent>
             <dl className="grid grid-cols-1 gap-x-3 gap-y-2 text-sm sm:grid-cols-2">
               <DetailRow label="Referentie" value={job.job_reference} mono />
-              {/* Sub-fase 2C: "Klant"-rij verwijderd — `job.client` was
-                  fantoom-veld zonder DB-grond. Komt terug bij Clients/CRM
-                  module (zie ROADMAP). */}
+              {/* Klant — inline wijzigbaar. `organization_id` op de vacature
+                  koppelt aan een CRM-organisatie; "Geen klant" = null. */}
+              <ClientDetailRow job={job} />
               <DetailRow
                 label="Aantal posities"
                 value={
@@ -423,6 +433,14 @@ export function JobOverzichtTab({ job }: { job: Job }) {
                 value={job.package_details}
                 colSpan
               />
+              {/* Pay Transparency (EU 2023/970 art. 5): criteria waarmee de
+                  beloning wordt bepaald — kandidaten zien dit ook op de
+                  publieke career-page. */}
+              <DetailRow
+                label="Beloningscriteria"
+                value={job.compensation_criteria}
+                colSpan
+              />
               {/* Sub-fase 2C: "Eigenaar"-rij verwijderd — `job.owner_name`
                   was fantoom-veld; recruiter wordt al getoond in
                   JobDetailHeader. */}
@@ -430,6 +448,72 @@ export function JobOverzichtTab({ job }: { job: Job }) {
           </CardContent>
         </Card>
       </div>
+    </div>
+  );
+}
+
+// ─── Inline "Klant"-selector ─────────────────────────────────────────────────
+//
+// Wijzigt `organization_id` van een BESTAANDE vacature via useUpdateJob. Volgt
+// dezelfde Select-conventie als JobForm (incl. "Geen klant" = null). De
+// JobDetail bevat alleen `organization_id` (geen name) — de naam wordt uit de
+// organisaties-lijst geresolved zodra die geladen is.
+
+function ClientDetailRow({ job }: { job: Job }) {
+  const { data: organizations } = useOrganizations();
+  const updateJob = useUpdateJob();
+  const { toast } = useToast();
+
+  const current = job.organization_id ?? null;
+
+  const handleChange = (v: string) => {
+    const organization_id = v === "none" ? null : v;
+    if (organization_id === current) return;
+    updateJob.mutate(
+      { id: job.id, organization_id },
+      {
+        onSuccess: () =>
+          toast({
+            title: "Klant bijgewerkt",
+            description:
+              organization_id === null
+                ? "Deze vacature heeft nu geen gekoppelde klant."
+                : "De klant van deze vacature is gewijzigd.",
+          }),
+        onError: () =>
+          toast({
+            variant: "destructive",
+            title: "Fout",
+            description: "Klant kon niet worden bijgewerkt.",
+          }),
+      }
+    );
+  };
+
+  return (
+    <div>
+      <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        Klant
+      </dt>
+      <dd className="mt-1">
+        <Select
+          value={current ?? "none"}
+          onValueChange={handleChange}
+          disabled={updateJob.isPending}
+        >
+          <SelectTrigger className="h-8 text-sm">
+            <SelectValue placeholder="Geen klant" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Geen klant</SelectItem>
+            {(organizations ?? []).map((org) => (
+              <SelectItem key={org.id} value={org.id}>
+                {org.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </dd>
     </div>
   );
 }

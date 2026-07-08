@@ -15,6 +15,7 @@ import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import * as portalService from './portal.service';
 import { AppError } from '../../middleware/errorHandler';
+import { auditCtxFromReq } from '../../lib/audit';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Validation schemas
@@ -103,7 +104,9 @@ export async function rotateToken(
   try {
     const result = await portalService.rotatePortalToken(
       req.user!.tenantId,
-      req.params.id
+      req.params.id,
+      req.user!.userId,
+      auditCtxFromReq(req)
     );
     res.json({ data: result });
   } catch (err) {

@@ -54,6 +54,34 @@ export function verifyTotp(secret: string, token: string): boolean {
   }
 }
 
+/** RFC 6238 time-step in ms — moet gelijk blijven aan `step` hierboven. */
+export const TOTP_STEP_MS = 30_000;
+
+/**
+ * Als verifyTotp, maar retourneert de tijdstap-delta waarop de code matchte
+ * (-1, 0 of +1 binnen window=1) i.p.v. alleen een boolean. `null` = geen
+ * match. Nodig voor replay-detectie: de service slaat de start van de
+ * gematchte tijdstap op en weigert codes uit dezelfde (of een oudere) stap.
+ */
+export function verifyTotpDelta(secret: string, token: string): number | null {
+  const cleaned = (token ?? '').replace(/[\s-]/g, '');
+  if (!/^\d{6}$/.test(cleaned)) return null;
+  try {
+    const delta = authenticator.checkDelta(cleaned, secret);
+    return delta === null ? null : delta;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Starttijd (ms epoch) van de tijdstap waarop een zojuist geverifieerde code
+ * matchte. `delta` komt uit verifyTotpDelta.
+ */
+export function matchedStepStart(delta: number, now = Date.now()): number {
+  return (Math.floor(now / TOTP_STEP_MS) + delta) * TOTP_STEP_MS;
+}
+
 /**
  * Genereer N alphanumerieke backup-codes (uppercase, 8 chars).
  * Format: `XXXX-XXXX` voor leesbaarheid; bij verify wordt het streepje

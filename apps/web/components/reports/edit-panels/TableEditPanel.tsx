@@ -2,18 +2,38 @@
 
 import type {
   DimensionDef,
-  DimensionKey,
   MetricDef,
-  TableBlockConfig,
+  TableBlock,
 } from "@/lib/types/reports";
+import { Input } from "@/components/ui/input";
 import { Field, MultiSelectChips, Section, SingleSelect } from "./shared";
 import { FilterBuilder } from "../FilterBuilder";
 
 export interface TableEditPanelProps {
-  config: TableBlockConfig;
-  onChange: (next: TableBlockConfig) => void;
+  config: TableBlock;
+  onChange: (next: TableBlock) => void;
   metrics: MetricDef[];
   dimensions: DimensionDef[];
+}
+
+type SortChoice = "metric_desc" | "metric_asc" | "label_asc";
+
+function toSortChoice(sort: TableBlock["sort"]): SortChoice {
+  if (!sort || sort.key === "metric") {
+    return sort?.direction === "asc" ? "metric_asc" : "metric_desc";
+  }
+  return "label_asc";
+}
+
+function fromSortChoice(choice: SortChoice): TableBlock["sort"] {
+  switch (choice) {
+    case "metric_asc":
+      return { key: "metric", direction: "asc" };
+    case "label_asc":
+      return { key: "label", direction: "asc" };
+    default:
+      return { key: "metric", direction: "desc" };
+  }
 }
 
 export function TableEditPanel({
@@ -24,25 +44,33 @@ export function TableEditPanel({
 }: TableEditPanelProps) {
   const dimOptions = dimensions.map((d) => ({ value: d.key, label: d.label }));
 
+  const keysToDims = (keys: string[]): DimensionDef[] =>
+    keys
+      .map((k) => dimensions.find((d) => d.key === k))
+      .filter((d): d is DimensionDef => !!d);
+
+  const setMetric = (key: string) => {
+    const m = metrics.find((x) => x.key === key);
+    if (m) onChange({ ...config, metric: m });
+  };
+
   return (
     <div className="space-y-4">
       <Section title="Rijen (group-by)">
         <MultiSelectChips
-          values={config.rows}
-          onChange={(rows) =>
-            onChange({ ...config, rows: rows as DimensionKey[] })
-          }
+          values={(config.rows ?? []).map((d) => d.key)}
+          onChange={(keys) => onChange({ ...config, rows: keysToDims(keys) })}
           options={dimOptions}
         />
       </Section>
 
       <Section title="Kolommen (optioneel)">
         <MultiSelectChips
-          values={config.cols ?? []}
-          onChange={(cols) =>
+          values={(config.cols ?? []).map((d) => d.key)}
+          onChange={(keys) =>
             onChange({
               ...config,
-              cols: (cols.length ? cols : undefined) as DimensionKey[] | undefined,
+              cols: keys.length ? keysToDims(keys) : undefined,
             })
           }
           options={dimOptions}
@@ -52,21 +80,16 @@ export function TableEditPanel({
       <Section title="Metric">
         <Field label="Welke meetwaarde?">
           <SingleSelect
-            value={config.metric}
-            onChange={(v) =>
-              onChange({ ...config, metric: v as TableBlockConfig["metric"] })
-            }
+            value={config.metric?.key ?? ""}
+            onChange={setMetric}
             options={metrics.map((m) => ({ value: m.key, label: m.label }))}
           />
         </Field>
         <Field label="Sortering">
           <SingleSelect
-            value={config.sort_by ?? "metric_desc"}
+            value={toSortChoice(config.sort)}
             onChange={(v) =>
-              onChange({
-                ...config,
-                sort_by: v as TableBlockConfig["sort_by"],
-              })
+              onChange({ ...config, sort: fromSortChoice(v as SortChoice) })
             }
             options={[
               { value: "metric_desc", label: "Metric — hoog naar laag" },
@@ -75,29 +98,27 @@ export function TableEditPanel({
             ]}
           />
         </Field>
-      </Section>
-
-      <Section title="Opties">
-        <label className="flex items-center gap-2 text-xs">
-          <input
-            type="checkbox"
-            checked={config.show_totals ?? false}
+        <Field label="Maximum aantal rijen">
+          <Input
+            type="number"
+            min={1}
+            max={10000}
+            value={config.limit ?? 1000}
             onChange={(e) =>
-              onChange({ ...config, show_totals: e.target.checked })
+              onChange({
+                ...config,
+                limit: parseInt(e.target.value, 10) || 1000,
+              })
             }
-            className="h-3.5 w-3.5 rounded border-zinc-300 text-indigo-600"
+            className="h-9 text-sm"
           />
-          <span className="text-zinc-700 dark:text-zinc-300">
-            Toon totaal-rij
-          </span>
-        </label>
+        </Field>
       </Section>
 
       <Section title="Filters">
         <FilterBuilder
           filters={config.filters ?? []}
           onChange={(filters) => onChange({ ...config, filters })}
-          dimensions={dimensions}
         />
       </Section>
     </div>

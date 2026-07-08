@@ -92,6 +92,16 @@ export interface TwoFactorSetupChallenge {
   backup_codes: string[];
 }
 
+/** Tenant 2FA-policy — GET/PUT /api/auth/2fa/policy (admin/owner only). */
+export interface TwoFactorTenantPolicy {
+  tenant_id: string;
+  required_for_roles: string[];
+  required_for_all: boolean;
+  grace_period_days: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
 // ─── Roles + permissions ────────────────────────────────────────────────────
 
 export type RbacResource =
@@ -163,7 +173,8 @@ export interface RoleAssignment {
 
 export interface AssignRoleInput {
   user_id: string;
-  role_id: string;
+  /** Stable role key (bv. "admin") — de backend eist `role_key`, geen role_id. */
+  role_key: string;
   expires_at?: string | null;
 }
 

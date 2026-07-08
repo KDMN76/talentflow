@@ -31,6 +31,7 @@ import {
   extractAddress,
   type TenantSendSettings,
 } from '../modules/tenants/emailSettings.service';
+import { appendTenantEmailFooter } from './emailFooter';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -158,6 +159,13 @@ export async function sendTenantEmail(
   // Per-tenant Reply-To wint van plus-addressing (RESEND_REPLY_DOMAIN).
   const replyTo = settings?.replyTo ?? params.replyTo;
 
+  // Tenant-branding e-mail-footer: gesaneerd (strikte allowlist) appenden aan
+  // html + text. Fail-open en dubbel-append-proof — zie lib/emailFooter.ts.
+  const body = await appendTenantEmailFooter(tenantId, {
+    html: params.html,
+    text: params.text,
+  });
+
   // ── Pad 1: eigen SMTP-server van de tenant ────────────────────────────────
   if (settings?.smtp) {
     const smtp = settings.smtp;
@@ -185,8 +193,8 @@ export async function sendTenantEmail(
         from: resolveSmtpFrom(settings),
         to: params.to,
         subject: params.subject,
-        html: params.html,
-        text: params.text,
+        html: body.html,
+        text: body.text,
         replyTo,
         headers: Object.keys(headers).length > 0 ? headers : undefined,
       });
@@ -217,6 +225,8 @@ export async function sendTenantEmail(
   // ── Pad 2: Resend met per-tenant afzendernaam (of globale default) ───────
   return sendEmail({
     ...params,
+    html: body.html,
+    text: body.text,
     from: params.from ?? resolveResendFrom(settings),
     replyTo,
   });

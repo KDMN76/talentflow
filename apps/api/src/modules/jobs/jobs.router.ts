@@ -7,6 +7,7 @@ import * as jobDetailController from './jobDetail.controller';
 import * as jdGeneratorController from './jdGenerator.controller';
 import { requireAuth } from '../../middleware/auth';
 import { tenantMiddleware } from '../../middleware/tenant';
+import { requireWriteOnMutation } from '../../middleware/permissions';
 import { enforcePayTransparency } from '../../middleware/payTransparency';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -43,6 +44,10 @@ const uploadJobAttachment = multer({
 const router = Router();
 
 router.use(requireAuth, tenantMiddleware);
+// Alle muterende job-routes (create/update/delete + sub-resources als
+// team/notes/attachments/jd-drafts) vereisen jobs:write. Blokkeert read-only
+// rollen zoals `viewer`; alle GET-routes in deze router passeren ongemoeid.
+router.use(requireWriteOnMutation('jobs'));
 
 // ─── JD Generator (Sprint Q3.2) ─────────────────────────────────────────────
 // Geplaatst BOVEN /:id-routes zodat /jd-drafts/... niet als :id wordt

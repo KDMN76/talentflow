@@ -17,6 +17,7 @@ import type {
   DEIFunnelSnapshot,
   PayEquityReport,
   PayEquitySnapshot,
+  PayTransparencyReport,
   TenantPaySettings,
 } from "@/lib/types/skills";
 
@@ -208,13 +209,28 @@ export function useFulfillDsarRequest() {
   });
 }
 
+export interface DataExportLink {
+  url: string;
+  expires_at: string;
+}
+
+/**
+ * AVG art. 15 — maak een kort-levende download-link (24u, max 3 downloads)
+ * voor het dossier van de kandidaat achter een DSAR-verzoek. De link wijst
+ * naar de publieke /api/gdpr-export/:token endpoint en kan dus ook veilig
+ * per e-mail aan de betrokkene worden doorgestuurd.
+ */
 export function useDsarExportUrl() {
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string): Promise<{ url: string }> => {
-      const { data } = await api.get<{ url: string }>(
-        `/compliance/dsar-requests/${id}/export`
+    mutationFn: async (id: string): Promise<DataExportLink> => {
+      const { data } = await api.post<{ data: DataExportLink }>(
+        `/compliance/dsar-requests/${id}/export-link`
       );
-      return data;
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["compliance", "audit-events"] });
     },
   });
 }
@@ -230,6 +246,25 @@ export function useAnonymizeCandidate() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["candidates"] });
+      queryClient.invalidateQueries({ queryKey: ["compliance", "audit-events"] });
+    },
+  });
+}
+
+/**
+ * AVG art. 15 — export-link direct vanaf kandidaat-detail (zonder DSAR).
+ * Zelfde token-mechaniek als useDsarExportUrl.
+ */
+export function useCandidateExportLink() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (candidateId: string): Promise<DataExportLink> => {
+      const { data } = await api.post<{ data: DataExportLink }>(
+        `/candidates/${candidateId}/export-link`
+      );
+      return data.data;
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["compliance", "audit-events"] });
     },
   });
@@ -299,16 +334,24 @@ export function useAuditEvents(filters: AuditFilters = {}) {
 
 // ─── Pay Transparency settings ───────────────────────────────────────────────
 
-export type { TenantPaySettings, PayEquityReport, PayEquitySnapshot, DEIFunnelReport, DEIFunnelSnapshot };
+export type {
+  TenantPaySettings,
+  PayEquityReport,
+  PayEquitySnapshot,
+  PayTransparencyReport,
+  DEIFunnelReport,
+  DEIFunnelSnapshot,
+};
 
 export function usePaySettings() {
   return useQuery({
     queryKey: ["compliance", "pay-settings"],
     queryFn: async (): Promise<TenantPaySettings> => {
-      const { data } = await api.get<TenantPaySettings>(
+      // API wrapt in { data } — dubbel `data` is dus géén typo.
+      const { data } = await api.get<{ data: TenantPaySettings }>(
         "/compliance/pay-settings"
       );
-      return data;
+      return data.data;
     },
   });
 }
@@ -319,15 +362,32 @@ export function useUpdatePaySettings() {
     mutationFn: async (
       patch: Partial<TenantPaySettings>
     ): Promise<TenantPaySettings> => {
-      const { data } = await api.patch<TenantPaySettings>(
+      const { data } = await api.patch<{ data: TenantPaySettings }>(
         "/compliance/pay-settings",
         patch
       );
-      return data;
+      return data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["compliance", "pay-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["compliance", "pay-transparency-report"] });
       queryClient.invalidateQueries({ queryKey: ["compliance", "audit-events"] });
+    },
+  });
+}
+
+/**
+ * Pay-transparency rapport (EU 2023/970 art. 5): % open vacatures met
+ * volledige salarisband + actielijst van vacatures zonder band.
+ */
+export function usePayTransparencyReport() {
+  return useQuery({
+    queryKey: ["compliance", "pay-transparency-report"],
+    queryFn: async (): Promise<PayTransparencyReport> => {
+      const { data } = await api.get<{ data: PayTransparencyReport }>(
+        "/compliance/pay-transparency-report"
+      );
+      return data.data;
     },
   });
 }

@@ -48,18 +48,22 @@ export interface PortalCommentThreadEntry {
   created_at: string;
 }
 
+/**
+ * Publieke shortlist-shape. De backend serialiseert bewust ZONDER PII
+ * (geen e-mail, telefoon of salaris) — zie serializePortalApplication()
+ * in apps/api. `candidate_email`/`candidate_phone` bestaan hier niet meer.
+ */
 export interface PortalApplication {
   id: string;
   candidate_id: string;
   candidate_name: string;
-  candidate_email: string | null;
-  candidate_phone: string | null;
   ai_score: number | null;
   stage_name: string | null;
   pipeline_history: Array<{ stage_name: string; entered_at: string }>;
   applied_at: string | null;
   skills: string[];
   resume_url: string | null;
+  resume_summary: string | null;
   comments: PortalCommentThreadEntry[];
   client_feedback: "approve" | "reject" | "doubt" | null;
 }
@@ -71,6 +75,7 @@ export interface PortalAccessData {
   permissions: PortalPermissions;
   branding: PortalBranding;
   applications: PortalApplication[];
+  general_comments: PortalCommentThreadEntry[];
   expires_at: string | null;
 }
 
@@ -139,6 +144,27 @@ export function normalizeBranding(raw: unknown): PortalBranding {
   };
 }
 
+/**
+ * Backend slaat beslissingen canoniek op als approved/rejected/doubt; de UI
+ * werkt met approve/reject/doubt. Beide vormen worden hier geaccepteerd.
+ */
+function normalizeClientFeedback(
+  raw: unknown
+): PortalApplication["client_feedback"] {
+  switch (raw) {
+    case "approve":
+    case "approved":
+      return "approve";
+    case "reject":
+    case "rejected":
+      return "reject";
+    case "doubt":
+      return "doubt";
+    default:
+      return null;
+  }
+}
+
 function normalizeApplication(raw: Record<string, unknown>): PortalApplication {
   const arr = (k: string): string[] =>
     Array.isArray(raw[k]) ? ((raw[k] as unknown[]).filter((x) => typeof x === "string") as string[]) : [];
@@ -146,9 +172,7 @@ function normalizeApplication(raw: Record<string, unknown>): PortalApplication {
   return {
     id: String(raw.id ?? ""),
     candidate_id: String(raw.candidate_id ?? raw.id ?? ""),
-    candidate_name: String(raw.candidate_name ?? "Onbekende kandidaat"),
-    candidate_email: (raw.candidate_email as string | null) ?? null,
-    candidate_phone: (raw.candidate_phone as string | null) ?? null,
+    candidate_name: String(raw.candidate_name ?? ""),
     ai_score:
       typeof raw.ai_score === "number"
         ? (raw.ai_score as number)
@@ -164,17 +188,13 @@ function normalizeApplication(raw: Record<string, unknown>): PortalApplication {
     applied_at: (raw.applied_at as string | null) ?? null,
     skills: arr("skills"),
     resume_url: (raw.resume_url as string | null) ?? null,
+    resume_summary: (raw.resume_summary as string | null) ?? null,
     comments: Array.isArray(raw.comments)
       ? ((raw.comments as unknown[]).filter(
           (x) => x && typeof x === "object"
         ) as PortalCommentThreadEntry[])
       : [],
-    client_feedback:
-      raw.client_feedback === "approve" ||
-      raw.client_feedback === "reject" ||
-      raw.client_feedback === "doubt"
-        ? raw.client_feedback
-        : null,
+    client_feedback: normalizeClientFeedback(raw.client_feedback),
   };
 }
 
@@ -193,7 +213,7 @@ export async function fetchPortalBrandingServer(
   token: string
 ): Promise<PortalBranding> {
   if (!token) return { ...DEFAULT_BRANDING };
-  const res = await fetch(`${SERVER_API_BASE}/portal/branding/${token}`, {
+  const res = await fetch(`${SERVER_API_BASE}/portals/branding/${token}`, {
     cache: "no-store",
   });
   if (!res.ok) throw new Error("branding fetch failed");
@@ -215,18 +235,10 @@ export function usePortalAccess(token: string) {
     enabled: !!token,
     retry: false,
     queryFn: async () => {
-      try {
-        const { data } = await api.get<unknown>(`/portal/access/${token}`, {
-          headers: { Authorization: "" },
-        });
-        return shapePortalResponse(data);
-      } catch {
-        // Probeer legacy endpoint /portals/access/:token (Q1 backend).
-        const { data } = await api.get<unknown>(`/portals/access/${token}`, {
-          headers: { Authorization: "" },
-        });
-        return shapePortalResponse(data);
-      }
+      const { data } = await api.get<unknown>(`/portals/access/${token}`, {
+        headers: { Authorization: "" },
+      });
+      return shapePortalResponse(data);
     },
   });
 }
@@ -237,7 +249,7 @@ export function usePortalBranding(token: string) {
     enabled: !!token,
     retry: false,
     queryFn: async () => {
-      const { data } = await api.get<unknown>(`/portal/branding/${token}`, {
+      const { data } = await api.get<unknown>(`/portals/branding/${token}`, {
         headers: { Authorization: "" },
       });
       const branding =
@@ -253,40 +265,43 @@ export function usePortalFeedback(token: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: {
-      application_id: string;
+      /** Weggelaten = algemene opmerking over de hele shortlist. */
+      application_id?: string;
       action: FeedbackAction;
       comment?: string;
       client_name?: string;
     }) => {
-      try {
-        const { data } = await api.post(
-          `/portal/${token}/feedback`,
-          payload,
-          { headers: { Authorization: "" } }
-        );
-        return data;
-      } catch {
-        // Legacy endpoint
-        const legacyAction =
-          payload.action === "approve"
-            ? "approve"
-            : payload.action === "reject"
-            ? "reject"
-            : "comment";
-        const { data } = await api.post(
-          `/portals/access/${token}/feedback`,
-          { ...payload, action: legacyAction },
-          { headers: { Authorization: "" } }
-        );
-        return data;
-      }
+      const { data } = await api.post(
+        `/portals/access/${token}/feedback`,
+        payload,
+        { headers: { Authorization: "" } }
+      );
+      return data;
     },
     onSuccess: (_, vars) => {
-      // Optimistic cache-update voor de kandidaat zonder volledige refetch.
+      // Optimistic cache-update zonder volledige refetch.
       queryClient.setQueryData<PortalAccessData | undefined>(
         ["portal-access-v2", token],
         (prev) => {
           if (!prev) return prev;
+
+          // Algemene opmerking (geen kandidaat) → general_comments bijwerken.
+          if (!vars.application_id) {
+            if (!vars.comment) return prev;
+            return {
+              ...prev,
+              general_comments: [
+                ...prev.general_comments,
+                {
+                  id: `local-${Date.now()}`,
+                  author: vars.client_name ?? null,
+                  body: vars.comment,
+                  created_at: new Date().toISOString(),
+                },
+              ],
+            };
+          }
+
           return {
             ...prev,
             applications: prev.applications.map((a) =>
@@ -299,7 +314,7 @@ export function usePortalFeedback(token: string) {
                         ? a.client_feedback
                         : (vars.action as PortalApplication["client_feedback"]),
                     comments:
-                      vars.action === "comment" && vars.comment
+                      vars.comment
                         ? [
                             ...a.comments,
                             {
@@ -338,7 +353,7 @@ export function usePortalLogView(token: string) {
       // Fire-and-forget — backend logt het, fout = stilletjes negeren.
       api
         .post(
-          `/portal/${token}/log-view/${candidateId}`,
+          `/portals/access/${token}/log-view/${candidateId}`,
           {},
           { headers: { Authorization: "" } }
         )
@@ -370,6 +385,9 @@ function shapePortalResponse(data: unknown): PortalAccessData {
     | null;
 
   const apps = (obj.applications ?? portal.applications ?? []) as unknown[];
+  const generalComments = (obj.general_comments ??
+    portal.general_comments ??
+    []) as unknown[];
 
   return {
     job: {
@@ -390,6 +408,10 @@ function shapePortalResponse(data: unknown): PortalAccessData {
     applications: apps
       .filter((a) => a && typeof a === "object")
       .map((a) => normalizeApplication(a as Record<string, unknown>)),
+    general_comments: generalComments.filter(
+      (c): c is PortalCommentThreadEntry =>
+        !!c && typeof c === "object" && "body" in (c as object)
+    ),
     expires_at: (obj.expires_at ?? portal.expires_at ?? null) as string | null,
   };
 }

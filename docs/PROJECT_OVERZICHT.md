@@ -15,9 +15,9 @@ Drie sporen: (1) BIM-stage-opdracht met Manatal als benchmark, (2) pilot bij
 IT Proposal BV (9 recruiters; eerste recruiter werkt al live), (3) commercieel
 SaaS-product voor NL/BE-bureaus van 3-50 recruiters.
 
-**Businesscase (docs/TCO_ROI.md):** Manatal €36.000 / 3 jaar vs. TalentFlow
-€3.393 operationeel (−91%). Incl. extern onderhoud: netto-besparing €21.207,
-ROI 6,3×, break-even dag 1 na go-live.
+**Businesscase (docs/TCO_ROI.md):** Manatal €22.320 / 3 jaar (werkelijke
+factuur ≈€620/mnd) vs. TalentFlow €3.393 operationeel (−85%). Incl. extern
+onderhoud: netto-besparing €7.527, ROI 2,2×, break-even dag 1 na go-live.
 
 ---
 

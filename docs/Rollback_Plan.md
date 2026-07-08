@@ -231,7 +231,7 @@ Na succesvolle root-cause-fix:
 We accepteren dat een rollback betekent:
 - Cutover-deliverable telt nog steeds als geslaagde stage-leeruitkomst (we documenteren beslissing + executie)
 - Data uit cutover-week kan partial-loss hebben (max ~50 nieuwe events)
-- IT Proposal blijft Manatal-licentie betalen tot 2e cutover (1 maand €1.000 extra)
+- IT Proposal blijft Manatal-licentie betalen tot 2e cutover (1 maand ≈€620 extra, zie TCO_ROI.md)
 - TalentFlow productie-tenant blijft in read-only tot 2e cutover
 
 Dit zijn **bewuste keuzes** om risico bij eindgebruikers te minimaliseren. Een rollback is geen falen — een rollback die te laat komt of niet werkt is wel falen.

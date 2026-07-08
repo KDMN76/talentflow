@@ -373,6 +373,14 @@ describe('publishJdDraft', () => {
             rowCount: 1,
           };
         }
+        // Publiceer-gate (EU 2023/970): tenant dwingt af — de band in de
+        // overrides hieronder maakt de publish compliant.
+        if (/FROM tenant_pay_settings/i.test(sql)) {
+          return {
+            rows: [{ pay_transparency_enforced: true }],
+            rowCount: 1,
+          };
+        }
         if (/^UPDATE jd_drafts/i.test(sql.trim())) {
           return {
             rows: [
@@ -390,13 +398,18 @@ describe('publishJdDraft', () => {
     });
     teardown = installPoolMock(client);
 
-    const result = await publishJdDraft(TENANT_ID, DRAFT_ID, USER_ID);
+    const result = await publishJdDraft(TENANT_ID, DRAFT_ID, USER_ID, {
+      salary_min: 60000,
+      salary_max: 80000,
+    });
 
     expect(createJob).toHaveBeenCalledOnce();
     const [tenantArg, userArg, jobInput] = vi.mocked(createJob).mock.calls[0];
     expect(tenantArg).toBe(TENANT_ID);
     expect(userArg).toBe(USER_ID);
     expect((jobInput as { title: string }).title).toBe('Senior Frontend Developer');
+    expect((jobInput as { salary_min: number }).salary_min).toBe(60000);
+    expect((jobInput as { salary_max: number }).salary_max).toBe(80000);
 
     expect(result.draft.status).toBe('published');
     expect(result.draft.job_id).toBe(JOB_ID);
@@ -413,6 +426,12 @@ describe('publishJdDraft', () => {
         if (/SELECT \* FROM jd_drafts/i.test(sql)) {
           return {
             rows: [draftRow({ selected_variant_id: VAR_ID_A })],
+            rowCount: 1,
+          };
+        }
+        if (/FROM tenant_pay_settings/i.test(sql)) {
+          return {
+            rows: [{ pay_transparency_enforced: true }],
             rowCount: 1,
           };
         }
@@ -437,6 +456,8 @@ describe('publishJdDraft', () => {
       department: 'Engineering',
       location: 'Amsterdam',
       headcount: 2,
+      salary_min: 55000,
+      salary_max: 75000,
     });
 
     const [, , jobInput] = vi.mocked(createJob).mock.calls[0] as [
@@ -449,6 +470,127 @@ describe('publishJdDraft', () => {
     expect(jobInput.headcount).toBe(2);
     // Description still comes from the variant
     expect((jobInput.description as string).length).toBeGreaterThan(0);
+  });
+
+  it('blokkeert publish naar status open zonder salarisband (EU 2023/970)', async () => {
+    client = mockClient({
+      __matcher: (sql) => {
+        if (/SELECT \* FROM jd_drafts/i.test(sql)) {
+          return {
+            rows: [draftRow({ selected_variant_id: VAR_ID_A })],
+            rowCount: 1,
+          };
+        }
+        if (/FROM tenant_pay_settings/i.test(sql)) {
+          return {
+            rows: [{ pay_transparency_enforced: true }],
+            rowCount: 1,
+          };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    teardown = installPoolMock(client);
+
+    await expect(
+      publishJdDraft(TENANT_ID, DRAFT_ID, USER_ID)
+    ).rejects.toMatchObject({
+      statusCode: 422,
+      code: 'PAY_TRANSPARENCY_REQUIRED',
+    });
+
+    // Gate zit VÓÓR createJob — bij een blok mag er géén job ontstaan.
+    expect(createJob).not.toHaveBeenCalled();
+  });
+
+  it('publiceert zonder band wanneer tenant afdwinging uit heeft staan', async () => {
+    vi.mocked(createJob).mockResolvedValue({ id: JOB_ID } as Awaited<
+      ReturnType<typeof createJob>
+    >);
+
+    client = mockClient({
+      __matcher: (sql) => {
+        if (/SELECT \* FROM jd_drafts/i.test(sql)) {
+          return {
+            rows: [draftRow({ selected_variant_id: VAR_ID_A })],
+            rowCount: 1,
+          };
+        }
+        if (/FROM tenant_pay_settings/i.test(sql)) {
+          return {
+            rows: [{ pay_transparency_enforced: false }],
+            rowCount: 1,
+          };
+        }
+        if (/^UPDATE jd_drafts/i.test(sql.trim())) {
+          return {
+            rows: [
+              draftRow({
+                selected_variant_id: VAR_ID_A,
+                status: 'published',
+                job_id: JOB_ID,
+              }),
+            ],
+            rowCount: 1,
+          };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    teardown = installPoolMock(client);
+
+    const result = await publishJdDraft(TENANT_ID, DRAFT_ID, USER_ID);
+
+    expect(createJob).toHaveBeenCalledOnce();
+    expect(result.draft.status).toBe('published');
+  });
+
+  it('als concept (status draft) publiceren vereist geen band', async () => {
+    vi.mocked(createJob).mockResolvedValue({ id: JOB_ID } as Awaited<
+      ReturnType<typeof createJob>
+    >);
+
+    client = mockClient({
+      __matcher: (sql) => {
+        if (/SELECT \* FROM jd_drafts/i.test(sql)) {
+          return {
+            rows: [draftRow({ selected_variant_id: VAR_ID_A })],
+            rowCount: 1,
+          };
+        }
+        // Bewust GEEN tenant_pay_settings-matcher: bij status 'draft' mag
+        // de gate helemaal niet lezen — default-matcher zou enforced=true
+        // opleveren (defaults) en dan alsnog doorlaten, maar het punt is
+        // dat de flow zonder band slaagt.
+        if (/^UPDATE jd_drafts/i.test(sql.trim())) {
+          return {
+            rows: [
+              draftRow({
+                selected_variant_id: VAR_ID_A,
+                status: 'published',
+                job_id: JOB_ID,
+              }),
+            ],
+            rowCount: 1,
+          };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    teardown = installPoolMock(client);
+
+    const result = await publishJdDraft(TENANT_ID, DRAFT_ID, USER_ID, {
+      status: 'draft',
+    });
+
+    expect(createJob).toHaveBeenCalledOnce();
+    const [, , jobInput] = vi.mocked(createJob).mock.calls[0] as [
+      string,
+      string,
+      Record<string, unknown>,
+    ];
+    expect(jobInput.status).toBe('draft');
+    expect(result.draft.status).toBe('published');
   });
 });
 

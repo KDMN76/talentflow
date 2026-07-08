@@ -103,7 +103,7 @@ Compressie naar 6 weken zou mogelijk zijn als we training overslaan (niet accept
 
 ### Week -4: Kick-off mail
 - **Onderwerp:** "TalentFlow gaat live — datum + wat dit voor jou betekent"
-- **Inhoud:** waarom (€1.000/m kostenbesparing), wanneer (datum), wat verandert er, wie is contact
+- **Inhoud:** waarom (kostenbesparing: Manatal-licentie ≈€620/m vervalt, zie TCO_ROI.md), wanneer (datum), wat verandert er, wie is contact
 - **Verzender:** Kaan + Angelo
 - **CC:** management IT Proposal, stagebegeleider
 

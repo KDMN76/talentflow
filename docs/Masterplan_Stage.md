@@ -10,7 +10,7 @@
 ## 1. Strategische uitgangspunten
 
 ### Why this project (zakelijk)
-IT Proposal betaalt **€1.000/maand** voor Manatal en is **tevreden** over het product. De aanleiding is dus geen ontevredenheid — het is **kostenbesparing**. Het bedrijf wil hetzelfde werkresultaat tegen lagere TCO.
+IT Proposal betaalt **≈€620/maand** voor Manatal (werkelijke factuur $674/mnd, zie `TCO_ROI.md`; destijds geschat op €1.000/mnd) en is **tevreden** over het product. De aanleiding is dus geen ontevredenheid — het is **kostenbesparing**. Het bedrijf wil hetzelfde werkresultaat tegen lagere TCO.
 
 ### Stage-deliverables (BIM)
 1. **Werkend product** end-to-end (geen mock-shell)
@@ -208,7 +208,7 @@ New Candidates → Interested → Shortlisted → Client Submission
 ## 6. TCO / ROI (eerste schatting)
 
 ### Manatal kosten (huidig)
-- €1.000 / maand × 12 = **€12.000 / jaar**
+- ≈€620 / maand × 12 = **~€7.440 / jaar** (werkelijke factuur $674/mnd, GORR5CHG-0006; eerdere aanname was €1.000/mnd — zie `TCO_ROI.md`)
 
 ### TalentFlow kosten (eigen hosting Hetzner)
 - VPS (gedeeld met KDMN, geen extra kosten) ≈ €0
@@ -218,8 +218,8 @@ New Candidates → Interested → Shortlisted → Client Submission
 - **Totaal: ~€1.450 / jaar**
 
 ### Besparing
-- **€10.550 / jaar** = ~€880/maand besparing
-- Break-even ontwikkeluren: bij €60/uur intern × 175 uur = nominal break-even na ~1 jaar
+- **~€5.990 / jaar** = ~€500/maand besparing
+- Break-even ontwikkeluren: bij €60/uur intern × 175 uur = nominal break-even na ~1,75 jaar
 
 ### Eenmalige kosten
 - Ontwikkeluren stage (Kaan): ~6 maanden × niet meegerekend (stage-context)

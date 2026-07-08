@@ -8,13 +8,18 @@ import {
   AlertTriangle,
   ArrowLeft,
   Check,
+  CheckCircle2,
   Copy,
   Globe,
+  HelpCircle,
   KeyRound,
   Loader2,
+  MessageSquare,
+  MessagesSquare,
   RefreshCcw,
   Save,
   Settings as SettingsIcon,
+  XCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -50,9 +55,12 @@ import { PortalActivityFeed } from "@/components/portal/PortalActivityFeed";
 import {
   usePortalActivity,
   usePortalLink,
+  usePortalLinkFeedback,
   useRotatePortalToken,
   useUpdatePortalLink,
   useVerifyCustomDomain,
+  type PortalFeedbackAction,
+  type PortalFeedbackItem,
   type PortalLinkPermissions,
   type PortalNotificationFrequency,
 } from "@/hooks/usePortalLinks";
@@ -80,6 +88,7 @@ export default function PortalLinkDetailPage() {
   const portalId = params.id;
   const { data: portal, isLoading } = usePortalLink(portalId);
   const { data: activity } = usePortalActivity(portalId);
+  const { data: feedback } = usePortalLinkFeedback(portalId);
   const update = useUpdatePortalLink(portalId);
   const rotate = useRotatePortalToken(portalId);
   const verify = useVerifyCustomDomain();
@@ -138,8 +147,9 @@ export default function PortalLinkDetailPage() {
 
   const handleVerifyDomain = () => {
     if (!portal.custom_domain) return;
+    // Endpoint verwacht het portal-id (niet de domeinnaam): POST /portals/:id/verify-domain.
     verify.mutate(
-      portal.custom_domain,
+      portalId,
       {
         onSuccess: (res) => {
           if (res.verified) {
@@ -248,6 +258,11 @@ export default function PortalLinkDetailPage() {
             <SettingsIcon className="mr-1 h-3.5 w-3.5" />
             {t("portalDetail.tabs.settings")}
           </TabsTrigger>
+          <TabsTrigger value="feedback">
+            <MessageSquare className="mr-1 h-3.5 w-3.5" />
+            {t("portalDetail.tabs.feedback")}
+            {feedback && feedback.length > 0 ? ` (${feedback.length})` : ""}
+          </TabsTrigger>
           <TabsTrigger value="activity">
             <Activity className="mr-1 h-3.5 w-3.5" />
             {t("portalDetail.tabs.activity")}
@@ -332,6 +347,23 @@ export default function PortalLinkDetailPage() {
                   </SelectContent>
                 </Select>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Klantfeedback (shortlist-beoordelingen + opmerkingen) */}
+        <TabsContent value="feedback">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
+                {t("portalDetail.feedback.title")}
+              </CardTitle>
+              <CardDescription>
+                {t("portalDetail.feedback.description")}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PortalFeedbackList items={feedback ?? []} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -559,6 +591,145 @@ export default function PortalLinkDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Feedback-lijst — gast-feedback per portal-link                     */
+/* ------------------------------------------------------------------ */
+
+const FEEDBACK_META: Record<
+  PortalFeedbackAction,
+  {
+    labelKey: string;
+    icon: React.ComponentType<{ className?: string }>;
+    badgeCls: string;
+  }
+> = {
+  approved: {
+    labelKey: "portalDetail.feedback.actions.approved",
+    icon: CheckCircle2,
+    badgeCls:
+      "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
+  },
+  rejected: {
+    labelKey: "portalDetail.feedback.actions.rejected",
+    icon: XCircle,
+    badgeCls: "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300",
+  },
+  doubt: {
+    labelKey: "portalDetail.feedback.actions.doubt",
+    icon: HelpCircle,
+    badgeCls:
+      "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
+  },
+  commented: {
+    labelKey: "portalDetail.feedback.actions.commented",
+    icon: MessageSquare,
+    badgeCls:
+      "bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300",
+  },
+};
+
+function PortalFeedbackList({ items }: { items: PortalFeedbackItem[] }) {
+  const { t } = useTranslation("miscPortals");
+
+  if (items.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
+          <MessagesSquare className="h-5 w-5 text-zinc-400" />
+        </div>
+        <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          {t("portalDetail.feedback.emptyTitle")}
+        </p>
+        <p className="mt-1 max-w-sm text-xs text-muted-foreground">
+          {t("portalDetail.feedback.emptyDescription")}
+        </p>
+      </div>
+    );
+  }
+
+  // Samenvatting: aantal per actie (alleen acties die voorkomen).
+  const counts = new Map<PortalFeedbackAction, number>();
+  for (const item of items) {
+    counts.set(item.action, (counts.get(item.action) ?? 0) + 1);
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-1.5">
+        {(Object.keys(FEEDBACK_META) as PortalFeedbackAction[])
+          .filter((a) => counts.has(a))
+          .map((a) => {
+            const meta = FEEDBACK_META[a];
+            const Icon = meta.icon;
+            return (
+              <span
+                key={a}
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${meta.badgeCls}`}
+              >
+                <Icon className="h-3 w-3" />
+                {t(meta.labelKey)}
+                <span className="font-semibold">{counts.get(a)}</span>
+              </span>
+            );
+          })}
+      </div>
+
+      <ul className="space-y-2">
+        {items.map((item) => {
+          const meta = FEEDBACK_META[item.action];
+          const Icon = meta.icon;
+          const isGeneral = !item.application_id;
+          return (
+            <li
+              key={item.id}
+              className="rounded-lg border border-zinc-200 bg-background px-3.5 py-2.5 dark:border-zinc-800"
+            >
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <p className="text-sm text-zinc-900 dark:text-zinc-100">
+                  <span
+                    className={`mr-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${meta.badgeCls}`}
+                  >
+                    <Icon className="h-3 w-3" />
+                    {isGeneral
+                      ? t("portalDetail.feedback.generalComment")
+                      : t(meta.labelKey)}
+                  </span>
+                  <span className="font-medium">
+                    {isGeneral
+                      ? ""
+                      : item.candidate_name ??
+                        t("portalDetail.feedback.unknownCandidate")}
+                  </span>
+                  {item.client_name && (
+                    <span className="text-xs text-muted-foreground">
+                      {" "}
+                      {t("portalDetail.feedback.byClient", {
+                        name: item.client_name,
+                      })}
+                    </span>
+                  )}
+                </p>
+                <time
+                  className="text-[11px] tabular-nums text-muted-foreground"
+                  dateTime={item.created_at}
+                  title={new Date(item.created_at).toLocaleString("nl-NL")}
+                >
+                  {formatDateTime(item.created_at)}
+                </time>
+              </div>
+              {item.comment && (
+                <p className="mt-1.5 text-xs italic text-zinc-600 dark:text-zinc-400">
+                  “{item.comment}”
+                </p>
+              )}
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

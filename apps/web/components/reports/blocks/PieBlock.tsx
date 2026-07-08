@@ -8,7 +8,7 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
-import type { PieBlockConfig, PieResult } from "@/lib/types/reports";
+import type { PieBlock as PieBlockConfig, PieResult } from "@/lib/types/reports";
 import { SERIES_COLORS } from "./colors";
 
 export interface PieBlockProps {
@@ -19,6 +19,8 @@ export interface PieBlockProps {
 }
 
 export function PieBlock({ title, result, placeholder }: PieBlockProps) {
+  const slices = result?.slices ?? [];
+
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
       {title && (
@@ -30,23 +32,27 @@ export function PieBlock({ title, result, placeholder }: PieBlockProps) {
         <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
           Voer rapport uit om data te tonen
         </div>
+      ) : slices.length === 0 ? (
+        <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+          Geen data in de gekozen periode
+        </div>
       ) : (
         <ResponsiveContainer width="100%" height={280}>
           <PieChart>
             <Pie
-              data={result.slices}
+              data={slices as Array<{ label: string; value: number; pct: number | null }>}
               dataKey="value"
-              nameKey="name"
+              nameKey="label"
               cx="50%"
               cy="50%"
               outerRadius={92}
               label={(p) => {
-                const x = p as unknown as { name: string; percentage: number };
-                return `${x.percentage.toFixed(0)}%`;
+                const x = p as unknown as { pct: number | null };
+                return x.pct !== null ? `${x.pct.toFixed(0)}%` : "";
               }}
               labelLine={{ stroke: "#d4d4d8", strokeWidth: 1 }}
             >
-              {result.slices.map((_, idx) => (
+              {slices.map((_, idx) => (
                 <Cell
                   key={idx}
                   fill={SERIES_COLORS[idx % SERIES_COLORS.length]}
@@ -56,10 +62,12 @@ export function PieBlock({ title, result, placeholder }: PieBlockProps) {
             <Tooltip
               formatter={(value, _name, item) => {
                 const v = typeof value === "number" ? value : Number(value ?? 0);
-                const p = (item as unknown as { payload?: { name: string; percentage: number } })?.payload;
+                const p = (item as unknown as { payload?: { label: string; pct: number | null } })?.payload;
                 return [
-                  `${new Intl.NumberFormat("nl-NL").format(v)} (${p?.percentage.toFixed(1) ?? 0}%)`,
-                  p?.name ?? "",
+                  `${new Intl.NumberFormat("nl-NL").format(v)}${
+                    p?.pct !== null && p?.pct !== undefined ? ` (${p.pct.toFixed(1)}%)` : ""
+                  }`,
+                  p?.label ?? "",
                 ];
               }}
               contentStyle={{

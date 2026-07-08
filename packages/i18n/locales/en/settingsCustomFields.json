@@ -1,0 +1,71 @@
+{
+  "backToSettings": "Back to settings",
+  "title": "Custom fields",
+  "description": "Define extra fields per entity. Custom fields are automatically shown in forms and CSV import.",
+  "entities": {
+    "candidate": "Candidates",
+    "job": "Jobs",
+    "application": "Applications"
+  },
+  "types": {
+    "text": "Text",
+    "number": "Number",
+    "date": "Date",
+    "dropdown": "Dropdown (single choice)",
+    "multiselect": "Multiselect",
+    "boolean": "Yes/No"
+  },
+  "tab": {
+    "cardTitle": "Fields for {{entity}}",
+    "cardDescription": "Drag to reorder. Deleted fields remain visible in historical records.",
+    "newField": "New field",
+    "loading": "Loading...",
+    "empty": "No custom fields for {{entity}} yet.",
+    "moveUp": "Up",
+    "moveDown": "Down",
+    "requiredBadge": "Required",
+    "optionsCount_one": "{{count}} options:",
+    "optionsCount_other": "{{count}} options:"
+  },
+  "deleteDialog": {
+    "title": "Delete field?",
+    "description": "Existing values for this field remain available historically but are no longer shown in new forms.",
+    "cancel": "Cancel",
+    "confirm": "Delete"
+  },
+  "toasts": {
+    "fieldDeleted": "Field deleted",
+    "deleteError": {
+      "title": "Error",
+      "description": "Could not delete field."
+    },
+    "optionsRequired": {
+      "title": "Options required",
+      "description": "Add at least one option for this field type."
+    },
+    "fieldUpdated": "Field updated",
+    "fieldAdded": "Field added",
+    "saveError": {
+      "title": "Error",
+      "description": "Could not save field."
+    }
+  },
+  "dialog": {
+    "editTitle": "Edit field",
+    "createTitle": "New custom field",
+    "labelLabel": "Label",
+    "labelPlaceholder": "E.g. LinkedIn URL",
+    "keyLabel": "Key (snake_case)",
+    "keyPlaceholder": "e.g. linkedin_url",
+    "keyHintEditing": "The key can no longer be changed after creation.",
+    "keyHintNew": "Automatically derived from the label, but you can adjust it.",
+    "fieldTypeLabel": "Field type",
+    "optionsLabel": "Options",
+    "optionPlaceholder": "New option",
+    "noOptions": "No options added yet.",
+    "requiredField": "Required field",
+    "cancel": "Cancel",
+    "save": "Save",
+    "create": "Create"
+  }
+}

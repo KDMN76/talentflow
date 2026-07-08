@@ -58,12 +58,17 @@ export async function fetchPortalBrandingServer(
 ): Promise<PortalBrandingServer> {
   if (!token) return { ...DEFAULT_BRANDING_SERVER };
   try {
-    const res = await fetch(`${SERVER_API_BASE}/portal/branding/${token}`, {
+    const res = await fetch(`${SERVER_API_BASE}/portals/branding/${token}`, {
       cache: "no-store",
     });
     if (!res.ok) return { ...DEFAULT_BRANDING_SERVER };
     const data = (await res.json()) as unknown;
-    return normalizeBrandingServer(data);
+    // API antwoordt { branding: {...}, client_name } — unwrap indien genest.
+    const branding =
+      data && typeof data === "object" && "branding" in (data as object)
+        ? (data as { branding?: unknown }).branding
+        : data;
+    return normalizeBrandingServer(branding);
   } catch {
     return { ...DEFAULT_BRANDING_SERVER };
   }

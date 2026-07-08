@@ -87,7 +87,9 @@
       "run": "Run",
       "save": "Sla op",
       "saving": "Opslaan…",
-      "embed": "Embed"
+      "embed": "Embed",
+      "exportCsv": "CSV",
+      "exportCsvTitle": "Exporteer als CSV-bestand"
     },
     "saveStatus": {
       "saving": "Bezig met opslaan…",
@@ -99,7 +101,8 @@
       "label": "Embed-link",
       "showLink": "Toon link",
       "revoke": "Trek link in",
-      "generate": "Genereer publieke link"
+      "generate": "Genereer publieke link",
+      "generateExpiry": "Genereer link — {{days}} dagen geldig"
     },
     "emptyCanvas": {
       "title": "Nog geen blokken",
@@ -111,7 +114,9 @@
       "description": "Iedereen met deze link kan dit rapport read-only bekijken.",
       "copy": "Kopieer",
       "close": "Sluit",
-      "revoke": "Trek link in"
+      "revoke": "Trek link in",
+      "expires": "Verloopt op {{date}}",
+      "neverExpires": "Geen vervaldatum — trek de link handmatig in als je hem niet meer wilt delen."
     },
     "toasts": {
       "saved": "Rapport opgeslagen",
@@ -121,7 +126,8 @@
       "embedError": "Embed-link aanmaken mislukt",
       "revoked": "Embed-link ingetrokken",
       "revokeError": "Intrekken mislukt",
-      "copied": "Gekopieerd"
+      "copied": "Gekopieerd",
+      "exportError": "CSV-export mislukt"
     }
   }
 }

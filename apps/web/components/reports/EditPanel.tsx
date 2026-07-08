@@ -3,8 +3,9 @@
 /**
  * EditPanel — right rail of the report builder.
  *
- * Picks the right type-specific edit panel for the selected block. Also
- * exposes a top-level "Titel" field shared across all block-types.
+ * Works on a ReportBlockEntry ({ id, title, size, block }) and dispatches to
+ * the type-specific edit panel for `entry.block`. Title + size are entry-level
+ * and shared across all block-types; the panels below only edit `block`.
  */
 
 import { Trash2, X } from "lucide-react";
@@ -12,16 +13,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   BLOCK_TYPE_LABELS,
-  type BarBlockConfig,
-  type BlockConfig,
+  type BlockSize,
   type DimensionDef,
-  type FunnelBlockConfig,
-  type KpiBlockConfig,
-  type LineBlockConfig,
   type MetricDef,
-  type PieBlockConfig,
   type ReportBlock,
-  type TableBlockConfig,
+  type ReportBlockEntry,
 } from "@/lib/types/reports";
 import { BarEditPanel } from "./edit-panels/BarEditPanel";
 import { FunnelEditPanel } from "./edit-panels/FunnelEditPanel";
@@ -29,28 +25,36 @@ import { KpiEditPanel } from "./edit-panels/KpiEditPanel";
 import { LineEditPanel } from "./edit-panels/LineEditPanel";
 import { PieEditPanel } from "./edit-panels/PieEditPanel";
 import { TableEditPanel } from "./edit-panels/TableEditPanel";
-import { Field, Section } from "./edit-panels/shared";
+import { Field, Section, SingleSelect } from "./edit-panels/shared";
 
 export interface EditPanelProps {
-  block: ReportBlock | null;
+  entry: ReportBlockEntry | null;
   metrics: MetricDef[];
   dimensions: DimensionDef[];
   onChangeTitle: (title: string) => void;
-  onChangeConfig: (config: BlockConfig) => void;
+  onChangeSize: (size: BlockSize) => void;
+  onChangeBlock: (block: ReportBlock) => void;
   onDelete: () => void;
   onClose: () => void;
 }
 
+const SIZE_OPTIONS: Array<{ value: BlockSize; label: string }> = [
+  { value: "sm", label: "Klein" },
+  { value: "md", label: "Middel" },
+  { value: "lg", label: "Groot" },
+];
+
 export function EditPanel({
-  block,
+  entry,
   metrics,
   dimensions,
   onChangeTitle,
-  onChangeConfig,
+  onChangeSize,
+  onChangeBlock,
   onDelete,
   onClose,
 }: EditPanelProps) {
-  if (!block) {
+  if (!entry) {
     return (
       <aside className="w-96 shrink-0 border-l border-border bg-zinc-50/40 dark:bg-zinc-900/40">
         <div className="flex h-full min-h-[400px] flex-col items-center justify-center gap-2 px-6 py-12 text-center">
@@ -64,6 +68,8 @@ export function EditPanel({
       </aside>
     );
   }
+
+  const block = entry.block;
 
   return (
     <aside className="flex w-96 shrink-0 flex-col border-l border-border bg-zinc-50/40 dark:bg-zinc-900/40">
@@ -100,7 +106,7 @@ export function EditPanel({
         <Section title="Titel">
           <Field label="Toon boven het blok">
             <Input
-              value={block.title ?? ""}
+              value={entry.title ?? ""}
               onChange={(e) => onChangeTitle(e.target.value)}
               placeholder="Bijv. Sollicitaties per recruiter"
               className="h-9 text-sm"
@@ -108,50 +114,54 @@ export function EditPanel({
           </Field>
         </Section>
 
+        <Section title="Formaat">
+          <Field label="Breedte in gedeelde weergave">
+            <SingleSelect
+              value={entry.size}
+              onChange={(v) => onChangeSize(v as BlockSize)}
+              options={SIZE_OPTIONS}
+            />
+          </Field>
+        </Section>
+
         {block.type === "kpi" && (
           <KpiEditPanel
-            config={block.config as KpiBlockConfig}
-            onChange={onChangeConfig}
+            config={block}
+            onChange={onChangeBlock}
             metrics={metrics}
-            dimensions={dimensions}
           />
         )}
         {block.type === "table" && (
           <TableEditPanel
-            config={block.config as TableBlockConfig}
-            onChange={onChangeConfig}
+            config={block}
+            onChange={onChangeBlock}
             metrics={metrics}
             dimensions={dimensions}
           />
         )}
         {block.type === "bar" && (
           <BarEditPanel
-            config={block.config as BarBlockConfig}
-            onChange={onChangeConfig}
+            config={block}
+            onChange={onChangeBlock}
             metrics={metrics}
             dimensions={dimensions}
           />
         )}
         {block.type === "line" && (
           <LineEditPanel
-            config={block.config as LineBlockConfig}
-            onChange={onChangeConfig}
+            config={block}
+            onChange={onChangeBlock}
             metrics={metrics}
             dimensions={dimensions}
           />
         )}
         {block.type === "funnel" && (
-          <FunnelEditPanel
-            config={block.config as FunnelBlockConfig}
-            onChange={onChangeConfig}
-            metrics={metrics}
-            dimensions={dimensions}
-          />
+          <FunnelEditPanel config={block} onChange={onChangeBlock} />
         )}
         {block.type === "pie" && (
           <PieEditPanel
-            config={block.config as PieBlockConfig}
-            onChange={onChangeConfig}
+            config={block}
+            onChange={onChangeBlock}
             metrics={metrics}
             dimensions={dimensions}
           />

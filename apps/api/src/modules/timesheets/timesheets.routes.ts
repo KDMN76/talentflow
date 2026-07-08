@@ -11,6 +11,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../../middleware/auth';
 import { tenantMiddleware } from '../../middleware/tenant';
+import { requirePermission } from '../../middleware/permissions';
 import { auditCtxFromReq } from '../../lib/audit';
 import { AppError } from '../../middleware/errorHandler';
 import * as service from './timesheets.service';
@@ -210,7 +211,11 @@ router.post('/:id/submit', async (req, res, next) => {
   }
 });
 
-router.post('/:id/approve', async (req, res, next) => {
+// Approve/reject zijn settlement-acties (voeden facturatie) en vereisen
+// `billing:write` — de inline check hieronder blokkeerde alleen rol
+// 'candidate', waardoor read-only rollen (viewer) konden approven
+// (viewer-gap gedicht).
+router.post('/:id/approve', requirePermission('billing', 'write'), async (req, res, next) => {
   try {
     const role = req.user!.role;
     if (role === 'candidate') {
@@ -233,7 +238,7 @@ router.post('/:id/approve', async (req, res, next) => {
   }
 });
 
-router.post('/:id/reject', async (req, res, next) => {
+router.post('/:id/reject', requirePermission('billing', 'write'), async (req, res, next) => {
   try {
     const body = reasonBody.parse(req.body);
     const ts = await service.rejectTimesheet(

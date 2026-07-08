@@ -5,17 +5,18 @@ import {
   Eye,
   CheckCircle2,
   XCircle,
+  HelpCircle,
   MessageSquare,
+  MessagesSquare,
   Star,
   Download,
-  CalendarClock,
   Globe,
 } from "lucide-react";
 import { cn, formatRelativeDate } from "@/lib/utils";
 import type {
   PortalActivityActionType,
   PortalActivityEvent,
-} from "@/lib/mockData";
+} from "@/hooks/usePortalLinks";
 
 const ACTION_META: Record<
   PortalActivityActionType,
@@ -50,29 +51,29 @@ const ACTION_META: Record<
     color: "text-red-600 dark:text-red-400",
     bg: "bg-red-100 dark:bg-red-950/40",
   },
+  doubted_candidate: {
+    label: "Twijfel",
+    icon: HelpCircle,
+    color: "text-amber-600 dark:text-amber-400",
+    bg: "bg-amber-100 dark:bg-amber-950/40",
+  },
   commented: {
     label: "Opmerking",
     icon: MessageSquare,
     color: "text-purple-600 dark:text-purple-400",
     bg: "bg-purple-100 dark:bg-purple-950/40",
   },
-  rated_candidate: {
-    label: "Beoordeeld",
-    icon: Star,
-    color: "text-amber-600 dark:text-amber-400",
-    bg: "bg-amber-100 dark:bg-amber-950/40",
+  general_comment: {
+    label: "Algemene opmerking",
+    icon: MessagesSquare,
+    color: "text-purple-600 dark:text-purple-400",
+    bg: "bg-purple-100 dark:bg-purple-950/40",
   },
   downloaded_cv: {
     label: "CV gedownload",
     icon: Download,
     color: "text-indigo-600 dark:text-indigo-400",
     bg: "bg-indigo-100 dark:bg-indigo-950/40",
-  },
-  scheduled_interview: {
-    label: "Interview ingepland",
-    icon: CalendarClock,
-    color: "text-teal-600 dark:text-teal-400",
-    bg: "bg-teal-100 dark:bg-teal-950/40",
   },
 };
 

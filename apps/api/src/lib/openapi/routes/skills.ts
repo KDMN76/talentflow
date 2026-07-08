@@ -96,6 +96,37 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: 'patch',
+  path: '/api/candidates/{id}/skill-profile',
+  tags: ['Skills', 'Candidates'],
+  summary: 'Replace candidate skill-profile (handmatige editor-save)',
+  security: authSecurity,
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            skills: z.array(
+              z.object({
+                esco_id: z.string(),
+                preferred_label: z.string(),
+                proficiency: z.number().int().min(1).max(10),
+                confidence: z.number().min(0).max(1),
+                source: z
+                  .enum(['ai_extracted', 'manual', 'esco_match', 'embedding_match'])
+                  .optional(),
+              })
+            ),
+          }),
+        },
+      },
+    },
+  },
+  responses: { 200: jsonResponse('OK', SkillProfile) },
+});
+
+registry.registerPath({
   method: 'post',
   path: '/api/candidates/{id}/sync-esco',
   tags: ['Skills', 'Candidates'],

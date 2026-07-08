@@ -1,0 +1,44 @@
+{
+  "header": {
+    "title": "AI Drafts",
+    "description": "Previously generated job descriptions — pick a draft to finish or publish.",
+    "newDraft": "New draft"
+  },
+  "status": {
+    "all": "All statuses",
+    "draft": "Draft",
+    "published": "Published",
+    "discarded": "Discarded"
+  },
+  "filters": {
+    "statusLabel": "Status",
+    "from": "From",
+    "to": "To",
+    "reset": "Reset"
+  },
+  "table": {
+    "date": "Date",
+    "role": "Role",
+    "status": "Status",
+    "selected": "Selected",
+    "actions": "Actions"
+  },
+  "row": {
+    "variantsMeta": "{{count}} variants · {{language}}",
+    "viewJob": "View job",
+    "edit": "Edit",
+    "continue": "Continue"
+  },
+  "discard": {
+    "confirm": "Are you sure you want to discard this draft?",
+    "successTitle": "Draft discarded",
+    "successDescription": "The draft has been marked as discarded.",
+    "errorTitle": "Error",
+    "errorDescription": "Discarding failed."
+  },
+  "empty": {
+    "title": "No AI drafts yet",
+    "description": "Generate your first job description with the AI generator. The AI creates three variants — you choose, edit and publish.",
+    "newDraft": "New AI draft"
+  }
+}

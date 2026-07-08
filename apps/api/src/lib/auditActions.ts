@@ -18,6 +18,7 @@ export const AuditActions = {
   CANDIDATE_RESUME_DELETED: 'candidate.resume_deleted',
   CANDIDATE_SKILL_ADDED: 'candidate.skill_added',
   CANDIDATE_SKILL_REMOVED: 'candidate.skill_removed',
+  CANDIDATE_SKILL_PROFILE_UPDATED: 'candidate.skill_profile_updated',
 
   // ─── Jobs ───────────────────────────────────────────────────────────────
   JOB_CREATED: 'job.created',
@@ -54,6 +55,13 @@ export const AuditActions = {
   //     voor het compliance dashboard).
   MATCH_EXPLANATION_GENERATED: 'match_explanation.generated',
 
+  // ─── EU AI Act — human-oversight-gate (migration 043) ───────────────────
+  // Geautomatiseerde reject-acties worden voorstellen; elke menselijke
+  // beslissing (goedkeuren/afwijzen) wordt hier append-only vastgelegd.
+  AI_PROPOSAL_CREATED: 'ai_proposal.created',
+  AI_PROPOSAL_APPROVED: 'ai_proposal.approved',
+  AI_PROPOSAL_REJECTED: 'ai_proposal.rejected',
+
   // ─── Compliance / Q2 ────────────────────────────────────────────────────
   CONSENT_GRANTED: 'consent.granted',
   CONSENT_WITHDRAWN: 'consent.withdrawn',
@@ -71,6 +79,9 @@ export const AuditActions = {
   DSAR_FULFILLED: 'dsar.fulfilled',
   DSAR_REJECTED: 'dsar.rejected',
   DATA_EXPORT_PACKAGE_GENERATED: 'data_export_package.generated',
+  // GDPR export-links (migration 046) — aanmaken + downloaden via token.
+  DATA_EXPORT_LINK_CREATED: 'data_export_link.created',
+  DATA_EXPORT_PACKAGE_DOWNLOADED: 'data_export_package.downloaded',
   CONSENT_UPDATED_BY_CANDIDATE: 'consent.updated_by_candidate',
   CANDIDATE_CORRECTION_BY_CANDIDATE: 'candidate.correction_by_candidate',
   CANDIDATE_DELETION_REQUESTED_BY_CANDIDATE: 'candidate.deletion_requested_by_candidate',

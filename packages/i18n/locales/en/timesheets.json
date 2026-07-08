@@ -1,0 +1,97 @@
+{
+  "header": {
+    "title": "Timesheets",
+    "description": "Review submitted timesheets and release them for invoicing."
+  },
+  "stats": {
+    "total": "Total",
+    "pending": "To review",
+    "approved": "Approved",
+    "rejected": "Rejected / disputed"
+  },
+  "status": {
+    "draft": "Draft",
+    "submitted": "Submitted",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "disputed": "Disputed"
+  },
+  "filters": {
+    "searchPlaceholder": "Search by candidate or client...",
+    "allStatuses": "All statuses",
+    "statusSubmitted": "Submitted",
+    "statusApproved": "Approved",
+    "statusRejected": "Rejected",
+    "statusDisputed": "Disputed",
+    "statusDraft": "Draft",
+    "allContracts": "All contracts"
+  },
+  "empty": {
+    "title": "No timesheets found",
+    "description": "Adjust the filters to see more results."
+  },
+  "table": {
+    "candidateClient": "Candidate / client",
+    "week": "Week",
+    "status": "Status",
+    "hours": "Hours",
+    "overtime": "Overtime",
+    "actions": "Actions"
+  },
+  "actions": {
+    "reject": "Reject",
+    "approve": "Approve",
+    "close": "Close"
+  },
+  "units": {
+    "hours": "{{value}}h",
+    "overtime": "+{{value}}h",
+    "breakMinutes": "{{value}}m"
+  },
+  "weekdays": {
+    "0": "Mon",
+    "1": "Tue",
+    "2": "Wed",
+    "3": "Thu",
+    "4": "Fri",
+    "5": "Sat",
+    "6": "Sun"
+  },
+  "detail": {
+    "titleFallback": "Timesheet",
+    "week": "Work week {{start}} — {{end}} ·",
+    "entries": {
+      "day": "Day",
+      "hours": "Hours",
+      "overtime": "Overtime",
+      "break": "Break",
+      "description": "Description",
+      "empty": "No hours entered.",
+      "total": "Total"
+    },
+    "audit": {
+      "title": "Activity",
+      "created": "Created on {{date}}",
+      "submitted": "Submitted on {{date}}",
+      "approved": "Approved on {{date}}",
+      "rejected": "Rejected on {{date}} — {{reason}}",
+      "noReason": "no reason"
+    }
+  },
+  "reject": {
+    "title": "Reject timesheet",
+    "description": "The candidate will immediately receive your comment and can correct the hours.",
+    "reasonLabel": "Reason for rejection",
+    "reasonPlaceholder": "e.g. 30min break missing on Wednesday",
+    "cancel": "Cancel",
+    "submit": "Reject"
+  },
+  "toast": {
+    "approvedTitle": "Approved",
+    "approvedDescription": "Timesheet can now be invoiced.",
+    "approveFailed": "Approval failed",
+    "rejectedTitle": "Rejected",
+    "rejectedDescription": "Candidate receives a notification to correct the hours.",
+    "rejectFailed": "Rejection failed"
+  }
+}

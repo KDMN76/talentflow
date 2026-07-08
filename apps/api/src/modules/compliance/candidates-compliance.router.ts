@@ -38,6 +38,13 @@ router.post(
   complianceController.setCandidateRetentionExcludedHandler
 );
 
+// AVG art. 15 — kort-levende export-download-link vanaf kandidaat-detail.
+router.post(
+  '/:id/export-link',
+  requireRole('admin', 'owner'),
+  complianceController.createCandidateExportLinkHandler
+);
+
 router.get(
   '/:id/resumes/:resumeId/anonymized',
   complianceController.downloadAnonymizedResumeHandler

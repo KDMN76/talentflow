@@ -2,6 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import { ArrowLeft, Users, Kanban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,6 +14,7 @@ import { usePipelineStages, useApplications } from "@/hooks/usePipeline";
 export default function PipelinePage() {
   const params = useParams();
   const router = useRouter();
+  const { t } = useTranslation("pipeline");
   const jobId = params.id as string;
 
   const { data: job, isLoading: jobLoading } = useJob(jobId);
@@ -49,18 +51,21 @@ export default function PipelinePage() {
         className="text-muted-foreground hover:text-foreground -ml-2"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
-        Terug
+        {t("jobPage.back")}
       </Button>
 
       <PageHeader
-        title={`Pipeline — ${job?.title ?? "..."}`}
-        description={`${applications?.length ?? 0} actieve sollicitanten · ${stages?.length ?? 0} fasen`}
+        title={t("jobPage.title", { title: job?.title ?? "..." })}
+        description={t("jobPage.description", {
+          count: applications?.length ?? 0,
+          stages: stages?.length ?? 0,
+        })}
         actions={
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" asChild>
               <Link href={`/jobs/${jobId}`}>
                 <Users className="mr-2 h-3.5 w-3.5" />
-                Details
+                {t("jobPage.details")}
               </Link>
             </Button>
           </div>
@@ -94,10 +99,10 @@ export default function PipelinePage() {
           <div>
             <Kanban className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
             <p className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-              Geen pipeline ingesteld
+              {t("jobPage.emptyTitle")}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              Voeg fasen toe aan deze vacature om te beginnen.
+              {t("jobPage.emptyDescription")}
             </p>
           </div>
         </div>

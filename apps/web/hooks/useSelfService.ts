@@ -11,6 +11,7 @@
  * - useUpdateSelfProfile(token)   : POST /correction — partial candidate update
  * - useUpdateSelfConsent(token)   : POST /consent — gdpr | email toggle
  * - useRequestDeletion(token)     : POST /deletion — start DSAR-flow
+ * - useRequestDataExport(token)   : POST /export — AVG art. 15 download-link
  * - useWithdrawApplication(token) : POST /application/:id/withdraw
  */
 
@@ -187,6 +188,30 @@ export function useRequestDeletion(token: string) {
   });
 }
 
+export interface DataExportResponse {
+  dsar_id: string;
+  url: string;
+  expires_at: string;
+}
+
+/**
+ * AVG art. 15 — kandidaat vraagt een kopie van zijn/haar gegevens.
+ * De API registreert een DSAR, genereert direct een kort-levende
+ * download-link (24u, max 3 downloads) en geeft die terug.
+ */
+export function useRequestDataExport(token: string) {
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await api.post(
+        `/self-service/${token}/export`,
+        {},
+        { headers: { Authorization: "" } }
+      );
+      return shapeExportResponse(data);
+    },
+  });
+}
+
 export function useWithdrawApplication(token: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -347,6 +372,22 @@ function shapeTenant(raw: unknown): SelfServiceData["tenant"] {
     name: typeof r.name === "string" ? r.name : "Recruitment-team",
     privacy_email:
       typeof r.privacy_email === "string" ? r.privacy_email : null,
+  };
+}
+
+function shapeExportResponse(data: unknown): DataExportResponse {
+  const r = (data && typeof data === "object" ? data : {}) as Record<string, unknown>;
+  const root =
+    r.data && typeof r.data === "object"
+      ? (r.data as Record<string, unknown>)
+      : r;
+  return {
+    dsar_id: String(root.dsar_id ?? ""),
+    url: typeof root.url === "string" ? root.url : "",
+    expires_at:
+      typeof root.expires_at === "string"
+        ? root.expires_at
+        : new Date(Date.now() + 24 * 3_600_000).toISOString(),
   };
 }
 

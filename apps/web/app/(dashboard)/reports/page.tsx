@@ -82,7 +82,7 @@ export default function ReportsListPage() {
       const r = await createReport.mutateAsync({
         name,
         config: {
-          date_range: { preset: "last_30_days" },
+          date_range: { type: "last_n_days", days: 30 },
           blocks: [],
         },
       });
@@ -276,8 +276,12 @@ function ReportCard({ report }: { report: Report }) {
       return;
     }
     try {
-      const res = await generateEmbed.mutateAsync(report.id);
-      setEmbedUrl(res.url);
+      const res = await generateEmbed.mutateAsync({ id: report.id });
+      const url =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/embed/reports/${res.token}`
+          : `/embed/reports/${res.token}`;
+      setEmbedUrl(url);
       setEmbedOpen(true);
     } catch {
       toast({ title: t("card.toasts.embedError"), variant: "destructive" });

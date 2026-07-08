@@ -13,16 +13,23 @@ import { Router } from 'express';
 import * as controller from './scorecards.controller';
 import { requireAuth } from '../../middleware/auth';
 import { tenantMiddleware } from '../../middleware/tenant';
+import { requireWriteOnMutation } from '../../middleware/permissions';
+
+// Scorecards zijn interview-feedback → gemapt op de `interviews`-resource:
+// recruiter/hiring_manager (interviews:write) mogen indienen, read-only rollen
+// zoals `viewer` niet.
 
 // Application-scoped routes — caller mounts at /api/applications
 export const applicationsScorecardsRouter = Router({ mergeParams: true });
 applicationsScorecardsRouter.use(requireAuth, tenantMiddleware);
+applicationsScorecardsRouter.use(requireWriteOnMutation('interviews'));
 applicationsScorecardsRouter.get('/:id/scorecards', controller.listForApplication);
 applicationsScorecardsRouter.post('/:id/scorecards', controller.createForApplication);
 
 // Standalone scorecards + templates router — caller mounts at /api/scorecards
 export const scorecardsRouter = Router();
 scorecardsRouter.use(requireAuth, tenantMiddleware);
+scorecardsRouter.use(requireWriteOnMutation('interviews'));
 
 // Templates first so /templates isn't captured as :id
 scorecardsRouter.get('/templates', controller.listTemplates);

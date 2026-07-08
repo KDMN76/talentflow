@@ -21,10 +21,19 @@ import { AuditActions } from '../../lib/auditActions';
 import {
   generateSecret,
   buildOtpauthUri,
-  verifyTotp,
+  verifyTotpDelta,
+  matchedStepStart,
   generateBackupCodes,
   normalizeBackupCode,
 } from '../../lib/totp';
+import {
+  getCachedTenantPolicy,
+  setCachedTenantPolicy,
+  invalidateTenantPolicy,
+  getCachedUser2faEnabled,
+  setCachedUser2faEnabled,
+  invalidateUser2fa,
+} from '../../lib/twoFactorCache';
 
 const BACKUP_CODE_BCRYPT_ROUNDS = 10;
 
@@ -42,6 +51,8 @@ interface User2faRow {
   backup_codes: string[];
   enabled_at: Date | null;
   last_used_at: Date | null;
+  /** ms-epoch starttijd van de tijdstap van de laatst geaccepteerde code (replay-guard, migration 047). */
+  last_totp_step: string | number | null;
 }
 
 interface UserRow {
@@ -66,10 +77,35 @@ async function fetch2faRow(
   userId: string
 ): Promise<User2faRow | null> {
   const { rows } = await client.query<User2faRow>(
-    'SELECT user_id, tenant_id, secret, enabled, backup_codes, enabled_at, last_used_at FROM user_2fa_secrets WHERE user_id = $1',
+    'SELECT user_id, tenant_id, secret, enabled, backup_codes, enabled_at, last_used_at, last_totp_step FROM user_2fa_secrets WHERE user_id = $1',
     [userId]
   );
   return rows[0] ?? null;
+}
+
+/**
+ * Verifieer een TOTP-code inclusief replay-guard. Retourneert de ms-epoch
+ * starttijd van de gematchte tijdstap bij succes, of `null` bij een
+ * ongeldige OF hergebruikte code.
+ *
+ * Replay-semantiek: elke geaccepteerde code "consumeert" z'n tijdstap.
+ * Een tweede code uit dezelfde (of een oudere) tijdstap wordt geweigerd,
+ * ook als 'ie cryptografisch klopt. De caller MOET de returned stepStart
+ * persisteren in `last_totp_step`.
+ */
+function checkTotpWithReplayGuard(row: User2faRow, code: string): number | null {
+  const delta = verifyTotpDelta(row.secret, code);
+  if (delta === null) return null;
+  const stepStart = matchedStepStart(delta);
+  const lastStep =
+    row.last_totp_step === null || row.last_totp_step === undefined
+      ? null
+      : Number(row.last_totp_step);
+  if (lastStep !== null && stepStart <= lastStep) {
+    // Replay — code (of een oudere) is al gebruikt.
+    return null;
+  }
+  return stepStart;
 }
 
 /**
@@ -160,18 +196,23 @@ export async function verifyTotpAndEnable(
     if (row.enabled) {
       throw new AppError(409, '2FA_ALREADY_ENABLED', '2FA staat al aan');
     }
-    if (!verifyTotp(row.secret, code)) {
+    const stepStart = checkTotpWithReplayGuard(row, code);
+    if (stepStart === null) {
       throw new AppError(401, 'INVALID_2FA_CODE', 'Ongeldige verificatiecode');
     }
 
+    // last_totp_step meteen zetten: de enrolment-code mag niet direct
+    // daarna hergebruikt worden voor een login-challenge.
     await client.query(
       `UPDATE user_2fa_secrets
           SET enabled = TRUE,
               enabled_at = now(),
-              last_used_at = now()
+              last_used_at = now(),
+              last_totp_step = $2
         WHERE user_id = $1`,
-      [userId]
+      [userId, stepStart]
     );
+    invalidateUser2fa(userId);
 
     await logAudit(
       client,
@@ -203,12 +244,23 @@ export async function verifyTotpCode(
   return withTenant(user.tenant_id, async (client) => {
     const row = await fetch2faRow(client, userId);
     if (!row || !row.enabled) return false;
-    if (!verifyTotp(row.secret, code)) return false;
+    const stepStart = checkTotpWithReplayGuard(row, code);
+    if (stepStart === null) return false;
 
-    await client.query(
-      'UPDATE user_2fa_secrets SET last_used_at = now() WHERE user_id = $1',
-      [userId]
+    // Atomaire consumptie: het terugschrijven van last_totp_step is de
+    // enige autoriteit tegen replay. De in-memory check hierboven is een
+    // snelle voorfilter, maar bij twee gelijktijdige verifies met dezelfde
+    // code lezen beide dezelfde (stale) last_totp_step. De conditionele
+    // UPDATE laat er dan precies één winnen; de verliezer krijgt rowCount 0
+    // en wordt als replay afgewezen.
+    const { rowCount } = await client.query(
+      `UPDATE user_2fa_secrets
+          SET last_totp_step = $2, last_used_at = now()
+        WHERE user_id = $1
+          AND (last_totp_step IS NULL OR last_totp_step < $2)`,
+      [userId, stepStart]
     );
+    if ((rowCount ?? 0) === 0) return false;
     return true;
   });
 }
@@ -267,12 +319,14 @@ export async function verifyBackupCode(
 }
 
 /**
- * Schakel 2FA uit — vereist verificatie via TOTP-code, anders kan een
- * gestolen sessie iemands 2FA bypassen.
+ * Schakel 2FA uit — vereist wachtwoord ÉN een tweede factor (TOTP-code of
+ * backup-code), anders kan een gestolen sessie iemands 2FA bypassen.
+ * De backup-code-fallback dekt het lost-device-scenario.
  */
 export async function disable2fa(
   userId: string,
   code: string,
+  password: string,
   ctx: AuditContext = {}
 ): Promise<void> {
   const user = await fetchUser(userId);
@@ -280,12 +334,39 @@ export async function disable2fa(
     throw new AppError(404, 'USER_NOT_FOUND', 'Gebruiker niet gevonden');
   }
 
+  // Wachtwoord-check — losse query zodat het hash-veld nergens anders
+  // door de service heen sijpelt.
+  const passwordHash = await withoutTenant(async (client: PoolClient) => {
+    const { rows } = await client.query<{ password_hash: string }>(
+      'SELECT password_hash FROM users WHERE id = $1 LIMIT 1',
+      [userId]
+    );
+    return rows[0]?.password_hash ?? null;
+  });
+  if (!passwordHash || !(await bcrypt.compare(password, passwordHash))) {
+    throw new AppError(401, 'INVALID_PASSWORD', 'Ongeldig wachtwoord');
+  }
+
   await withTenant(user.tenant_id, async (client) => {
     const row = await fetch2faRow(client, userId);
     if (!row || !row.enabled) {
       throw new AppError(400, '2FA_NOT_ENABLED', '2FA staat niet aan');
     }
-    if (!verifyTotp(row.secret, code)) {
+
+    // Tweede factor: TOTP (met replay-guard) of een geldige backup-code.
+    let secondFactorOk = checkTotpWithReplayGuard(row, code) !== null;
+    if (!secondFactorOk) {
+      const normalized = normalizeBackupCode(code);
+      if (normalized) {
+        for (const hash of row.backup_codes) {
+          if (await bcrypt.compare(normalized, hash)) {
+            secondFactorOk = true;
+            break;
+          }
+        }
+      }
+    }
+    if (!secondFactorOk) {
       throw new AppError(401, 'INVALID_2FA_CODE', 'Ongeldige verificatiecode');
     }
 
@@ -293,6 +374,7 @@ export async function disable2fa(
       'DELETE FROM user_2fa_secrets WHERE user_id = $1',
       [userId]
     );
+    invalidateUser2fa(userId);
 
     await logAudit(
       client,
@@ -328,7 +410,8 @@ export async function regenerateBackupCodes(
     if (!row || !row.enabled) {
       throw new AppError(400, '2FA_NOT_ENABLED', '2FA staat niet aan');
     }
-    if (!verifyTotp(row.secret, code)) {
+    const stepStart = checkTotpWithReplayGuard(row, code);
+    if (stepStart === null) {
       throw new AppError(401, 'INVALID_2FA_CODE', 'Ongeldige verificatiecode');
     }
 
@@ -340,8 +423,8 @@ export async function regenerateBackupCodes(
     );
 
     await client.query(
-      'UPDATE user_2fa_secrets SET backup_codes = $1 WHERE user_id = $2',
-      [codesHashed, userId]
+      'UPDATE user_2fa_secrets SET backup_codes = $1, last_totp_step = $3 WHERE user_id = $2',
+      [codesHashed, userId, stepStart]
     );
 
     await logAudit(
@@ -487,6 +570,7 @@ export async function setTenant2faPolicy(
       ctx
     );
 
+    invalidateTenantPolicy(tenantId);
     return rows[0]!;
   });
 }
@@ -501,14 +585,30 @@ export async function require2faForUser(
   userId: string,
   role: string
 ): Promise<{ required: boolean; in_grace: boolean; grace_ends_at?: Date }> {
-  const policy = await getTenant2faPolicy(tenantId);
+  // Cache (30s TTL, uit in tests) — dit pad draait via enforce2faPolicy op
+  // elk geauthenticeerd request. Zie lib/twoFactorCache.ts.
+  let policy: Tenant2faPolicy | null;
+  const cachedPolicy = getCachedTenantPolicy(tenantId);
+  if (cachedPolicy.hit) {
+    policy = cachedPolicy.value ?? null;
+  } else {
+    policy = await getTenant2faPolicy(tenantId);
+    setCachedTenantPolicy(tenantId, policy);
+  }
   if (!policy) return { required: false, in_grace: false };
 
   const isRequired =
     policy.required_for_all || policy.required_for_roles.includes(role);
   if (!isRequired) return { required: false, in_grace: false };
 
-  const enabled = await is2faEnabled(userId);
+  let enabled: boolean;
+  const cachedEnabled = getCachedUser2faEnabled(userId);
+  if (cachedEnabled.hit) {
+    enabled = cachedEnabled.value ?? false;
+  } else {
+    enabled = await is2faEnabled(userId);
+    setCachedUser2faEnabled(userId, enabled);
+  }
   if (enabled) return { required: false, in_grace: false };
 
   const graceEnds = new Date(

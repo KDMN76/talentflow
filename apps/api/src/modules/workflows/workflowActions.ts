@@ -3,6 +3,11 @@ import axios from 'axios';
 import { logger } from '../../middleware/errorHandler';
 import { emailSenderQueue } from '../../queue/queues';
 import { applyMergeVars } from '../../lib/mergeVariables';
+import {
+  createActionProposal,
+  isGatedActionType,
+  isRejectionStageName,
+} from '../compliance/aiOversight.service';
 import type { WorkflowAction } from './workflows.service';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -28,6 +33,8 @@ export interface WorkflowActionContext {
   payload: Record<string, unknown>;
   /** User that initiated the trigger, or `null` for system-driven events. */
   userId?: string | null;
+  /** Workflow die deze actie triggert — voor de human-oversight-gate. */
+  workflowId?: string | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -255,7 +262,19 @@ async function executeRemoveTag(action: WorkflowAction, ctx: WorkflowActionConte
 // ─────────────────────────────────────────────────────────────────────────────
 // move_to_stage — only meaningful for `candidate.stage_changed` (entityId =
 // application_id). For other triggers, requires payload.application_id.
+//
+// EU AI Act human-oversight-gate (migration 043): een automatische move naar
+// een afwijzings-stage wordt NIET uitgevoerd maar als voorstel
+// (`ai_action_proposals`, status pending_review) klaargezet. Een recruiter
+// bevestigt of verwerpt het voorstel in de UI (compliance/aiOversight).
 // ─────────────────────────────────────────────────────────────────────────────
+
+/** Resolve het application-id volgens de trigger-semantiek. */
+function resolveApplicationId(ctx: WorkflowActionContext): string | null {
+  if (ctx.event === 'candidate.stage_changed') return ctx.entityId;
+  const aid = (ctx.payload as Record<string, unknown>).application_id;
+  return typeof aid === 'string' ? aid : null;
+}
 
 async function executeMoveToStage(action: WorkflowAction, ctx: WorkflowActionContext): Promise<void> {
   const stageId = action.config.stage_id;
@@ -264,16 +283,7 @@ async function executeMoveToStage(action: WorkflowAction, ctx: WorkflowActionCon
     throw new Error('move_to_stage action requires config.stage_id or config.stage_name');
   }
 
-  // Resolve applicationId. For the dedicated stage trigger, entityId IS the
-  // application_id. For every other trigger we expect payload.application_id.
-  let applicationId: string | null = null;
-  if (ctx.event === 'candidate.stage_changed') {
-    applicationId = ctx.entityId;
-  } else {
-    const aid = (ctx.payload as Record<string, unknown>).application_id;
-    if (typeof aid === 'string') applicationId = aid;
-  }
-
+  const applicationId = resolveApplicationId(ctx);
   if (!applicationId) {
     logger.warn('[workflowActions] move_to_stage: no application_id resolvable', {
       event: ctx.event,
@@ -282,9 +292,10 @@ async function executeMoveToStage(action: WorkflowAction, ctx: WorkflowActionCon
     return;
   }
 
-  // Get the job_id for this application so we can scope stage_name lookup.
+  // Get the job/candidate for this application so we can scope stage lookup
+  // and denormalize the oversight-proposal.
   const { rows: [app] } = await ctx.client.query(
-    `SELECT id, job_id FROM applications WHERE id = $1 AND tenant_id = $2`,
+    `SELECT id, job_id, candidate_id FROM applications WHERE id = $1 AND tenant_id = $2`,
     [applicationId, ctx.tenantId]
   );
   if (!app) {
@@ -292,10 +303,27 @@ async function executeMoveToStage(action: WorkflowAction, ctx: WorkflowActionCon
     return;
   }
 
-  let resolvedStageId = stageId;
-  if (!resolvedStageId && stageName) {
+  // Resolve target stage (id + naam). We hebben de NAAM altijd nodig voor de
+  // rejection-detectie, ook wanneer de config alleen een stage_id bevat.
+  let resolvedStageId: string | null = null;
+  let resolvedStageName: string | null = null;
+
+  if (stageId) {
     const { rows: [stage] } = await ctx.client.query(
-      `SELECT id FROM pipeline_stages
+      `SELECT id, name FROM pipeline_stages
+       WHERE id = $1 AND tenant_id = $2
+       LIMIT 1`,
+      [stageId, ctx.tenantId]
+    );
+    if (!stage) {
+      logger.warn('[workflowActions] move_to_stage: stage_id not found', { stageId });
+      return;
+    }
+    resolvedStageId = stage.id;
+    resolvedStageName = stage.name;
+  } else if (stageName) {
+    const { rows: [stage] } = await ctx.client.query(
+      `SELECT id, name FROM pipeline_stages
        WHERE job_id = $1 AND tenant_id = $2 AND lower(name) = lower($3)
        LIMIT 1`,
       [app.job_id, ctx.tenantId, stageName]
@@ -308,6 +336,31 @@ async function executeMoveToStage(action: WorkflowAction, ctx: WorkflowActionCon
       return;
     }
     resolvedStageId = stage.id;
+    resolvedStageName = stage.name;
+  }
+
+  // ── Human-oversight-gate: reject-moves worden voorstellen, geen acties ──
+  if (isRejectionStageName(resolvedStageName)) {
+    const proposalId = await createActionProposal(ctx.client, ctx.tenantId, {
+      source: 'workflow',
+      sourceId: ctx.workflowId ?? null,
+      actionType: 'move_to_stage',
+      actionConfig: { stage_id: resolvedStageId, stage_name: resolvedStageName },
+      triggerEvent: ctx.event,
+      entityType: 'application',
+      entityId: applicationId,
+      candidateId: (app.candidate_id as string) ?? null,
+      jobId: (app.job_id as string) ?? null,
+      reason: `Automatische verplaatsing naar afwijzings-stage "${resolvedStageName}" vereist menselijke goedkeuring (EU AI Act art. 14)`,
+    });
+    logger.info('[workflowActions] move_to_stage gated — proposal created (pending_review)', {
+      applicationId,
+      stageId: resolvedStageId,
+      stageName: resolvedStageName,
+      proposalId,
+      event: ctx.event,
+    });
+    return;
   }
 
   await ctx.client.query(
@@ -320,6 +373,61 @@ async function executeMoveToStage(action: WorkflowAction, ctx: WorkflowActionCon
   logger.info('[workflowActions] move_to_stage applied', {
     applicationId,
     stageId: resolvedStageId,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Gated reject-acties ('reject', 'reject_application', 'move_to_rejected') —
+// deze actietypes bestaan niet als directe executor en zúllen ook nooit
+// direct uitgevoerd worden: ze produceren per definitie een oversight-
+// voorstel. Defensief aanwezig zodat een toekomstige (of via de API
+// geconfigureerde) reject-actie nooit om de gate heen kan.
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function executeGatedRejectAction(
+  action: WorkflowAction,
+  ctx: WorkflowActionContext
+): Promise<void> {
+  const applicationId = resolveApplicationId(ctx);
+  if (!applicationId) {
+    logger.warn('[workflowActions] gated reject action: no application_id resolvable', {
+      actionType: action.type,
+      event: ctx.event,
+      entityId: ctx.entityId,
+    });
+    return;
+  }
+
+  const { rows: [app] } = await ctx.client.query(
+    `SELECT id, job_id, candidate_id FROM applications WHERE id = $1 AND tenant_id = $2`,
+    [applicationId, ctx.tenantId]
+  );
+  if (!app) {
+    logger.warn('[workflowActions] gated reject action: application not found', {
+      applicationId,
+    });
+    return;
+  }
+
+  const proposalId = await createActionProposal(ctx.client, ctx.tenantId, {
+    source: 'workflow',
+    sourceId: ctx.workflowId ?? null,
+    actionType: action.type,
+    actionConfig: { ...action.config },
+    triggerEvent: ctx.event,
+    entityType: 'application',
+    entityId: applicationId,
+    candidateId: (app.candidate_id as string) ?? null,
+    jobId: (app.job_id as string) ?? null,
+    reason:
+      'Automatische afwijzing vereist menselijke goedkeuring (EU AI Act art. 14)',
+  });
+
+  logger.info('[workflowActions] reject action gated — proposal created (pending_review)', {
+    actionType: action.type,
+    applicationId,
+    proposalId,
+    event: ctx.event,
   });
 }
 
@@ -435,6 +543,13 @@ export async function executeAction(
   action: WorkflowAction,
   ctx: WorkflowActionContext
 ): Promise<void> {
+  // EU AI Act human-oversight-gate: expliciete reject-actietypes gaan ALTIJD
+  // via een pending_review-voorstel, nooit direct. Check vóór de switch zodat
+  // geen enkel codepad (ook toekomstige) hier omheen kan.
+  if (isGatedActionType(action.type)) {
+    return executeGatedRejectAction(action, ctx);
+  }
+
   switch (action.type) {
     case 'send_email':
       return executeSendEmail(action, ctx);

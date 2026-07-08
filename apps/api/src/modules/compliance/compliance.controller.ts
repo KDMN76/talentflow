@@ -26,6 +26,8 @@ import { DEFAULT_ANONYMIZATION_RULES } from '../../lib/anonymization';
 import {
   getPaySettings,
   updatePaySettings,
+  getPayTransparencyReport,
+  SALARY_FREQUENCY_VALUES,
 } from './payTransparency.service';
 import {
   generatePayEquityReport,
@@ -35,6 +37,13 @@ import {
   generateDeiFunnel,
   listDeiFunnelSnapshots,
 } from './deiFunnel.service';
+import {
+  listAiActionProposals,
+  decideAiActionProposal,
+  getCandidateAiSummary,
+  getAiRetentionStatus,
+  type AiProposalStatus,
+} from './aiOversight.service';
 import * as auditService from './audit.service';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -82,6 +91,7 @@ const paySettingsPatchSchema = z.object({
   prohibit_current_salary_questions: z.boolean().optional(),
   reporting_threshold: z.number().int().min(1).max(100000).optional(),
   default_currency: z.string().regex(/^[A-Z]{3}$/, 'ISO 3-letter currency').optional(),
+  default_salary_frequency: z.enum(SALARY_FREQUENCY_VALUES).optional(),
   benchmark_data_consent: z.boolean().optional(),
 });
 
@@ -93,6 +103,21 @@ const periodBodySchema = z.object({
     message: 'to moet een geldige datum zijn',
   }),
   job_category: z.string().min(1).max(120).optional(),
+});
+
+// ─── Sprint Q4.6 — AI human-oversight schemas ───────────────────────────────
+
+const aiProposalListQuerySchema = z.object({
+  status: z
+    .enum(['pending_review', 'approved', 'rejected', 'failed'])
+    .optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
+});
+
+const aiProposalDecisionSchema = z.object({
+  decision: z.enum(['approve', 'reject']),
+  note: z.string().max(2000).nullable().optional(),
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -278,6 +303,72 @@ export async function exportDsarRequestHandler(
     );
     res.setHeader('Cache-Control', 'no-store, max-age=0');
     res.status(200).send(buffer);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /compliance/dsar-requests/:id/export-link — maak een kort-levende
+ * download-link (AVG art. 15) voor het dossier van de aan het DSAR
+ * gekoppelde kandidaat. De link wijst naar de publieke
+ * `/api/gdpr-export/:token`-endpoint en kan veilig per e-mail aan de
+ * betrokkene worden doorgestuurd (24u geldig, max 3 downloads).
+ */
+export async function createDsarExportLinkHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const dsar = await dsarService.getDsarRequest(
+      req.user!.tenantId,
+      req.params.id
+    );
+    if (!dsar.candidate_id) {
+      res.status(400).json({
+        error: {
+          code: 'DSAR_NO_CANDIDATE',
+          message: 'DSAR-verzoek heeft geen gekoppelde kandidaat',
+          details: {},
+        },
+      });
+      return;
+    }
+    const link = await dsarService.createDataExportLink(
+      req.user!.tenantId,
+      dsar.candidate_id,
+      {
+        dsarId: dsar.id,
+        userId: req.user!.userId,
+        ctx: auditCtxFromReq(req),
+      }
+    );
+    res.status(201).json({ data: link });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /candidates/:id/export-link — zelfde export-link, maar direct
+ * vanaf kandidaat-detail (zonder bestaand DSAR-verzoek).
+ */
+export async function createCandidateExportLinkHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const link = await dsarService.createDataExportLink(
+      req.user!.tenantId,
+      req.params.id,
+      {
+        userId: req.user!.userId,
+        ctx: auditCtxFromReq(req),
+      }
+    );
+    res.status(201).json({ data: link });
   } catch (err) {
     next(err);
   }
@@ -592,6 +683,19 @@ export async function updatePaySettingsHandler(
   }
 }
 
+export async function getPayTransparencyReportHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const data = await getPayTransparencyReport(req.user!.tenantId);
+    res.json({ data });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function generatePayEquityHandler(
   req: Request,
   res: Response,
@@ -665,6 +769,78 @@ export async function listDeiFunnelSnapshotsHandler(
       1000
     );
     const data = await listDeiFunnelSnapshots(req.user!.tenantId, limit);
+    res.json({ data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sprint Q4.6 — EU AI Act human-oversight-gate + kandidaat-AI-transparantie
+// ─────────────────────────────────────────────────────────────────────────────
+
+export async function listAiProposalsHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const q = aiProposalListQuerySchema.parse(req.query);
+    const data = await listAiActionProposals(req.user!.tenantId, {
+      status: q.status as AiProposalStatus | undefined,
+      limit: q.limit,
+      offset: q.offset,
+    });
+    res.json({ data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function decideAiProposalHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const input = aiProposalDecisionSchema.parse(req.body);
+    const data = await decideAiActionProposal(
+      req.user!.tenantId,
+      req.params.id,
+      req.user!.userId,
+      input.decision,
+      input.note ?? null,
+      auditCtxFromReq(req)
+    );
+    res.json({ data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getCandidateAiSummaryHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const data = await getCandidateAiSummary(
+      req.user!.tenantId,
+      req.params.id
+    );
+    res.json({ data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getAiRetentionStatusHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const data = await getAiRetentionStatus(req.user!.tenantId);
     res.json({ data });
   } catch (err) {
     next(err);

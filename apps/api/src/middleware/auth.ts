@@ -66,22 +66,31 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction): v
 /**
  * 2FA policy enforcement middleware — Sprint Q4.2 (Agent NNN).
  *
- * Mount NA `requireAuth`. Checkt of de tenant een 2FA-policy heeft die
- * verplicht is voor de huidige rol. Zo ja en de user heeft 2FA niet aan
- * staan én de grace-period is verlopen, dan retourneren we 428 Precondition
- * Required met een setup-link. Frontend redirect naar /settings/2fa-setup.
+ * Globaal gemount in index.ts (vóór de routers). Omdat `requireAuth`
+ * per-router draait en dus nog niet gelopen heeft, decodeert deze
+ * middleware de Bearer-JWT zelf; requests zonder (geldige) JWT worden
+ * doorgelaten — requireAuth wijst die verderop zelf af. Checkt of de
+ * tenant een 2FA-policy heeft die verplicht is voor de huidige rol. Zo ja
+ * en de user heeft 2FA niet aan staan én de grace-period is verlopen, dan
+ * retourneren we 428 Precondition Required met een setup-link. Frontend
+ * (lib/api.ts interceptor) redirect naar /settings/security/2fa.
  *
- * Whitelist: de 2fa-setup en login endpoints zelf moeten altijd bereikbaar
- * blijven, anders kan een user die geblokkeerd wordt zelf nooit 2FA aanzetten.
+ * Whitelist: de 2fa-setup, status en login endpoints zelf moeten altijd
+ * bereikbaar blijven, anders kan een geblokkeerde user nooit 2FA aanzetten.
+ * De policy-lookup is gecached (30s TTL) in lib/twoFactorCache.ts.
  */
 const TWO_FA_WHITELIST_PATHS = [
   '/api/auth/2fa/setup',
   '/api/auth/2fa/verify-setup',
   '/api/auth/2fa/verify',
+  '/api/auth/2fa/status',
   '/api/auth/2fa/policy',
   '/api/auth/logout',
   '/api/auth/refresh',
+  '/api/users/me',
 ];
+
+const TWO_FA_SETUP_URL = '/settings/security/2fa';
 
 export async function enforce2faPolicy(
   req: Request,
@@ -89,10 +98,35 @@ export async function enforce2faPolicy(
   next: NextFunction
 ): Promise<void> {
   try {
-    if (!req.user) return next();
+    let payload: JwtPayload | undefined = req.user;
+
+    if (!payload) {
+      // Globale mount: requireAuth heeft nog niet gelopen — decodeer de
+      // Bearer-JWT zelf. Geen/ongeldige/partial token → doorlaten; de
+      // route-eigen auth handelt dat af.
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) return next();
+      const secret = process.env.JWT_SECRET;
+      if (!secret) return next();
+      try {
+        const decoded = jwt.verify(authHeader.slice(7), secret) as JwtPayload & {
+          aud?: string;
+        };
+        if (decoded.aud === 'tflw:partial-2fa') return next();
+        payload = decoded;
+      } catch {
+        return next();
+      }
+    }
 
     const path = (req.originalUrl ?? req.url).split('?')[0]!;
-    if (TWO_FA_WHITELIST_PATHS.some((p) => path.startsWith(p))) {
+    // Exact-match (of een echte sub-path onder `<whitelisted>/…`). Een kale
+    // startsWith zou `/api/users/me<x>` doorlaten en zo de policy omzeilen.
+    if (
+      TWO_FA_WHITELIST_PATHS.some(
+        (p) => path === p || path.startsWith(`${p}/`)
+      )
+    ) {
       return next();
     }
 
@@ -100,9 +134,9 @@ export async function enforce2faPolicy(
       '../modules/auth/twoFactor.service'
     );
     const decision = await require2faForUser(
-      req.user.tenantId,
-      req.user.userId,
-      req.user.role
+      payload.tenantId,
+      payload.userId,
+      payload.role
     );
 
     if (decision.required) {
@@ -111,7 +145,7 @@ export async function enforce2faPolicy(
           code: '2FA_REQUIRED',
           message: 'Tenant policy vereist 2FA — setup voor je verder kunt',
           details: {
-            setup_url: '/settings/2fa-setup',
+            setup_url: TWO_FA_SETUP_URL,
             grace_ended_at: decision.grace_ends_at,
           },
         },

@@ -47,5 +47,13 @@
   "clientFilter": {
     "all": "All clients",
     "empty": "No jobs for this client."
+  },
+  "jobPage": {
+    "back": "Back",
+    "title": "Pipeline — {{title}}",
+    "description": "{{count}} active applicants · {{stages}} stages",
+    "details": "Details",
+    "emptyTitle": "No pipeline configured",
+    "emptyDescription": "Add stages to this job to get started."
   }
 }

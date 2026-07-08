@@ -68,6 +68,56 @@ export interface ApplicationsTrendPoint {
   count: number;
 }
 
+// ─── AI & Bias (Sprint Q4.6 — EU AI Act bias-monitoring) ─────────────────────
+
+export interface AdverseImpactGroup {
+  group: string;
+  total: number;
+  selected: number;
+  selection_rate: number;
+  impact_ratio: number | null;
+  passes_four_fifths: boolean | null;
+  insufficient_data: boolean;
+  is_reference: boolean;
+}
+
+export type AdverseImpactDimension = "gender" | "age_bracket" | "nationality";
+
+export interface AdverseImpactReport {
+  selected_definition: "hired";
+  min_group_size: number;
+  four_fifths_threshold: number;
+  total_applications: number;
+  dimensions: Array<{
+    dimension: AdverseImpactDimension;
+    groups: AdverseImpactGroup[];
+  }>;
+}
+
+export interface AiUsageMonth {
+  month: string;
+  month_label: string;
+  total: number;
+  by_feature: Record<string, number>;
+}
+
+export interface AiUsageTrend {
+  months: AiUsageMonth[];
+  features: string[];
+}
+
+export interface MatchScoreBucket {
+  bucket: string;
+  from_pct: number;
+  count: number;
+}
+
+export interface MatchScoreDistribution {
+  buckets: MatchScoreBucket[];
+  total: number;
+  avg_score_pct: number;
+}
+
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 
 export function useAnalyticsOverview(filters?: AnalyticsFilters) {
@@ -137,6 +187,47 @@ export function useAnalyticsApplicationsTrend(filters?: AnalyticsFilters) {
     queryFn: async (): Promise<ApplicationsTrendPoint[]> => {
       const { data } = await api.get<ApplicationsTrendPoint[]>(
         "/analytics/applications-trend",
+        { params: toParams(filters) }
+      );
+      return data;
+    },
+  });
+}
+
+// ─── AI & Bias hooks (Sprint Q4.6) ───────────────────────────────────────────
+
+export function useAnalyticsAdverseImpact(filters?: AnalyticsFilters) {
+  return useQuery({
+    queryKey: ["analytics", "adverse-impact", keyOf(filters)],
+    queryFn: async (): Promise<AdverseImpactReport> => {
+      const { data } = await api.get<AdverseImpactReport>(
+        "/analytics/adverse-impact",
+        { params: toParams(filters) }
+      );
+      return data;
+    },
+  });
+}
+
+export function useAnalyticsAiUsageTrend(filters?: AnalyticsFilters) {
+  return useQuery({
+    queryKey: ["analytics", "ai-usage-trend", keyOf(filters)],
+    queryFn: async (): Promise<AiUsageTrend> => {
+      const { data } = await api.get<AiUsageTrend>(
+        "/analytics/ai-usage-trend",
+        { params: toParams(filters) }
+      );
+      return data;
+    },
+  });
+}
+
+export function useAnalyticsMatchScoreDistribution(filters?: AnalyticsFilters) {
+  return useQuery({
+    queryKey: ["analytics", "match-score-distribution", keyOf(filters)],
+    queryFn: async (): Promise<MatchScoreDistribution> => {
+      const { data } = await api.get<MatchScoreDistribution>(
+        "/analytics/match-score-distribution",
         { params: toParams(filters) }
       );
       return data;

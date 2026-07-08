@@ -1,0 +1,111 @@
+{
+  "header": {
+    "fallbackBrand": "Recruitment portal",
+    "tagline": "Recruitment portal",
+    "poweredByPrefix": "Powered by"
+  },
+  "footer": {
+    "copyrightWithBrand": "© {{year}} {{brand}} — recruitment portal",
+    "copyright": "© {{year}} — recruitment portal",
+    "secure": "Secure, confidential connection",
+    "poweredBy": "Powered by TalentFlow"
+  },
+  "states": {
+    "invalidTitle": "This link is invalid",
+    "invalidBody": "This portal link does not exist or has been revoked. Ask your recruiter for a new link.",
+    "expiredTitle": "This link has expired",
+    "expiredBody": "Access to this shortlist has expired. Ask your recruiter for a new link if you want to review the candidates again.",
+    "rateLimitedTitle": "Too many requests",
+    "rateLimitedBody": "You have temporarily made too many requests. Wait a few minutes and try again.",
+    "networkTitle": "Temporarily unavailable",
+    "networkBody": "We could not load the data. Check your connection and try again.",
+    "retry": "Try again"
+  },
+  "page": {
+    "eyebrow": "Recruitment shortlist",
+    "greeting": "Welcome — share your feedback on this shortlist.",
+    "greetingNamed": "Welcome, {{name}} — share your feedback on this shortlist.",
+    "sentBy": "Shared by {{name}}.",
+    "bulkButton": "Bulk feedback",
+    "stats": {
+      "total": "Candidates",
+      "decided": "Reviewed",
+      "pending": "Pending"
+    },
+    "noAccessTitle": "No access to candidates",
+    "noAccessBody": "This portal link does not have permission to view candidates. Contact your recruiter for access.",
+    "jobDescriptionTitle": "Job description",
+    "jobDescriptionCollapse": "Collapse",
+    "jobDescriptionExpand": "View the full description",
+    "reviewerNameLabel": "Your name (optional)",
+    "reviewerNamePlaceholder": "What should we call you?",
+    "reviewerNameHelp": "Shown with your feedback so the recruiter knows who it came from.",
+    "candidateCount_one": "{{count}} candidate",
+    "candidateCount_other": "{{count}} candidates",
+    "emptyShortlist": "No candidates have been shared for this job yet.",
+    "generalComments": {
+      "title": "General comments",
+      "description": "Comments about the shortlist as a whole — not tied to a single candidate.",
+      "placeholder": "E.g. strong selection, we would like more seniority…",
+      "submit": "Post comment",
+      "empty": "No general comments yet.",
+      "anonymous": "Anonymous"
+    },
+    "bulkDialog": {
+      "title": "Mark all pending candidates",
+      "description": "Apply the same feedback to all {{count}} candidates without a review. This cannot be undone.",
+      "approve": "Suitable",
+      "doubt": "Unsure",
+      "reject": "Not suitable",
+      "cancel": "Cancel"
+    },
+    "toasts": {
+      "approveSent": "Marked as suitable",
+      "rejectSent": "Marked as not suitable",
+      "doubtSent": "Marked as unsure",
+      "commentSent": "Comment sent",
+      "generalCommentSent": "Comment sent",
+      "feedbackDescription": "The recruiter has been notified.",
+      "failTitle": "Something went wrong",
+      "failForbidden": "You do not have permission for this action.",
+      "failGeneric": "Please try again — the action could not be sent.",
+      "bulkDoneTitle": "Bulk feedback sent",
+      "bulkDoneDescription": "{{count}} candidates marked.",
+      "bulkFailTitle": "Bulk action partially failed",
+      "bulkFailDescription": "Not all candidates could be processed."
+    }
+  },
+  "card": {
+    "anonymousCandidate": "Candidate #{{index}}",
+    "contactHidden": "Contact details are not shared in this portal.",
+    "appliedOn": "Applied on {{date}}",
+    "resumeSummaryTitle": "Resume summary",
+    "viewCv": "View resume",
+    "historyShow": "Show pipeline history ({{count}})",
+    "historyHide": "Hide pipeline history ({{count}})",
+    "approve": "Suitable",
+    "reject": "Not suitable",
+    "doubt": "Unsure",
+    "comment": "Comment",
+    "commentPlaceholder": "Write your comment...",
+    "commentSubmit": "Post comment",
+    "cancel": "Cancel",
+    "anonymous": "Anonymous",
+    "aiScore": "AI score {{score}}",
+    "aiScoreTitle": "AI match score: {{score}}/100",
+    "sent": {
+      "approve": "Suitable — sent",
+      "reject": "Not suitable — sent",
+      "doubt": "Unsure — sent"
+    }
+  },
+  "resume": {
+    "title": "Resume — {{name}}",
+    "openTab": "Open in tab",
+    "download": "Download",
+    "iframeTitle": "Resume of {{name}}",
+    "noCv": "No resume available for this candidate.",
+    "noPermissionTitle": "No permission",
+    "noPermissionBody": "You do not have permission to download resumes."
+  }
+}

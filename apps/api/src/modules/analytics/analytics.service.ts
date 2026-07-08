@@ -1,4 +1,10 @@
 import { withTenant } from '../../db/pool';
+import {
+  bucketAge,
+  computeAge,
+  normalizeGender,
+} from '../compliance/payEquity.service';
+import { bucketNationality } from '../compliance/deiFunnel.service';
 
 /**
  * Gedeelde filters voor de analytiek-endpoints.
@@ -323,5 +329,350 @@ export async function getApplicationsTrend(
     });
   } catch {
     return [];
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AI & Bias — Sprint Q4.6 (EU AI Act bias-monitoring op het analytics-dashboard)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 4/5-regel (four-fifths rule, EEOC): de selectieratio van elke groep moet
+ * minimaal 80% zijn van de ratio van de best scorende groep. Groepen kleiner
+ * dan ADVERSE_IMPACT_MIN_GROUP_SIZE zijn statistisch te klein voor een
+ * betrouwbare uitspraak en worden als 'onvoldoende data' gemarkeerd.
+ */
+export const FOUR_FIFTHS_THRESHOLD = 0.8;
+export const ADVERSE_IMPACT_MIN_GROUP_SIZE = 30;
+
+export interface AdverseImpactGroupInput {
+  group: string;
+  total: number;
+  selected: number;
+}
+
+export interface AdverseImpactGroupResult {
+  group: string;
+  total: number;
+  selected: number;
+  /** selected / total, 4 decimalen. 0 bij total = 0. */
+  selection_rate: number;
+  /**
+   * selection_rate gedeeld door de rate van de referentiegroep (hoogste
+   * rate onder groepen met voldoende data, exclusief 'unknown').
+   * null wanneer onvoldoende data of geen referentie beschikbaar.
+   */
+  impact_ratio: number | null;
+  /** true = ratio ≥ 0.8 (4/5-regel). null wanneer geen ratio te bepalen. */
+  passes_four_fifths: boolean | null;
+  /** true wanneer total < ADVERSE_IMPACT_MIN_GROUP_SIZE. */
+  insufficient_data: boolean;
+  /** true voor de referentiegroep zelf. */
+  is_reference: boolean;
+}
+
+/**
+ * Pure adverse-impact-berekening — exported voor tests.
+ *
+ * Referentiegroep = hoogste selection-rate onder groepen met ≥ 30 records,
+ * exclusief 'unknown' (een onbekende demografie kan geen benchmark zijn).
+ * Wanneer géén enkele groep voldoende data heeft is er geen referentie en
+ * krijgt iedere groep impact_ratio null.
+ */
+export function computeAdverseImpact(
+  groups: AdverseImpactGroupInput[]
+): AdverseImpactGroupResult[] {
+  const rate = (g: AdverseImpactGroupInput): number =>
+    g.total > 0 ? g.selected / g.total : 0;
+
+  let referenceGroup: string | null = null;
+  let referenceRate = 0;
+  for (const g of groups) {
+    if (g.group === 'unknown') continue;
+    if (g.total < ADVERSE_IMPACT_MIN_GROUP_SIZE) continue;
+    const r = rate(g);
+    if (referenceGroup === null || r > referenceRate) {
+      referenceGroup = g.group;
+      referenceRate = r;
+    }
+  }
+
+  return groups.map((g) => {
+    const selectionRate = Number(rate(g).toFixed(4));
+    const insufficient = g.total < ADVERSE_IMPACT_MIN_GROUP_SIZE;
+
+    let impactRatio: number | null = null;
+    let passes: boolean | null = null;
+
+    if (!insufficient && referenceGroup !== null && referenceRate > 0) {
+      impactRatio = Number((rate(g) / referenceRate).toFixed(4));
+      passes = impactRatio >= FOUR_FIFTHS_THRESHOLD;
+    }
+
+    return {
+      group: g.group,
+      total: g.total,
+      selected: g.selected,
+      selection_rate: selectionRate,
+      impact_ratio: impactRatio,
+      passes_four_fifths: passes,
+      insufficient_data: insufficient,
+      is_reference: g.group === referenceGroup,
+    };
+  });
+}
+
+export type AdverseImpactDimension = 'gender' | 'age_bracket' | 'nationality';
+
+export interface AdverseImpactReport {
+  /** Definitie van 'geselecteerd': sollicitaties met status 'hired'. */
+  selected_definition: 'hired';
+  min_group_size: number;
+  four_fifths_threshold: number;
+  total_applications: number;
+  dimensions: Array<{
+    dimension: AdverseImpactDimension;
+    groups: AdverseImpactGroupResult[];
+  }>;
+}
+
+/**
+ * Adverse-impact-ratio's over de sollicitaties in de gekozen periode
+ * (default: laatste 12 maanden). Bucketing hergebruikt de compliance-
+ * helpers (normalizeGender / bucketAge / bucketNationality) zodat dezelfde
+ * groepsdefinities gelden als in de DEI-funnel en pay-equity.
+ */
+export async function getAdverseImpact(
+  tenantId: string,
+  filters: AnalyticsFilters = {}
+): Promise<AdverseImpactReport> {
+  const { from, to } = norm(filters);
+  const empty: AdverseImpactReport = {
+    selected_definition: 'hired',
+    min_group_size: ADVERSE_IMPACT_MIN_GROUP_SIZE,
+    four_fifths_threshold: FOUR_FIFTHS_THRESHOLD,
+    total_applications: 0,
+    dimensions: [
+      { dimension: 'gender', groups: [] },
+      { dimension: 'age_bracket', groups: [] },
+      { dimension: 'nationality', groups: [] },
+    ],
+  };
+  try {
+    return await withTenant(tenantId, async (client) => {
+      const refDate = to ? new Date(to) : new Date();
+      const { rows } = await client.query<{
+        status: string;
+        gender: string | null;
+        birthdate: string | null;
+        nationalities: string[] | null;
+      }>(
+        `SELECT a.status,
+                c.gender,
+                c.birthdate::text AS birthdate,
+                c.nationalities
+           FROM applications a
+           JOIN candidates c ON c.id = a.candidate_id AND c.tenant_id = a.tenant_id
+          WHERE a.tenant_id = $1
+            AND a.applied_at >= COALESCE($2::timestamptz, now() - interval '12 months')
+            AND ($3::timestamptz IS NULL OR a.applied_at < $3)
+            AND c.anonymized_at IS NULL`,
+        [tenantId, from, to]
+      );
+
+      const buckets: Record<AdverseImpactDimension, Map<string, { total: number; selected: number }>> = {
+        gender: new Map(),
+        age_bracket: new Map(),
+        nationality: new Map(),
+      };
+
+      const add = (
+        dim: AdverseImpactDimension,
+        group: string,
+        hired: boolean
+      ) => {
+        const entry = buckets[dim].get(group) ?? { total: 0, selected: 0 };
+        entry.total += 1;
+        if (hired) entry.selected += 1;
+        buckets[dim].set(group, entry);
+      };
+
+      for (const r of rows) {
+        const hired = r.status === 'hired';
+        add('gender', normalizeGender(r.gender), hired);
+        add('age_bracket', bucketAge(computeAge(r.birthdate, refDate)), hired);
+        add('nationality', bucketNationality(r.nationalities), hired);
+      }
+
+      const toResults = (dim: AdverseImpactDimension) =>
+        computeAdverseImpact(
+          [...buckets[dim].entries()]
+            .map(([group, v]) => ({ group, total: v.total, selected: v.selected }))
+            .sort((a, b) => b.total - a.total)
+        );
+
+      return {
+        selected_definition: 'hired' as const,
+        min_group_size: ADVERSE_IMPACT_MIN_GROUP_SIZE,
+        four_fifths_threshold: FOUR_FIFTHS_THRESHOLD,
+        total_applications: rows.length,
+        dimensions: [
+          { dimension: 'gender' as const, groups: toResults('gender') },
+          { dimension: 'age_bracket' as const, groups: toResults('age_bracket') },
+          { dimension: 'nationality' as const, groups: toResults('nationality') },
+        ],
+      };
+    });
+  } catch {
+    return empty;
+  }
+}
+
+export interface AiUsageMonth {
+  /** 'YYYY-MM' — sorteerbaar. */
+  month: string;
+  /** 'Jan 2026' — as-label. */
+  month_label: string;
+  total: number;
+  by_feature: Record<string, number>;
+}
+
+export interface AiUsageTrend {
+  months: AiUsageMonth[];
+  /** Distinct features, gesorteerd op totaal gebruik (desc) — voor stacked charts. */
+  features: string[];
+}
+
+/**
+ * AI-gebruik per maand uit ai_events (default: laatste 12 maanden).
+ * Alleen counts per feature — geen prompts, hashes of kosten.
+ */
+export async function getAiUsageTrend(
+  tenantId: string,
+  filters: AnalyticsFilters = {}
+): Promise<AiUsageTrend> {
+  const { from, to } = norm(filters);
+  try {
+    return await withTenant(tenantId, async (client) => {
+      const { rows } = await client.query<{
+        month: string;
+        month_label: string;
+        feature: string;
+        count: string;
+      }>(
+        `SELECT to_char(date_trunc('month', created_at), 'YYYY-MM')  AS month,
+                to_char(date_trunc('month', created_at), 'Mon YYYY') AS month_label,
+                feature,
+                COUNT(*) AS count
+           FROM ai_events
+          WHERE tenant_id = $1
+            AND created_at >= COALESCE($2::timestamptz, now() - interval '12 months')
+            AND ($3::timestamptz IS NULL OR created_at < $3)
+          GROUP BY 1, 2, 3
+          ORDER BY 1 ASC`,
+        [tenantId, from, to]
+      );
+
+      const monthMap = new Map<string, AiUsageMonth>();
+      const featureTotals = new Map<string, number>();
+      for (const r of rows) {
+        const count = parseInt(r.count, 10) || 0;
+        const entry = monthMap.get(r.month) ?? {
+          month: r.month,
+          month_label: r.month_label,
+          total: 0,
+          by_feature: {},
+        };
+        entry.total += count;
+        entry.by_feature[r.feature] = (entry.by_feature[r.feature] ?? 0) + count;
+        monthMap.set(r.month, entry);
+        featureTotals.set(r.feature, (featureTotals.get(r.feature) ?? 0) + count);
+      }
+
+      return {
+        months: [...monthMap.values()].sort((a, b) => a.month.localeCompare(b.month)),
+        features: [...featureTotals.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .map(([f]) => f),
+      };
+    });
+  } catch {
+    return { months: [], features: [] };
+  }
+}
+
+export interface MatchScoreBucket {
+  /** '0-10' t/m '90-100' (score × 100). */
+  bucket: string;
+  /** Ondergrens van de bucket in % — voor sortering/as. */
+  from_pct: number;
+  count: number;
+}
+
+export interface MatchScoreDistribution {
+  buckets: MatchScoreBucket[];
+  total: number;
+  avg_score_pct: number;
+}
+
+/**
+ * Verdeling van AI-match-scores (match_scores.score, cosine similarity
+ * 0..1) in 10 buckets van 10%. Alle 10 buckets worden altijd geretourneerd,
+ * ook wanneer leeg — zo blijft de histogram-as stabiel.
+ */
+export async function getMatchScoreDistribution(
+  tenantId: string,
+  filters: AnalyticsFilters = {}
+): Promise<MatchScoreDistribution> {
+  const { from, to } = norm(filters);
+  try {
+    return await withTenant(tenantId, async (client) => {
+      const { rows } = await client.query<{
+        bucket_idx: number;
+        count: string;
+      }>(
+        `SELECT LEAST(FLOOR(score * 10), 9)::int AS bucket_idx,
+                COUNT(*) AS count
+           FROM match_scores
+          WHERE tenant_id = $1
+            AND ($2::timestamptz IS NULL OR computed_at >= $2)
+            AND ($3::timestamptz IS NULL OR computed_at < $3)
+          GROUP BY 1
+          ORDER BY 1 ASC`,
+        [tenantId, from, to]
+      );
+      const { rows: [aggRow] } = await client.query<{
+        total: string;
+        avg_score: string | null;
+      }>(
+        `SELECT COUNT(*) AS total, AVG(score) AS avg_score
+           FROM match_scores
+          WHERE tenant_id = $1
+            AND ($2::timestamptz IS NULL OR computed_at >= $2)
+            AND ($3::timestamptz IS NULL OR computed_at < $3)`,
+        [tenantId, from, to]
+      );
+
+      const counts = new Map<number, number>();
+      for (const r of rows) {
+        counts.set(Number(r.bucket_idx), parseInt(r.count, 10) || 0);
+      }
+      const buckets: MatchScoreBucket[] = Array.from({ length: 10 }, (_, i) => ({
+        bucket: `${i * 10}-${(i + 1) * 10}`,
+        from_pct: i * 10,
+        count: counts.get(i) ?? 0,
+      }));
+
+      return {
+        buckets,
+        total: parseInt(aggRow?.total ?? '0', 10) || 0,
+        avg_score_pct:
+          aggRow?.avg_score !== null && aggRow?.avg_score !== undefined
+            ? Math.round(parseFloat(aggRow.avg_score) * 1000) / 10
+            : 0,
+      };
+    });
+  } catch {
+    return { buckets: [], total: 0, avg_score_pct: 0 };
   }
 }

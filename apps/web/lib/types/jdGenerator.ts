@@ -86,6 +86,8 @@ export interface JdDraft {
 export interface JdDraftPublishOverrides {
   title?: string;
   description?: string;
+  /** 'draft' = als concept opslaan; 'open' (backend-default) = direct live. */
+  status?: "draft" | "open";
   department?: string;
   location?: string;
   employment_type?: string;
@@ -94,7 +96,10 @@ export interface JdDraftPublishOverrides {
   salary_min?: number | null;
   salary_max?: number | null;
   currency?: string;
+  /** monthly / annual / hourly — spiegelt de DB-CHECK op jobs.salary_frequency. */
   salary_frequency?: string;
+  /** Beloningscriteria (EU 2023/970 art. 5). */
+  compensation_criteria?: string | null;
   open_date?: string | null;
   close_date?: string | null;
   client?: string | null;

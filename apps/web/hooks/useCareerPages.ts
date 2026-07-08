@@ -217,6 +217,10 @@ export interface PublicCareerPageJob {
   employment_type: string | null;
   salary_min: number | null;
   salary_max: number | null;
+  /** monthly / annual / hourly — nodig om de band correct te tonen (EU 2023/970). */
+  salary_frequency: string | null;
+  /** Criteria waarmee de beloning bepaald wordt (EU 2023/970 art. 5). */
+  compensation_criteria: string | null;
 }
 
 export interface PublicCareerPageData {

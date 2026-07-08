@@ -370,12 +370,14 @@ export function buildMockSkillsGap(
 
 let mockPaySettingsStore: TenantPaySettings = {
   tenant_id: "tenant-1",
-  enforce_salary_range: true,
-  forbid_current_salary_question: true,
-  reporting_threshold_employees: 100,
+  pay_transparency_enforced: true,
+  prohibit_current_salary_questions: true,
+  reporting_threshold: 100,
   default_currency: "EUR",
-  allow_anonymous_benchmark: false,
+  default_salary_frequency: "monthly",
+  benchmark_data_consent: false,
   updated_at: new Date().toISOString(),
+  created_at: new Date().toISOString(),
 };
 
 export function getMockPaySettings(): TenantPaySettings {

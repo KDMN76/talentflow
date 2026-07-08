@@ -32,7 +32,7 @@ Dit document beschrijft de **huidige werkwijze (as-is)** waarmee IT Proposal rec
 
 ## 3. Huidig systeem-landschap
 
-Het hart van de operatie is **Manatal**, een SaaS-ATS (Applicant Tracking System) waarvoor IT Proposal momenteel **€1.000/maand** betaalt. Manatal levert de centrale kandidaten- en vacaturedatabase, de pipeline (kanban), AI-matching, rapportage en de career-page-builder. Daaromheen draait een kleine ring van externe diensten: de publieke career page wordt door Manatal gehost op `app.careers-page.com`, **LinkedIn** wordt gebruikt als sourcingbron (organisch zoeken, profielen importeren), en **Gmail/Outlook** is via two-way-sync gekoppeld aan Manatal voor e-mailcommunicatie met kandidaten en klanten.
+Het hart van de operatie is **Manatal**, een SaaS-ATS (Applicant Tracking System) waarvoor IT Proposal momenteel **≈€620/maand** betaalt (werkelijke factuur $674/mnd: 16 Enterprise-seats × $39 + $50 add-on, zie `TCO_ROI.md`). Manatal levert de centrale kandidaten- en vacaturedatabase, de pipeline (kanban), AI-matching, rapportage en de career-page-builder. Daaromheen draait een kleine ring van externe diensten: de publieke career page wordt door Manatal gehost op `app.careers-page.com`, **LinkedIn** wordt gebruikt als sourcingbron (organisch zoeken, profielen importeren), en **Gmail/Outlook** is via two-way-sync gekoppeld aan Manatal voor e-mailcommunicatie met kandidaten en klanten.
 
 IT Proposal heeft géén eigen interne tooling: er is geen custom CRM, geen eigen database en geen integraties met boekhouding of HRIS. Alles wat een recruiter nodig heeft loopt via Manatal of via één van de gekoppelde apps. Bestanden (CV's, contracten) worden door Manatal opgeslagen; e-mailthreads blijven primair in de mailbox van de recruiter staan, met een gespiegelde kopie in Manatal.
 
@@ -193,7 +193,7 @@ IT Proposal heeft géén eigen interne tooling: er is geen custom CRM, geen eige
 | Top recruiter — kandidaten | Laura Mpiana — 468 kandidaten | Leaderboard |
 | Sterkste activiteit | Lorraine — ~1.300 actions | Leaderboard |
 | Kerncijfers ondersteunende recruiters | Kasaday 165, Angelo 36 | Leaderboard |
-| Manatal-licentiekosten | €1.000 / maand (~€12.000 / jaar) | Boekhouding IT Proposal |
+| Manatal-licentiekosten | ≈€620 / maand (~€7.440 / jaar; factuur GORR5CHG-0006: $674/mnd) | Boekhouding IT Proposal |
 | Pipeline-stages per vacature | 9 (incl. Started + Probation passed) | IT Proposal config |
 
 ---
@@ -204,7 +204,7 @@ Manatal levert IT Proposal vandaag een werkbare en gewaardeerde oplossing — re
 
 | Categorie | Beperking | Effect voor IT Proposal |
 |---|---|---|
-| Kosten | €1.000/maand recurring licentie, lineair schalend met gebruikers | Vaste kostenpost van ~€12k/jaar; groeit mee bij uitbreiding van het team |
+| Kosten | ≈€620/maand recurring licentie (per-seat), lineair schalend met gebruikers | Vaste kostenpost van ~€7,4k/jaar; groeit mee bij uitbreiding van het team |
 | API-toegang | Open API alleen op tier Enterprise Plus ($55/user/mnd) | Geen eigen integraties met boekhouding, eigen klantportaal of Excel-export op maat zonder upgrade |
 | Custom rapportage | Advanced Report Builder alleen op Enterprise Plus | Eigenaar moet exporteren naar Excel voor klantspecifieke of fee-specifieke views |
 | Workflow-automation | Beschikbaar vanaf Enterprise tier; niet altijd actief op huidig abonnement | Stage-changes triggeren handwerk in plaats van mails of taken |
@@ -217,7 +217,7 @@ Manatal levert IT Proposal vandaag een werkbare en gewaardeerde oplossing — re
 
 ## 7. Conclusie
 
-IT Proposal draait een gezonde, compacte recruitment-operatie op een centrale ATS-stack die werkt: ~5.540 kandidaten, 24 actieve vacatures, negen recruiters en een duidelijke negen-stappen-pipeline van *New Candidates* tot *Probation passed*. Manatal is daarbij geen probleem — het is de motor onder een tevreden gebruikersbestand. De kanttekeningen zitten elders: in de jaarlijks terugkerende licentiekosten van ~€12.000, in een aantal premium features die achter de duurste tier zitten (open API, custom rapportages, full workflow-automation), en in het ontbreken van koppelingen met IT Proposal-eigen tools en administratie.
+IT Proposal draait een gezonde, compacte recruitment-operatie op een centrale ATS-stack die werkt: ~5.540 kandidaten, 24 actieve vacatures, negen recruiters en een duidelijke negen-stappen-pipeline van *New Candidates* tot *Probation passed*. Manatal is daarbij geen probleem — het is de motor onder een tevreden gebruikersbestand. De kanttekeningen zitten elders: in de jaarlijks terugkerende licentiekosten van ~€7.440, in een aantal premium features die achter de duurste tier zitten (open API, custom rapportages, full workflow-automation), en in het ontbreken van koppelingen met IT Proposal-eigen tools en administratie.
 
 Daarmee is de zakelijke aanleiding voor het TalentFlow-traject helder: niet een vlucht weg van Manatal, maar een gerichte zoektocht naar **lagere TCO bij gelijkblijvende of betere functionaliteit**, plus de vrijheid om eigen integraties en aanpassingen te bouwen zonder vendor-paywall.
 

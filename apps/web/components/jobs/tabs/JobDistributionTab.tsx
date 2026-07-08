@@ -24,6 +24,7 @@ import {
   Globe,
   Loader2,
   RefreshCw,
+  Rocket,
   Send,
   Trash2,
   Users,
@@ -47,6 +48,7 @@ import {
   useJobBoardIntegrations,
   useJobPostings,
   useRetractPosting,
+  useJobBoardAutoPostSettings,
 } from "@/hooks/useJobBoards";
 import type { JobBoardIntegration, JobPosting } from "@/lib/types/jobBoards";
 
@@ -83,8 +85,20 @@ export function JobDistributionTab({ jobId, jobTitle }: JobDistributionTabProps)
 
   const createPostings = useCreatePostings();
   const retract = useRetractPosting();
+  const { data: autoPost } = useJobBoardAutoPostSettings();
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const autoPostActive =
+    !!autoPost?.enabled && (autoPost?.boards.length ?? 0) > 0;
+  const autoPostBoardNames = useMemo(() => {
+    if (!autoPost?.boards?.length) return "";
+    return autoPost.boards
+      .map(
+        (id) => (catalog ?? []).find((b) => b.id === id)?.display_name ?? id
+      )
+      .join(", ");
+  }, [autoPost, catalog]);
 
   const integrationByBoard = useMemo(() => {
     const map = new Map<string, JobBoardIntegration>();
@@ -228,6 +242,19 @@ export function JobDistributionTab({ jobId, jobTitle }: JobDistributionTabProps)
           </Button>
         </CardContent>
       </Card>
+
+      {/* Auto-post active notice */}
+      {autoPostActive && (
+        <div className="flex items-start gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-xs text-indigo-800 dark:border-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-300">
+          <Rocket className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>
+            <span className="font-semibold">Auto-plaatsing staat aan.</span> Bij
+            publiceren wordt deze vacature automatisch geplaatst op{" "}
+            <span className="font-medium">{autoPostBoardNames}</span>. Beheer dit
+            op de vacaturebanken-pagina.
+          </p>
+        </div>
+      )}
 
       {/* Board grid */}
       <Card className="border-0 shadow-sm">

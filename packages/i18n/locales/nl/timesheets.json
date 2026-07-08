@@ -1,0 +1,97 @@
+{
+  "header": {
+    "title": "Timesheets",
+    "description": "Beoordeel ingediende urenstaten en geef vrij voor facturatie."
+  },
+  "stats": {
+    "total": "Totaal",
+    "pending": "Te keuren",
+    "approved": "Goedgekeurd",
+    "rejected": "Afgekeurd / bezwaar"
+  },
+  "status": {
+    "draft": "Concept",
+    "submitted": "Ingediend",
+    "approved": "Goedgekeurd",
+    "rejected": "Afgekeurd",
+    "disputed": "Bezwaar"
+  },
+  "filters": {
+    "searchPlaceholder": "Zoek op kandidaat of klant...",
+    "allStatuses": "Alle statussen",
+    "statusSubmitted": "Ingediend",
+    "statusApproved": "Goedgekeurd",
+    "statusRejected": "Afgekeurd",
+    "statusDisputed": "Bezwaar",
+    "statusDraft": "Concept",
+    "allContracts": "Alle contracten"
+  },
+  "empty": {
+    "title": "Geen timesheets gevonden",
+    "description": "Pas de filters aan om meer resultaten te zien."
+  },
+  "table": {
+    "candidateClient": "Kandidaat / klant",
+    "week": "Week",
+    "status": "Status",
+    "hours": "Uren",
+    "overtime": "Overuren",
+    "actions": "Acties"
+  },
+  "actions": {
+    "reject": "Afkeuren",
+    "approve": "Goedkeuren",
+    "close": "Sluiten"
+  },
+  "units": {
+    "hours": "{{value}}u",
+    "overtime": "+{{value}}u",
+    "breakMinutes": "{{value}}m"
+  },
+  "weekdays": {
+    "0": "Ma",
+    "1": "Di",
+    "2": "Wo",
+    "3": "Do",
+    "4": "Vr",
+    "5": "Za",
+    "6": "Zo"
+  },
+  "detail": {
+    "titleFallback": "Timesheet",
+    "week": "Werkweek {{start}} — {{end}} ·",
+    "entries": {
+      "day": "Dag",
+      "hours": "Uren",
+      "overtime": "Overuren",
+      "break": "Pauze",
+      "description": "Omschrijving",
+      "empty": "Geen uren ingevuld.",
+      "total": "Totaal"
+    },
+    "audit": {
+      "title": "Activiteit",
+      "created": "Aangemaakt op {{date}}",
+      "submitted": "Ingediend op {{date}}",
+      "approved": "Goedgekeurd op {{date}}",
+      "rejected": "Afgekeurd op {{date}} — {{reason}}",
+      "noReason": "geen reden"
+    }
+  },
+  "reject": {
+    "title": "Timesheet afkeuren",
+    "description": "De kandidaat ontvangt direct je opmerking en kan de uren corrigeren.",
+    "reasonLabel": "Reden van afkeuring",
+    "reasonPlaceholder": "Bv. Pauze van 30min ontbreekt op woensdag",
+    "cancel": "Annuleren",
+    "submit": "Afkeuren"
+  },
+  "toast": {
+    "approvedTitle": "Goedgekeurd",
+    "approvedDescription": "Timesheet kan nu worden gefactureerd.",
+    "approveFailed": "Goedkeuren mislukt",
+    "rejectedTitle": "Afgekeurd",
+    "rejectedDescription": "Kandidaat ontvangt een melding om de uren te corrigeren.",
+    "rejectFailed": "Afkeuren mislukt"
+  }
+}

@@ -3,9 +3,14 @@
 /**
  * FilterBuilder — reusable component for adding/editing filters on a block.
  *
- * Each filter has: field (free-form for now), operator, value (string).
- * For MVP we keep this simple — the backend dimension/metric catalogue can
- * later replace the free-form input with a dropdown of valid fields.
+ * Fields and operators mirror the backend whitelist (FILTERABLE_FIELDS +
+ * FilterOperator in apps/api/src/lib/reports/configSchema.ts). Unknown fields
+ * are silently dropped server-side, so only whitelisted fields are offered.
+ *
+ * Value handling per operator:
+ *   - equals / gt / lt / contains → single value
+ *   - in       → comma-separated input, sent as array
+ *   - between  → two inputs, sent as [from, to]
  */
 
 import { Plus, X } from "lucide-react";
@@ -18,39 +23,56 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type {
-  DimensionDef,
-  FilterOperator,
-  ReportFilter,
+import {
+  FILTER_FIELD_OPTIONS,
+  type FilterOperator,
+  type ReportFilter,
 } from "@/lib/types/reports";
 
 const OPERATORS: { value: FilterOperator; label: string }[] = [
-  { value: "eq", label: "is gelijk aan" },
-  { value: "neq", label: "is niet" },
-  { value: "gt", label: ">" },
-  { value: "gte", label: "≥" },
-  { value: "lt", label: "<" },
-  { value: "lte", label: "≤" },
-  { value: "in", label: "in (komma-gesch.)" },
-  { value: "nin", label: "niet in" },
+  { value: "equals", label: "is gelijk aan" },
   { value: "contains", label: "bevat" },
+  { value: "gt", label: ">" },
+  { value: "lt", label: "<" },
+  { value: "in", label: "in (komma-gesch.)" },
+  { value: "between", label: "tussen" },
 ];
 
 export interface FilterBuilderProps {
   filters: ReportFilter[];
   onChange: (next: ReportFilter[]) => void;
-  dimensions?: DimensionDef[];
 }
 
-export function FilterBuilder({
-  filters,
-  onChange,
-  dimensions,
-}: FilterBuilderProps) {
+function valueAsString(value: unknown): string {
+  if (Array.isArray(value)) return value.map(String).join(", ");
+  if (value === null || value === undefined) return "";
+  return String(value);
+}
+
+function betweenPart(value: unknown, idx: 0 | 1): string {
+  if (Array.isArray(value)) return valueAsString(value[idx]);
+  return "";
+}
+
+export function FilterBuilder({ filters, onChange }: FilterBuilderProps) {
   const update = (idx: number, patch: Partial<ReportFilter>) => {
     const next = [...filters];
     next[idx] = { ...next[idx], ...patch };
     onChange(next);
+  };
+
+  const setOperator = (idx: number, operator: FilterOperator) => {
+    const current = filters[idx];
+    // Normalize value shape when the operator category changes.
+    let value: unknown = current.value;
+    if (operator === "between") {
+      value = Array.isArray(value) ? value.slice(0, 2) : ["", ""];
+    } else if (operator === "in") {
+      value = Array.isArray(value) ? value : [valueAsString(value)].filter(Boolean);
+    } else if (Array.isArray(value)) {
+      value = valueAsString(value[0] ?? "");
+    }
+    update(idx, { operator, value });
   };
 
   const remove = (idx: number) => {
@@ -58,8 +80,10 @@ export function FilterBuilder({
   };
 
   const add = () => {
-    const firstDim = dimensions?.[0]?.key ?? "";
-    onChange([...filters, { field: firstDim, operator: "eq", value: "" }]);
+    onChange([
+      ...filters,
+      { field: FILTER_FIELD_OPTIONS[0].value, operator: "equals", value: "" },
+    ]);
   };
 
   return (
@@ -75,33 +99,24 @@ export function FilterBuilder({
           className="flex flex-col gap-1.5 rounded-md border border-zinc-200 bg-zinc-50/40 p-2 dark:border-zinc-800 dark:bg-zinc-900/40"
         >
           <div className="flex items-center gap-1.5">
-            {dimensions && dimensions.length > 0 ? (
-              <Select
-                value={f.field}
-                onValueChange={(v) => update(idx, { field: v })}
-              >
-                <SelectTrigger className="h-7 flex-1 text-xs">
-                  <SelectValue placeholder="Veld" />
-                </SelectTrigger>
-                <SelectContent>
-                  {dimensions.map((d) => (
-                    <SelectItem key={d.key} value={d.key}>
-                      {d.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <Input
-                value={f.field}
-                onChange={(e) => update(idx, { field: e.target.value })}
-                className="h-7 flex-1 text-xs"
-                placeholder="veld"
-              />
-            )}
+            <Select
+              value={f.field}
+              onValueChange={(v) => update(idx, { field: v })}
+            >
+              <SelectTrigger className="h-7 flex-1 text-xs">
+                <SelectValue placeholder="Veld" />
+              </SelectTrigger>
+              <SelectContent>
+                {FILTER_FIELD_OPTIONS.map((d) => (
+                  <SelectItem key={d.value} value={d.value}>
+                    {d.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select
               value={f.operator}
-              onValueChange={(v) => update(idx, { operator: v as FilterOperator })}
+              onValueChange={(v) => setOperator(idx, v as FilterOperator)}
             >
               <SelectTrigger className="h-7 w-[140px] text-xs">
                 <SelectValue />
@@ -123,12 +138,52 @@ export function FilterBuilder({
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
-          <Input
-            value={String(f.value ?? "")}
-            onChange={(e) => update(idx, { value: e.target.value })}
-            className="h-7 text-xs"
-            placeholder="waarde"
-          />
+          {f.operator === "between" ? (
+            <div className="flex items-center gap-1.5">
+              <Input
+                value={betweenPart(f.value, 0)}
+                onChange={(e) =>
+                  update(idx, {
+                    value: [e.target.value, betweenPart(f.value, 1)],
+                  })
+                }
+                className="h-7 flex-1 text-xs"
+                placeholder="van"
+              />
+              <span className="text-xs text-muted-foreground">→</span>
+              <Input
+                value={betweenPart(f.value, 1)}
+                onChange={(e) =>
+                  update(idx, {
+                    value: [betweenPart(f.value, 0), e.target.value],
+                  })
+                }
+                className="h-7 flex-1 text-xs"
+                placeholder="tot"
+              />
+            </div>
+          ) : f.operator === "in" ? (
+            <Input
+              value={valueAsString(f.value)}
+              onChange={(e) =>
+                update(idx, {
+                  value: e.target.value
+                    .split(",")
+                    .map((s) => s.trim())
+                    .filter(Boolean),
+                })
+              }
+              className="h-7 text-xs"
+              placeholder="waarde1, waarde2, …"
+            />
+          ) : (
+            <Input
+              value={valueAsString(f.value)}
+              onChange={(e) => update(idx, { value: e.target.value })}
+              className="h-7 text-xs"
+              placeholder="waarde"
+            />
+          )}
         </div>
       ))}
       <Button

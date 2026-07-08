@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { TableBlockConfig, TableResult } from "@/lib/types/reports";
+import type { TableBlock as TableBlockConfig, TableResult } from "@/lib/types/reports";
 
 export interface TableBlockProps {
   title?: string;
@@ -14,37 +14,43 @@ export interface TableBlockProps {
 
 type SortDir = "asc" | "desc" | null;
 
-export function TableBlock({ title, config, result, placeholder }: TableBlockProps) {
-  const [sortKey, setSortKey] = useState<string | null>(null);
+function formatCell(v: string | number | null): string {
+  if (v === null || v === undefined) return "—";
+  if (typeof v === "number") return new Intl.NumberFormat("nl-NL").format(v);
+  return v;
+}
+
+/**
+ * Renders the backend TableResult: `headers` (labels in render order) +
+ * `rows` (array-of-arrays, dimension cells first, metric value(s) last).
+ * Client-side re-sorting on any column.
+ */
+export function TableBlock({ title, result, placeholder }: TableBlockProps) {
+  const [sortIdx, setSortIdx] = useState<number | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>(null);
 
-  const rowDimKey = config.rows[0] ?? "row";
-
   const sortedRows = useMemo(() => {
-    if (!result || sortKey === null || sortDir === null) return result?.rows ?? [];
-    return [...result.rows].sort((a, b) => {
-      let av: number | string = 0;
-      let bv: number | string = 0;
-      if (sortKey === "_label") {
-        av = a.group[rowDimKey] ?? "";
-        bv = b.group[rowDimKey] ?? "";
-      } else {
-        av = a.values[sortKey] ?? 0;
-        bv = b.values[sortKey] ?? 0;
+    const rows = result?.rows ?? [];
+    if (sortIdx === null || sortDir === null) return rows;
+    return [...rows].sort((a, b) => {
+      const av = a[sortIdx] ?? "";
+      const bv = b[sortIdx] ?? "";
+      if (typeof av === "number" && typeof bv === "number") {
+        return sortDir === "asc" ? av - bv : bv - av;
       }
-      if (av < bv) return sortDir === "asc" ? -1 : 1;
-      if (av > bv) return sortDir === "asc" ? 1 : -1;
-      return 0;
+      const as = String(av);
+      const bs = String(bv);
+      return sortDir === "asc" ? as.localeCompare(bs) : bs.localeCompare(as);
     });
-  }, [result, sortKey, sortDir, rowDimKey]);
+  }, [result, sortIdx, sortDir]);
 
-  const toggleSort = (key: string) => {
-    if (sortKey !== key) {
-      setSortKey(key);
+  const toggleSort = (idx: number) => {
+    if (sortIdx !== idx) {
+      setSortIdx(idx);
       setSortDir("desc");
     } else {
       setSortDir((d) => (d === "desc" ? "asc" : d === "asc" ? null : "desc"));
-      if (sortDir === "asc") setSortKey(null);
+      if (sortDir === "asc") setSortIdx(null);
     }
   };
 
@@ -59,25 +65,23 @@ export function TableBlock({ title, config, result, placeholder }: TableBlockPro
         <div className="p-10 text-center text-sm text-muted-foreground">
           Voer rapport uit om data te tonen
         </div>
+      ) : result.rows.length === 0 ? (
+        <div className="p-10 text-center text-sm text-muted-foreground">
+          Geen data in de gekozen periode
+        </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-zinc-50/60 dark:bg-zinc-900/60">
               <tr>
-                <SortableTh
-                  label={rowDimKey}
-                  active={sortKey === "_label"}
-                  dir={sortKey === "_label" ? sortDir : null}
-                  onClick={() => toggleSort("_label")}
-                />
-                {result.columns.map((col) => (
+                {result.headers.map((h, idx) => (
                   <SortableTh
-                    key={col}
-                    label={col}
-                    align="right"
-                    active={sortKey === col}
-                    dir={sortKey === col ? sortDir : null}
-                    onClick={() => toggleSort(col)}
+                    key={`${h}-${idx}`}
+                    label={h}
+                    align={idx === 0 ? "left" : "right"}
+                    active={sortIdx === idx}
+                    dir={sortIdx === idx ? sortDir : null}
+                    onClick={() => toggleSort(idx)}
                   />
                 ))}
               </tr>
@@ -88,36 +92,21 @@ export function TableBlock({ title, config, result, placeholder }: TableBlockPro
                   key={i}
                   className="hover:bg-zinc-50/80 dark:hover:bg-zinc-800/30"
                 >
-                  <td className="py-2.5 pl-5 pr-4 font-medium text-zinc-700 dark:text-zinc-300">
-                    {row.group[rowDimKey] ?? "—"}
-                  </td>
-                  {result.columns.map((col) => (
+                  {row.map((cell, j) => (
                     <td
-                      key={col}
-                      className="py-2.5 pr-5 text-right tabular-nums text-zinc-900 dark:text-zinc-100"
+                      key={j}
+                      className={cn(
+                        "py-2.5",
+                        j === 0
+                          ? "pl-5 pr-4 font-medium text-zinc-700 dark:text-zinc-300"
+                          : "pr-5 text-right tabular-nums text-zinc-900 dark:text-zinc-100"
+                      )}
                     >
-                      {new Intl.NumberFormat("nl-NL").format(row.values[col] ?? 0)}
+                      {formatCell(cell)}
                     </td>
                   ))}
                 </tr>
               ))}
-              {config.show_totals && result.total && (
-                <tr className="border-t-2 border-zinc-200 bg-zinc-50/60 font-semibold dark:bg-zinc-900/60 dark:border-zinc-700">
-                  <td className="py-2.5 pl-5 pr-4 text-zinc-900 dark:text-zinc-100">
-                    Totaal
-                  </td>
-                  {result.columns.map((col) => (
-                    <td
-                      key={col}
-                      className="py-2.5 pr-5 text-right tabular-nums text-zinc-900 dark:text-zinc-100"
-                    >
-                      {new Intl.NumberFormat("nl-NL").format(
-                        result.total?.[col] ?? 0
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              )}
             </tbody>
           </table>
         </div>

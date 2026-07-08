@@ -1,5 +1,6 @@
 /**
- * Pay-transparency middleware — Sprint Q3.6 (Agent III).
+ * Pay-transparency middleware — Sprint Q3.6 (Agent III), uitgebreid in de
+ * Pay-Transparency-afronding (migration 044).
  *
  * EU Pay Transparency Directive 2023/970 (in werking 2026) verplicht
  * werkgevers de salarisbandbreedte voor elke openstaande vacature
@@ -10,14 +11,22 @@
  *
  * Een vacature wordt als "gepubliceerd" beschouwd zodra `status = 'open'`.
  * Drafts (`status = 'draft'`) zijn nog niet zichtbaar voor kandidaten en
- * mogen dus zonder volledig salaris-band aangemaakt worden — recruiters
+ * mogen dus zonder volledige salarisband aangemaakt worden — recruiters
  * kunnen later een band toevoegen voordat ze publishen.
+ *
+ * De volledige band bestaat uit DRIE velden (art. 5: kandidaten moeten de
+ * bandbreedte én de periode kunnen interpreteren):
+ *   1. salary_min
+ *   2. salary_max
+ *   3. salary_frequency (monthly/annual/hourly; DB-default 'monthly' geldt
+ *      alleen bij POST zonder expliciet veld)
  *
  * Wanneer geblokkeerd:
  *   1. Audit-event `pay_transparency.blocked` (NIET fataal — alleen
  *      compliance-trail; logger.swallow bij DB-fouten conform audit.ts).
- *   2. Response 422 met code `PAY_TRANSPARENCY_REQUIRED`, een explainer
- *      en een link naar de tenant-pay-settings pagina (frontend route).
+ *   2. Response 422 met code `PAY_TRANSPARENCY_REQUIRED`, een NL-melding
+ *      die opsomt welke velden ontbreken (details.missing) en een link
+ *      naar de tenant-pay-settings pagina (frontend route).
  *
  * Tenant kan via `tenant_pay_settings.pay_transparency_enforced = FALSE`
  * de check uitschakelen (bv. internal-only positions). Default = TRUE
@@ -28,15 +37,26 @@ import type { Request, Response, NextFunction } from 'express';
 import { withTenant } from '../db/pool';
 import { logAudit, auditCtxFromReq } from '../lib/audit';
 import { AuditActions } from '../lib/auditActions';
+import {
+  buildPayTransparencyError,
+  computeMissingFields,
+  type PayTransparencyMissingField,
+} from '../modules/compliance/payTransparency.service';
 import { logger } from './errorHandler';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
+interface BandBody {
+  salary_min?: number | null;
+  salary_max?: number | null;
+  salary_frequency?: string | null;
+}
+
 /**
  * Detecteer of dit een "publish"-mutatie is: ofwel POST met status='open',
- * ofwel PATCH die status overgeschreven naar 'open'. Andere status-waardes
+ * ofwel PATCH die status overschrijft naar 'open'. Andere status-waardes
  * (draft/closed/filled/archived) skippen de check.
  */
 function isPublishMutation(req: Request): boolean {
@@ -69,59 +89,61 @@ async function isPayTransparencyEnforced(tenantId: string): Promise<boolean> {
 }
 
 /**
- * Voor PATCH /:id moeten we — als alleen `status` in de body staat zonder
- * salary_min/max — de huidige rij uit DB lezen om te zien of de band al
- * gevuld is. Anders zou een gebruiker een job kunnen publishen die in DB
- * geen band heeft door de check via een PATCH-only-status te omzeilen.
+ * Voor PATCH /:id moeten we — voor elk band-veld dat NIET in de body staat —
+ * de huidige rij uit DB lezen. Anders zou een gebruiker een job kunnen
+ * publishen die in DB geen band heeft door een status-only PATCH.
  */
-async function jobAlreadyHasBand(
+async function readBandFromDb(
   tenantId: string,
   jobId: string
-): Promise<boolean> {
+): Promise<BandBody | null> {
   return withTenant(tenantId, async (client) => {
     const { rows } = await client.query<{
       salary_min: number | null;
       salary_max: number | null;
+      salary_frequency: string | null;
     }>(
-      `SELECT salary_min, salary_max
+      `SELECT salary_min, salary_max, salary_frequency
          FROM jobs
         WHERE id = $1 AND tenant_id = $2`,
       [jobId, tenantId]
     );
-    if (rows.length === 0) return false;
-    const r = rows[0];
-    return r.salary_min !== null && r.salary_max !== null;
+    if (rows.length === 0) return null;
+    return rows[0];
   });
 }
 
 /**
- * Bepaal of de combinatie (incoming body + DB-state) een gevulde band oplevert.
- * Voor POST: alleen body. Voor PATCH: body OR (DB-band als body de velden niet
- * meenemen).
+ * Bepaal de effectieve waarde per band-veld door body + fallback (DB-state
+ * bij PATCH, DB-default bij POST) te combineren:
+ *
+ *   - Veld aanwezig in body (ook expliciet `null`) → body wint.
+ *   - Veld afwezig in body:
+ *       * PATCH → huidige DB-waarde.
+ *       * POST  → salary_frequency krijgt de DB-default 'monthly'
+ *         (007_job_detail_expansion.sql); salary_min/max hebben geen
+ *         default en zijn dan dus ontbrekend.
  */
-function bodyHasBand(req: Request): boolean {
-  const body = (req.body ?? {}) as {
-    salary_min?: number | null;
-    salary_max?: number | null;
+function resolveEffectiveBand(
+  body: BandBody,
+  fallback: BandBody | null,
+  isPost: boolean
+): { salary_min: number | null; salary_max: number | null; salary_frequency: string | null } {
+  const pick = <K extends keyof BandBody>(key: K): BandBody[K] | null => {
+    if (key in body) return body[key] ?? null;
+    if (fallback && key in fallback) return fallback[key] ?? null;
+    if (isPost && key === 'salary_frequency') {
+      // DB-default vult 'monthly' in wanneer de kolom niet in de INSERT zit.
+      return 'monthly' as BandBody[K];
+    }
+    return null;
   };
-  return (
-    body.salary_min !== undefined &&
-    body.salary_min !== null &&
-    body.salary_max !== undefined &&
-    body.salary_max !== null
-  );
-}
 
-/**
- * Detecteer of de body de salary-velden expliciet op `null` zet — dan moeten
- * we ze als "gewist" behandelen en niet de DB-state vertrouwen.
- */
-function bodyClearsBand(req: Request): boolean {
-  const body = (req.body ?? {}) as {
-    salary_min?: number | null;
-    salary_max?: number | null;
+  return {
+    salary_min: (pick('salary_min') as number | null) ?? null,
+    salary_max: (pick('salary_max') as number | null) ?? null,
+    salary_frequency: (pick('salary_frequency') as string | null) ?? null,
   };
-  return body.salary_min === null || body.salary_max === null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -133,8 +155,7 @@ function bodyClearsBand(req: Request): boolean {
  * tenantMiddleware. Skip-cases:
  *   - Geen status='open' in body → niet blokkeren.
  *   - Tenant heeft pay_transparency_enforced = FALSE → niet blokkeren.
- *   - Body bevat een complete salary-band → niet blokkeren.
- *   - PATCH zonder salary-veranderingen, maar DB-rij heeft al een band → niet blokkeren.
+ *   - Effectieve band (body ∪ DB-state) is compleet → niet blokkeren.
  */
 export async function enforcePayTransparency(
   req: Request,
@@ -159,30 +180,30 @@ export async function enforcePayTransparency(
       return;
     }
 
-    // Als body de band wist (expliciet null), dan blokkeren we direct —
-    // zelfs als DB-state een band had.
-    if (bodyClearsBand(req)) {
-      await emitBlockAudit(req, tenantId);
-      respondBlocked(res);
-      return;
+    const body = (req.body ?? {}) as BandBody;
+
+    // Alleen DB lezen als er velden ontbreken in de body én dit een PATCH
+    // op een bestaande job is.
+    let fallback: BandBody | null = null;
+    const bodyCoversAll =
+      'salary_min' in body && 'salary_max' in body && 'salary_frequency' in body;
+    if (!bodyCoversAll && req.method === 'PATCH' && req.params.id) {
+      fallback = await readBandFromDb(tenantId, req.params.id);
     }
 
-    if (bodyHasBand(req)) {
+    const effective = resolveEffectiveBand(
+      body,
+      fallback,
+      req.method !== 'PATCH'
+    );
+    const missing = computeMissingFields(effective);
+    if (missing.length === 0) {
       next();
       return;
     }
 
-    // PATCH zonder explicite band: check DB-state. POST zonder band: blokkeren.
-    if (req.method === 'PATCH' && req.params.id) {
-      const dbHasBand = await jobAlreadyHasBand(tenantId, req.params.id);
-      if (dbHasBand) {
-        next();
-        return;
-      }
-    }
-
-    await emitBlockAudit(req, tenantId);
-    respondBlocked(res);
+    await emitBlockAudit(req, tenantId, missing);
+    respondBlocked(res, missing);
   } catch (err) {
     // Bij DB-fouten (bv. tenant_pay_settings tabel ontbreekt op een db die
     // migrations achter loopt) niet 500-en op middleware-pad. Log + open
@@ -195,22 +216,25 @@ export async function enforcePayTransparency(
   }
 }
 
-function respondBlocked(res: Response): void {
+function respondBlocked(
+  res: Response,
+  missing: PayTransparencyMissingField[]
+): void {
+  const err = buildPayTransparencyError(missing);
   res.status(422).json({
     error: {
-      code: 'PAY_TRANSPARENCY_REQUIRED',
-      message:
-        'Salarisbandbreedte (salary_min en salary_max) is verplicht voordat de vacature gepubliceerd kan worden. (EU Pay Transparency Directive 2023/970)',
-      details: {
-        explainer_url: '/docs/pay-transparency',
-        settings_url: '/dashboard/settings/compliance/pay-transparency',
-        directive: 'EU 2023/970',
-      },
+      code: err.code,
+      message: err.message,
+      details: err.details,
     },
   });
 }
 
-async function emitBlockAudit(req: Request, tenantId: string): Promise<void> {
+async function emitBlockAudit(
+  req: Request,
+  tenantId: string,
+  missing: PayTransparencyMissingField[]
+): Promise<void> {
   try {
     await withTenant(tenantId, async (client) => {
       await logAudit(
@@ -225,6 +249,7 @@ async function emitBlockAudit(req: Request, tenantId: string): Promise<void> {
             method: req.method,
             path: req.originalUrl,
             attempted_status: 'open',
+            missing,
             user_id: req.user?.userId ?? null,
           },
           userId: req.user?.userId ?? null,
@@ -245,7 +270,6 @@ async function emitBlockAudit(req: Request, tenantId: string): Promise<void> {
 export const _internal = {
   isPublishMutation,
   isPayTransparencyEnforced,
-  jobAlreadyHasBand,
-  bodyHasBand,
-  bodyClearsBand,
+  readBandFromDb,
+  resolveEffectiveBand,
 };

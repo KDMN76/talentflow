@@ -25,7 +25,11 @@ import { withTenant, withoutTenant } from '../../db/pool';
 import { AppError } from '../../middleware/errorHandler';
 import { logAudit, type AuditContext } from '../../lib/audit';
 import { AuditActions } from '../../lib/auditActions';
-import { createDsarRequest } from './dsar.service';
+import {
+  createDsarRequest,
+  createDataExportLink,
+  type DsarStatus,
+} from './dsar.service';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -86,6 +90,16 @@ export interface CandidateSelfPayload {
     policy: string;
     will_be_deleted_at: string | null;
   };
+  tenant: {
+    name: string;
+    privacy_email: string | null;
+  };
+  deletion_request: {
+    dsar_id: string;
+    status: 'pending' | 'processing' | 'completed' | 'rejected';
+    requested_at: string;
+    deadline: string;
+  } | null;
 }
 
 interface TokenRow {
@@ -108,7 +122,8 @@ function buildSelfServiceUrl(token: string): string {
   const base =
     process.env.PUBLIC_APP_URL?.replace(/\/$/, '') ??
     'https://app.talentflow.io';
-  return `${base}/self-service/${token}`;
+  // NB: het portaal leeft op /profile/[token] in de web-app.
+  return `${base}/profile/${token}`;
 }
 
 /**
@@ -264,6 +279,28 @@ export async function getCandidateSelfData(
       .catch(() => ({ rows: [] as Record<string, unknown>[] }));
     const retention = await computeRetentionInfo(client, tenantId, candidate);
 
+    // Tenant-naam voor de portaal-header ("Jouw gegevens bij <naam>").
+    const { rows: tenantRows } = await client.query(
+      `SELECT name, settings->>'privacy_email' AS privacy_email
+         FROM tenants WHERE id = $1`,
+      [tenantId]
+    );
+
+    // Laatste verwijderverzoek zodat de kandidaat de status kan volgen en
+    // niet per ongeluk dubbel indient.
+    const { rows: deletionRows } = await client.query(
+      `SELECT id, status, created_at::text, due_at::text
+         FROM dsar_requests
+        WHERE tenant_id = $1 AND candidate_id = $2
+          AND request_type = 'deletion'
+        ORDER BY created_at DESC
+        LIMIT 1`,
+      [tenantId, candidateId]
+    );
+    const deletionRow = deletionRows[0] as
+      | { id: string; status: DsarStatus; created_at: string; due_at: string }
+      | undefined;
+
     return {
       candidate: {
         id: candidate.id,
@@ -288,8 +325,36 @@ export async function getCandidateSelfData(
           candidate.gdpr_consent_at ?? candidate.email_consent_at ?? null,
       },
       retention,
+      tenant: {
+        name: (tenantRows[0]?.name as string) ?? 'Recruitment-team',
+        privacy_email: (tenantRows[0]?.privacy_email as string) ?? null,
+      },
+      deletion_request: deletionRow
+        ? {
+            dsar_id: deletionRow.id,
+            status: mapDsarStatusForPortal(deletionRow.status),
+            requested_at: deletionRow.created_at,
+            deadline: deletionRow.due_at,
+          }
+        : null,
     };
   });
+}
+
+function mapDsarStatusForPortal(
+  status: DsarStatus
+): 'pending' | 'processing' | 'completed' | 'rejected' {
+  switch (status) {
+    case 'in_progress':
+      return 'processing';
+    case 'fulfilled':
+      return 'completed';
+    case 'rejected':
+    case 'expired':
+      return 'rejected';
+    default:
+      return 'pending';
+  }
 }
 
 interface CandidateRetentionFields {
@@ -490,6 +555,85 @@ export async function recordCandidateDeletionRequest(
   });
 
   return { dsar_id: dsar.id };
+}
+
+/**
+ * Kandidaat vraagt via het portaal een kopie van zijn/haar gegevens
+ * (AVG art. 15). We registreren een DSAR (type=export, self_portal),
+ * genereren direct een kort-levende download-link en markeren het
+ * verzoek als vervuld — de link ís het antwoord.
+ *
+ * Audit-spoor: dsar.requested → data_export_link.created → dsar.fulfilled.
+ */
+export async function recordCandidateExportRequest(
+  token: string,
+  ctx: AuditContext = {}
+): Promise<{ dsar_id: string; url: string; expires_at: string }> {
+  const tokenRow = await findAndTouchToken(token);
+  const { tenant_id: tenantId, candidate_id: candidateId } = tokenRow;
+
+  const candidate = await withTenant(tenantId, async (client) => {
+    const { rows } = await client.query(
+      `SELECT email FROM candidates
+        WHERE id = $1 AND tenant_id = $2
+          AND deleted_at IS NULL AND anonymized_at IS NULL`,
+      [candidateId, tenantId]
+    );
+    return rows[0] ?? null;
+  });
+  if (!candidate) {
+    throw new AppError(
+      404,
+      'CANDIDATE_NOT_FOUND',
+      'Je gegevens zijn niet meer beschikbaar'
+    );
+  }
+
+  const dsar = await createDsarRequest(
+    tenantId,
+    candidateId,
+    'export',
+    candidate.email ?? 'self-portal@talentflow.local',
+    'self_portal',
+    'Export aangevraagd via self-service-portaal',
+    ctx
+  );
+
+  const link = await createDataExportLink(tenantId, candidateId, {
+    dsarId: dsar.id,
+    ctx,
+  });
+
+  // Direct vervuld: response_url vastleggen zodat de recruiter in het
+  // dashboard ziet dat dit verzoek automatisch is afgehandeld.
+  await withTenant(tenantId, async (client) => {
+    await client.query(
+      `UPDATE dsar_requests
+          SET status = 'fulfilled',
+              response_url = $1,
+              fulfilled_at = now()
+        WHERE id = $2 AND tenant_id = $3`,
+      [link.url, dsar.id, tenantId]
+    );
+    await logAudit(
+      client,
+      tenantId,
+      {
+        action: AuditActions.DSAR_FULFILLED,
+        entityType: 'dsar_request',
+        entityId: dsar.id,
+        after: {
+          auto_fulfilled: true,
+          request_type: 'export',
+          expires_at: link.expires_at,
+        },
+        userId: null,
+      },
+      ctx
+    );
+  });
+
+  return { dsar_id: dsar.id, url: link.url, expires_at: link.expires_at };
 }
 
 export const _internal = { TOKEN_TTL_DAYS, TOKEN_BYTES };

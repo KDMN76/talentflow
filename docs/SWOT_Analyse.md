@@ -33,7 +33,7 @@ De SWOT richt zich op de feitelijke staat van het project op 5 mei 2026 (zie `Ma
 | S5 | **Open API standaard op alle plannen** | Manatal verbergt open API achter Enterprise Plus ($55/user/maand). TalentFlow biedt API zonder feature-gating — concurrentievoordeel voor bureaus die eigen integraties willen bouwen. |
 | S6 | **Commercieel inzetbaar by design** | Multi-tenant + RLS + JWT-tenant-claim betekent dat dezelfde codebase van interne tool naar SaaS-product schaalt zonder rewrite. Tweezijdig gebruik vanaf dag één. |
 | S7 | **Frontend volledig gebouwd** | 16 modules (kandidaten, jobs, pipeline, CRM, communications, career pages, job boards, hiring manager, analytics, workflows, instellingen, klantportalen, publiek portal). Visueel polished, volledig in het Nederlands. |
-| S8 | **Lage TCO** | Ongeveer 91% reductie ten opzichte van Manatal-licentie (zie `TCO_ROI.md`). Hetzner-allocatie + Cloudflare R2 + Resend + Claude API samen ~€1.000/jaar in plaats van ~€12.000/jaar. |
+| S8 | **Lage TCO** | Ongeveer 85% reductie ten opzichte van de werkelijke Manatal-factuur (zie `TCO_ROI.md`). Hetzner-allocatie + Cloudflare R2 + Resend + Claude API samen ~€1.000–1.300/jaar in plaats van ~€7.440/jaar (≈€620/mnd). |
 | S9 | **EU-native compliance-mindset** | Hosting in EU (Hetzner, Duitsland), GDPR-velden (`gdpr_consent`, `email_consent`, retentie) zijn datamodel-uitbreidingen die expliciet worden gebouwd. Manatal is SOC 2 maar heeft Amerikaanse roots. |
 
 ### Weaknesses (Zwaktes — intern, negatief)

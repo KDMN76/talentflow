@@ -21,6 +21,7 @@ import {
   recordCandidateConsentChange,
   recordCandidateCorrection,
   recordCandidateDeletionRequest,
+  recordCandidateExportRequest,
 } from './selfService.service';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -129,6 +130,19 @@ async function deletionHandler(req: Request, res: Response, next: NextFunction) 
   }
 }
 
+async function exportHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const token = tokenParam.parse(req.params.token);
+    const result = await recordCandidateExportRequest(
+      token,
+      auditCtxFromReq(req)
+    );
+    res.status(201).json({ data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Router
 // ─────────────────────────────────────────────────────────────────────────────
@@ -141,5 +155,6 @@ router.get('/:token', viewHandler);
 router.post('/:token/consent', consentHandler);
 router.post('/:token/correction', correctionHandler);
 router.post('/:token/deletion', deletionHandler);
+router.post('/:token/export', exportHandler);
 
 export default router;

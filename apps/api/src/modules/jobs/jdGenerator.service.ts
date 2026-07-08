@@ -32,6 +32,7 @@ import {
   createJob as createJobRow,
   type CreateJobInput,
 } from './jobs.service';
+import { assertJobPublishable } from '../compliance/payTransparency.service';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -463,7 +464,7 @@ export async function discardJdDraft(
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type JobOverrides = Partial<
-  Omit<CreateJobInput, 'title' | 'description' | 'pipeline_template_id'>
+  Omit<CreateJobInput, 'pipeline_template_id'>
 > & {
   pipeline_template_id?: string;
 };
@@ -505,19 +506,28 @@ export async function publishJdDraft(
   }
   const variant = findVariant(draft, draft.selected_variant_id);
 
-  // 2) Bouw CreateJobInput — variant levert title + description, overrides
-  //    vullen de rest aan. We nemen 'open' als default status zodat de
-  //    vacature direct zichtbaar is na publish; recruiter kan het altijd
-  //    overrulen via overrides.status.
+  // 2) Bouw CreateJobInput — variant levert title + description (door de
+  //    recruiter overschrijfbaar via overrides), overrides vullen de rest
+  //    aan. We nemen 'open' als default status zodat de vacature direct
+  //    zichtbaar is na publish; recruiter kan het altijd overrulen via
+  //    overrides.status.
+  //
+  //    `salary_frequency` laten we bewust weg uit de INSERT wanneer de
+  //    overrides het veld niet meesturen — dan vult de DB-default
+  //    ('monthly', 007_job_detail_expansion.sql) 'm in. Dat spiegelt de
+  //    POST /api/jobs-semantiek van de pay-transparency-middleware.
   const jobInput: CreateJobInput = {
-    title: variant.title,
-    description: variant.description,
+    title: overrides.title?.trim() || variant.title,
+    description: overrides.description ?? variant.description,
     status: overrides.status ?? 'open',
     employment_type: overrides.employment_type ?? undefined,
     department: overrides.department ?? null,
     location: overrides.location ?? null,
     salary_min: overrides.salary_min ?? null,
     salary_max: overrides.salary_max ?? null,
+    // job_reference alleen doorgeven wanneer expliciet gezet — anders
+    // genereert createJob zelf een unieke referentie (JOB-XXXXXX).
+    ...(overrides.job_reference ? { job_reference: overrides.job_reference } : {}),
     recruiter_id: overrides.recruiter_id ?? userId,
     headcount: overrides.headcount ?? null,
     experience_level: overrides.experience_level ?? null,
@@ -530,7 +540,16 @@ export async function publishJdDraft(
     office_address: overrides.office_address ?? null,
     package_details: overrides.package_details ?? null,
     currency: overrides.currency ?? null,
-    salary_frequency: overrides.salary_frequency ?? null,
+    ...('salary_frequency' in overrides
+      ? { salary_frequency: overrides.salary_frequency ?? null }
+      : {}),
+    // Pay Transparency (EU 2023/970)
+    ...('pay_transparency_required' in overrides
+      ? { pay_transparency_required: overrides.pay_transparency_required ?? null }
+      : {}),
+    ...('compensation_criteria' in overrides
+      ? { compensation_criteria: overrides.compensation_criteria ?? null }
+      : {}),
     required_skills:
       overrides.required_skills ?? draft.parameters.key_skills ?? null,
     nice_to_have_skills:
@@ -538,7 +557,28 @@ export async function publishJdDraft(
     pipeline_template_id: overrides.pipeline_template_id,
   };
 
-  // 3) createJob handelt zelf RLS + audit + embedding-queue af.
+  // 3a) Publiceer-gate (EU 2023/970): de jd-publish-flow gaat NIET door de
+  //     /api/jobs-middleware, dus dezelfde check hier op service-niveau.
+  //     Alleen wanneer de job als 'open' live gaat; drafts mogen altijd.
+  //     Gate vóór createJobRow — bij een blok mag er géén job ontstaan.
+  if (jobInput.status === 'open') {
+    await assertJobPublishable(
+      tenantId,
+      {
+        salary_min: jobInput.salary_min,
+        salary_max: jobInput.salary_max,
+        // Zonder expliciete override vult de DB-default 'monthly' in —
+        // de effectieve waarde is dan dus niet-leeg.
+        salary_frequency:
+          'salary_frequency' in overrides
+            ? overrides.salary_frequency ?? null
+            : 'monthly',
+      },
+      { userId, source: 'jd_draft.publish', ctx }
+    );
+  }
+
+  // 3b) createJob handelt zelf RLS + audit + embedding-queue af.
   const job = await createJobRow(tenantId, userId, jobInput, ctx);
 
   // 4) Update draft → published binnen aparte tx.

@@ -251,18 +251,27 @@ function deriveBaseUrl(req: Request): string {
   return `${proto}://${host}`;
 }
 
+const embedSchema = z
+  .object({
+    /** Geldigheid in dagen (1..365). null/omitted = geen expiry. */
+    expires_in_days: z.number().int().min(1).max(365).nullable().optional(),
+  })
+  .optional();
+
 export async function enableEmbed(
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
   try {
+    const body = embedSchema.parse(req.body ?? {});
     const result = await service.generateEmbedToken(
       req.user!.tenantId,
       req.params.id,
       req.user!.userId,
       deriveBaseUrl(req),
-      auditCtxFromReq(req)
+      auditCtxFromReq(req),
+      body?.expires_in_days ?? null
     );
     res.json(result);
   } catch (err) {

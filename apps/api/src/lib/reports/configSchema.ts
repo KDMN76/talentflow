@@ -462,10 +462,11 @@ export function validateReportConfig(config: unknown): ValidateResult {
 
   validateDateRange(config.date_range, errors);
 
+  // Lege blocks-array is toegestaan: de UI maakt eerst een leeg (draft)
+  // rapport aan en voegt daarna blocks toe in de builder. Een run op een
+  // leeg rapport levert simpelweg nul resultaten op.
   if (!Array.isArray(config.blocks)) {
     errors.push('blocks: array vereist');
-  } else if (config.blocks.length === 0) {
-    errors.push('blocks: minimaal 1 block vereist');
   } else if (config.blocks.length > 50) {
     errors.push('blocks: maximaal 50 blocks per rapport');
   } else {

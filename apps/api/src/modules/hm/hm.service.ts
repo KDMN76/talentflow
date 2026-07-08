@@ -468,10 +468,79 @@ export interface HmScorecardDeadline {
   bucket: HmDeadlineBucket;
 }
 
-function bucketFor(due: Date, now: Date): HmDeadlineBucket {
+// De "vandaag/deze week"-grenzen worden in Europe/Amsterdam berekend, NIET in
+// server-lokale (UTC) tijd. Anders viel een deadline vlak na middernacht
+// Amsterdam-tijd (bv. 23:30Z = 00:30 CET) in de verkeerde bucket. We gebruiken
+// Intl.DateTimeFormat (geen extra dependency) om de Amsterdam-offset (CET/CEST)
+// af te leiden en zo het einde van de Amsterdamse dag als UTC-instant te bepalen.
+
+const AMSTERDAM_TZ = 'Europe/Amsterdam';
+
+/** Kalenderdatum (jaar/maand/dag) van `at` zoals die in Amsterdam geldt. */
+function amsterdamYmd(at: Date): { y: number; m: number; d: number } {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: AMSTERDAM_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(at);
+  const map: Record<string, string> = {};
+  for (const p of parts) map[p.type] = p.value;
+  return { y: Number(map.year), m: Number(map.month), d: Number(map.day) };
+}
+
+/**
+ * Offset (in ms) van Europe/Amsterdam t.o.v. UTC op het moment `at`.
+ * Positief = Amsterdam loopt vóór op UTC (+1u CET, +2u CEST).
+ */
+function amsterdamOffsetMs(at: Date): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: AMSTERDAM_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(at);
+  const map: Record<string, string> = {};
+  for (const p of parts) map[p.type] = p.value;
+  let hour = Number(map.hour);
+  if (hour === 24) hour = 0; // sommige runtimes geven '24' voor middernacht
+  const asUtc = Date.UTC(
+    Number(map.year),
+    Number(map.month) - 1,
+    Number(map.day),
+    hour,
+    Number(map.minute),
+    Number(map.second)
+  );
+  // Vergelijk de Amsterdamse wandkloktijd (geïnterpreteerd als UTC) met de
+  // echte UTC-tijd, op secondeprecisie.
+  return asUtc - Math.floor(at.getTime() / 1000) * 1000;
+}
+
+/** Het einde (23:59:59.999) van de Amsterdamse dag waarin `now` valt, als UTC-instant. */
+function endOfAmsterdamDay(now: Date): Date {
+  const { y, m, d } = amsterdamYmd(now);
+  const wallEnd = Date.UTC(y, m - 1, d, 23, 59, 59, 999);
+  // Twee passes: eerst schatten met de offset van `now`, dan verfijnen met de
+  // offset op de kandidaat-grens zelf zodat DST-overgangsdagen (2×/jaar) kloppen.
+  let boundary = wallEnd - amsterdamOffsetMs(now);
+  boundary = wallEnd - amsterdamOffsetMs(new Date(boundary));
+  return new Date(boundary);
+}
+
+/**
+ * Deelt een deadline in een bucket in relatief tot `now`. De dag-grens
+ * ("vandaag") wordt in Europe/Amsterdam bepaald, niet in server-UTC.
+ *
+ * Geëxporteerd voor unit-tests (vaste timestamps → verwachte buckets).
+ */
+export function bucketFor(due: Date, now: Date): HmDeadlineBucket {
   if (due.getTime() < now.getTime()) return 'overdue';
-  const endOfToday = new Date(now);
-  endOfToday.setHours(23, 59, 59, 999);
+  const endOfToday = endOfAmsterdamDay(now);
   if (due.getTime() <= endOfToday.getTime()) return 'today';
   if (due.getTime() <= now.getTime() + 7 * 24 * 3600 * 1000) return 'this_week';
   return 'later';

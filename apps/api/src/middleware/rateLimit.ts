@@ -8,9 +8,11 @@ import { rateLimitStore } from './rateLimitStore';
 const API_MAX = Number(process.env.RATE_LIMIT_MAX) || 200;
 const AUTH_MAX = Number(process.env.RATE_LIMIT_AUTH_MAX) || 10;
 const EMAIL_TEST_MAX = Number(process.env.RATE_LIMIT_EMAIL_TEST_MAX) || 5;
+const PORTAL_MAX = Number(process.env.RATE_LIMIT_PORTAL_MAX) || 60;
 const API_WINDOW_MS = 15 * 60 * 1000;
 const AUTH_WINDOW_MS = 15 * 60 * 1000;
 const EMAIL_TEST_WINDOW_MS = 15 * 60 * 1000;
+const PORTAL_WINDOW_MS = 15 * 60 * 1000;
 
 // express-rate-limit v7 zet `req.rateLimit` op het Request nadat de limiter
 // heeft gedraaid, maar augmenteert het Express-Request-type niet globaal —
@@ -77,6 +79,28 @@ export const emailTestRateLimit = rateLimit({
         code: 'RATE_LIMIT_EXCEEDED',
         message: 'Te veel testmails, probeer het later opnieuw',
         details: rateLimitDetails(req, EMAIL_TEST_WINDOW_MS, EMAIL_TEST_MAX),
+      },
+    });
+  },
+});
+
+/**
+ * Publieke klantportaal-endpoints (token-based, geen login): 60 requests per
+ * 15 minuten per IP (default, env-tunebaar via RATE_LIMIT_PORTAL_MAX).
+ * Beschermt tegen token-brute-force en feedback-spam op de gast-routes.
+ */
+export const portalPublicRateLimit = rateLimit({
+  windowMs: PORTAL_WINDOW_MS,
+  max: PORTAL_MAX,
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: rateLimitStore('rl:portal:'),
+  handler: (req, res) => {
+    res.status(429).json({
+      error: {
+        code: 'RATE_LIMIT_EXCEEDED',
+        message: 'Te veel verzoeken naar het portaal, probeer het later opnieuw',
+        details: rateLimitDetails(req, PORTAL_WINDOW_MS, PORTAL_MAX),
       },
     });
   },

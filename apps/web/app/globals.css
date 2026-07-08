@@ -24,6 +24,12 @@
     --input: 240 5.9% 90%;
     --ring: 243 75% 59%;
     --radius: 0.75rem;
+    /* Tenant branding accent (white-label). Raw color values — same
+       convention as the client portal (app/portal/[token]/layout.tsx).
+       Overridden at runtime by BrandingTheme.tsx when the tenant has an
+       accent_color; these are the TalentFlow-indigo fallbacks. */
+    --brand-accent: #6366f1;
+    --brand-accent-foreground: #ffffff;
   }
 
   .dark {

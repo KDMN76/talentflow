@@ -1,0 +1,76 @@
+{
+  "oversight": {
+    "header": {
+      "title": "AI oversight",
+      "description": "Human oversight of automated AI decisions (EU AI Act art. 14). Automated rejections are queued here as proposals — you decide."
+    },
+    "queue": {
+      "title": "Decision queue",
+      "pendingTab": "Pending",
+      "decidedTab": "Decided",
+      "emptyPending": "No pending AI proposals — all automated decisions have been reviewed.",
+      "emptyDecided": "No decided proposals yet.",
+      "proposedAt": "Proposed at",
+      "decidedAt": "Decided at",
+      "workflow": "Workflow",
+      "targetStage": "Target stage",
+      "candidate": "Candidate",
+      "job": "Job",
+      "trigger": "Trigger",
+      "notePlaceholder": "Optional note explaining your decision…",
+      "approve": "Approve & execute",
+      "reject": "Reject",
+      "deciding": "Processing…",
+      "status": {
+        "pending_review": "Awaiting review",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "failed": "Failed"
+      },
+      "executedBadge": "Action executed",
+      "notExecutedBadge": "Action not executed",
+      "toasts": {
+        "approved": "Proposal approved",
+        "approvedDescription": "The action was executed and recorded in the audit log.",
+        "approvedNotExecuted": "Proposal approved, but the action could not be executed (target no longer exists).",
+        "rejected": "Proposal rejected",
+        "rejectedDescription": "The automated action was blocked and recorded in the audit log.",
+        "failed": "Decision could not be processed",
+        "alreadyDecided": "This proposal has already been decided by someone else.",
+        "forbidden": "Only recruiters and admins can decide on AI proposals."
+      }
+    },
+    "retention": {
+      "title": "AI logging & retention",
+      "description": "Every AI decision is logged in an append-only register (WORM). The EU AI Act requires a minimum retention of {{months}} months.",
+      "totalEvents": "Logged AI events",
+      "oldestEvent": "Oldest event",
+      "newestEvent": "Newest event",
+      "monthsCovered": "Months of logging available",
+      "wormProtected": "Append-only (WORM) — logs cannot be modified or deleted",
+      "compliant": "Retention period structurally guaranteed",
+      "noEvents": "No AI events logged yet"
+    }
+  },
+  "candidateSummary": {
+    "title": "AI usage for this candidate",
+    "hint": "Transparency overview (EU AI Act art. 13): which AI processing has been applied to this candidate. Categories, dates and models only — never content.",
+    "empty": "No AI has been applied to this candidate.",
+    "eventCount_one": "{{count}} operation",
+    "eventCount_other": "{{count}} operations",
+    "firstUsed": "First used",
+    "lastUsed": "Last used",
+    "models": "Models",
+    "disclosure": "The recruiter retains the final judgement on every AI-assisted decision.",
+    "category": {
+      "profile_parsing": "Resume parsing",
+      "semantic_indexing": "Semantic indexing",
+      "matching": "Matching & match explanations",
+      "bias_monitoring": "Bias monitoring",
+      "content_generation": "Content generation",
+      "interview_ai": "Interview AI",
+      "communication_ai": "Communication AI",
+      "other": "Other"
+    }
+  }
+}

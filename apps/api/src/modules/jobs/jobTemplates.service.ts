@@ -16,6 +16,7 @@ import { withTenant } from '../../db/pool';
 import { AppError } from '../../middleware/errorHandler';
 import { logAudit, type AuditContext } from '../../lib/audit';
 import { AuditActions } from '../../lib/auditActions';
+import { assertJobPublishable } from '../compliance/payTransparency.service';
 import { createJob, type CreateJobInput } from './jobs.service';
 
 export interface JobTemplate {
@@ -242,6 +243,26 @@ export async function instantiateFromTemplate(
     title: (overrides.title ?? (tmpl.job_data.title as string | undefined) ?? tmpl.name),
   };
 
+  // Publiceer-gate (EU 2023/970): overrides kunnen status='open' meesturen
+  // en dit pad loopt NIET door de /api/jobs-middleware — zelfde check als de
+  // jd-draft-publish-flow, vóór createJob zodat er geen job ontstaat bij blok.
+  // `salary_frequency` valt zonder expliciet veld terug op de DB-default
+  // 'monthly' (007_job_detail_expansion.sql) en is dan dus niet-leeg.
+  if (merged.status === 'open') {
+    await assertJobPublishable(
+      tenantId,
+      {
+        salary_min: merged.salary_min ?? null,
+        salary_max: merged.salary_max ?? null,
+        salary_frequency:
+          'salary_frequency' in merged
+            ? merged.salary_frequency ?? null
+            : 'monthly',
+      },
+      { userId, source: 'job_template.instantiate', ctx }
+    );
+  }
+
   const created = await createJob(tenantId, userId, merged, ctx);
 
   // Audit-trail: koppel job → template voor traceability.
@@ -298,6 +319,23 @@ export async function duplicateJob(
       overrides.title ??
       `${(source.title as string | undefined) ?? 'Untitled'} (kopie)`,
   };
+
+  // Publiceer-gate (EU 2023/970) — zie instantiateFromTemplate: overrides
+  // kunnen status='open' bevatten en dit pad omzeilt de /api/jobs-middleware.
+  if (merged.status === 'open') {
+    await assertJobPublishable(
+      tenantId,
+      {
+        salary_min: merged.salary_min ?? null,
+        salary_max: merged.salary_max ?? null,
+        salary_frequency:
+          'salary_frequency' in merged
+            ? merged.salary_frequency ?? null
+            : 'monthly',
+      },
+      { userId, source: 'job_template.duplicate', ctx }
+    );
+  }
 
   return createJob(tenantId, userId, merged, ctx);
 }

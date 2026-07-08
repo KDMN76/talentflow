@@ -27,7 +27,7 @@
     },
     "payWarning": {
       "title": "EU Pay Transparency Directive vereist een salarisbandbreedte",
-      "description": "Zonder ingevulde minimum- en maximum-salaris kan deze vacature niet worden gepubliceerd. Vul de bandbreedte hieronder in.",
+      "description": "Zonder ingevuld minimumsalaris, maximumsalaris en frequentie kan deze vacature niet worden gepubliceerd. Vul de volledige band hieronder in.",
       "settingsLink": "Naar Pay Transparency-instellingen"
     },
     "sections": {
@@ -49,22 +49,39 @@
     "requirementsLabel": "Vereisten (één per regel, optioneel)",
     "requirementsPlaceholder": "5+ jaar React ervaring\nTypeScript expertise\nErvaring met Next.js",
     "euRequiredBadge": "EU verplicht",
-    "salaryMinLabel": "Minimum (EUR/jaar)",
-    "salaryMaxLabel": "Maximum (EUR/jaar)",
+    "salaryMinLabel": "Minimum (EUR)",
+    "salaryMaxLabel": "Maximum (EUR)",
+    "salaryFrequencyLabel": "Frequentie",
+    "salaryFrequencyPlaceholder": "Kies frequentie",
+    "salaryFrequencies": {
+      "monthly": "Per maand",
+      "annual": "Per jaar",
+      "hourly": "Per uur"
+    },
+    "compensationCriteriaLabel": "Beloningscriteria",
+    "compensationCriteriaPlaceholder": "Bijv. inschaling op basis van ervaring, cao-schaal 8-10, jaarlijkse beoordelingscyclus…",
+    "compensationCriteriaHelp": "Beschrijf hoe de beloning wordt bepaald — kandidaten zien dit op de vacature (EU-richtlijn 2023/970).",
+    "publishBlockedTooltip": "Publiceren vereist een volledige salarisband: minimum, maximum en frequentie.",
     "submit": "Vacature aanmaken",
+    "publish": "Aanmaken & publiceren",
     "validation": {
       "descriptionTooShort": "Omschrijving is te kort",
       "departmentRequired": "Afdeling is verplicht",
-      "locationRequired": "Locatie is verplicht"
+      "locationRequired": "Locatie is verplicht",
+      "compensationCriteriaTooLong": "Beloningscriteria mogen maximaal 2000 tekens zijn"
     },
     "toasts": {
       "salaryRequired": {
         "title": "Salarisbandbreedte verplicht",
-        "description": "Je tenant verplicht salaris-transparantie volgens EU 2023/970. Vul min en max in."
+        "description": "Je tenant verplicht salaris-transparantie volgens EU 2023/970. Vul minimum, maximum en frequentie in."
       },
       "created": {
         "title": "Vacature aangemaakt",
         "description": "\"{{title}}\" is opgeslagen als concept."
+      },
+      "published": {
+        "title": "Vacature gepubliceerd",
+        "description": "\"{{title}}\" staat live op status Open."
       },
       "createError": {
         "title": "Fout",

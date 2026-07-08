@@ -8,11 +8,16 @@ import { Router, type Request, type Response, type NextFunction } from 'express'
 import { z } from 'zod';
 import { requireAuth } from '../../middleware/auth';
 import { tenantMiddleware } from '../../middleware/tenant';
+import { requirePermission } from '../../middleware/permissions';
 import { auditCtxFromReq } from '../../lib/audit';
 import * as service from './commissions.service';
 
 const router = Router();
 router.use(requireAuth, tenantMiddleware);
+
+// Commissie-mutaties (schemes/assignments/approve/pay/dispute) vereisen
+// `billing:write` — read-only rollen (viewer) konden hier eerst zonder
+// check commissies goedkeuren/uitbetalen (viewer-gap gedicht).
 
 // ── Schemes ───────────────────────────────────────────────────────────────
 router.get(
@@ -43,6 +48,7 @@ const createSchemeBody = z.object({
 
 router.post(
   '/schemes',
+  requirePermission('billing', 'write'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const body = createSchemeBody.parse(req.body);
@@ -67,6 +73,7 @@ const updateSchemeBody = z.object({
 
 router.patch(
   '/schemes/:id',
+  requirePermission('billing', 'write'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const body = updateSchemeBody.parse(req.body);
@@ -115,6 +122,7 @@ const createAssignmentBody = z.object({
 
 router.post(
   '/assignments',
+  requirePermission('billing', 'write'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const body = createAssignmentBody.parse(req.body);
@@ -152,6 +160,7 @@ router.get('/records', async (req: Request, res: Response, next: NextFunction) =
 
 router.post(
   '/records/:id/approve',
+  requirePermission('billing', 'write'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const record = await service.approveCommission(
@@ -168,6 +177,7 @@ router.post(
 
 router.post(
   '/records/:id/pay',
+  requirePermission('billing', 'write'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const record = await service.payCommission(
@@ -185,6 +195,7 @@ router.post(
 const disputeBody = z.object({ reason: z.string().min(2).max(500) });
 router.post(
   '/records/:id/dispute',
+  requirePermission('billing', 'write'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const body = disputeBody.parse(req.body);

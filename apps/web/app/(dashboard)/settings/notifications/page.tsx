@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Bell,
   BellOff,
@@ -96,28 +97,8 @@ type RegisteredDevice = {
   created_at: string;
 };
 
-const EVENT_LABELS: Record<EventType, { title: string; description: string }> = {
-  new_candidate_review: {
-    title: "Nieuwe kandidaat te beoordelen",
-    description: "Direct seintje als er een sollicitatie op je wacht.",
-  },
-  scorecard_deadline: {
-    title: "Scorecard-deadline",
-    description: "Reminder voordat een scorecard te laat is.",
-  },
-  interview_reminder: {
-    title: "Interview-herinnering",
-    description: "15 minuten voor een geplande sollicitatiegesprek.",
-  },
-  application_status_change: {
-    title: "Status van sollicitatie wijzigt",
-    description: "Bij goedkeuren, afwijzen of doorzetten naar volgende fase.",
-  },
-  daily_digest: {
-    title: "Dagelijkse samenvatting",
-    description: "Eén overzichtsbericht per dag (in plaats van losse meldingen).",
-  },
-};
+// EVENT_LABELS wordt binnen de component opgebouwd met vertaalde labels (t),
+// zodat de teksten uit de settingsNotifications-catalogus komen. Zie hieronder.
 
 /**
  * Placeholder tot de server-waarden geladen zijn — spiegelt de
@@ -151,8 +132,32 @@ const TIMEZONES = [
 // ----------------------------------------------------------------
 
 export default function NotificationSettingsPage() {
+  const { t } = useTranslation("settingsNotifications");
   const { toast } = useToast();
   const prefsQuery = useNotificationPreferences();
+
+  const EVENT_LABELS: Record<EventType, { title: string; description: string }> = {
+    new_candidate_review: {
+      title: t("events.types.new_candidate_review.title"),
+      description: t("events.types.new_candidate_review.description"),
+    },
+    scorecard_deadline: {
+      title: t("events.types.scorecard_deadline.title"),
+      description: t("events.types.scorecard_deadline.description"),
+    },
+    interview_reminder: {
+      title: t("events.types.interview_reminder.title"),
+      description: t("events.types.interview_reminder.description"),
+    },
+    application_status_change: {
+      title: t("events.types.application_status_change.title"),
+      description: t("events.types.application_status_change.description"),
+    },
+    daily_digest: {
+      title: t("events.types.daily_digest.title"),
+      description: t("events.types.daily_digest.description"),
+    },
+  };
   const saveMutation = useSaveNotificationPreferences();
   const [prefs, setPrefs] = useState<PrefsFormState>(DEFAULT_PREFS);
   const [devices, setDevices] = useState<RegisteredDevice[]>([]);
@@ -218,13 +223,14 @@ export default function NotificationSettingsPage() {
       const saved = await saveMutation.mutateAsync(toUpdate(next));
       setPrefs(fromWire(saved));
       if (!opts.silent) {
-        toast({ title: "Voorkeuren opgeslagen" });
+        toast({ title: t("toasts.saved.title") });
       }
       return true;
     } catch (err) {
       toast({
-        title: "Opslaan mislukt",
-        description: err instanceof Error ? err.message : "Probeer opnieuw.",
+        title: t("toasts.saveError.title"),
+        description:
+          err instanceof Error ? err.message : t("toasts.saveError.description"),
         variant: "destructive",
       });
       return false;
@@ -244,14 +250,14 @@ export default function NotificationSettingsPage() {
         );
         if (ok) {
           toast({
-            title: "Push ingeschakeld",
-            description: "Je ontvangt nu meldingen op dit apparaat.",
+            title: t("toasts.pushEnabled.title"),
+            description: t("toasts.pushEnabled.description"),
           });
         }
       } catch (err) {
         toast({
-          title: "Inschakelen mislukt",
-          description: err instanceof Error ? err.message : "Onbekende fout",
+          title: t("toasts.enableError.title"),
+          description: err instanceof Error ? err.message : t("toasts.unknownError"),
           variant: "destructive",
         });
       } finally {
@@ -267,7 +273,7 @@ export default function NotificationSettingsPage() {
           { silent: true }
         );
         if (ok) {
-          toast({ title: "Push uitgeschakeld" });
+          toast({ title: t("toasts.pushDisabled.title") });
         }
       } finally {
         setBusyAction(null);
@@ -280,13 +286,13 @@ export default function NotificationSettingsPage() {
     try {
       await api.post("/notifications/test");
       toast({
-        title: "Test-melding verstuurd",
-        description: "Je zou hem binnen enkele seconden moeten zien.",
+        title: t("toasts.testSent.title"),
+        description: t("toasts.testSent.description"),
       });
     } catch (err) {
       toast({
-        title: "Test-melding mislukt",
-        description: err instanceof Error ? err.message : "Onbekende fout",
+        title: t("toasts.testError.title"),
+        description: err instanceof Error ? err.message : t("toasts.unknownError"),
         variant: "destructive",
       });
     } finally {
@@ -299,11 +305,11 @@ export default function NotificationSettingsPage() {
     try {
       await api.delete(`/notifications/devices/${deviceId}`);
       setDevices((d) => d.filter((x) => x.id !== deviceId));
-      toast({ title: "Apparaat ingetrokken" });
+      toast({ title: t("toasts.deviceRevoked.title") });
     } catch (err) {
       toast({
-        title: "Intrekken mislukt",
-        description: err instanceof Error ? err.message : "Onbekende fout",
+        title: t("toasts.revokeError.title"),
+        description: err instanceof Error ? err.message : t("toasts.unknownError"),
         variant: "destructive",
       });
     } finally {
@@ -318,8 +324,8 @@ export default function NotificationSettingsPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Meldingen"
-        description="Bepaal welke push-notificaties je ontvangt en wanneer."
+        title={t("page.title")}
+        description={t("page.description")}
       />
 
       {/* Master toggle */}
@@ -329,10 +335,10 @@ export default function NotificationSettingsPage() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Bell className="h-5 w-5 text-indigo-600" />
-                Push-meldingen
+                {t("master.title")}
               </CardTitle>
               <CardDescription>
-                Krijg een seintje op je telefoon of desktop.
+                {t("master.description")}
               </CardDescription>
             </div>
             <ToggleSwitch
@@ -346,13 +352,13 @@ export default function NotificationSettingsPage() {
           {!supported && (
             <StatusLine
               variant="warn"
-              text="Deze browser ondersteunt geen push-notificaties."
+              text={t("master.unsupported")}
             />
           )}
           {supported && permission === "denied" && (
             <StatusLine
               variant="warn"
-              text="Meldingen zijn geblokkeerd in je browser. Wijzig dit in de site-instellingen om ze opnieuw te activeren."
+              text={t("master.denied")}
             />
           )}
           {supported && hasSubscription && (
@@ -369,7 +375,7 @@ export default function NotificationSettingsPage() {
                 ) : (
                   <Send className="mr-1.5 h-3.5 w-3.5" />
                 )}
-                Verstuur test-melding
+                {t("master.testButton")}
               </Button>
             </div>
           )}
@@ -379,9 +385,9 @@ export default function NotificationSettingsPage() {
       {/* Per event-type */}
       <Card className="border-0 shadow-sm">
         <CardHeader>
-          <CardTitle>Per type</CardTitle>
+          <CardTitle>{t("events.title")}</CardTitle>
           <CardDescription>
-            Schakel specifieke event-types uit als je er teveel krijgt.
+            {t("events.description")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-1">
@@ -420,16 +426,15 @@ export default function NotificationSettingsPage() {
       {/* Quiet hours */}
       <Card className="border-0 shadow-sm">
         <CardHeader>
-          <CardTitle>Stille uren</CardTitle>
+          <CardTitle>{t("quietHours.title")}</CardTitle>
           <CardDescription>
-            Tijdens deze uren worden meldingen niet verstuurd (alleen
-            kritieke uitzonderingen).
+            {t("quietHours.description")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-1.5">
-              <Label htmlFor="quiet-start">Start</Label>
+              <Label htmlFor="quiet-start">{t("quietHours.startLabel")}</Label>
               <Input
                 id="quiet-start"
                 type="time"
@@ -441,7 +446,7 @@ export default function NotificationSettingsPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="quiet-end">Einde</Label>
+              <Label htmlFor="quiet-end">{t("quietHours.endLabel")}</Label>
               <Input
                 id="quiet-end"
                 type="time"
@@ -453,7 +458,7 @@ export default function NotificationSettingsPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="quiet-tz">Tijdzone</Label>
+              <Label htmlFor="quiet-tz">{t("quietHours.timezoneLabel")}</Label>
               <Select
                 value={prefs.timezone}
                 onValueChange={(v) =>
@@ -479,18 +484,17 @@ export default function NotificationSettingsPage() {
       {/* Devices */}
       <Card className="border-0 shadow-sm">
         <CardHeader>
-          <CardTitle>Geregistreerde apparaten</CardTitle>
+          <CardTitle>{t("devices.title")}</CardTitle>
           <CardDescription>
-            Apparaten die meldingen ontvangen. Verwijder verloren of niet
-            meer gebruikte apparaten.
+            {t("devices.description")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           {loading ? (
-            <p className="text-sm text-muted-foreground">Laden...</p>
+            <p className="text-sm text-muted-foreground">{t("devices.loading")}</p>
           ) : devices.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Nog geen apparaten geregistreerd.
+              {t("devices.empty")}
             </p>
           ) : (
             <ul className="divide-y divide-border">
@@ -505,13 +509,14 @@ export default function NotificationSettingsPage() {
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
-                        {d.device_label || "Onbekend apparaat"}
+                        {d.device_label || t("devices.unknownDevice")}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Laatst actief:{" "}
-                        {new Date(d.last_seen_at).toLocaleString("nl-NL", {
-                          dateStyle: "short",
-                          timeStyle: "short",
+                        {t("devices.lastActive", {
+                          date: new Date(d.last_seen_at).toLocaleString("nl-NL", {
+                            dateStyle: "short",
+                            timeStyle: "short",
+                          }),
                         })}
                       </p>
                     </div>
@@ -519,7 +524,7 @@ export default function NotificationSettingsPage() {
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary" className="font-normal">
                       <CheckCircle2 className="mr-1 h-3 w-3 text-emerald-600" />
-                      Actief
+                      {t("devices.active")}
                     </Badge>
                     <Button
                       type="button"
@@ -527,7 +532,7 @@ export default function NotificationSettingsPage() {
                       variant="ghost"
                       disabled={busyAction === `revoke-${d.id}`}
                       onClick={() => handleRevoke(d.id)}
-                      aria-label={`Apparaat ${d.device_label} intrekken`}
+                      aria-label={t("devices.revokeAria", { label: d.device_label })}
                     >
                       {busyAction === `revoke-${d.id}` ? (
                         <Loader2 className="h-4 w-4 animate-spin" />

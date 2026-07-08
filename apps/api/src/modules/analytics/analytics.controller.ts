@@ -71,3 +71,32 @@ export async function getApplicationsTrend(req: Request, res: Response, next: Ne
     next(err);
   }
 }
+
+// ─── AI & Bias — Sprint Q4.6 ─────────────────────────────────────────────────
+
+export async function getAdverseImpact(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const result = await analyticsService.getAdverseImpact(req.user!.tenantId, parseFilters(req));
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getAiUsageTrend(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const result = await analyticsService.getAiUsageTrend(req.user!.tenantId, parseFilters(req));
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getMatchScoreDistribution(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const result = await analyticsService.getMatchScoreDistribution(req.user!.tenantId, parseFilters(req));
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}

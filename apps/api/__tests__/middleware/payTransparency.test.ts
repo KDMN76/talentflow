@@ -184,8 +184,16 @@ describe('enforcePayTransparency middleware', () => {
           };
         }
         if (/FROM jobs/i.test(sql)) {
+          // SELECT retourneert álle band-kolommen — salary_frequency heeft
+          // DB-default 'monthly' (007) en is dus gevuld bij bestaande jobs.
           return {
-            rows: [{ salary_min: 40000, salary_max: 60000 }],
+            rows: [
+              {
+                salary_min: 40000,
+                salary_max: 60000,
+                salary_frequency: 'monthly',
+              },
+            ],
             rowCount: 1,
           };
         }
@@ -218,7 +226,9 @@ describe('enforcePayTransparency middleware', () => {
         }
         if (/FROM jobs/i.test(sql)) {
           return {
-            rows: [{ salary_min: null, salary_max: null }],
+            rows: [
+              { salary_min: null, salary_max: null, salary_frequency: null },
+            ],
             rowCount: 1,
           };
         }
@@ -252,7 +262,13 @@ describe('enforcePayTransparency middleware', () => {
         }
         if (/FROM jobs/i.test(sql)) {
           return {
-            rows: [{ salary_min: 40000, salary_max: 60000 }],
+            rows: [
+              {
+                salary_min: 40000,
+                salary_max: 60000,
+                salary_frequency: 'monthly',
+              },
+            ],
             rowCount: 1,
           };
         }

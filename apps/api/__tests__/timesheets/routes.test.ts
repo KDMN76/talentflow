@@ -128,6 +128,11 @@ describe('POST /api/timesheets/:id/approve — role enforcement', () => {
     teardown = installPoolMock(
       mockClient({
         __matcher: (sql) => {
+          // requirePermission('billing','write') bouwt de matrix uit
+          // users.role — de mock moet die rij leveren, net als de echte DB.
+          if (/SELECT role FROM users/i.test(sql)) {
+            return { rows: [{ role: 'admin' }], rowCount: 1 };
+          }
           if (/SELECT \* FROM timesheets/i.test(sql)) {
             return { rows: [tsRow({ status: 'submitted' })], rowCount: 1 };
           }
@@ -149,7 +154,18 @@ describe('POST /api/timesheets/:id/approve — role enforcement', () => {
   });
 
   it('candidate is forbidden', async () => {
-    teardown = installPoolMock(mockClient());
+    teardown = installPoolMock(
+      mockClient({
+        __matcher: (sql) => {
+          // Candidate-rol heeft geen billing:write in de matrix → 403 op
+          // het echte permission-pad (niet slechts door een lege mock).
+          if (/SELECT role FROM users/i.test(sql)) {
+            return { rows: [{ role: 'candidate' }], rowCount: 1 };
+          }
+          return { rows: [], rowCount: 0 };
+        },
+      })
+    );
     const res = await request(buildApp())
       .post(`/api/timesheets/${TS_ID}/approve`)
       .set('Authorization', `Bearer ${token(TENANT_A, 'candidate')}`);
@@ -310,6 +326,11 @@ describe('POST /api/timesheets/:id/reject', () => {
     teardown = installPoolMock(
       mockClient({
         __matcher: (sql, params) => {
+          // requirePermission('billing','write') bouwt de matrix uit
+          // users.role — de mock moet die rij leveren, net als de echte DB.
+          if (/SELECT role FROM users/i.test(sql)) {
+            return { rows: [{ role: 'admin' }], rowCount: 1 };
+          }
           if (/SELECT \* FROM timesheets/i.test(sql)) {
             return { rows: [tsRow({ status: 'submitted' })], rowCount: 1 };
           }

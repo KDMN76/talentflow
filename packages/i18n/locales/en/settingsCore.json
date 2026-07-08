@@ -50,6 +50,10 @@
       "voice": {
         "title": "Telephony",
         "description": "Calling integration and voice settings."
+      },
+      "modules": {
+        "title": "Modules",
+        "description": "Control which modules are visible for your organisation."
       }
     },
     "validation": {
@@ -227,13 +231,35 @@
       "saveError": {
         "title": "Save failed",
         "description": "The branding could not be saved. Please try again."
+      },
+      "logoUploaded": {
+        "title": "Logo uploaded",
+        "description": "Your logo has been saved and is immediately visible in the app and portal."
+      },
+      "logoUploadError": {
+        "title": "Upload failed",
+        "description": "The logo could not be uploaded. Please try again."
+      },
+      "logoRemoved": {
+        "title": "Logo removed",
+        "description": "The default logo will be shown again."
+      },
+      "logoRemoveError": {
+        "title": "Removal failed",
+        "description": "The logo could not be removed. Please try again."
       }
     },
     "logo": {
       "title": "Logo & favicon",
-      "description": "Show your own logo in the portal and emails.",
-      "logoUrlLabel": "Logo URL",
-      "logoUrlPlaceholder": "https://your-agency.com/logo.png",
+      "description": "Show your own logo in the app, the portal and emails.",
+      "uploadButton": "Upload logo",
+      "replaceButton": "Replace logo",
+      "removeButton": "Remove",
+      "uploadHint": "PNG, JPG or SVG, up to 1 MB.",
+      "currentAlt": "Current logo",
+      "noLogo": "No logo yet",
+      "invalidType": "Only PNG, JPG or SVG is allowed as a logo.",
+      "tooLarge": "The file is too large (1 MB maximum).",
       "faviconUrlLabel": "Favicon URL",
       "faviconUrlPlaceholder": "https://your-agency.com/favicon.ico"
     },
@@ -241,8 +267,33 @@
       "title": "Colors",
       "description": "Set your primary and accent color.",
       "primaryLabel": "Primary color",
-      "primaryAria": "Primary color"
-    }
+      "primaryAria": "Primary color",
+      "accentLabel": "Accent color",
+      "accentAria": "Accent color",
+      "contrastWarning": "This color has low contrast with text (WCAG 3:1). Choose a darker or lighter shade for better readability."
+    },
+    "brand": {
+      "title": "Brand name & email footer",
+      "description": "Override the TalentFlow name and add your own email signature.",
+      "nameLabel": "Brand name (override)",
+      "namePlaceholder": "Your agency name",
+      "nameHint": "Empty = default tenant name.",
+      "footerLabel": "Email footer (HTML)",
+      "footerPlaceholder": "<p>Kind regards,<br/>The team</p>",
+      "footerHint": "Simple HTML (p, br, a, strong, …). Scripts and unsafe content are removed automatically when sending."
+    },
+    "preview": {
+      "title": "Live preview",
+      "description": "How your portal and emails look to clients.",
+      "brandFallback": "Your agency",
+      "portalLabel": "Recruitment portal",
+      "badgeExample": "AI Match: 92%",
+      "candidateExample": "Sample candidate — Job title",
+      "emailFooterTitle": "Email footer",
+      "noFooter": "No footer configured.",
+      "note": "Changes apply immediately after saving — existing portal links see the new branding right away."
+    },
+    "save": "Save"
   },
   "email": {
     "title": "Email",
@@ -307,6 +358,72 @@
       "testError": {
         "title": "Test email failed",
         "description": "Sending failed. Check your settings."
+      }
+    }
+  },
+  "modules": {
+    "title": "Modules",
+    "description": "Enable or disable modules for your organisation. Disabled modules disappear from the menu and are blocked by the API.",
+    "adminOnly": "Only administrators can enable or disable modules. The current status is shown below.",
+    "cardTitle": "Available modules",
+    "cardDescription": "Changes apply immediately to all users in your organisation.",
+    "loadError": "Failed to load modules. Please try again later.",
+    "frozenBadge": "Limited availability",
+    "coreNote": "Core functionality (dashboard, jobs, candidates, pipeline, messages and settings) is always available and cannot be disabled.",
+    "toasts": {
+      "enabled": {
+        "title": "Module enabled",
+        "description": "{{module}} is now enabled for your organisation."
+      },
+      "disabled": {
+        "title": "Module disabled",
+        "description": "{{module}} is now disabled for your organisation."
+      },
+      "error": {
+        "title": "Saving failed",
+        "description": "The change was not saved. Please try again."
+      }
+    },
+    "items": {
+      "recruitToCash": {
+        "title": "Contracts & invoicing",
+        "description": "Contracts, timesheets, invoices, commissions and forecasting."
+      },
+      "outreach": {
+        "title": "Outreach",
+        "description": "Outreach campaigns, sequences and nurture flows."
+      },
+      "sourcingAi": {
+        "title": "AI sourcing",
+        "description": "The AI sourcing agent that finds and suggests candidates."
+      },
+      "voice": {
+        "title": "Telephony",
+        "description": "Calling via the VoIP integration (Twilio)."
+      },
+      "whatsapp": {
+        "title": "WhatsApp",
+        "description": "WhatsApp Business messages to candidates."
+      },
+      "jobBoards": {
+        "title": "Job distribution",
+        "description": "Publish jobs to external job boards."
+      },
+      "careerPages": {
+        "title": "Career pages",
+        "description": "Public career pages with the page builder."
+      },
+      "portals": {
+        "title": "Client portals",
+        "description": "Shareable shortlist portals for your clients."
+      },
+      "reportsAnalytics": {
+        "title": "Reports & analytics",
+        "description": "Report builder, dashboards and analyses."
+      },
+      "compliancePlus": {
+        "title": "GDPR & AI oversight",
+        "description": "GDPR tools, data requests and AI oversight."
       }
     }
   }

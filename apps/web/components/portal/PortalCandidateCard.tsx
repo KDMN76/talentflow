@@ -1,19 +1,24 @@
 /**
  * PortalCandidateCard — kandidaat-kaart in het klantportaal.
  *
+ * PII-beleid: de publieke portal-API levert bewust GEEN e-mail, telefoon of
+ * salaris (zie serializePortalApplication in apps/api). Deze kaart toont dus
+ * alleen naam, skills, matchscore en cv-samenvatting.
+ *
  * Permission-aware rendering:
- *   - view_ai_scores      → AI-score gauge tonen
- *   - view_contact_info   → email/phone tonen (anders anonymized "Kandidaat #X")
+ *   - view_ai_scores        → AI-score badge tonen
+ *   - view_contact_info     → echte naam tonen (anders "Kandidaat #X")
  *   - view_pipeline_history → pipeline-stage badge + timeline
- *   - view_resumes        → "CV bekijken"-knop
- *   - download_cv         → "Downloaden"-knop in CV-modal
- *   - accept_reject       → ✓ Geschikt / ✗ Niet geschikt / ? Twijfel knoppen
- *   - comment             → comment-thread + textarea
+ *   - view_resumes          → cv-samenvatting + "CV bekijken"-knop
+ *   - download_cv           → "Downloaden"-knop in CV-modal
+ *   - accept_reject         → ✓ Geschikt / ✗ Niet geschikt / ? Twijfel knoppen
+ *   - comment               → comment-thread + textarea
  */
 
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   CheckCircle2,
   XCircle,
@@ -23,8 +28,6 @@ import {
   Loader2,
   Send,
   History,
-  Mail,
-  Phone,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
@@ -62,6 +65,7 @@ export function PortalCandidateCard({
   onOpenResume,
   isSubmitting,
 }: PortalCandidateCardProps) {
+  const { t } = useTranslation("portalPublic");
   const [commentOpen, setCommentOpen] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -88,10 +92,9 @@ export function PortalCandidateCard({
 
   const showAiScore =
     permissions.view_ai_scores && typeof application.ai_score === "number";
-  const showContact = permissions.view_contact_info;
-  const displayName = showContact
+  const displayName = permissions.view_contact_info
     ? application.candidate_name
-    : `Kandidaat #${index + 1}`;
+    : t("card.anonymousCandidate", { index: index + 1 });
 
   const given = application.client_feedback;
 
@@ -148,30 +151,17 @@ export function PortalCandidateCard({
               )}
             </div>
 
-            {/* Contact info */}
-            {showContact ? (
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                {application.candidate_email && (
-                  <span className="inline-flex items-center gap-1">
-                    <Mail className="h-3 w-3" />
-                    <span className="break-all">{application.candidate_email}</span>
-                  </span>
-                )}
-                {application.candidate_phone && (
-                  <span className="inline-flex items-center gap-1">
-                    <Phone className="h-3 w-3" />
-                    {application.candidate_phone}
-                  </span>
-                )}
-                {application.applied_at && (
-                  <span>· Gesolliciteerd op {formatDate(application.applied_at)}</span>
-                )}
-              </div>
-            ) : (
-              <p className="text-xs italic text-muted-foreground">
-                Contactgegevens zijn voor jouw toegangsniveau verborgen.
-              </p>
-            )}
+            {/* Meta — bewust géén e-mail/telefoon: PII blijft buiten het portaal. */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              {application.applied_at && (
+                <span>
+                  {t("card.appliedOn", { date: formatDate(application.applied_at) })}
+                </span>
+              )}
+              {!permissions.view_contact_info && (
+                <span className="italic">{t("card.contactHidden")}</span>
+              )}
+            </div>
 
             {/* Skills */}
             {application.skills.length > 0 && (
@@ -187,6 +177,18 @@ export function PortalCandidateCard({
               </div>
             )}
 
+            {/* Cv-samenvatting (alleen met view_resumes-permission geleverd) */}
+            {application.resume_summary && (
+              <div className="rounded-lg bg-zinc-50 p-3 dark:bg-zinc-900/50">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                  {t("card.resumeSummaryTitle")}
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-zinc-700 dark:text-zinc-300">
+                  {application.resume_summary}
+                </p>
+              </div>
+            )}
+
             {/* Pipeline history */}
             {permissions.view_pipeline_history &&
               application.pipeline_history.length > 0 && (
@@ -197,8 +199,13 @@ export function PortalCandidateCard({
                     className="inline-flex items-center gap-1 text-[11px] font-medium text-zinc-500 hover:text-zinc-700 dark:text-zinc-400"
                   >
                     <History className="h-3 w-3" />
-                    {historyOpen ? "Verberg" : "Toon"} pipeline-historie (
-                    {application.pipeline_history.length})
+                    {historyOpen
+                      ? t("card.historyHide", {
+                          count: application.pipeline_history.length,
+                        })
+                      : t("card.historyShow", {
+                          count: application.pipeline_history.length,
+                        })}
                     {historyOpen ? (
                       <ChevronUp className="h-3 w-3" />
                     ) : (
@@ -232,7 +239,7 @@ export function PortalCandidateCard({
                   }
                 >
                   <FileText className="mr-1.5 h-3 w-3" />
-                  CV bekijken
+                  {t("card.viewCv")}
                 </Button>
               </div>
             )}
@@ -257,7 +264,7 @@ export function PortalCandidateCard({
                       ) : (
                         <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
                       )}
-                      Geschikt
+                      {t("card.approve")}
                     </Button>
                     <Button
                       size="sm"
@@ -271,7 +278,7 @@ export function PortalCandidateCard({
                       ) : (
                         <XCircle className="mr-1.5 h-3.5 w-3.5" />
                       )}
-                      Niet geschikt
+                      {t("card.reject")}
                     </Button>
                     <Button
                       size="sm"
@@ -285,7 +292,7 @@ export function PortalCandidateCard({
                       ) : (
                         <HelpCircle className="mr-1.5 h-3.5 w-3.5" />
                       )}
-                      Twijfel
+                      {t("card.doubt")}
                     </Button>
                   </>
                 )}
@@ -296,7 +303,7 @@ export function PortalCandidateCard({
                     onClick={() => setCommentOpen((o) => !o)}
                   >
                     <MessageSquare className="mr-1.5 h-3.5 w-3.5" />
-                    Reageer
+                    {t("card.comment")}
                     {application.comments.length > 0 && (
                       <span className="ml-1 rounded-full bg-zinc-200 px-1.5 text-[10px] font-semibold text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200">
                         {application.comments.length}
@@ -320,7 +327,7 @@ export function PortalCandidateCard({
                         >
                           <div className="flex items-center justify-between gap-2">
                             <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                              {c.author ?? "Anoniem"}
+                              {c.author ?? t("card.anonymous")}
                             </span>
                             <span className="text-[10px] text-zinc-400">
                               {formatDate(c.created_at)}
@@ -338,7 +345,7 @@ export function PortalCandidateCard({
                       <textarea
                         value={commentText}
                         onChange={(e) => setCommentText(e.target.value)}
-                        placeholder="Schrijf je reactie..."
+                        placeholder={t("card.commentPlaceholder")}
                         rows={3}
                         className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
                       />
@@ -357,7 +364,7 @@ export function PortalCandidateCard({
                           ) : (
                             <Send className="mr-1.5 h-3.5 w-3.5" />
                           )}
-                          Plaats reactie
+                          {t("card.commentSubmit")}
                         </Button>
                         <Button
                           size="sm"
@@ -367,7 +374,7 @@ export function PortalCandidateCard({
                             setCommentText("");
                           }}
                         >
-                          Annuleren
+                          {t("card.cancel")}
                         </Button>
                       </div>
                     </div>
@@ -382,6 +389,7 @@ export function PortalCandidateCard({
 }
 
 function AiScoreBadge({ score }: { score: number }) {
+  const { t } = useTranslation("portalPublic");
   const tone =
     score >= 80
       ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400"
@@ -394,9 +402,9 @@ function AiScoreBadge({ score }: { score: number }) {
         "inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold",
         tone
       )}
-      title={`AI-match-score: ${score}/100`}
+      title={t("card.aiScoreTitle", { score })}
     >
-      AI score {score}
+      {t("card.aiScore", { score })}
     </span>
   );
 }
@@ -406,27 +414,28 @@ function FeedbackResultBadge({
 }: {
   action: NonNullable<PortalApplication["client_feedback"]>;
 }) {
+  const { t } = useTranslation("portalPublic");
   const map: Record<
     NonNullable<PortalApplication["client_feedback"]>,
-    { label: string; cls: string }
+    { labelKey: string; cls: string }
   > = {
     approve: {
-      label: "Geschikt — verstuurd",
+      labelKey: "card.sent.approve",
       cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400",
     },
     reject: {
-      label: "Niet geschikt — verstuurd",
+      labelKey: "card.sent.reject",
       cls: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400",
     },
     doubt: {
-      label: "Twijfel — verstuurd",
+      labelKey: "card.sent.doubt",
       cls: "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400",
     },
   };
-  const { label, cls } = map[action];
+  const { labelKey, cls } = map[action];
   return (
     <Badge variant="outline" className={cn("border-0 px-2 py-0.5 text-[11px]", cls)}>
-      {label}
+      {t(labelKey)}
     </Badge>
   );
 }

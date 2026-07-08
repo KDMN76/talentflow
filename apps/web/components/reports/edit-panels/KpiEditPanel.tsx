@@ -1,35 +1,28 @@
 "use client";
 
-import type {
-  DimensionDef,
-  KpiBlockConfig,
-  MetricDef,
-} from "@/lib/types/reports";
+import type { KpiBlock, MetricDef } from "@/lib/types/reports";
 import { Field, Section, SingleSelect } from "./shared";
 import { FilterBuilder } from "../FilterBuilder";
 
 export interface KpiEditPanelProps {
-  config: KpiBlockConfig;
-  onChange: (next: KpiBlockConfig) => void;
+  config: KpiBlock;
+  onChange: (next: KpiBlock) => void;
   metrics: MetricDef[];
-  dimensions: DimensionDef[];
 }
 
-export function KpiEditPanel({
-  config,
-  onChange,
-  metrics,
-  dimensions,
-}: KpiEditPanelProps) {
+export function KpiEditPanel({ config, onChange, metrics }: KpiEditPanelProps) {
+  const setMetric = (key: string) => {
+    const m = metrics.find((x) => x.key === key);
+    if (m) onChange({ ...config, metric: m });
+  };
+
   return (
     <div className="space-y-4">
       <Section title="Metric">
         <Field label="Welk getal toon je?">
           <SingleSelect
-            value={config.metric}
-            onChange={(v) =>
-              onChange({ ...config, metric: v as KpiBlockConfig["metric"] })
-            }
+            value={config.metric?.key ?? ""}
+            onChange={setMetric}
             options={metrics.map((m) => ({ value: m.key, label: m.label }))}
           />
         </Field>
@@ -42,7 +35,8 @@ export function KpiEditPanel({
             onChange={(v) =>
               onChange({
                 ...config,
-                comparison: v as KpiBlockConfig["comparison"],
+                comparison:
+                  v === "none" ? null : (v as "previous_period" | "previous_year"),
               })
             }
             options={[
@@ -58,7 +52,6 @@ export function KpiEditPanel({
         <FilterBuilder
           filters={config.filters ?? []}
           onChange={(filters) => onChange({ ...config, filters })}
-          dimensions={dimensions}
         />
       </Section>
     </div>

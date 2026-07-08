@@ -1,0 +1,67 @@
+{
+  "header": {
+    "title": "API Playground",
+    "description": "Try out endpoints with your own API keys, debug responses and share snippets."
+  },
+  "toasts": {
+    "invalidBodyTitle": "Body is not valid JSON",
+    "invalidBodyDescription": "Check the body editor.",
+    "requestFailedTitle": "Request failed",
+    "unknownError": "Unknown error",
+    "copiedTitle": "Copied",
+    "copiedResponseBody": "Response body copied.",
+    "snippetSavedTitle": "Snippet saved",
+    "snippetLoadedTitle": "Snippet loaded",
+    "curlCopiedTitle": "cURL copied"
+  },
+  "tree": {
+    "searchPlaceholder": "Search endpoint...",
+    "loading": "Loading spec...",
+    "empty": "No endpoints found"
+  },
+  "snippets": {
+    "title": "Saved snippets",
+    "empty": "No snippets saved yet.",
+    "deleteTitle": "Delete"
+  },
+  "emptyState": "Choose an endpoint on the left to get started.",
+  "request": {
+    "snippet": "Snippet",
+    "run": "Run",
+    "pathParamsLabel": "Path parameters",
+    "pathParamPlaceholder": "value for {{name}}",
+    "queryParamsLabel": "Query parameters",
+    "addButton": "+ Add",
+    "noQueryParams": "No query params.",
+    "keyPlaceholder": "key",
+    "valuePlaceholder": "value",
+    "headerPlaceholder": "header",
+    "authLabel": "Authentication",
+    "authJwt": "Own session (JWT)",
+    "authApiKey": "API key",
+    "selectApiKeyPlaceholder": "Choose API key",
+    "apiKeyWarning": "Note: the server proxy uses your session. The plain key is only visible in the generated cURL.",
+    "headersLabel": "Headers",
+    "bodyLabel": "Request body (JSON)"
+  },
+  "response": {
+    "title": "Response",
+    "durationMs": "{{duration}} ms",
+    "copyBody": "Copy body",
+    "empty": "Run a request to see the response here.",
+    "headersToggle": "Headers ({{count}})",
+    "bodyLabel": "Body"
+  },
+  "curlDialog": {
+    "title": "cURL command",
+    "copy": "Copy",
+    "close": "Close"
+  },
+  "saveDialog": {
+    "title": "Save snippet",
+    "nameLabel": "Name",
+    "namePlaceholder": "E.g. List candidates — debug",
+    "cancel": "Cancel",
+    "save": "Save"
+  }
+}

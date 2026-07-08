@@ -1,0 +1,76 @@
+{
+  "oversight": {
+    "header": {
+      "title": "AI-toezicht",
+      "description": "Menselijke controle op geautomatiseerde AI-besluiten (EU AI Act art. 14). Automatische afwijzingen worden hier als voorstel klaargezet — jij beslist."
+    },
+    "queue": {
+      "title": "Beslis-wachtrij",
+      "pendingTab": "Openstaand",
+      "decidedTab": "Beoordeeld",
+      "emptyPending": "Geen openstaande AI-voorstellen — alle geautomatiseerde besluiten zijn beoordeeld.",
+      "emptyDecided": "Nog geen beoordeelde voorstellen.",
+      "proposedAt": "Voorgesteld op",
+      "decidedAt": "Beoordeeld op",
+      "workflow": "Workflow",
+      "targetStage": "Doel-stage",
+      "candidate": "Kandidaat",
+      "job": "Vacature",
+      "trigger": "Trigger",
+      "notePlaceholder": "Optionele toelichting bij je beslissing…",
+      "approve": "Goedkeuren & uitvoeren",
+      "reject": "Afwijzen",
+      "deciding": "Verwerken…",
+      "status": {
+        "pending_review": "Wacht op beoordeling",
+        "approved": "Goedgekeurd",
+        "rejected": "Afgewezen",
+        "failed": "Mislukt"
+      },
+      "executedBadge": "Actie uitgevoerd",
+      "notExecutedBadge": "Actie niet uitgevoerd",
+      "toasts": {
+        "approved": "Voorstel goedgekeurd",
+        "approvedDescription": "De actie is uitgevoerd en vastgelegd in de audit-log.",
+        "approvedNotExecuted": "Voorstel goedgekeurd, maar de actie kon niet worden uitgevoerd (doel bestaat niet meer).",
+        "rejected": "Voorstel afgewezen",
+        "rejectedDescription": "De automatische actie is geblokkeerd en vastgelegd in de audit-log.",
+        "failed": "Beslissing kon niet worden verwerkt",
+        "alreadyDecided": "Dit voorstel is al door iemand anders beoordeeld.",
+        "forbidden": "Alleen recruiters en admins mogen over AI-voorstellen beslissen."
+      }
+    },
+    "retention": {
+      "title": "AI-logging & bewaartermijn",
+      "description": "Elk AI-besluit wordt gelogd in een append-only register (WORM). De EU AI Act vereist minimaal {{months}} maanden bewaring.",
+      "totalEvents": "Gelogde AI-events",
+      "oldestEvent": "Oudste event",
+      "newestEvent": "Nieuwste event",
+      "monthsCovered": "Maanden logging aanwezig",
+      "wormProtected": "Append-only (WORM) — logs kunnen niet gewijzigd of verwijderd worden",
+      "compliant": "Bewaartermijn structureel gegarandeerd",
+      "noEvents": "Nog geen AI-events gelogd"
+    }
+  },
+  "candidateSummary": {
+    "title": "AI-gebruik bij deze kandidaat",
+    "hint": "Transparantie-overzicht (EU AI Act art. 13): welke AI-verwerkingen zijn op deze kandidaat toegepast. Alleen categorieën, datums en modellen — nooit inhoud.",
+    "empty": "Er is geen AI toegepast op deze kandidaat.",
+    "eventCount_one": "{{count}} verwerking",
+    "eventCount_other": "{{count}} verwerkingen",
+    "firstUsed": "Eerste gebruik",
+    "lastUsed": "Laatste gebruik",
+    "models": "Modellen",
+    "disclosure": "De recruiter behoudt bij elk AI-ondersteund besluit het finale oordeel.",
+    "category": {
+      "profile_parsing": "CV-verwerking",
+      "semantic_indexing": "Semantische indexering",
+      "matching": "Matching & match-uitleg",
+      "bias_monitoring": "Bias-monitoring",
+      "content_generation": "Tekstgeneratie",
+      "interview_ai": "Interview-AI",
+      "communication_ai": "Communicatie-AI",
+      "other": "Overig"
+    }
+  }
+}

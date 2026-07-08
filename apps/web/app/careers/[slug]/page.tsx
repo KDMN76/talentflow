@@ -12,6 +12,7 @@ import {
   ArrowRight,
   Loader2,
   AlertCircle,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,11 +29,40 @@ import {
   useSubmitApplication,
   type PublicCareerPageJob,
   type CareerPageTemplate,
+  type CareerPageBlock,
+  type JobsListBlockConfig,
 } from "@/hooks/useCareerPages";
+import { resolveCareerBlocks } from "./careerBlocks";
+import { builderBlockToPublicBlock } from "@/components/career-builder/configToData";
+import { sanitizeColor } from "@/components/career-public/utils";
+import type {
+  PublicBranding,
+  PublicJob,
+  Locale,
+} from "@/components/career-public/types";
+import { PublicHeroBlock } from "@/components/career-public/blocks/PublicHeroBlock";
+import { PublicFeaturesBlock } from "@/components/career-public/blocks/PublicFeaturesBlock";
+import { PublicAboutBlock } from "@/components/career-public/blocks/PublicAboutBlock";
+import { PublicTestimonialsBlock } from "@/components/career-public/blocks/PublicTestimonialsBlock";
+import { PublicCtaBlock } from "@/components/career-public/blocks/PublicCtaBlock";
+import { PublicFooterBlock } from "@/components/career-public/blocks/PublicFooterBlock";
+import { PublicCustomHtmlBlock } from "@/components/career-public/blocks/PublicCustomHtmlBlock";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function formatSalary(min: number | null, max: number | null): string | null {
+// EU 2023/970 art. 5: kandidaten moeten de band én de periode kunnen
+// interpreteren — de frequentie hoort dus bij de salarisweergave.
+const FREQUENCY_SUFFIX: Record<string, string> = {
+  monthly: "per maand",
+  annual: "per jaar",
+  hourly: "per uur",
+};
+
+function formatSalary(
+  min: number | null,
+  max: number | null,
+  frequency: string | null
+): string | null {
   if (!min && !max) return null;
   const fmt = (n: number) =>
     new Intl.NumberFormat("nl-NL", {
@@ -40,9 +70,11 @@ function formatSalary(min: number | null, max: number | null): string | null {
       currency: "EUR",
       maximumFractionDigits: 0,
     }).format(n);
-  if (min && max) return `${fmt(min)} – ${fmt(max)}`;
-  if (min) return `Vanaf ${fmt(min)}`;
-  if (max) return `Tot ${fmt(max)}`;
+  const suffix = frequency ? FREQUENCY_SUFFIX[frequency] ?? "" : "";
+  const withSuffix = (s: string) => (suffix ? `${s} ${suffix}` : s);
+  if (min && max) return withSuffix(`${fmt(min)} – ${fmt(max)}`);
+  if (min) return withSuffix(`Vanaf ${fmt(min)}`);
+  if (max) return withSuffix(`Tot ${fmt(max)}`);
   return null;
 }
 
@@ -200,6 +232,225 @@ function HeroSection({
       </div>
     </section>
   );
+}
+
+// ─── Job card + jobs section ──────────────────────────────────────────────────
+// Gedeeld tussen de vaste template (fallback) en het jobs_list-blok, zodat de
+// pay-transparency-weergave (band + frequentie + beloningscriteria) op één plek
+// staat en overal identiek is.
+
+function JobCard({
+  job,
+  primaryColor,
+  onApply,
+}: {
+  job: PublicCareerPageJob;
+  primaryColor: string;
+  onApply: (job: PublicCareerPageJob) => void;
+}) {
+  const salary = formatSalary(
+    job.salary_min,
+    job.salary_max,
+    job.salary_frequency
+  );
+  const empType = employmentTypeLabel(job.employment_type);
+  return (
+    <div className="group flex flex-col gap-4 rounded-xl border bg-white dark:bg-zinc-950 p-5 shadow-sm hover:shadow-md transition-all md:flex-row md:items-center md:justify-between">
+      <div className="flex-1 min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+            {job.title}
+          </h3>
+          {empType && (
+            <span
+              className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+              style={{
+                backgroundColor: `${primaryColor}15`,
+                color: primaryColor,
+              }}
+            >
+              {empType}
+            </span>
+          )}
+        </div>
+
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          {job.department && (
+            <div className="flex items-center gap-1.5">
+              <Building2 className="h-3.5 w-3.5" />
+              {job.department}
+            </div>
+          )}
+          {job.location && (
+            <div className="flex items-center gap-1.5">
+              <MapPin className="h-3.5 w-3.5" />
+              {job.location}
+            </div>
+          )}
+          {salary && (
+            <div className="flex items-center gap-1.5">
+              <Banknote className="h-3.5 w-3.5" />
+              {salary}
+            </div>
+          )}
+        </div>
+
+        <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2 leading-relaxed">
+          {job.description}
+        </p>
+
+        {/* Beloningscriteria (EU 2023/970 art. 5) — hoe de
+            beloning wordt bepaald, publiek zichtbaar. */}
+        {job.compensation_criteria && (
+          <p className="mt-2 text-xs text-muted-foreground leading-relaxed line-clamp-2">
+            <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+              Beloningscriteria:
+            </span>{" "}
+            {job.compensation_criteria}
+          </p>
+        )}
+      </div>
+
+      <button
+        onClick={() => onApply(job)}
+        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:scale-105"
+        style={{ backgroundColor: primaryColor }}
+      >
+        Solliciteer
+        <ArrowRight className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
+function JobsSection({
+  jobs,
+  primaryColor,
+  onApply,
+  grow = false,
+  id = "vacatures",
+}: {
+  jobs: PublicCareerPageJob[];
+  primaryColor: string;
+  onApply: (job: PublicCareerPageJob) => void;
+  grow?: boolean;
+  id?: string;
+}) {
+  return (
+    <section
+      id={id}
+      className={`max-w-5xl mx-auto w-full px-6 py-16 ${grow ? "flex-1" : ""}`}
+    >
+      {/* Extra anker: builder-hero/cta-blokken linken standaard naar #jobs. */}
+      <span id="jobs" aria-hidden className="block h-0 scroll-mt-16" />
+      <div className="flex items-end justify-between mb-8">
+        <div>
+          <h2 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+            Open vacatures
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {jobs.length}{" "}
+            {jobs.length === 1 ? "openstaande positie" : "openstaande posities"}
+          </p>
+        </div>
+      </div>
+
+      {jobs.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-16 text-center">
+          <Briefcase className="h-10 w-10 text-muted-foreground/40 mb-3" />
+          <p className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+            Op dit moment geen vacatures
+          </p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Kom later terug — we groeien snel.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {jobs.map((job) => (
+            <JobCard
+              key={job.id}
+              job={job}
+              primaryColor={primaryColor}
+              onApply={onApply}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ─── Block renderer ───────────────────────────────────────────────────────────
+// Rendert builder-blocks blok-voor-blok. Presentatie-blokken (hero, features,
+// about, testimonials, cta, footer, custom_html) hergebruiken exact dezelfde
+// publieke renderers als de builder-preview → WYSIWYG-pariteit. Het jobs_list-
+// blok gebruikt de eigen JobsSection zodat band + beloningscriteria zichtbaar
+// blijven en de solliciteer-knop de disclosure-dialog opent.
+
+function CareerBlockRenderer({
+  block,
+  jobs,
+  branding,
+  locale,
+  slug,
+  careerPageId,
+  primaryColor,
+  onApply,
+}: {
+  block: CareerPageBlock;
+  jobs: PublicCareerPageJob[];
+  branding: PublicBranding;
+  locale: Locale;
+  slug: string;
+  careerPageId: string;
+  primaryColor: string;
+  onApply: (job: PublicCareerPageJob) => void;
+}) {
+  if (block.type === "jobs_list") {
+    const cfg = block.config as JobsListBlockConfig;
+    let list = jobs.slice();
+    const dept = cfg.filter?.department?.trim().toLowerCase();
+    if (dept) {
+      list = list.filter((j) => (j.department ?? "").toLowerCase() === dept);
+    }
+    if (cfg.limit && cfg.limit > 0) {
+      list = list.slice(0, cfg.limit);
+    }
+    return (
+      <JobsSection jobs={list} primaryColor={primaryColor} onApply={onApply} />
+    );
+  }
+
+  // Presentatie-blokken: adapteer builder-config → publieke `data` en render
+  // de bestaande publieke renderer. Deze gebruiken geen `jobs`.
+  const publicBlock = builderBlockToPublicBlock(block);
+  const props = {
+    block: publicBlock,
+    jobs: [] as PublicJob[],
+    branding,
+    locale,
+    slug,
+    careerPageId,
+  };
+  switch (block.type) {
+    case "hero":
+      return <PublicHeroBlock {...props} />;
+    case "features":
+      return <PublicFeaturesBlock {...props} />;
+    case "about":
+      return <PublicAboutBlock {...props} />;
+    case "testimonials":
+      return <PublicTestimonialsBlock {...props} />;
+    case "cta":
+      return <PublicCtaBlock {...props} />;
+    case "footer":
+      return <PublicFooterBlock {...props} />;
+    case "custom_html":
+      return <PublicCustomHtmlBlock {...props} />;
+    default:
+      return null;
+  }
 }
 
 // ─── Application Form ────────────────────────────────────────────────────────
@@ -427,6 +678,23 @@ function ApplicationDialog({
                 />
               </div>
 
+              {/* EU AI Act art. 13 — transparantie richting kandidaat: AI
+                  ondersteunt de behandeling van sollicitaties, een mens
+                  neemt het besluit. Publieke pagina is NL (net als de rest
+                  van deze pagina). */}
+              <div className="flex items-start gap-2 rounded-lg bg-zinc-50 dark:bg-zinc-800/40 border border-border px-3 py-2.5">
+                <Sparkles
+                  className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                  style={{ color: primaryColor }}
+                />
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Bij de behandeling van je sollicitatie wordt AI gebruikt ter
+                  ondersteuning (zoals CV-verwerking en het matchen met
+                  vacatures). Beslissingen over je sollicitatie worden altijd
+                  door een mens genomen en gecontroleerd. (EU AI Act art. 13)
+                </p>
+              </div>
+
               <div className="flex justify-end gap-2 pt-2">
                 <Button type="button" variant="outline" onClick={onClose}>
                   Annuleren
@@ -496,127 +764,81 @@ export default function PublicCareerPage() {
     cfg.intro_text ||
     "Ontdek vacatures die bij je passen en solliciteer in één klik.";
 
+  // Builder-blocks (config.blocks) → render blok-voor-blok. Zonder bruikbare
+  // blocks valt de pagina terug op de vaste template.
+  const blocks = resolveCareerBlocks(cfg);
+
+  const branding: PublicBranding = {
+    brand_name: company_name,
+    logo_url: cfg.logo_url ?? null,
+    primary_color: primaryColor,
+    accent_color: null,
+    font_family: fontFamily,
+  };
+  const locale: Locale = career_page.language === "en" ? "en" : "nl";
+
+  // De publieke block-renderers stylen via `--brand-primary`; zet die var op
+  // een wrapper zodat ze de tenant-kleur oppikken (dezelfde bron als de
+  // builder-preview, die de var via een <style>-tag zet).
+  const brandStyle: React.CSSProperties & Record<`--${string}`, string> = {
+    fontFamily,
+    "--brand-primary": sanitizeColor(primaryColor) ?? "#6366f1",
+    "--brand-accent": sanitizeColor(primaryColor) ?? "#6366f1",
+  };
+
   return (
     <div className="min-h-screen flex flex-col" style={{ fontFamily }}>
-      <HeroSection
-        template={career_page.template}
-        primaryColor={primaryColor}
-        fontFamily={fontFamily}
-        headerText={headerText}
-        introText={introText}
-        companyName={company_name}
-        logoUrl={cfg.logo_url}
-      />
-
-      {/* Jobs */}
-      <section
-        id="vacatures"
-        className="flex-1 max-w-5xl mx-auto w-full px-6 py-16"
-      >
-        <div className="flex items-end justify-between mb-8">
-          <div>
-            <h2 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
-              Open vacatures
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {jobs.length} {jobs.length === 1 ? "openstaande positie" : "openstaande posities"}
-            </p>
-          </div>
+      {blocks ? (
+        <div className="flex flex-1 flex-col" style={brandStyle}>
+          {blocks.map((block) => (
+            <CareerBlockRenderer
+              key={block.id}
+              block={block}
+              jobs={jobs}
+              branding={branding}
+              locale={locale}
+              slug={slug}
+              careerPageId={career_page.id}
+              primaryColor={primaryColor}
+              onApply={setActiveJob}
+            />
+          ))}
         </div>
+      ) : (
+        <>
+          <HeroSection
+            template={career_page.template}
+            primaryColor={primaryColor}
+            fontFamily={fontFamily}
+            headerText={headerText}
+            introText={introText}
+            companyName={company_name}
+            logoUrl={cfg.logo_url}
+          />
 
-        {jobs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-16 text-center">
-            <Briefcase className="h-10 w-10 text-muted-foreground/40 mb-3" />
-            <p className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-              Op dit moment geen vacatures
-            </p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Kom later terug — we groeien snel.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {jobs.map((job) => {
-              const salary = formatSalary(job.salary_min, job.salary_max);
-              const empType = employmentTypeLabel(job.employment_type);
-              return (
-                <div
-                  key={job.id}
-                  className="group flex flex-col gap-4 rounded-xl border bg-white dark:bg-zinc-950 p-5 shadow-sm hover:shadow-md transition-all md:flex-row md:items-center md:justify-between"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                        {job.title}
-                      </h3>
-                      {empType && (
-                        <span
-                          className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
-                          style={{
-                            backgroundColor: `${primaryColor}15`,
-                            color: primaryColor,
-                          }}
-                        >
-                          {empType}
-                        </span>
-                      )}
-                    </div>
+          <JobsSection
+            jobs={jobs}
+            primaryColor={primaryColor}
+            onApply={setActiveJob}
+            grow
+          />
 
-                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                      {job.department && (
-                        <div className="flex items-center gap-1.5">
-                          <Building2 className="h-3.5 w-3.5" />
-                          {job.department}
-                        </div>
-                      )}
-                      {job.location && (
-                        <div className="flex items-center gap-1.5">
-                          <MapPin className="h-3.5 w-3.5" />
-                          {job.location}
-                        </div>
-                      )}
-                      {salary && (
-                        <div className="flex items-center gap-1.5">
-                          <Banknote className="h-3.5 w-3.5" />
-                          {salary}
-                        </div>
-                      )}
-                    </div>
-
-                    <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400 line-clamp-2 leading-relaxed">
-                      {job.description}
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={() => setActiveJob(job)}
-                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:scale-105"
-                    style={{ backgroundColor: primaryColor }}
-                  >
-                    Solliciteer
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t bg-zinc-50 dark:bg-zinc-900/50 py-8">
-        <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} {company_name}. Alle rechten voorbehouden.
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Career page powered by{" "}
-            <span className="font-semibold text-zinc-900 dark:text-zinc-100">
-              TalentFlow
-            </span>
-          </p>
-        </div>
-      </footer>
+          {/* Footer */}
+          <footer className="border-t bg-zinc-50 dark:bg-zinc-900/50 py-8">
+            <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">
+                © {new Date().getFullYear()} {company_name}. Alle rechten voorbehouden.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Career page powered by{" "}
+                <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                  TalentFlow
+                </span>
+              </p>
+            </div>
+          </footer>
+        </>
+      )}
 
       <ApplicationDialog
         job={activeJob}

@@ -2,17 +2,16 @@
 
 import type {
   DimensionDef,
-  DimensionKey,
   MetricDef,
-  PieBlockConfig,
+  PieBlock,
 } from "@/lib/types/reports";
 import { Field, Section, SingleSelect } from "./shared";
 import { Input } from "@/components/ui/input";
 import { FilterBuilder } from "../FilterBuilder";
 
 export interface PieEditPanelProps {
-  config: PieBlockConfig;
-  onChange: (next: PieBlockConfig) => void;
+  config: PieBlock;
+  onChange: (next: PieBlock) => void;
   metrics: MetricDef[];
   dimensions: DimensionDef[];
 }
@@ -23,15 +22,23 @@ export function PieEditPanel({
   metrics,
   dimensions,
 }: PieEditPanelProps) {
+  const setMetric = (key: string) => {
+    const m = metrics.find((x) => x.key === key);
+    if (m) onChange({ ...config, metric: m });
+  };
+
+  const setGroupBy = (key: string) => {
+    const d = dimensions.find((x) => x.key === key);
+    if (d) onChange({ ...config, group_by: d });
+  };
+
   return (
     <div className="space-y-4">
       <Section title="Metric">
         <Field label="Welk getal verdelen we?">
           <SingleSelect
-            value={config.metric}
-            onChange={(v) =>
-              onChange({ ...config, metric: v as PieBlockConfig["metric"] })
-            }
+            value={config.metric?.key ?? ""}
+            onChange={setMetric}
             options={metrics.map((m) => ({ value: m.key, label: m.label }))}
           />
         </Field>
@@ -40,10 +47,8 @@ export function PieEditPanel({
       <Section title="Verdeel per">
         <Field label="Dimensie">
           <SingleSelect
-            value={config.group_by}
-            onChange={(v) =>
-              onChange({ ...config, group_by: v as DimensionKey })
-            }
+            value={config.group_by?.key ?? ""}
+            onChange={setGroupBy}
             options={dimensions.map((d) => ({ value: d.key, label: d.label }))}
           />
         </Field>
@@ -66,7 +71,6 @@ export function PieEditPanel({
         <FilterBuilder
           filters={config.filters ?? []}
           onChange={(filters) => onChange({ ...config, filters })}
-          dimensions={dimensions}
         />
       </Section>
     </div>

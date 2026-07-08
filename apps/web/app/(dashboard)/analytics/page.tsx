@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/select";
 import { cn, getInitials } from "@/lib/utils";
 import { useTenantUsers } from "@/hooks/useUsers";
+import { AiBiasTab } from "@/components/analytics/AiBiasTab";
 
 import {
   useAnalyticsOverview,
@@ -701,6 +702,12 @@ export default function AnalyticsPage() {
           >
             {t("tabs.trends")}
           </TabsTrigger>
+          <TabsTrigger
+            value="ai-bias"
+            className="data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:shadow-sm px-5"
+          >
+            {t("tabs.aiBias")}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overzicht">
@@ -713,6 +720,13 @@ export default function AnalyticsPage() {
 
         <TabsContent value="trends">
           <TrendsTab filters={filters} />
+        </TabsContent>
+
+        <TabsContent value="ai-bias">
+          {/* Q4.6 — EU AI Act bias-monitoring: 4/5-regel, AI-gebruik,
+              match-score-verdeling. Volgt het periode-filter (recruiter-
+              filter is hier niet van toepassing: bias meet je bureau-breed). */}
+          <AiBiasTab filters={{ from: filters.from, to: filters.to }} />
         </TabsContent>
       </Tabs>
     </div>

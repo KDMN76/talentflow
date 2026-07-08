@@ -1,0 +1,90 @@
+{
+  "header": {
+    "title": "Integraties — koppel je mailbox aan TalentFlow",
+    "description": "Verbind Gmail of Outlook om mails direct vanuit TalentFlow te versturen en replies automatisch in te lezen.",
+    "refresh": "Vernieuwen"
+  },
+  "stats": {
+    "connectedLabel": "Verbonden mailboxes",
+    "connectedEmpty": "Nog geen mailboxes gekoppeld",
+    "connectedActive": "Actief en klaar voor verzending",
+    "syncedLabel": "Emails gesynced (24u)",
+    "syncedHint": "Inkomende + uitgaande mails via gekoppelde accounts"
+  },
+  "errorState": {
+    "title": "Integraties konden niet worden geladen",
+    "description": "Controleer je verbinding en probeer het opnieuw."
+  },
+  "errorReasons": {
+    "access_denied": "Toestemming geweigerd. Probeer het opnieuw en sta de gevraagde rechten toe.",
+    "invalid_state": "OAuth-sessie verlopen. Start de koppeling opnieuw.",
+    "token_exchange_failed": "Token-uitwisseling met de provider mislukte.",
+    "scope_missing": "Niet alle benodigde rechten zijn verleend.",
+    "unknown": "Er ging iets mis bij het verbinden."
+  },
+  "providers": {
+    "gmailDescription": "Verbind je Gmail om mails direct vanuit TalentFlow te versturen en replies automatisch in te lezen.",
+    "outlookDescription": "Verbind je Microsoft 365 / Outlook-postvak om vanuit TalentFlow te corresponderen."
+  },
+  "toasts": {
+    "connected": {
+      "title": "Mailbox verbonden",
+      "description": "Je e-mailaccount is gekoppeld aan TalentFlow en kan nu gebruikt worden voor verzending."
+    },
+    "connectFailed": {
+      "title": "Verbinden mislukt"
+    },
+    "oauthFailed": {
+      "title": "Kon OAuth niet starten",
+      "description": "Probeer het later opnieuw of neem contact op met support."
+    },
+    "disconnected": {
+      "title": "Mailbox losgekoppeld",
+      "description": "{{email}} is niet meer verbonden."
+    },
+    "disconnectFailed": {
+      "title": "Loskoppelen mislukt",
+      "description": "Probeer het opnieuw."
+    }
+  },
+  "disclosure": {
+    "title": "We krijgen alleen toegang tot mails versturen + lezen",
+    "description": "Geen agenda, geen contacten, geen Drive-bestanden. Tokens worden versleuteld opgeslagen en kun je elk moment intrekken.",
+    "details": "Details"
+  },
+  "scopes": {
+    "gmailTitle": "Gmail-scopes",
+    "outlookTitle": "Outlook-scopes",
+    "gmailSend": "— versturen namens jouw account",
+    "gmailReadonly": "— alleen lezen om replies van kandidaten te koppelen",
+    "outlookSend": "— versturen namens jouw account",
+    "outlookRead": "— alleen lezen om replies van kandidaten te koppelen",
+    "footer": "Tokens worden versleuteld opgeslagen (AES-256-GCM) en nooit gedeeld met derden. Bij \"Disconnect\" verwijderen we het token onmiddellijk uit onze database."
+  },
+  "disconnectDialog": {
+    "title": "Mailbox loskoppelen?",
+    "body": "wordt losgekoppeld. Lopende campagnes via dit account worden gepauzeerd. Je kunt later opnieuw verbinden.",
+    "cancel": "Annuleren",
+    "confirm": "Loskoppelen"
+  },
+  "providerCard": {
+    "limit": "Limiet: {{limit}} mails/uur",
+    "connectedBadge_one": "{{count}} verbonden",
+    "connectedBadge_other": "{{count}} verbonden",
+    "loading": "Laden…",
+    "emptyAccount": "Nog geen {{name}}-account verbonden.",
+    "lastSync": "Laatste sync:",
+    "notYet": "nog niet",
+    "disconnect": "Disconnect",
+    "connectButton": "Verbind {{name}}-account"
+  },
+  "relative": {
+    "justNow": "zojuist",
+    "minutesAgo_one": "{{count}} min geleden",
+    "minutesAgo_other": "{{count}} min geleden",
+    "hoursAgo_one": "{{count}} uur geleden",
+    "hoursAgo_other": "{{count}} uur geleden",
+    "daysAgo_one": "{{count}} dag geleden",
+    "daysAgo_other": "{{count}} dagen geleden"
+  }
+}

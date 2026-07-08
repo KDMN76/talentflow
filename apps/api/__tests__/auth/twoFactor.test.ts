@@ -20,6 +20,9 @@ import {
 import {
   generateBackupCodes,
   verifyTotp,
+  verifyTotpDelta,
+  matchedStepStart,
+  TOTP_STEP_MS,
   generateSecret,
   buildOtpauthUri,
   normalizeBackupCode,
@@ -59,6 +62,34 @@ describe('totp lib — primitives', () => {
   it('normalizeBackupCode strips dashes and uppercases', () => {
     expect(normalizeBackupCode('abcd-efgh')).toBe('ABCDEFGH');
     expect(normalizeBackupCode(' ABCD EFGH ')).toBe('ABCDEFGH');
+  });
+
+  it('verifyTotpDelta: geeft tijdstap-delta voor geldige code, null voor rommel', () => {
+    const s = generateSecret();
+    const code = authenticator.generate(s);
+    const delta = verifyTotpDelta(s, code);
+    expect(delta).not.toBeNull();
+    // Code van "nu" matcht op delta 0 (of ±1 vlak rond een stapgrens).
+    expect([-1, 0, 1]).toContain(delta);
+    expect(verifyTotpDelta(s, '000000')).toBeNull();
+    expect(verifyTotpDelta(s, 'abc')).toBeNull();
+  });
+
+  it('verifyTotpDelta: weigert een vervallen code (buiten window ±1)', () => {
+    const s = generateSecret();
+    // Code van 5 minuten geleden — 10 tijdstappen terug, ver buiten window=1.
+    const old = authenticator.clone({ epoch: Date.now() - 5 * 60_000 });
+    const expired = old.generate(s);
+    expect(verifyTotpDelta(s, expired)).toBeNull();
+    expect(verifyTotp(s, expired)).toBe(false);
+  });
+
+  it('matchedStepStart: mapt delta naar de start van de juiste tijdstap', () => {
+    const now = 1_750_000_000_000; // vaste timestamp voor determinisme
+    const currentStep = Math.floor(now / TOTP_STEP_MS) * TOTP_STEP_MS;
+    expect(matchedStepStart(0, now)).toBe(currentStep);
+    expect(matchedStepStart(-1, now)).toBe(currentStep - TOTP_STEP_MS);
+    expect(matchedStepStart(1, now)).toBe(currentStep + TOTP_STEP_MS);
   });
 });
 
@@ -120,13 +151,14 @@ describe('twoFactor.service — verifyTotpAndEnable', () => {
   let teardown: () => void;
   afterEach(() => teardown?.());
 
-  it('schakelt 2FA aan bij geldige code', async () => {
+  it('schakelt 2FA aan bij geldige code en persisteert last_totp_step (replay-guard)', async () => {
     const secret = generateSecret();
     const code = authenticator.generate(secret);
     let updated = false;
+    let persistedStep: unknown;
 
     const client = mockClient({
-      __matcher: (sql) => {
+      __matcher: (sql, params) => {
         if (/SELECT id, tenant_id, email, role FROM users/i.test(sql)) {
           return {
             rows: [{ id: USER_ID, tenant_id: TENANT_ID, email: 'a@b.nl', role: 'admin' }],
@@ -144,6 +176,7 @@ describe('twoFactor.service — verifyTotpAndEnable', () => {
                 backup_codes: [],
                 enabled_at: null,
                 last_used_at: null,
+                last_totp_step: null,
               },
             ],
             rowCount: 1,
@@ -151,6 +184,7 @@ describe('twoFactor.service — verifyTotpAndEnable', () => {
         }
         if (/UPDATE user_2fa_secrets\s+SET enabled = TRUE/i.test(sql)) {
           updated = true;
+          persistedStep = params[1];
           return { rows: [], rowCount: 1 };
         }
         return { rows: [], rowCount: 0 };
@@ -161,6 +195,9 @@ describe('twoFactor.service — verifyTotpAndEnable', () => {
     const ok = await verifyTotpAndEnable(USER_ID, code);
     expect(ok).toBe(true);
     expect(updated).toBe(true);
+    // De gematchte tijdstap wordt opgeslagen: ms-epoch, veelvoud van 30s.
+    expect(typeof persistedStep).toBe('number');
+    expect((persistedStep as number) % TOTP_STEP_MS).toBe(0);
   });
 
   it('weigert ongeldige code met 401', async () => {
@@ -334,53 +371,111 @@ describe('twoFactor.service — disable2fa + regenerateBackupCodes', () => {
   let teardown: () => void;
   afterEach(() => teardown?.());
 
-  it('disable2fa wist de row na geldige TOTP', async () => {
+  const PASSWORD = 'Correct!123';
+  // bcrypt-mock in setup.ts: compare(pw, hash) matcht wanneer hash === `bcrypt$${pw}`.
+  const PASSWORD_HASH = `bcrypt$${PASSWORD}`;
+
+  /**
+   * Matcher voor de disable-flow: user-lookup, password_hash-lookup,
+   * 2FA-row en DELETE. `state.deleted` legt vast of de row gewist is.
+   */
+  function disableMatcher(
+    secret: string,
+    state: { deleted: boolean },
+    backupCodes: string[] = []
+  ) {
+    return (sql: string) => {
+      if (/SELECT password_hash FROM users/i.test(sql)) {
+        return { rows: [{ password_hash: PASSWORD_HASH }], rowCount: 1 };
+      }
+      if (/SELECT id, tenant_id, email, role FROM users/i.test(sql)) {
+        return {
+          rows: [{ id: USER_ID, tenant_id: TENANT_ID, email: 'a@b.nl', role: 'admin' }],
+          rowCount: 1,
+        };
+      }
+      if (/SELECT user_id, tenant_id, secret/i.test(sql)) {
+        return {
+          rows: [
+            {
+              user_id: USER_ID,
+              tenant_id: TENANT_ID,
+              secret,
+              enabled: true,
+              backup_codes: backupCodes,
+              enabled_at: new Date(),
+              last_used_at: null,
+              last_totp_step: null,
+            },
+          ],
+          rowCount: 1,
+        };
+      }
+      if (/DELETE FROM user_2fa_secrets/i.test(sql)) {
+        state.deleted = true;
+        return { rows: [], rowCount: 1 };
+      }
+      return { rows: [], rowCount: 0 };
+    };
+  }
+
+  it('disable2fa wist de row na geldig wachtwoord + geldige TOTP', async () => {
     const secret = generateSecret();
     const code = authenticator.generate(secret);
-    let deleted = false;
-    const client = mockClient({
-      __matcher: (sql) => {
-        if (/SELECT id, tenant_id, email, role FROM users/i.test(sql)) {
-          return {
-            rows: [{ id: USER_ID, tenant_id: TENANT_ID, email: 'a@b.nl', role: 'admin' }],
-            rowCount: 1,
-          };
-        }
-        if (/SELECT user_id, tenant_id, secret/i.test(sql)) {
-          return {
-            rows: [
-              {
-                user_id: USER_ID,
-                tenant_id: TENANT_ID,
-                secret,
-                enabled: true,
-                backup_codes: [],
-                enabled_at: new Date(),
-                last_used_at: null,
-              },
-            ],
-            rowCount: 1,
-          };
-        }
-        if (/DELETE FROM user_2fa_secrets/i.test(sql)) {
-          deleted = true;
-          return { rows: [], rowCount: 1 };
-        }
-        return { rows: [], rowCount: 0 };
-      },
-    });
-    teardown = installPoolMock(client);
+    const state = { deleted: false };
+    teardown = installPoolMock(mockClient({ __matcher: disableMatcher(secret, state) }));
 
-    await disable2fa(USER_ID, code);
-    expect(deleted).toBe(true);
+    await disable2fa(USER_ID, code, PASSWORD);
+    expect(state.deleted).toBe(true);
   });
 
-  it('regenerateBackupCodes vereist TOTP en geeft 10 nieuwe codes', async () => {
+  it('disable2fa weigert bij fout wachtwoord (401 INVALID_PASSWORD), ook met geldige TOTP', async () => {
     const secret = generateSecret();
     const code = authenticator.generate(secret);
+    const state = { deleted: false };
+    teardown = installPoolMock(mockClient({ __matcher: disableMatcher(secret, state) }));
+
+    await expect(disable2fa(USER_ID, code, 'fout-wachtwoord')).rejects.toMatchObject({
+      statusCode: 401,
+      code: 'INVALID_PASSWORD',
+    });
+    expect(state.deleted).toBe(false);
+  });
+
+  it('disable2fa accepteert een backup-code als tweede factor (lost-device-fallback)', async () => {
+    const secret = generateSecret();
+    const backupCode = 'AAAA-BBBB';
+    const backupHash = `bcrypt$${normalizeBackupCode(backupCode)}`;
+    const state = { deleted: false };
+    teardown = installPoolMock(
+      mockClient({ __matcher: disableMatcher(secret, state, [backupHash]) })
+    );
+
+    await disable2fa(USER_ID, backupCode, PASSWORD);
+    expect(state.deleted).toBe(true);
+  });
+
+  it('disable2fa weigert wanneer noch TOTP noch backup-code klopt (401 INVALID_2FA_CODE)', async () => {
+    const secret = generateSecret();
+    const state = { deleted: false };
+    teardown = installPoolMock(
+      mockClient({ __matcher: disableMatcher(secret, state, ['bcrypt$NOMATCH']) })
+    );
+
+    await expect(disable2fa(USER_ID, '000000', PASSWORD)).rejects.toMatchObject({
+      statusCode: 401,
+      code: 'INVALID_2FA_CODE',
+    });
+    expect(state.deleted).toBe(false);
+  });
+
+  it('regenerateBackupCodes vereist TOTP, geeft 10 nieuwe codes en persisteert last_totp_step', async () => {
+    const secret = generateSecret();
+    const code = authenticator.generate(secret);
+    let persistedStep: unknown;
 
     const client = mockClient({
-      __matcher: (sql) => {
+      __matcher: (sql, params) => {
         if (/SELECT id, tenant_id, email, role FROM users/i.test(sql)) {
           return {
             rows: [{ id: USER_ID, tenant_id: TENANT_ID, email: 'a@b.nl', role: 'admin' }],
@@ -398,10 +493,15 @@ describe('twoFactor.service — disable2fa + regenerateBackupCodes', () => {
                 backup_codes: [],
                 enabled_at: new Date(),
                 last_used_at: null,
+                last_totp_step: null,
               },
             ],
             rowCount: 1,
           };
+        }
+        if (/UPDATE user_2fa_secrets SET backup_codes/i.test(sql)) {
+          persistedStep = params[2];
+          return { rows: [], rowCount: 1 };
         }
         return { rows: [], rowCount: 0 };
       },
@@ -410,6 +510,157 @@ describe('twoFactor.service — disable2fa + regenerateBackupCodes', () => {
 
     const newCodes = await regenerateBackupCodes(USER_ID, code);
     expect(newCodes).toHaveLength(10);
+    // De regenerate-code consumeert ook z'n tijdstap (replay-guard).
+    expect(typeof persistedStep).toBe('number');
+    expect((persistedStep as number) % TOTP_STEP_MS).toBe(0);
+  });
+});
+
+describe('twoFactor.service — TOTP replay-protectie (migration 047)', () => {
+  let teardown: () => void;
+  afterEach(() => teardown?.());
+
+  /**
+   * Stateful mock: `last_totp_step` en `enabled` overleven meerdere calls,
+   * zoals de echte DB-row dat doet. UPDATEs schrijven de state terug.
+   */
+  function statefulMatcher(
+    secret: string,
+    state: { enabled: boolean; lastStep: number | null }
+  ) {
+    return (sql: string, params: unknown[]) => {
+      if (/SELECT id, tenant_id, email, role FROM users/i.test(sql)) {
+        return {
+          rows: [{ id: USER_ID, tenant_id: TENANT_ID, email: 'a@b.nl', role: 'admin' }],
+          rowCount: 1,
+        };
+      }
+      if (/SELECT user_id, tenant_id, secret/i.test(sql)) {
+        return {
+          rows: [
+            {
+              user_id: USER_ID,
+              tenant_id: TENANT_ID,
+              secret,
+              enabled: state.enabled,
+              backup_codes: [],
+              enabled_at: state.enabled ? new Date() : null,
+              last_used_at: null,
+              last_totp_step: state.lastStep,
+            },
+          ],
+          rowCount: 1,
+        };
+      }
+      if (/UPDATE user_2fa_secrets\s+SET enabled = TRUE/i.test(sql)) {
+        state.enabled = true;
+        state.lastStep = params[1] as number;
+        return { rows: [], rowCount: 1 };
+      }
+      // Login-consumptie is nu een conditionele UPDATE (last_totp_step eerst).
+      if (/UPDATE user_2fa_secrets\s+SET last_totp_step/i.test(sql)) {
+        const step = params[1] as number;
+        if (state.lastStep === null || state.lastStep < step) {
+          state.lastStep = step;
+          return { rows: [], rowCount: 1 };
+        }
+        return { rows: [], rowCount: 0 };
+      }
+      return { rows: [], rowCount: 0 };
+    };
+  }
+
+  it('verifyTotpCode: accepteert een code één keer, weigert replay van dezelfde code', async () => {
+    const secret = generateSecret();
+    const code = authenticator.generate(secret);
+    const state = { enabled: true, lastStep: null as number | null };
+    teardown = installPoolMock(mockClient({ __matcher: statefulMatcher(secret, state) }));
+
+    expect(await verifyTotpCode(USER_ID, code)).toBe(true);
+    expect(state.lastStep).not.toBeNull();
+    expect((state.lastStep as number) % TOTP_STEP_MS).toBe(0);
+    // Zelfde code nogmaals: cryptografisch geldig, maar tijdstap is geconsumeerd.
+    expect(await verifyTotpCode(USER_ID, code)).toBe(false);
+  });
+
+  it('verifyTotpCode: weigert codes uit een oudere tijdstap dan last_totp_step', async () => {
+    const secret = generateSecret();
+    const code = authenticator.generate(secret);
+    // last_totp_step staat al ná de huidige tijdstap (delta +5) — elke
+    // code binnen window ±1 matcht dan op een oudere of gelijke stap.
+    const state = { enabled: true, lastStep: matchedStepStart(5) };
+    teardown = installPoolMock(mockClient({ __matcher: statefulMatcher(secret, state) }));
+
+    expect(await verifyTotpCode(USER_ID, code)).toBe(false);
+  });
+
+  it('enrolment-code kan niet direct daarna hergebruikt worden voor login', async () => {
+    const secret = generateSecret();
+    const code = authenticator.generate(secret);
+    const state = { enabled: false, lastStep: null as number | null };
+    teardown = installPoolMock(mockClient({ __matcher: statefulMatcher(secret, state) }));
+
+    // Stap 1: enrolment bevestigen met de code — zet enabled + last_totp_step.
+    expect(await verifyTotpAndEnable(USER_ID, code)).toBe(true);
+    expect(state.enabled).toBe(true);
+    expect(state.lastStep).not.toBeNull();
+
+    // Stap 2: dezelfde code als login-challenge — geweigerd (replay).
+    expect(await verifyTotpCode(USER_ID, code)).toBe(false);
+  });
+
+  it('parallelle dubbel-verify van dezelfde code: precies één succes (atomaire consumptie)', async () => {
+    const secret = generateSecret();
+    const code = authenticator.generate(secret);
+
+    // Simuleer een echte race: beide reads zien de stale snapshot
+    // (last_totp_step = null) zodat de in-memory voorfilter nooit ingrijpt.
+    // De autoriteit is de conditionele UPDATE, die maar één keer slaagt.
+    let consumedStep: number | null = null;
+    const client = mockClient({
+      __matcher: (sql: string, params: unknown[]) => {
+        if (/SELECT id, tenant_id, email, role FROM users/i.test(sql)) {
+          return {
+            rows: [{ id: USER_ID, tenant_id: TENANT_ID, email: 'a@b.nl', role: 'admin' }],
+            rowCount: 1,
+          };
+        }
+        if (/SELECT user_id, tenant_id, secret/i.test(sql)) {
+          return {
+            rows: [
+              {
+                user_id: USER_ID,
+                tenant_id: TENANT_ID,
+                secret,
+                enabled: true,
+                backup_codes: [],
+                enabled_at: new Date(),
+                last_used_at: null,
+                last_totp_step: null, // stale snapshot voor beide callers
+              },
+            ],
+            rowCount: 1,
+          };
+        }
+        if (/UPDATE user_2fa_secrets\s+SET last_totp_step/i.test(sql)) {
+          const step = params[1] as number;
+          if (consumedStep === null || consumedStep < step) {
+            consumedStep = step;
+            return { rows: [], rowCount: 1 };
+          }
+          return { rows: [], rowCount: 0 }; // race verloren → replay
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    teardown = installPoolMock(client);
+
+    const results = await Promise.all([
+      verifyTotpCode(USER_ID, code),
+      verifyTotpCode(USER_ID, code),
+    ]);
+    // Beiden crypto-geldig, maar de tijdstap wordt maar één keer geconsumeerd.
+    expect(results.filter(Boolean)).toHaveLength(1);
   });
 });
 

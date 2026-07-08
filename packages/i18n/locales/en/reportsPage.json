@@ -87,7 +87,9 @@
       "run": "Run",
       "save": "Save",
       "saving": "Saving…",
-      "embed": "Embed"
+      "embed": "Embed",
+      "exportCsv": "CSV",
+      "exportCsvTitle": "Export as CSV file"
     },
     "saveStatus": {
       "saving": "Saving…",
@@ -99,7 +101,8 @@
       "label": "Embed link",
       "showLink": "Show link",
       "revoke": "Revoke link",
-      "generate": "Generate public link"
+      "generate": "Generate public link",
+      "generateExpiry": "Generate link — valid for {{days}} days"
     },
     "emptyCanvas": {
       "title": "No blocks yet",
@@ -111,7 +114,9 @@
       "description": "Anyone with this link can view this report read-only.",
       "copy": "Copy",
       "close": "Close",
-      "revoke": "Revoke link"
+      "revoke": "Revoke link",
+      "expires": "Expires on {{date}}",
+      "neverExpires": "No expiry — revoke the link manually once you no longer want to share it."
     },
     "toasts": {
       "saved": "Report saved",
@@ -121,7 +126,8 @@
       "embedError": "Couldn't create embed link",
       "revoked": "Embed link revoked",
       "revokeError": "Couldn't revoke link",
-      "copied": "Copied"
+      "copied": "Copied",
+      "exportError": "CSV export failed"
     }
   }
 }

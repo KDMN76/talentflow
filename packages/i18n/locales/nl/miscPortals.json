@@ -77,9 +77,25 @@
     "copyUrl": "URL kopiëren",
     "tabs": {
       "settings": "Instellingen",
+      "feedback": "Feedback",
       "activity": "Activiteit",
       "domain": "Domein",
       "token": "Token"
+    },
+    "feedback": {
+      "title": "Klantfeedback",
+      "description": "Beoordelingen en opmerkingen die de opdrachtgever via het portaal heeft gegeven.",
+      "emptyTitle": "Nog geen feedback",
+      "emptyDescription": "Zodra je opdrachtgever kandidaten beoordeelt of een opmerking plaatst, verschijnt dat hier.",
+      "generalComment": "Algemene opmerking",
+      "unknownCandidate": "Onbekende kandidaat",
+      "byClient": "door {{name}}",
+      "actions": {
+        "approved": "Geschikt",
+        "rejected": "Niet geschikt",
+        "doubt": "Twijfel",
+        "commented": "Opmerking"
+      }
     },
     "permissions": {
       "title": "Rechten",

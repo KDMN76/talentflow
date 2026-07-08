@@ -14,6 +14,7 @@ import { cn, getInitials } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { clearToken } from "@/lib/auth";
 import { useCurrentUser } from "@/hooks/useUsers";
+import { useTenantBranding } from "@/hooks/useTenantBranding";
 
 // TODO: vervangen door echte `useNotifications()` hook zodra het backend-
 // endpoint er is. Tot dan: lege lijst — een nieuwe tenant heeft 0 meldingen.
@@ -34,17 +35,39 @@ interface HeaderProps {
 
 export function Header({ onMenuClick }: HeaderProps) {
   const { t } = useTranslation("dashboard");
+  const { data: branding } = useTenantBranding();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>(INITIAL_NOTIFICATIONS);
   const unreadCount = notifications.filter((n) => n.unread).length;
 
   const markAllRead = () => setNotifications((n) => n.map((x) => ({ ...x, unread: false })));
 
+  // White-label: op mobiel (sidebar dicht) tonen we het tenant-logo of de
+  // merknaam in de topbar; fallback = TalentFlow.
+  const brandName = branding?.brand_name?.trim() || "TalentFlow";
+  const logoUrl = branding?.logo_url ?? null;
+
   return (
     <header className="flex h-16 items-center gap-4 border-b border-border bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm px-4 lg:px-6 sticky top-0 z-30">
       <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenuClick}>
         <Menu className="h-5 w-5" />
       </Button>
+
+      {/* Mobiel: tenant-logo/merknaam (desktop toont de sidebar-branding al) */}
+      <div className="flex items-center gap-2 lg:hidden min-w-0">
+        {logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={logoUrl}
+            alt={brandName}
+            className="h-7 w-auto max-w-[8rem] shrink-0 object-contain"
+          />
+        ) : (
+          <span className="truncate text-base font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+            {brandName}
+          </span>
+        )}
+      </div>
 
       <div className="relative hidden md:flex flex-1 max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

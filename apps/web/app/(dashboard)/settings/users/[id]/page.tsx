@@ -69,9 +69,12 @@ export default function UserDetailPage() {
       });
       return;
     }
+    // De Select levert het role-id; de backend eist de stabiele role_key.
+    const role = (roles ?? []).find((r) => r.id === selectedRole);
+    if (!role) return;
     await assignMutation.mutateAsync({
       user_id: userId,
-      role_id: selectedRole,
+      role_key: role.key,
       expires_at: expiresAt || null,
     });
     setSelectedRole("");

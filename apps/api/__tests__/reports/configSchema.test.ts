@@ -6,6 +6,7 @@ import {
   AVAILABLE_METRICS,
   type ReportConfig,
 } from '../../src/lib/reports/configSchema';
+import { SYSTEM_TEMPLATES } from '../../src/lib/reports/templates';
 
 const dim = (key: string) => {
   const d = AVAILABLE_DIMENSIONS.find((x) => x.key === key)!;
@@ -23,13 +24,35 @@ describe('configSchema.validateReportConfig', () => {
     expect(r.errors?.[0]).toMatch(/object vereist/);
   });
 
-  it('requires blocks array with at least 1 block', () => {
+  it('accepts an empty blocks array (draft-rapport uit de builder)', () => {
     const r = validateReportConfig({
       date_range: { type: 'last_n_days', days: 7 },
       blocks: [],
     });
+    expect(r.valid).toBe(true);
+  });
+
+  it('requires blocks to be an array', () => {
+    const r = validateReportConfig({
+      date_range: { type: 'last_n_days', days: 7 },
+      blocks: 'not-an-array',
+    });
     expect(r.valid).toBe(false);
-    expect(r.errors?.some((e) => /minimaal 1 block/.test(e))).toBe(true);
+    expect(r.errors?.some((e) => /blocks: array vereist/.test(e))).toBe(true);
+  });
+
+  it('rejects more than 50 blocks', () => {
+    const blocks = Array.from({ length: 51 }, (_, i) => ({
+      id: `b${i}`,
+      size: 'sm',
+      block: { type: 'kpi', metric: met('count') },
+    }));
+    const r = validateReportConfig({
+      date_range: { type: 'last_n_days', days: 7 },
+      blocks,
+    });
+    expect(r.valid).toBe(false);
+    expect(r.errors?.some((e) => /maximaal 50 blocks/.test(e))).toBe(true);
   });
 
   it('rejects unknown dimension keys', () => {
@@ -242,5 +265,27 @@ describe('configSchema.resolveDateRange', () => {
     const r = resolveDateRange({ type: 'last_quarter' }, now);
     expect(r.from.getMonth()).toBe(0); // Jan
     expect(r.to.getMonth()).toBe(2); // Mar
+  });
+});
+
+describe('system templates', () => {
+  it('alle 5 system-templates valideren tegen validateReportConfig', () => {
+    // De builder past templates 1-op-1 toe (alleen nieuwe block-ids) — een
+    // template die niet valideert zou de save-flow direct breken.
+    for (const tpl of SYSTEM_TEMPLATES) {
+      const r = validateReportConfig(tpl.config);
+      expect(r.errors ?? [], `template ${tpl.key}`).toEqual([]);
+      expect(r.valid, `template ${tpl.key}`).toBe(true);
+    }
+  });
+
+  it('template-blocks hebben unieke ids en geldige sizes', () => {
+    for (const tpl of SYSTEM_TEMPLATES) {
+      const ids = tpl.config.blocks.map((b) => b.id);
+      expect(new Set(ids).size, `template ${tpl.key}`).toBe(ids.length);
+      for (const b of tpl.config.blocks) {
+        expect(['sm', 'md', 'lg']).toContain(b.size);
+      }
+    }
   });
 });

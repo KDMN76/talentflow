@@ -50,6 +50,10 @@
       "voice": {
         "title": "Telefonie",
         "description": "Bel-integratie en spraakinstellingen."
+      },
+      "modules": {
+        "title": "Modules",
+        "description": "Bepaal welke modules zichtbaar zijn voor je organisatie."
       }
     },
     "validation": {
@@ -227,13 +231,35 @@
       "saveError": {
         "title": "Opslaan mislukt",
         "description": "De branding kon niet worden opgeslagen. Probeer het opnieuw."
+      },
+      "logoUploaded": {
+        "title": "Logo geüpload",
+        "description": "Je logo is opgeslagen en direct zichtbaar in de app en het portaal."
+      },
+      "logoUploadError": {
+        "title": "Upload mislukt",
+        "description": "Het logo kon niet worden geüpload. Probeer het opnieuw."
+      },
+      "logoRemoved": {
+        "title": "Logo verwijderd",
+        "description": "Het standaardlogo wordt weer getoond."
+      },
+      "logoRemoveError": {
+        "title": "Verwijderen mislukt",
+        "description": "Het logo kon niet worden verwijderd. Probeer het opnieuw."
       }
     },
     "logo": {
       "title": "Logo & favicon",
-      "description": "Toon je eigen logo in het portaal en de e-mails.",
-      "logoUrlLabel": "Logo-URL",
-      "logoUrlPlaceholder": "https://jouw-bureau.nl/logo.png",
+      "description": "Toon je eigen logo in de app, het portaal en de e-mails.",
+      "uploadButton": "Logo uploaden",
+      "replaceButton": "Logo vervangen",
+      "removeButton": "Verwijderen",
+      "uploadHint": "PNG, JPG of SVG, maximaal 1 MB.",
+      "currentAlt": "Huidig logo",
+      "noLogo": "Nog geen logo",
+      "invalidType": "Alleen PNG, JPG of SVG is toegestaan als logo.",
+      "tooLarge": "Het bestand is te groot (maximaal 1 MB).",
       "faviconUrlLabel": "Favicon-URL",
       "faviconUrlPlaceholder": "https://jouw-bureau.nl/favicon.ico"
     },
@@ -241,8 +267,33 @@
       "title": "Kleuren",
       "description": "Stel je primaire en accentkleur in.",
       "primaryLabel": "Primaire kleur",
-      "primaryAria": "Primaire kleur"
-    }
+      "primaryAria": "Primaire kleur",
+      "accentLabel": "Accentkleur",
+      "accentAria": "Accentkleur",
+      "contrastWarning": "Deze kleur heeft weinig contrast met tekst (WCAG 3:1). Kies een donkerdere of lichtere tint voor betere leesbaarheid."
+    },
+    "brand": {
+      "title": "Merknaam & e-mailfooter",
+      "description": "Vervang de TalentFlow-naam en voeg een eigen e-mailhandtekening toe.",
+      "nameLabel": "Merknaam (override)",
+      "namePlaceholder": "Jouw bureau-naam",
+      "nameHint": "Leeg = standaard tenant-naam.",
+      "footerLabel": "E-mailfooter (HTML)",
+      "footerPlaceholder": "<p>Met vriendelijke groet,<br/>Het team</p>",
+      "footerHint": "Eenvoudige HTML (p, br, a, strong, …). Scripts en onveilige inhoud worden bij verzending automatisch verwijderd."
+    },
+    "preview": {
+      "title": "Live preview",
+      "description": "Hoe je portaal en e-mails er voor klanten uitzien.",
+      "brandFallback": "Jouw bureau",
+      "portalLabel": "Recruitment portaal",
+      "badgeExample": "AI Match: 92%",
+      "candidateExample": "Voorbeeld kandidaat — Functietitel",
+      "emailFooterTitle": "E-mailfooter",
+      "noFooter": "Geen footer ingesteld.",
+      "note": "Wijzigingen worden direct toegepast na opslaan — bestaande portaal-links zien meteen de nieuwe branding."
+    },
+    "save": "Opslaan"
   },
   "email": {
     "title": "E-mail",
@@ -307,6 +358,72 @@
       "testError": {
         "title": "Testmail mislukt",
         "description": "Versturen is niet gelukt. Controleer je instellingen."
+      }
+    }
+  },
+  "modules": {
+    "title": "Modules",
+    "description": "Zet modules aan of uit voor je organisatie. Uitgeschakelde modules verdwijnen uit het menu en worden door de API geblokkeerd.",
+    "adminOnly": "Alleen beheerders kunnen modules aan- of uitzetten. Je ziet hieronder de huidige status.",
+    "cardTitle": "Beschikbare modules",
+    "cardDescription": "Wijzigingen gelden direct voor alle gebruikers in je organisatie.",
+    "loadError": "Modules laden is niet gelukt. Probeer het later opnieuw.",
+    "frozenBadge": "Beperkt beschikbaar",
+    "coreNote": "Kernfunctionaliteit (dashboard, vacatures, kandidaten, pipeline, berichten en instellingen) is altijd beschikbaar en kan niet worden uitgeschakeld.",
+    "toasts": {
+      "enabled": {
+        "title": "Module ingeschakeld",
+        "description": "{{module}} staat nu aan voor je organisatie."
+      },
+      "disabled": {
+        "title": "Module uitgeschakeld",
+        "description": "{{module}} staat nu uit voor je organisatie."
+      },
+      "error": {
+        "title": "Opslaan mislukt",
+        "description": "De wijziging is niet opgeslagen. Probeer het opnieuw."
+      }
+    },
+    "items": {
+      "recruitToCash": {
+        "title": "Contracten & facturatie",
+        "description": "Contracten, urenregistratie, facturen, commissies en forecasting."
+      },
+      "outreach": {
+        "title": "Benaderen",
+        "description": "Outreach-campagnes, opvolgreeksen en nurture-flows."
+      },
+      "sourcingAi": {
+        "title": "AI-sourcing",
+        "description": "De AI-sourcingagent die kandidaten zoekt en voorstelt."
+      },
+      "voice": {
+        "title": "Telefonie",
+        "description": "Bellen via de VoIP-integratie (Twilio)."
+      },
+      "whatsapp": {
+        "title": "WhatsApp",
+        "description": "WhatsApp Business-berichten naar kandidaten."
+      },
+      "jobBoards": {
+        "title": "Vacature-distributie",
+        "description": "Vacatures publiceren naar externe job boards."
+      },
+      "careerPages": {
+        "title": "Career-pagina's",
+        "description": "Publieke career-pagina's met de pagebuilder."
+      },
+      "portals": {
+        "title": "Klantportalen",
+        "description": "Deelbare shortlist-portalen voor je klanten."
+      },
+      "reportsAnalytics": {
+        "title": "Rapporten & analytics",
+        "description": "Rapportbouwer, dashboards en analyses."
+      },
+      "compliancePlus": {
+        "title": "AVG & AI-toezicht",
+        "description": "AVG-tools, datarequests en AI-toezicht."
       }
     }
   }

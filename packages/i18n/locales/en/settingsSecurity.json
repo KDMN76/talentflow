@@ -102,11 +102,24 @@
     },
     "disableDialog": {
       "title": "Disable two-factor authentication",
-      "warning": "Disabling 2FA makes your account less secure. Enter a code from your authenticator app or a backup code to confirm.",
+      "warning": "Disabling 2FA makes your account less secure. Enter your password and a code from your authenticator app or a backup code to confirm.",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Your current password",
       "codeLabel": "Verification code",
       "codePlaceholder": "Code or backup code",
       "cancel": "Cancel",
       "disable": "Disable"
+    },
+    "policy": {
+      "title": "Organization policy",
+      "description": "Enforce two-factor authentication for all users in your organization. Users without 2FA are blocked after the grace period until they set it up.",
+      "requireAll": "Require 2FA for everyone",
+      "requireAllHint": "All users must set up 2FA to keep access.",
+      "graceLabel": "Grace period (days)",
+      "graceHint": "Number of days users get to set up 2FA before access is restricted (0–90).",
+      "save": "Save policy",
+      "saved": "2FA policy saved",
+      "saveFailed": "Saving failed"
     },
     "regenDialog": {
       "title": "Regenerate backup codes",

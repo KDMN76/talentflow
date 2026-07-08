@@ -104,6 +104,32 @@ export function requirePermission(
 }
 
 /**
+ * Router-level gate: laat lees-methodes (GET/HEAD/OPTIONS) altijd door en
+ * eist voor élke muterende methode (POST/PUT/PATCH/DELETE) de `write`-
+ * permissie op de gegeven resource. Bedoeld voor routers waar iedere mutatie
+ * dezelfde resource raakt (jobs, crm, scorecards) — zo blokkeren we read-only
+ * rollen zoals `viewer` in één keer zonder elke losse write-route te moeten
+ * annoteren.
+ *
+ * LET OP: gebruik dit NIET op routers met "read-via-POST"-endpoints (bv.
+ * zoek- of beschikbaarheids-queries via POST) — die zouden dan onterecht
+ * 403'en. Guard zulke routers per-route met `requirePermission`.
+ */
+export function requireWriteOnMutation(
+  resource: PermissionResource | string
+) {
+  const guard = requirePermission(resource, 'write');
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const method = req.method;
+    if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') {
+      next();
+      return;
+    }
+    guard(req, res, next);
+  };
+}
+
+/**
  * Vereist één van meerdere (resource, action) combinaties. Handig wanneer
  * een endpoint óf admin-rechten óf eigen-record-rechten accepteert.
  */
