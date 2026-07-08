@@ -14,6 +14,7 @@
     "build:api": "cd apps/api && npm run build",
     "build:web": "cd apps/web && npm run build",
     "build:contracts": "cd packages/contracts && npm run build",
+    "lint": "npm run lint --workspaces --if-present",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down"
   },
