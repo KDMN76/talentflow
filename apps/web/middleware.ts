@@ -98,6 +98,10 @@ export const config = {
   //   favicon/robots/sitemap/sw/manifest en elk pad met een bestandsextensie
   // Zonder deze exclusions zou /_next en /api ook rewriten → de hele app breekt.
   matcher: [
+    // De root expliciet: de negatieve-lookahead-matcher hieronder matcht "/"
+    // niet (bekende Next.js-gotcha) → zonder deze regel zou het custom domein
+    // op de homepage terugvallen op app-gedrag (redirect naar /dashboard).
+    "/",
     "/((?!_next/|api/|favicon.ico|robots.txt|sitemap.xml|sw.js|manifest.json|.*\\.[\\w]+$).*)",
   ],
 };
