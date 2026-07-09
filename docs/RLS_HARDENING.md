@@ -4,25 +4,36 @@ Security-runbook voor de TalentFlow multi-tenant SaaS. Dit document beschrijft d
 overgang naar echt door de database afgedwongen tenant-isolatie via Row-Level
 Security (RLS).
 
-> ## ✅ CUTOVER UITGEVOERD — 2026-07-08
-> Productie draait sinds 2026-07-08 onder de non-owner rol **`talentflow_app`**
-> (`NOSUPERUSER NOBYPASSRLS`). RLS wordt nu écht door de database afgedwongen;
-> tenant-isolatie leunt niet langer alleen op de app-laag. Vooraf: verse
-> Postgres-dump naar R2 (`postgres-2026-07-08-1827.sql.gz`, 337 MB). Isolatie-
-> probe onder de rol bewees: reads mét context werken (incl. de nieuwe tabellen
-> `ai_action_proposals`/`tenant_module_settings`/`data_export_tokens`),
-> cross-tenant = 0 rijen, geen context = 0 rijen (fail-closed, geen 500). Live
-> smoke ná cutover: login 200, **refresh 200** (auth_context-pad), POST
-> /candidates 201 (WITH CHECK), candidates/jobs/dashboard 200.
+> ## ⚠️ CUTOVER UITGEVOERD ÉN TERUGGEDRAAID — 2026-07-08/09
+> De cutover naar de non-owner rol **`talentflow_app`** is op 2026-07-08 gedaan
+> en smoke-geverifieerd (login/refresh/write 200, isolatie-probe groen). Maar op
+> 2026-07-09 bleek een **regressie**: de **publieke career-pagina's** (en het
+> gast-portaal) doen legitiem *cross-tenant* reads via `withoutTenant` (een
+> bezoeker heeft geen tenant-context). Onder de non-owner rol fail-closed de
+> RLS-policy op o.a. `career_pages`/`guest_portal_links` dan naar **0 rijen** →
+> `/api/career-pages/public/:slug` gaf 404. De cutover-voorbereiding dekte wél de
+> `auth_context`-carve-out (refresh/reset/gdpr-tokens) maar **niet** deze publieke
+> leespaden.
 >
-> - `DATABASE_URL` in `infra/.env.prod` wijst nu naar `talentflow_app`.
-> - De owner-URL staat als `MIGRATE_DATABASE_URL` in `.env.prod` — **toekomstige
->   migraties draaien met die URL** (de app-rol kan geen DDL): zie "Toekomstige
->   migraties ná de cutover" onderaan.
-> - Rollback (indien ooit nodig): zet `DATABASE_URL` terug op de owner-waarde uit
->   `infra/.env.prod.bak-rlscutover` en `./infra/deploy.sh up -d --no-deps
->   --force-recreate api api-worker`.
-> - Het rol-wachtwoord staat alleen in `infra/.env.prod` (chmod 600) op de VPS.
+> **Actie:** cutover teruggedraaid — `DATABASE_URL` staat weer op de owner-rol.
+> Prod draait dus (net als de maanden ervoor) op app-laag-isolatie (`WHERE
+> tenant_id` overal, geverifieerd door de security-reviews). Publieke pagina's
+> werken weer.
+>
+> **Vóór een nieuwe cutover-poging NODIG (nog te bouwen):** een `public_read`-
+> carve-out (analoog aan de `auth_context`-carve-out van migratie 037) op de
+> tabellen die publiek cross-tenant gelezen worden — minimaal `career_pages`,
+> `guest_portal_links`, `guest_portal_feedback`, en de bijbehorende job-/tenant-
+> lookups — plus een `withPublicRead`-helper (transactie + `SET LOCAL
+> app.public_context = 'on'`) die de betrokken `withoutTenant`-leespaden gebruiken.
+> Ook de achtergrond-workers die `withoutTenant` cross-tenant lezen
+> (`monitoring`, `calendarSync`, `autoPost`, `retention`, `outreach`
+> tenant_settings) moeten dan nagelopen. **Dit is de resterende gate vóór klant #2.**
+>
+> - De rol `talentflow_app` (NOBYPASSRLS) blijft bestaan op de DB (ongebruikt).
+> - `MIGRATE_DATABASE_URL` (owner) staat in `.env.prod`; `infra/.env.prod.bak-rlscutover`
+>   bewaart de pre-cutover env.
+> - Rol-cutover-commando's + isolatie-probe: zie de rest van dit runbook.
 
 ---
 
