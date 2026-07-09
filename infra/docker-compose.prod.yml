@@ -242,6 +242,9 @@ services:
       NEXT_PUBLIC_USE_MOCK_DATA: ${NEXT_PUBLIC_USE_MOCK_DATA}
       NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN}
       NEXT_PUBLIC_APP_HOSTS: ${NEXT_PUBLIC_APP_HOSTS:-}
+      # De custom-domain-middleware resolvet host→slug INTERN via de api-
+      # container (compose-netwerk), niet via de publieke URL. Snel + betrouwbaar.
+      CUSTOM_DOMAIN_RESOLVE_BASE: ${CUSTOM_DOMAIN_RESOLVE_BASE:-http://api:4000/api}
     depends_on:
       api:
         condition: service_healthy

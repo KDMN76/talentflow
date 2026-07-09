@@ -65,5 +65,10 @@ export function isAppHost(hostname: string, appHosts: Set<string>): boolean {
 export function buildRewritePath(slug: string, pathname: string): string {
   const base = `/careers/${slug}`;
   if (!pathname || pathname === "/") return base;
+  // Al onder /careers/<slug>? Niet nog eens prefixen (voorkomt
+  // /careers/<slug>/careers/<slug> → 404 als een bezoeker direct een
+  // /careers-URL op het custom domein opvraagt).
+  if (pathname === base || pathname.startsWith(`${base}/`)) return pathname;
+  if (pathname.startsWith("/careers/")) return pathname;
   return `${base}${pathname.startsWith("/") ? "" : "/"}${pathname}`;
 }

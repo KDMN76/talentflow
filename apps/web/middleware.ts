@@ -23,8 +23,16 @@ import {
  * valt terug op de normale flow (NextResponse.next → normale 404).
  */
 
+// Server-side resolve gaat bij voorkeur INTERN (compose-netwerk), niet via de
+// publieke NEXT_PUBLIC_API_URL — die zou vanuit de web-container naar buiten
+// (nginx) en terug gaan: traag + flaky, waardoor de timeout tript en het
+// custom domein stilletjes terugvalt op app-gedrag. CUSTOM_DOMAIN_RESOLVE_BASE
+// wijst in productie naar http://api:4000/api. Fallback op de publieke URL
+// voor lokale dev.
 const API_BASE = (
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"
+  process.env.CUSTOM_DOMAIN_RESOLVE_BASE ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  "http://localhost:4000/api"
 ).replace(/\/$/, "");
 
 const APP_HOSTS = getAppHosts({
