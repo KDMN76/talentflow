@@ -23,18 +23,6 @@ import {
  * valt terug op de normale flow (NextResponse.next → normale 404).
  */
 
-// Server-side resolve gaat bij voorkeur INTERN (compose-netwerk), niet via de
-// publieke NEXT_PUBLIC_API_URL — die zou vanuit de web-container naar buiten
-// (nginx) en terug gaan: traag + flaky, waardoor de timeout tript en het
-// custom domein stilletjes terugvalt op app-gedrag. CUSTOM_DOMAIN_RESOLVE_BASE
-// wijst in productie naar http://api:4000/api. Fallback op de publieke URL
-// voor lokale dev.
-const API_BASE = (
-  process.env.CUSTOM_DOMAIN_RESOLVE_BASE ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  "http://localhost:4000/api"
-).replace(/\/$/, "");
-
 const APP_HOSTS = getAppHosts({
   NEXT_PUBLIC_APP_HOSTS: process.env.NEXT_PUBLIC_APP_HOSTS,
   NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
@@ -45,7 +33,10 @@ const APP_HOSTS = getAppHosts({
 const CACHE_TTL_MS = 60_000;
 const slugCache = new Map<string, { slug: string | null; expires: number }>();
 
-async function resolveHostToSlug(host: string): Promise<string | null> {
+async function resolveHostToSlug(
+  origin: string,
+  host: string
+): Promise<string | null> {
   const now = Date.now();
   const cached = slugCache.get(host);
   if (cached && cached.expires > now) return cached.slug;
@@ -54,8 +45,13 @@ async function resolveHostToSlug(host: string): Promise<string | null> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 2500);
+    // Resolve via de EIGEN origin van het request (bv. https://werkenbij.kdmn.nl):
+    // de nginx-vhost van elk custom domein proxyt /api/ naar de api-container, en
+    // de matcher hieronder sluit /api/ uit (dus geen middleware-loop). Env-vrij —
+    // Next inlinet in de Edge-runtime alleen NEXT_PUBLIC_-vars, dus een aparte
+    // resolve-env zou toch niet aankomen.
     const res = await fetch(
-      `${API_BASE}/career-pages/public/resolve-domain?host=${encodeURIComponent(host)}`,
+      `${origin}/api/career-pages/public/resolve-domain?host=${encodeURIComponent(host)}`,
       { signal: controller.signal, headers: { accept: "application/json" } }
     );
     clearTimeout(timeout);
@@ -85,7 +81,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
 
   // Custom domein: resolve host → slug en rewrite. Geen match/fout → normale
   // flow (val terug op 404 van de app).
-  const slug = await resolveHostToSlug(host);
+  const slug = await resolveHostToSlug(request.nextUrl.origin, host);
   if (!slug) {
     return NextResponse.next();
   }
