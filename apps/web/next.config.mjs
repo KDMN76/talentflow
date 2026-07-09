@@ -29,9 +29,30 @@ const nextConfig = {
   // → HTTP 500 (incident 2026-06-19). `force-dynamic` lost dat niet op: de
   // pagina blijft renderen. Een redirect hier wordt door next-server afgehandeld
   // vóór enige page-render, dus dat kapotte render-pad wordt nooit geraakt.
+  //
+  // LET OP: next.config-redirects draaien VÓÓR de middleware. Zonder host-scope
+  // zou deze `/`-redirect ook op white-label custom domeinen vuren, waardoor de
+  // custom-domain-middleware de homepage nooit naar de career-page kan rewriten.
+  // Daarom alleen op de app-eigen hosts (afgeleid uit NEXT_PUBLIC_API_URL +
+  // localhost); custom domeinen matchen niet en vallen door naar de middleware.
   async redirects() {
+    const appHostRe = (() => {
+      const hosts = ['localhost', '127\\.0\\.0\\.1'];
+      try {
+        const h = new URL(process.env.NEXT_PUBLIC_API_URL || '').host;
+        if (h) hosts.push(h.split(':')[0].replace(/[.]/g, '\\.'));
+      } catch {
+        // negeer onparsebare URL
+      }
+      return hosts.join('|');
+    })();
     return [
-      { source: '/', destination: '/dashboard', permanent: false },
+      {
+        source: '/',
+        destination: '/dashboard',
+        permanent: false,
+        has: [{ type: 'host', value: `^(${appHostRe})(:\\d+)?$` }],
+      },
     ];
   },
 
