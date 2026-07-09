@@ -887,7 +887,7 @@ Gevolg voor de positionering:
   IT-consultants/freelancers vinden, **tech-stack/skills-matching**, **uren- en project-detachering**,
   **client-plaatsingen + marge/tarief-tracking** — niet monteurs/VCA/planning.
 - KDMN blijft de eigenaar/leverancier, maar de **eerste referentieklant is ITProposal** (niet KDMN zelf).
-- Manatal blijft de benchmark (ITProposal komt daar vandaan; ~€1.000/mo TCO-besparing is de drijfveer).
+- Manatal blijft de benchmark (ITProposal komt daar vandaan; ~€620/mo TCO-besparing is de drijfveer — echte factuur, zie docs/TCO_ROI.md).
 - Kern-niche-aanbeveling (5.6) blijft staan: **moderne, AI-native, NL-eerst ATS+CRM voor kleine
   recruitment-/detacheringsbureaus**, met **IT-detachering als eerste wig** via ITProposal.
 - Anti-scope (5.7) blijft: payroll/CAO koppelen, niet bezitten; geen VMS/enterprise; ontstapelen i.p.v. bijbouwen.
@@ -1006,5 +1006,6 @@ portal-mock alleen non-prod). Testsuite bij oplevering: **1805 api + 25 web groe
   `career-public`-SSR-renderer is levend (niet dood, reviewer-aanname klopte niet).
 - **[P2] Reports-share plaintext-tokens** (portal/embed) — GDPR-token is gehasht; portal/embed-tokens nog plaintext (LOW).
 - **[P3] Lint-warnings opruimen** (73 warnings, niet-blokkerend) + testfiles onder tsc-gate.
-- **[BESLISSING Kaan] Manatal-cijfer in beschermde bestanden** — CLAUDE.md + ROADMAP.md regel 890 dragen nog "~€1.000/mo";
+- **[✅ 2026-07-09] Manatal-cijfer in beschermde bestanden gecorrigeerd** — CLAUDE.md regel 6 + ROADMAP.md regel 890 stonden nog op "~€1.000/mo";
+  na akkoord Kaan gecorrigeerd naar ≈€620/mo (echte factuur, docs/TCO_ROI.md). ~~Origineel item:~~
   de echte factuur is ≈€620/mo (zie `docs/TCO_ROI.md`). Mag ik die twee regels corrigeren?

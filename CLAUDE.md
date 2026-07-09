@@ -3,7 +3,8 @@
 ## Wat is dit project?
 
 TalentFlow is een recruitment SaaS-platform gebouwd om Manatal te vervangen én te overtreffen.
-Het bedrijf betaalde €1.000/maand voor Manatal. TalentFlow elimineert die kosten en wordt
+Het stagebedrijf (ITProposal) betaalde ≈€620/maand voor Manatal (echte factuur GORR5CHG-0006:
+16 seats × $39 + $50 add-on, zie docs/TCO_ROI.md). TalentFlow elimineert die kosten en wordt
 zelf een commercieel product voor recruitmentbureaus en interne HR-teams.
 
 **Positionering:** "Manatal-prijs. Ashby-analytics. Vincere-bureaufeatures. Één platform."
