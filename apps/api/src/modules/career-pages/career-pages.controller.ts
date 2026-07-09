@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import * as careerPagesService from './career-pages.service';
+import { auditCtxFromReq } from '../../lib/audit';
 
 // ─── Validation Schemas ───────────────────────────────────────────────────────
 
@@ -44,6 +45,12 @@ const blocksSchema = z.object({
       })
       .catchall(z.unknown())
   ),
+});
+
+const customDomainSchema = z.object({
+  // null / leeg = koppeling wissen. Verdere hostnaam-validatie in de service
+  // (validateCustomDomainInput) zodat één bron van waarheid geldt.
+  domain: z.string().max(253).nullable().optional(),
 });
 
 const applicationSchema = z.object({
@@ -193,7 +200,73 @@ export async function unpublish(
   }
 }
 
+// ─── Custom Domain Handlers ───────────────────────────────────────────────────
+
+/**
+ * Admin: koppel/wis het custom-domain (tenant-scoped).
+ * PUT /career-pages/:id/custom-domain  body: { domain: string | null }
+ */
+export async function setCustomDomain(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { domain } = customDomainSchema.parse(req.body);
+    const page = await careerPagesService.setCareerPageCustomDomain(
+      req.user!.tenantId,
+      req.params.id,
+      req.user!.userId,
+      domain ?? null,
+      auditCtxFromReq(req)
+    );
+    res.json(page);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * Admin: verifieer dat het domein naar onze VPS wijst (DNS A-record).
+ * POST /career-pages/:id/custom-domain/verify
+ */
+export async function verifyCustomDomain(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const result = await careerPagesService.verifyCareerPageCustomDomain(
+      req.user!.tenantId,
+      req.params.id,
+      req.user!.userId,
+      auditCtxFromReq(req)
+    );
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
 // ─── Public Handlers ──────────────────────────────────────────────────────────
+
+/**
+ * Publiek: resolve een hostnaam → career-page-slug (white-label serving).
+ * GET /career-pages/public/resolve-domain?host=<hostname>
+ */
+export async function resolveDomain(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const host = typeof req.query.host === 'string' ? req.query.host : '';
+    const result = await careerPagesService.resolveCareerPageByDomain(host);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
 
 export async function getPublic(
   req: Request,

@@ -1,6 +1,14 @@
 import crypto from 'crypto';
+import { promises as dns } from 'dns';
 import { withTenant, withoutTenant } from '../../db/pool';
 import { AppError } from '../../middleware/errorHandler';
+import { logAudit, type AuditContext } from '../../lib/audit';
+import {
+  CUSTOM_DOMAIN_TARGET_IP,
+  ipMatchesTarget,
+  normalizeHostname,
+  validateCustomDomainInput,
+} from './customDomain';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -495,6 +503,261 @@ export async function getPublicCareerPage(slug: string): Promise<PublicCareerPag
     // Table missing or other DB issue — return mock
     return buildMockCareerPage(slug);
   }
+}
+
+// ─── Custom Domain (white-label serving) ───────────────────────────────────────
+
+export interface ResolveDomainResult {
+  slug: string;
+}
+
+export interface VerifyDomainResult {
+  verified: boolean;
+  custom_domain: string;
+  verified_at: string | null;
+  target_ip: string;
+  resolved_ips: string[];
+  reason?: string;
+}
+
+/**
+ * Resolve een custom-domain → career-page-slug. Publiek: de hostnaam is de
+ * sleutel (geen tenant-context). Matcht case-insensitief op de genormaliseerde
+ * host en alleen op een publiek-zichtbare (active) career-page — exact dezelfde
+ * gate als getPublicCareerPage, zodat een eigen domein identiek toont aan
+ * /careers/<slug>. Geen mock-fallback: bij DB-fout propageert de error zodat de
+ * caller (web-middleware) netjes terugvalt op een normale 404.
+ */
+export async function resolveCareerPageByDomain(
+  host: string
+): Promise<ResolveDomainResult> {
+  const normalized = normalizeHostname(host);
+  if (!normalized) {
+    throw new AppError(404, 'DOMAIN_NOT_FOUND', 'Geen career page voor dit domein');
+  }
+  return withoutTenant(async (client) => {
+    const { rows: [page] } = await client.query(
+      `SELECT slug
+         FROM career_pages
+        WHERE lower(custom_domain) = $1
+          AND deleted_at IS NULL
+          AND active = TRUE
+        LIMIT 1`,
+      [normalized]
+    );
+    if (!page) {
+      throw new AppError(404, 'DOMAIN_NOT_FOUND', 'Geen career page voor dit domein');
+    }
+    return { slug: page.slug as string };
+  });
+}
+
+/**
+ * Zet of wis het custom-domain van een career-page (admin, tenant-scoped).
+ * Lege/­null waarde → koppeling wissen. Anders: valideren als hostnaam,
+ * app-eigen hosts weigeren, globale uniciteit afdwingen (409 bij conflict).
+ * Elke wijziging reset `custom_domain_verified_at` (nieuw domein moet opnieuw
+ * geverifieerd). Schrijft een audit-event binnen dezelfde transactie.
+ */
+export async function setCareerPageCustomDomain(
+  tenantId: string,
+  id: string,
+  userId: string,
+  domain: string | null,
+  ctx: AuditContext = {}
+): Promise<CareerPage> {
+  return withTenant(tenantId, async (client) => {
+    const { rows: [existing] } = await client.query(
+      `SELECT id, custom_domain FROM career_pages
+        WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL`,
+      [id, tenantId]
+    );
+    if (!existing) {
+      throw new AppError(404, 'CAREER_PAGE_NOT_FOUND', 'Career page niet gevonden');
+    }
+    const previous = (existing.custom_domain as string | null) ?? null;
+
+    const trimmed = (domain ?? '').trim();
+    if (!trimmed) {
+      const { rows: [page] } = await client.query(
+        `UPDATE career_pages
+            SET custom_domain = NULL,
+                custom_domain_verified_at = NULL,
+                updated_at = now()
+          WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
+          RETURNING *`,
+        [id, tenantId]
+      );
+      await logAudit(
+        client,
+        tenantId,
+        {
+          action: 'career_page.custom_domain.clear',
+          entityType: 'career_page',
+          entityId: id,
+          before: { custom_domain: previous },
+          after: { custom_domain: null },
+          userId,
+        },
+        ctx
+      );
+      return page;
+    }
+
+    const host = validateCustomDomainInput(trimmed);
+
+    // Globale uniciteit: één domein → één career-page. Pre-check geeft een nette
+    // 409 onder de owner-rol (die RLS bypasst en dus alle tenants ziet). De
+    // partial unique index (uq_career_pages_custom_domain) is de harde garantie
+    // en vangt de cross-tenant-race → 23505 mappen we óók naar 409.
+    const { rows: dupes } = await client.query(
+      `SELECT id FROM career_pages
+        WHERE lower(custom_domain) = $1 AND id <> $2 AND deleted_at IS NULL
+        LIMIT 1`,
+      [host, id]
+    );
+    if (dupes.length > 0) {
+      throw new AppError(
+        409,
+        'DOMAIN_TAKEN',
+        'Dit domein is al aan een andere career page gekoppeld'
+      );
+    }
+
+    let page;
+    try {
+      const res = await client.query(
+        `UPDATE career_pages
+            SET custom_domain = $1,
+                custom_domain_verified_at = NULL,
+                updated_at = now()
+          WHERE id = $2 AND tenant_id = $3 AND deleted_at IS NULL
+          RETURNING *`,
+        [host, id, tenantId]
+      );
+      page = res.rows[0];
+    } catch (err) {
+      if ((err as { code?: string }).code === '23505') {
+        throw new AppError(
+          409,
+          'DOMAIN_TAKEN',
+          'Dit domein is al aan een andere career page gekoppeld'
+        );
+      }
+      throw err;
+    }
+
+    await logAudit(
+      client,
+      tenantId,
+      {
+        action: 'career_page.custom_domain.set',
+        entityType: 'career_page',
+        entityId: id,
+        before: { custom_domain: previous },
+        after: { custom_domain: host },
+        userId,
+      },
+      ctx
+    );
+    return page;
+  });
+}
+
+/**
+ * Verifieer dat het gekoppelde domein naar onze VPS wijst. Doet een
+ * `dns.resolve4`-lookup (buiten de DB-transactie, met timeout) en vergelijkt de
+ * A-records met CUSTOM_DOMAIN_TARGET_IP. Bij succes wordt
+ * `custom_domain_verified_at` gezet; bij mislukking gewist. Audit op beide.
+ */
+export async function verifyCareerPageCustomDomain(
+  tenantId: string,
+  id: string,
+  userId: string,
+  ctx: AuditContext = {}
+): Promise<VerifyDomainResult> {
+  // 1) Lees het domein — korte transactie, geen netwerk-I/O onder de client.
+  const domain = await withTenant(tenantId, async (client) => {
+    const { rows: [page] } = await client.query(
+      `SELECT custom_domain FROM career_pages
+        WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL`,
+      [id, tenantId]
+    );
+    if (!page) {
+      throw new AppError(404, 'CAREER_PAGE_NOT_FOUND', 'Career page niet gevonden');
+    }
+    const d = (page.custom_domain as string | null) ?? null;
+    if (!d) {
+      throw new AppError(
+        400,
+        'NO_CUSTOM_DOMAIN',
+        'Er is nog geen eigen domein ingesteld voor deze career page'
+      );
+    }
+    return d;
+  });
+
+  // 2) DNS-lookup buiten de transactie, met timeout zodat verify nooit hangt.
+  let resolvedIps: string[] = [];
+  let reason: string | undefined;
+  try {
+    resolvedIps = await Promise.race([
+      dns.resolve4(domain),
+      new Promise<string[]>((_, reject) =>
+        setTimeout(() => reject(new Error('DNS_TIMEOUT')), 5000)
+      ),
+    ]);
+  } catch (err) {
+    const code = (err as { code?: string }).code ?? (err as Error).message;
+    reason =
+      code === 'ENOTFOUND' || code === 'ENODATA'
+        ? 'Geen A-record gevonden voor dit domein.'
+        : code === 'DNS_TIMEOUT'
+          ? 'DNS-lookup duurde te lang. Probeer het later opnieuw.'
+          : 'DNS-lookup mislukt.';
+    resolvedIps = [];
+  }
+
+  const verified = ipMatchesTarget(resolvedIps, CUSTOM_DOMAIN_TARGET_IP);
+  if (!verified && !reason) {
+    reason = `Domein wijst nog niet naar ${CUSTOM_DOMAIN_TARGET_IP}.`;
+  }
+
+  // 3) Persisteer resultaat + audit.
+  const verifiedAt = await withTenant(tenantId, async (client) => {
+    const { rows: [row] } = await client.query(
+      `UPDATE career_pages
+          SET custom_domain_verified_at = $1::timestamptz,
+              updated_at = now()
+        WHERE id = $2 AND tenant_id = $3 AND deleted_at IS NULL
+        RETURNING custom_domain_verified_at`,
+      [verified ? new Date().toISOString() : null, id, tenantId]
+    );
+    await logAudit(
+      client,
+      tenantId,
+      {
+        action: verified
+          ? 'career_page.custom_domain.verified'
+          : 'career_page.custom_domain.verify_failed',
+        entityType: 'career_page',
+        entityId: id,
+        after: { custom_domain: domain, verified, resolved_ips: resolvedIps },
+        userId,
+      },
+      ctx
+    );
+    return (row?.custom_domain_verified_at as string | null) ?? null;
+  });
+
+  return {
+    verified,
+    custom_domain: domain,
+    verified_at: verifiedAt,
+    target_ip: CUSTOM_DOMAIN_TARGET_IP,
+    resolved_ips: resolvedIps,
+    reason: verified ? undefined : reason,
+  };
 }
 
 export async function submitApplication(

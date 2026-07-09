@@ -9,6 +9,23 @@ export const api = axios.create({
   },
 });
 
+/**
+ * Credential-loze client voor PUBLIEKE, ongeauthenticeerde endpoints
+ * (career-page-render + sollicitatie-apply). Bewust ZONDER `withCredentials`
+ * en zonder Authorization-interceptor: zo mag de server-CORS de origin
+ * reflecteren zonder credentials, waardoor deze calls óók werken vanaf een
+ * white-label custom domein (cross-origin naar de API). Alleen gebruiken voor
+ * data die publiek mag zijn (gepubliceerde vacatures) — nooit voor iets dat de
+ * sessie-cookie nodig heeft.
+ */
+export const publicApi = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api",
+  withCredentials: false,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
 // Request interceptor: add Authorization header
 api.interceptors.request.use((config) => {
   const token = getToken();

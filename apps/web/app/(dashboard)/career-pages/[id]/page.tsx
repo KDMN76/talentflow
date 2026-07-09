@@ -13,6 +13,9 @@ import {
   FileText,
   AlertCircle,
   LayoutTemplate,
+  ShieldCheck,
+  ShieldAlert,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,6 +33,8 @@ import { useToast } from "@/components/ui/use-toast";
 import {
   useCareerPage,
   useUpdateCareerPage,
+  useSetCustomDomain,
+  useVerifyCustomDomain,
   TEMPLATE_LABELS,
   LANGUAGE_LABELS,
   LANGUAGE_FLAGS,
@@ -37,6 +42,9 @@ import {
   type CareerPageTemplate,
   type CareerPageLanguage,
 } from "@/hooks/useCareerPages";
+
+// A-record-doel: het VPS-IP waar klant-domeinen naartoe moeten wijzen.
+const DNS_TARGET_IP = "91.98.232.104";
 
 const TEMPLATES: CareerPageTemplate[] = [
   "modern",
@@ -227,6 +235,8 @@ export default function CareerPageEditorPage() {
   const { toast } = useToast();
   const { data: page, isLoading, isError } = useCareerPage(id);
   const updatePage = useUpdateCareerPage();
+  const setDomain = useSetCustomDomain(id);
+  const verifyDomain = useVerifyCustomDomain(id);
   const { t } = useTranslation("careerPages");
 
   // Local editable state
@@ -256,12 +266,14 @@ export default function CareerPageEditorPage() {
 
   const handleSave = async () => {
     if (!page) return;
+    // NB: het eigen domein wordt NIET via deze algemene Save opgeslagen, maar
+    // via de dedicated "Eigen domein"-sectie (PUT /custom-domain) — die valideert
+    // de hostnaam, dwingt uniciteit af en beheert de verificatiestatus.
     try {
       await updatePage.mutateAsync({
         id: page.id,
         template,
         language,
-        custom_domain: customDomain.trim() || null,
         config: {
           header_text: headerText,
           intro_text: introText,
@@ -278,6 +290,64 @@ export default function CareerPageEditorPage() {
       toast({
         title: t("editor.toasts.saveError.title"),
         description: t("editor.toasts.saveError.description"),
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSaveDomain = async () => {
+    if (!page) return;
+    const value = customDomain.trim() || null;
+    try {
+      await setDomain.mutateAsync(value);
+      toast(
+        value
+          ? {
+              title: t("editor.domain.toasts.saved.title"),
+              description: t("editor.domain.toasts.saved.description", {
+                domain: value,
+              }),
+            }
+          : {
+              title: t("editor.domain.toasts.cleared.title"),
+              description: t("editor.domain.toasts.cleared.description"),
+            }
+      );
+    } catch (err) {
+      const apiMsg = (
+        err as { response?: { data?: { error?: { message?: string } } } }
+      )?.response?.data?.error?.message;
+      toast({
+        title: t("editor.domain.toasts.saveError.title"),
+        description: apiMsg ?? t("editor.domain.toasts.saveError.description"),
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleVerifyDomain = async () => {
+    try {
+      const result = await verifyDomain.mutateAsync();
+      if (result.verified) {
+        toast({
+          title: t("editor.domain.toasts.verified.title"),
+          description: t("editor.domain.toasts.verified.description", {
+            domain: result.custom_domain,
+          }),
+        });
+      } else {
+        toast({
+          title: t("editor.domain.toasts.verifyFailed.title"),
+          description:
+            result.reason ??
+            t("editor.domain.toasts.verifyFailed.description"),
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: t("editor.domain.toasts.verifyFailed.title"),
+        description: t("editor.domain.toasts.verifyFailed.description"),
         variant: "destructive",
       });
     }
@@ -318,6 +388,13 @@ export default function CareerPageEditorPage() {
     logo_url: logoUrl,
     font_family: fontFamily,
   };
+
+  // Domein-status: verificatie geldt alleen voor het opgeslagen domein. Zodra
+  // het invoerveld afwijkt (nog niet opgeslagen) tonen we geen "geverifieerd".
+  const savedDomain = page.custom_domain ?? "";
+  const domainDirty = customDomain.trim() !== savedDomain;
+  const domainVerified =
+    !!page.custom_domain_verified_at && !domainDirty && !!savedDomain;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -529,9 +606,29 @@ export default function CareerPageEditorPage() {
 
           <Card className="border-0 shadow-sm">
             <CardContent className="p-5 space-y-4">
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                {t("editor.domain.title")}
-              </h2>
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                  {t("editor.domain.title")}
+                </h2>
+                {savedDomain ? (
+                  domainVerified ? (
+                    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      {t("editor.domain.verified")}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">
+                      <ShieldAlert className="h-3.5 w-3.5" />
+                      {t("editor.domain.notVerified")}
+                    </span>
+                  )
+                ) : null}
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                {t("editor.domain.description")}
+              </p>
+
               <div className="space-y-2">
                 <Label htmlFor="domain">{t("editor.domain.nameLabel")}</Label>
                 <div className="relative">
@@ -544,9 +641,87 @@ export default function CareerPageEditorPage() {
                     className="pl-9"
                   />
                 </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSaveDomain}
+                  disabled={setDomain.isPending || !domainDirty}
+                  className="gap-1.5"
+                >
+                  {setDomain.isPending ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      {t("editor.domain.saving")}
+                    </>
+                  ) : (
+                    t("editor.domain.save")
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleVerifyDomain}
+                  disabled={
+                    verifyDomain.isPending || !savedDomain || domainDirty
+                  }
+                  className="gap-1.5"
+                >
+                  {verifyDomain.isPending ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      {t("editor.domain.verifying")}
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      {t("editor.domain.verify")}
+                    </>
+                  )}
+                </Button>
+                {savedDomain && domainDirty ? (
+                  <span className="text-xs text-muted-foreground">
+                    {t("editor.domain.saveFirst")}
+                  </span>
+                ) : null}
+              </div>
+
+              {/* DNS-instructie voor de klant */}
+              <div className="rounded-lg border border-dashed border-border bg-muted/30 p-3 space-y-2">
+                <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                  {t("editor.domain.dnsTitle")}
+                </p>
                 <p className="text-xs text-muted-foreground">
-                  {t("editor.domain.helpBefore")} <code className="font-mono">careers.talentflow.app</code>{" "}
-                  {t("editor.domain.helpAfter")}
+                  {t("editor.domain.dnsHelp")}
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs font-mono">
+                    <thead>
+                      <tr className="text-muted-foreground text-left">
+                        <th className="pr-4 pb-1 font-medium">
+                          {t("editor.domain.dnsType")}
+                        </th>
+                        <th className="pr-4 pb-1 font-medium">
+                          {t("editor.domain.dnsHost")}
+                        </th>
+                        <th className="pb-1 font-medium">
+                          {t("editor.domain.dnsValue")}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="text-zinc-900 dark:text-zinc-100">
+                        <td className="pr-4">A</td>
+                        <td className="pr-4">{savedDomain || customDomain.trim() || "werkenbij.bedrijf.nl"}</td>
+                        <td>{DNS_TARGET_IP}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  {t("editor.domain.dnsNote")}
                 </p>
               </div>
             </CardContent>

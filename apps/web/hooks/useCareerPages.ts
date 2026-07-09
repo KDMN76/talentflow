@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api, publicApi } from "@/lib/api";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -52,6 +52,7 @@ export interface CareerPage {
   id: string;
   slug: string;
   custom_domain: string | null;
+  custom_domain_verified_at?: string | null;
   active: boolean;
   config: CareerPageConfig;
   language: CareerPageLanguage;
@@ -61,6 +62,15 @@ export interface CareerPage {
   created_at: string;
   blocks?: CareerPageBlock[];
   published_at?: string | null;
+}
+
+export interface VerifyCustomDomainResult {
+  verified: boolean;
+  custom_domain: string;
+  verified_at: string | null;
+  target_ip: string;
+  resolved_ips: string[];
+  reason?: string;
 }
 
 // ─── Block types (builder) ───────────────────────────────────────────────────
@@ -311,13 +321,51 @@ export function useDeleteCareerPage() {
   });
 }
 
+// ─── Hooks: Custom domain (white-label serving) ──────────────────────────────
+
+/** Koppel/wis een eigen domein. `domain === null` of "" wist de koppeling. */
+export function useSetCustomDomain(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (domain: string | null): Promise<CareerPage> => {
+      const { data } = await api.put<CareerPage>(
+        `/career-pages/${id}/custom-domain`,
+        { domain }
+      );
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["career-pages"] });
+      queryClient.invalidateQueries({ queryKey: ["career-pages", id] });
+    },
+  });
+}
+
+/** Verifieer dat het gekoppelde domein via DNS naar TalentFlow wijst. */
+export function useVerifyCustomDomain(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (): Promise<VerifyCustomDomainResult> => {
+      const { data } = await api.post<VerifyCustomDomainResult>(
+        `/career-pages/${id}/custom-domain/verify`
+      );
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["career-pages", id] });
+    },
+  });
+}
+
 // ─── Hooks: Public ───────────────────────────────────────────────────────────
 
 export function usePublicCareerPage(slug: string) {
   return useQuery({
     queryKey: ["career-pages", "public", slug],
     queryFn: async (): Promise<PublicCareerPageData> => {
-      const { data } = await api.get<PublicCareerPageData>(
+      // publicApi (geen credentials) zodat dit óók vanaf een white-label
+      // custom domein werkt (cross-origin, reflected-origin CORS).
+      const { data } = await publicApi.get<PublicCareerPageData>(
         `/career-pages/public/${slug}`
       );
       return data;
@@ -425,7 +473,9 @@ export function useUpdateApplicationForm(
 export function useSubmitApplication(slug: string) {
   return useMutation({
     mutationFn: async (payload: SubmitApplicationData): Promise<{ id: string }> => {
-      const { data } = await api.post<{ id: string }>(
+      // publicApi: sollicitatie-apply is publiek en moet cross-origin werken
+      // vanaf een custom domein (geen sessie-cookie nodig).
+      const { data } = await publicApi.post<{ id: string }>(
         `/career-pages/public/${slug}/apply`,
         payload
       );

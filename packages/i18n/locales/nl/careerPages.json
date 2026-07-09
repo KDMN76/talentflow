@@ -123,11 +123,45 @@
       "languageLabel": "Taal"
     },
     "domain": {
-      "title": "Custom domein",
+      "title": "Eigen domein",
+      "description": "Toon deze career page op je eigen (sub)domein, bijvoorbeeld werkenbij.bedrijf.nl.",
       "nameLabel": "Domeinnaam",
-      "namePlaceholder": "werken.bedrijf.nl",
-      "helpBefore": "Wijs een CNAME naar",
-      "helpAfter": "om dit domein te activeren."
+      "namePlaceholder": "werkenbij.bedrijf.nl",
+      "save": "Domein opslaan",
+      "saving": "Opslaan…",
+      "verify": "Verifiëren",
+      "verifying": "Verifiëren…",
+      "verified": "Geverifieerd",
+      "notVerified": "Niet geverifieerd",
+      "saveFirst": "Sla het domein eerst op om te verifiëren.",
+      "dnsTitle": "DNS-instelling",
+      "dnsHelp": "Zet bij je domeinprovider dit A-record en klik daarna op Verifiëren:",
+      "dnsType": "Type",
+      "dnsHost": "Host",
+      "dnsValue": "Waarde",
+      "dnsNote": "DNS-wijzigingen kunnen tot 24 uur duren voordat ze wereldwijd actief zijn.",
+      "toasts": {
+        "saved": {
+          "title": "Domein opgeslagen",
+          "description": "{{domain}} is gekoppeld. Verifieer nu de DNS."
+        },
+        "cleared": {
+          "title": "Domein losgekoppeld",
+          "description": "Deze career page is weer alleen via de slug bereikbaar."
+        },
+        "saveError": {
+          "title": "Kon domein niet opslaan",
+          "description": "Controleer de domeinnaam en probeer het opnieuw."
+        },
+        "verified": {
+          "title": "Domein geverifieerd",
+          "description": "{{domain}} wijst correct naar TalentFlow."
+        },
+        "verifyFailed": {
+          "title": "Nog niet geverifieerd",
+          "description": "Het domein wijst nog niet naar TalentFlow. Controleer het A-record en probeer het later opnieuw."
+        }
+      }
     },
     "livePreview": {
       "title": "Live preview",

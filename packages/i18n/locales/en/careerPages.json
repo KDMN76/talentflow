@@ -124,10 +124,44 @@
     },
     "domain": {
       "title": "Custom domain",
+      "description": "Serve this career page on your own (sub)domain, e.g. careers.company.com.",
       "nameLabel": "Domain name",
       "namePlaceholder": "careers.company.com",
-      "helpBefore": "Point a CNAME to",
-      "helpAfter": "to activate this domain."
+      "save": "Save domain",
+      "saving": "Saving…",
+      "verify": "Verify",
+      "verifying": "Verifying…",
+      "verified": "Verified",
+      "notVerified": "Not verified",
+      "saveFirst": "Save the domain first to verify it.",
+      "dnsTitle": "DNS setup",
+      "dnsHelp": "At your DNS provider, add this A-record, then click Verify:",
+      "dnsType": "Type",
+      "dnsHost": "Host",
+      "dnsValue": "Value",
+      "dnsNote": "DNS changes can take up to 24 hours to propagate worldwide.",
+      "toasts": {
+        "saved": {
+          "title": "Domain saved",
+          "description": "{{domain}} is linked. Now verify the DNS."
+        },
+        "cleared": {
+          "title": "Domain unlinked",
+          "description": "This career page is now reachable via its slug only."
+        },
+        "saveError": {
+          "title": "Could not save domain",
+          "description": "Check the domain name and try again."
+        },
+        "verified": {
+          "title": "Domain verified",
+          "description": "{{domain}} points correctly to TalentFlow."
+        },
+        "verifyFailed": {
+          "title": "Not verified yet",
+          "description": "The domain does not point to TalentFlow yet. Check the A-record and try again later."
+        }
+      }
     },
     "livePreview": {
       "title": "Live preview",

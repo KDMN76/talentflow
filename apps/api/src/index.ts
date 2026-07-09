@@ -178,7 +178,26 @@ app.set('trust proxy', 1);
 
 // ── Security ────────────────────────────────────────────────────────────────
 app.use(helmet());
-app.use(cors({
+
+// Publieke career-routes (render + sollicitatie-apply) moeten óók werken
+// vanaf white-label custom domeinen — dat is cross-origin naar deze API.
+// Daarom een aparte CORS die de origin REFLECTEERT maar ZONDER credentials:
+// de data is publiek (gepubliceerde vacatures) en heeft geen sessie-cookie
+// nodig. De web-client gebruikt hiervoor een credential-loze `publicApi`.
+// Bewust géén credentials i.c.m. reflected-origin — dat zou anders elke site
+// credentialed requests laten doen. Deze CORS staat VÓÓR de globale zodat de
+// preflight (OPTIONS) hier wordt afgehandeld en niet door de strikte globale.
+const publicCareerCors = cors({
+  origin: true, // reflecteer de request-origin (elk custom domein)
+  credentials: false,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type'],
+});
+app.use('/api/career-pages/public', publicCareerCors);
+
+// Globale CORS: strikt op de app-origin, mét credentials (refresh-cookie).
+// Slaat de publieke career-routes over (die hebben hun eigen CORS hierboven).
+const globalCors = cors({
   origin: process.env.CORS_ORIGIN ?? 'http://localhost:3000',
   credentials: true,
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT', 'OPTIONS'],
@@ -187,7 +206,12 @@ app.use(cors({
   // resterende pogingen + retry-countdown). Zonder exposedHeaders kan axios
   // deze cross-origin niet lezen.
   exposedHeaders: ['RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset', 'Retry-After'],
-}));
+});
+app.use((req, res, next) =>
+  req.path.startsWith('/api/career-pages/public')
+    ? next()
+    : globalCors(req, res, next)
+);
 
 // ── Body parsing ─────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '1mb' }));

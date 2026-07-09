@@ -37,6 +37,31 @@ Niets hieruit wordt opgepakt zonder expliciete promotie door Kaan.
   Geen quick wiring; echte feature-reconciliatie. Push is niet het primaire kanaal
   (e-mail wel), dus lagere urgentie.
 
+### Custom-domain career-pages: publieke API-fetch is cross-origin (CORS)
+- **Priority**: P2
+- **Status**: Open
+- **Source**: Claude (gevonden tijdens bouw white-label custom-domain serving, 2026-07-09)
+- **Context**: De publieke career-page (`app/careers/[slug]/page.tsx`) is een
+  client component die de data client-side ophaalt via de axios-instance
+  (`lib/api.ts`, baseURL = `NEXT_PUBLIC_API_URL` = https://talentflow.kdmn.nl/api,
+  `withCredentials: true`). Via een eigen domein (bv. werkenbij.klant.nl) is die
+  fetch **cross-origin**: de browser-origin is het klantdomein, de API-origin is
+  talentflow.kdmn.nl. De globale CORS-config (`index.ts`) staat alleen
+  `CORS_ORIGIN` (= talentflow.kdmn.nl) toe → preflight/GET wordt geblokkeerd →
+  de pagina toont de error-state op het custom domein. De **middleware-rewrite,
+  het resolve-endpoint, de admin-koppeling/verificatie en de render zelf werken**;
+  alleen de client-side datafetch faalt cross-origin.
+- **Waarom niet meegefixt**: het openzetten van CORS voor de publieke
+  career-/apply-endpoints is een security-relevante, cross-cutting keuze
+  (origin-reflectie vs. wildcard, omgang met `withCredentials`/refresh-cookie).
+  Buiten de afgesproken scope van de 4 build-items — expliciet ter beslissing.
+- **Aanbevolen fix (ter keuze)**: (a) mount een tweede `cors()` alléén op de
+  publieke career-routes (`/public/resolve-domain`, `/public/:slug`,
+  `/public/:slug/apply`) die de origin reflecteert en **geen** credentials
+  vereist (de publieke endpoints hebben geen auth-cookie nodig); en/of (b) op de
+  career-page een dedicated fetch zonder `withCredentials`. Optie (a) is het
+  meest generiek. Vereist een bewuste keuze van Kaan i.v.m. security-posture.
+
 ### ✅ Opgelost op 2026-06-03 (sessie "Sectie-1 opruiming")
 
 Additieve log — de losse items hieronder zijn niet herschreven; deze sectie is

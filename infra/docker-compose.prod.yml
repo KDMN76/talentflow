@@ -226,6 +226,10 @@ services:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
         NEXT_PUBLIC_USE_MOCK_DATA: ${NEXT_PUBLIC_USE_MOCK_DATA}
         NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN}
+        # White-label custom-domain serving: komma-gescheiden lijst van app-eigen
+        # hosts die NIET naar een career-page rewriten. Leeg laten mag — de
+        # middleware leidt de app-host dan af uit NEXT_PUBLIC_API_URL + localhost.
+        NEXT_PUBLIC_APP_HOSTS: ${NEXT_PUBLIC_APP_HOSTS:-}
         # Hotfix 2026-05-15: verbergt "Registreer je bedrijf" CTA op /login
         # wanneer 'true'. Moet matchen met API-zijde DISABLE_PUBLIC_REGISTRATION.
         NEXT_PUBLIC_DISABLE_PUBLIC_REGISTRATION: ${DISABLE_PUBLIC_REGISTRATION:-false}
@@ -237,6 +241,7 @@ services:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
       NEXT_PUBLIC_USE_MOCK_DATA: ${NEXT_PUBLIC_USE_MOCK_DATA}
       NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN}
+      NEXT_PUBLIC_APP_HOSTS: ${NEXT_PUBLIC_APP_HOSTS:-}
     depends_on:
       api:
         condition: service_healthy
