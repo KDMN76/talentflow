@@ -3,7 +3,7 @@ import {
   normalizeHost,
   getAppHosts,
   isAppHost,
-  buildRewritePath,
+  buildCareerPath,
 } from "@/lib/customDomain";
 
 describe("normalizeHost", () => {
@@ -69,17 +69,17 @@ describe("isAppHost", () => {
   });
 });
 
-describe("buildRewritePath", () => {
+describe("buildCareerPath", () => {
   it("always rewrites to the single /careers/<slug> route", () => {
     // Een white-label domein is aan één career-page gekoppeld en is een
     // single-page site: elk pad valt terug op dezelfde bestaande route (HTTP
     // 200 op /, /jobs, /privacy). De uiteindelijke render loopt via de host-
     // gate (root-layout), dus alleen de route-match/HTTP-status telt hier.
-    expect(buildRewritePath("klant")).toBe("/careers/klant");
+    expect(buildCareerPath("klant")).toBe("/careers/klant");
   });
 
   it("is stable regardless of the requested slug value", () => {
-    expect(buildRewritePath("kdmn")).toBe("/careers/kdmn");
-    expect(buildRewritePath("acme-bv")).toBe("/careers/acme-bv");
+    expect(buildCareerPath("kdmn")).toBe("/careers/kdmn");
+    expect(buildCareerPath("acme-bv")).toBe("/careers/acme-bv");
   });
 });

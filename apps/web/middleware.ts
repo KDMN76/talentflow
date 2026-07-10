@@ -1,27 +1,29 @@
 import { NextResponse, type NextRequest } from "next/server";
 import {
-  buildRewritePath,
+  buildCareerPath,
   getAppHosts,
   isAppHost,
   normalizeHost,
-  CAREER_SLUG_HEADER,
 } from "@/lib/customDomain";
 
 /**
  * White-label custom-domain serving.
  *
- * Een tenant koppelt een eigen (sub)domein aan een gepubliceerde career-page.
- * Requests op zo'n domein worden server-side geREWRITE (geen redirect — de URL
- * blijft het eigen domein tonen) naar de bestaande /careers/<slug>-tree, zodat
- * er één bron van waarheid is voor de render (blokken, salarisband, AI-
- * disclosure).
+ * Een tenant koppelt een eigen (sub)domein aan één gepubliceerde career-page.
+ * Een verzoek op zo'n domein wordt geREDIRECT naar de bestaande route
+ * `/careers/<slug>`. Bewust een redirect (geen onzichtbare rewrite): bij een
+ * rewrite blijft de browser-URL "/" en dan koppelt de Next.js CLIENT-router die
+ * aan de `(dashboard)`-route-groep (want `/` en `/jobs` zijn dashboard-routes),
+ * waardoor de auth-guard alsnog naar /login navigeert. Door naar de échte route
+ * `/careers/<slug>` te redirecten matcht de client-router meteen de career-tree
+ * → geen /login, geen hydration-mismatch. De bezoeker blijft op het eigen
+ * domein (werkenbij.kdmn.nl/careers/<slug>).
  *
  * App-eigen hosts (dashboard/API) passeren ongemoeid. De matcher (onderaan)
- * sluit /_next, /api, static assets, favicon en robots uit — die mogen NOOIT
- * gerewrite worden, anders breekt de hele app.
+ * sluit /_next, /api, static assets, favicon en robots uit.
  *
  * Defensief: fetch-timeout, negatief cachen en nooit throwen — een resolve-fout
- * valt terug op de normale flow (NextResponse.next → normale 404).
+ * valt terug op de normale flow.
  */
 
 const APP_HOSTS = getAppHosts({
@@ -48,9 +50,7 @@ async function resolveHostToSlug(
     const timeout = setTimeout(() => controller.abort(), 2500);
     // Resolve via de EIGEN origin van het request (bv. https://werkenbij.kdmn.nl):
     // de nginx-vhost van elk custom domein proxyt /api/ naar de api-container, en
-    // de matcher hieronder sluit /api/ uit (dus geen middleware-loop). Env-vrij —
-    // Next inlinet in de Edge-runtime alleen NEXT_PUBLIC_-vars, dus een aparte
-    // resolve-env zou toch niet aankomen.
+    // de matcher hieronder sluit /api/ uit (dus geen middleware-loop).
     const res = await fetch(
       `${origin}/api/career-pages/public/resolve-domain?host=${encodeURIComponent(host)}`,
       { signal: controller.signal, headers: { accept: "application/json" } }
@@ -75,34 +75,32 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     request.headers.get("host") ?? request.nextUrl.hostname
   );
 
-  // Anti-spoofing: verwijder ALTIJD een eventueel door de client meegestuurde
-  // career-slug-header. Alleen deze middleware mag hem zetten; anders zou een
-  // request naar een app-host met een verzonnen header de app-tree kunnen laten
-  // vervangen door een career-page.
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.delete(CAREER_SLUG_HEADER);
-
-  // App-eigen host (dashboard) → niets rewriten (wel de gestripte header
-  // doorzetten).
+  // App-eigen host (dashboard) → niets doen.
   if (isAppHost(host, APP_HOSTS)) {
-    return NextResponse.next({ request: { headers: requestHeaders } });
+    return NextResponse.next();
   }
 
-  // Custom domein: resolve host → slug en rewrite. Geen match/fout → normale
-  // flow (val terug op 404 van de app).
+  // Custom domein: resolve host → slug. Geen match/fout → normale flow.
   const slug = await resolveHostToSlug(request.nextUrl.origin, host);
   if (!slug) {
-    return NextResponse.next({ request: { headers: requestHeaders } });
+    return NextResponse.next();
   }
 
-  // Zet de opgeloste slug als header zodat de root-layout hem server-side kan
-  // lezen en de host-gate de career-page rechtstreeks rendert (los van de
-  // client-router-resolutie van "/").
-  requestHeaders.set(CAREER_SLUG_HEADER, slug);
+  const target = buildCareerPath(slug);
+  const path = request.nextUrl.pathname;
 
+  // Al op de eigen career-route (of een subpad ervan)? Gewoon renderen.
+  if (path === target || path.startsWith(`${target}/`)) {
+    return NextResponse.next();
+  }
+
+  // Alle andere paden (/, /jobs, /careers/andere-slug, …) → redirect naar de
+  // eigen career-route. Zo blijft het custom domein aan één career-page vast
+  // (een bezoeker kan niet naar de career-page van een andere tenant) en matcht
+  // de client-router de juiste route.
   const url = request.nextUrl.clone();
-  url.pathname = buildRewritePath(slug);
-  return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+  url.pathname = target;
+  return NextResponse.redirect(url);
 }
 
 export const config = {
@@ -110,11 +108,7 @@ export const config = {
   //   _next/*        → build-output + image optimizer
   //   api/*          → (proxy)-API-routes
   //   favicon/robots/sitemap/sw/manifest en elk pad met een bestandsextensie
-  // Zonder deze exclusions zou /_next en /api ook rewriten → de hele app breekt.
   matcher: [
-    // De root expliciet: de negatieve-lookahead-matcher hieronder matcht "/"
-    // niet (bekende Next.js-gotcha) → zonder deze regel zou het custom domein
-    // op de homepage terugvallen op app-gedrag (redirect naar /dashboard).
     "/",
     "/((?!_next/|api/|favicon.ico|robots.txt|sitemap.xml|sw.js|manifest.json|.*\\.[\\w]+$).*)",
   ],
