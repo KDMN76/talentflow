@@ -31,15 +31,22 @@ const APP_HOSTS = getAppHosts({
   NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
 });
 
+// Resolve-base = de PUBLIEKE API-URL (NEXT_PUBLIC_API_URL). Bewust niet
+// request.nextUrl.origin: achter nginx geeft die in de Edge-runtime de INTERNE
+// origin (http://localhost:3000 = de web-container zelf) → /api daar is 404 →
+// resolve mislukt → geen redirect → "/" valt terug op de dashboard-tree →
+// /login. NEXT_PUBLIC_* wordt wél build-time in de Edge-bundle geïnlined en de
+// container kan de publieke API-host bereiken.
+const API_BASE = (
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"
+).replace(/\/$/, "");
+
 // Module-level cache host → slug|null (negatief cachen voorkomt hammering van
 // de API bij bots/onbekende hosts). ~60s TTL.
 const CACHE_TTL_MS = 60_000;
 const slugCache = new Map<string, { slug: string | null; expires: number }>();
 
-async function resolveHostToSlug(
-  origin: string,
-  host: string
-): Promise<string | null> {
+async function resolveHostToSlug(host: string): Promise<string | null> {
   const now = Date.now();
   const cached = slugCache.get(host);
   if (cached && cached.expires > now) return cached.slug;
@@ -48,11 +55,8 @@ async function resolveHostToSlug(
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 2500);
-    // Resolve via de EIGEN origin van het request (bv. https://werkenbij.kdmn.nl):
-    // de nginx-vhost van elk custom domein proxyt /api/ naar de api-container, en
-    // de matcher hieronder sluit /api/ uit (dus geen middleware-loop).
     const res = await fetch(
-      `${origin}/api/career-pages/public/resolve-domain?host=${encodeURIComponent(host)}`,
+      `${API_BASE}/career-pages/public/resolve-domain?host=${encodeURIComponent(host)}`,
       { signal: controller.signal, headers: { accept: "application/json" } }
     );
     clearTimeout(timeout);
@@ -81,7 +85,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   }
 
   // Custom domein: resolve host → slug. Geen match/fout → normale flow.
-  const slug = await resolveHostToSlug(request.nextUrl.origin, host);
+  const slug = await resolveHostToSlug(host);
   if (!slug) {
     return NextResponse.next();
   }
