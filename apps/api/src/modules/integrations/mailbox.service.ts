@@ -15,7 +15,7 @@
 
 import { withTenant, withoutTenant } from '../../db/pool';
 import { redis } from '../../queue/queues';
-import { getMailProvider } from '../../lib/providers';
+import { getMailProvider, isProviderMockMode } from '../../lib/providers';
 import { logAudit } from '../../lib/audit';
 import { AuditActions } from '../../lib/auditActions';
 import { AppError, logger } from '../../middleware/errorHandler';
@@ -73,6 +73,30 @@ function isProviderName(s: string): s is MailProviderName {
   return s === 'gmail' || s === 'outlook';
 }
 
+// ─── Provider config-status (welke OAuth-providers zijn ingericht) ──────────
+
+export interface ProviderConfigStatus {
+  provider: MailProviderName;
+  configured: boolean;
+}
+
+/**
+ * Rapporteert per OAuth-provider of de server-side client-credentials
+ * (client-id/secret) gezet zijn — NOOIT de secrets zelf, alleen booleans.
+ *
+ * `outlook` dekt zowel Outlook.com als Microsoft 365: beide lopen via
+ * dezelfde Microsoft-Graph-OAuth (AZURE_AD_CLIENT_ID/SECRET). De frontend
+ * gebruikt dit om "Verbind Gmail/Outlook" te disablen zolang de koppeling nog
+ * niet is ingericht, i.p.v. de gebruiker naar een kapotte OAuth-URL te sturen.
+ */
+export function getProviderConfigStatus(): ProviderConfigStatus[] {
+  const providers: MailProviderName[] = ['gmail', 'outlook'];
+  return providers.map((provider) => ({
+    provider,
+    configured: !isProviderMockMode(provider),
+  }));
+}
+
 function rowToPublic(row: MailboxIntegrationWithTokens | MailboxIntegration): MailboxIntegration {
   return {
     id: row.id,
@@ -97,6 +121,17 @@ export async function startOAuth(
 ): Promise<{ url: string; state: string }> {
   if (!isProviderName(provider)) {
     throw new AppError(400, 'INVALID_PROVIDER', 'Unsupported mail provider');
+  }
+  // Eerlijke staat: als de OAuth-client (client-id/secret) ontbreekt, NOOIT een
+  // (kapotte/lege) OAuth-URL bouwen. De frontend disablet de knop al op basis
+  // van getProviderConfigStatus(); dit is de server-side vangnet voor directe
+  // API-calls.
+  if (isProviderMockMode(provider)) {
+    throw new AppError(
+      501,
+      'PROVIDER_NOT_CONFIGURED',
+      `${provider}-OAuth is nog niet geconfigureerd door de beheerder`
+    );
   }
   const state = randomUUID();
   const payload: OAuthStatePayload = { tenantId, userId, provider };

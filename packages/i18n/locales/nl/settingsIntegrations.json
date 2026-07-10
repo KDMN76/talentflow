@@ -1,7 +1,7 @@
 {
   "header": {
     "title": "Integraties — koppel je mailbox aan TalentFlow",
-    "description": "Verbind Gmail of Outlook om mails direct vanuit TalentFlow te versturen en replies automatisch in te lezen.",
+    "description": "Verbind Gmail, Outlook of Microsoft 365 via OAuth, of koppel je eigen mailserver via IMAP/SMTP — om mails direct vanuit TalentFlow te versturen.",
     "refresh": "Vernieuwen"
   },
   "stats": {
@@ -20,11 +20,31 @@
     "invalid_state": "OAuth-sessie verlopen. Start de koppeling opnieuw.",
     "token_exchange_failed": "Token-uitwisseling met de provider mislukte.",
     "scope_missing": "Niet alle benodigde rechten zijn verleend.",
+    "PROVIDER_NOT_CONFIGURED": "Deze koppeling is nog niet geconfigureerd door de beheerder. Gebruik voorlopig IMAP/SMTP.",
     "unknown": "Er ging iets mis bij het verbinden."
   },
   "providers": {
-    "gmailDescription": "Verbind je Gmail om mails direct vanuit TalentFlow te versturen en replies automatisch in te lezen.",
-    "outlookDescription": "Verbind je Microsoft 365 / Outlook-postvak om vanuit TalentFlow te corresponderen."
+    "gmailName": "Gmail",
+    "outlookName": "Outlook / Microsoft 365",
+    "gmailDescription": "Verbind je Gmail via Google-OAuth om mails direct vanuit TalentFlow te versturen en replies automatisch in te lezen.",
+    "outlookDescription": "Verbind je Outlook- of Microsoft 365-postvak via Microsoft-OAuth (Microsoft Graph) om vanuit TalentFlow te corresponderen."
+  },
+  "notConfigured": {
+    "badge": "Niet geconfigureerd",
+    "title": "{{name}}-koppeling is nog niet geconfigureerd",
+    "description": "De beheerder heeft de OAuth-koppeling nog niet ingericht. Gebruik voorlopig je eigen mailserver via IMAP/SMTP hieronder.",
+    "button": "Nog niet beschikbaar",
+    "toastTitle": "Koppeling niet geconfigureerd",
+    "toastDescription": "Deze OAuth-koppeling is nog niet ingericht door de beheerder. Gebruik voorlopig IMAP/SMTP."
+  },
+  "smtp": {
+    "title": "Eigen mailserver (IMAP/SMTP)",
+    "subtitle": "Zonder OAuth — via je eigen server",
+    "badge": "Beschikbaar",
+    "description": "Geen Gmail of Outlook? Koppel je eigen mailserver. Verzenden werkt direct via SMTP, zonder Google- of Microsoft-OAuth.",
+    "sendWorks": "Verzenden via je eigen SMTP-server werkt direct — configureer host, poort en inloggegevens en verstuur een testmail.",
+    "receiveRoadmap": "Inkomende mail inlezen via IMAP volgt later. Voor nu koppelen we alleen verzending.",
+    "button": "Open e-mailinstellingen"
   },
   "toasts": {
     "connected": {

@@ -34,6 +34,30 @@ export function useMailboxIntegrations() {
   });
 }
 
+/**
+ * Config-status van de OAuth-providers: welke providers hebben server-side
+ * client-credentials (client-id/secret) ingericht. Bevat GEEN secrets — enkel
+ * booleans. De UI gebruikt dit om "Verbind Gmail/Outlook" te disablen zolang
+ * de koppeling nog niet is ingericht (i.p.v. naar een kapotte OAuth-URL te
+ * navigeren). `outlook` dekt ook Microsoft 365 (zelfde Microsoft-OAuth).
+ */
+export interface MailboxProviderConfig {
+  providers: Partial<Record<MailboxProvider, { configured: boolean }>>;
+  smtp: { available: boolean };
+}
+
+export function useMailboxProviderConfig() {
+  return useQuery({
+    queryKey: ["mailbox-provider-config"],
+    queryFn: async (): Promise<MailboxProviderConfig> => {
+      const { data } = await api.get<{ data: MailboxProviderConfig }>(
+        "/integrations/mailbox/providers"
+      );
+      return data.data;
+    },
+  });
+}
+
 // ─── Mutations ──────────────────────────────────────────────────────────────
 
 interface OAuthStartResponse {

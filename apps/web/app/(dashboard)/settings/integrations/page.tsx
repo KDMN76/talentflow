@@ -12,8 +12,10 @@ import {
   ShieldCheck,
   Trash2,
   Loader2,
+  Lock,
   Plus,
   RefreshCw,
+  Server,
 } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -45,6 +47,7 @@ import { useToast } from "@/components/ui/use-toast";
 import {
   useDisconnectIntegration,
   useMailboxIntegrations,
+  useMailboxProviderConfig,
   useStartOAuth,
   type MailboxIntegration,
   type MailboxProvider,
@@ -54,7 +57,10 @@ import {
 
 interface ProviderMeta {
   id: MailboxProvider;
+  /** Korte naam voor interpolatie in knoppen/labels (bv. "Gmail"). */
   name: string;
+  /** i18n-sleutel voor de kaarttitel (bv. "Outlook / Microsoft 365"). */
+  titleKey: string;
   descriptionKey: string;
   hourlyLimit: number;
   Logo: React.FC<{ className?: string }>;
@@ -65,6 +71,7 @@ const PROVIDERS: ProviderMeta[] = [
   {
     id: "gmail",
     name: "Gmail",
+    titleKey: "providers.gmailName",
     descriptionKey: "providers.gmailDescription",
     hourlyLimit: 250,
     Logo: GmailLogo,
@@ -73,6 +80,7 @@ const PROVIDERS: ProviderMeta[] = [
   {
     id: "outlook",
     name: "Outlook",
+    titleKey: "providers.outlookName",
     descriptionKey: "providers.outlookDescription",
     hourlyLimit: 100,
     Logo: OutlookLogo,
@@ -95,6 +103,8 @@ export default function IntegrationsPage() {
     refetch,
     isRefetching,
   } = useMailboxIntegrations();
+  const { data: providerConfig, isLoading: isConfigLoading } =
+    useMailboxProviderConfig();
   const startOAuth = useStartOAuth();
   const disconnect = useDisconnectIntegration();
 
@@ -153,15 +163,37 @@ export default function IntegrationsPage() {
 
   // ─── Handlers ───────────────────────────────────────────────────────────
   const handleConnect = async (provider: MailboxProvider) => {
+    // Eerlijke staat: nooit een OAuth-flow starten (en dus nooit redirecten
+    // naar een kapotte/lege provider-URL) als de koppeling niet is ingericht.
+    if (providerConfig && providerConfig.providers[provider]?.configured !== true) {
+      toast({
+        title: t("notConfigured.toastTitle"),
+        description: t("notConfigured.toastDescription"),
+        variant: "destructive",
+      });
+      return;
+    }
     setPendingProvider(provider);
     try {
       const result = await startOAuth.mutateAsync(provider);
+      // Extra vangnet: leeg/onvolledig URL nooit volgen.
+      if (!result.url || !/^https?:\/\//i.test(result.url)) {
+        throw new Error("invalid_oauth_url");
+      }
       // OAuth handshake leaves the SPA — full page redirect.
       window.location.href = result.url;
-    } catch {
+    } catch (err) {
+      const code = (
+        err as { response?: { data?: { error?: { code?: string } } } }
+      )?.response?.data?.error?.code;
+      const notConfigured = code === "PROVIDER_NOT_CONFIGURED";
       toast({
-        title: t("toasts.oauthFailed.title"),
-        description: t("toasts.oauthFailed.description"),
+        title: notConfigured
+          ? t("notConfigured.toastTitle")
+          : t("toasts.oauthFailed.title"),
+        description: notConfigured
+          ? t("notConfigured.toastDescription")
+          : t("toasts.oauthFailed.description"),
         variant: "destructive",
       });
       setPendingProvider(null);
@@ -267,6 +299,8 @@ export default function IntegrationsPage() {
             meta={meta}
             accounts={accounts}
             isLoading={isLoading}
+            configLoading={isConfigLoading}
+            configured={providerConfig?.providers[meta.id]?.configured ?? false}
             isConnecting={
               pendingProvider === meta.id || startOAuth.isPending
             }
@@ -275,6 +309,9 @@ export default function IntegrationsPage() {
           />
         ))}
       </div>
+
+      {/* ── Eigen mailserver (IMAP/SMTP) — OAuth-loos alternatief ── */}
+      <SmtpCard onOpenSettings={() => router.push("/settings/email")} />
 
       {/* ── Scopes / privacy disclosure ── */}
       <Card className="border-0 shadow-sm bg-zinc-50/50 dark:bg-zinc-900/40">
@@ -382,6 +419,8 @@ interface ProviderCardProps {
   meta: ProviderMeta;
   accounts: MailboxIntegration[];
   isLoading: boolean;
+  configLoading: boolean;
+  configured: boolean;
   isConnecting: boolean;
   onConnect: () => void;
   onDisconnect: (integ: MailboxIntegration) => void;
@@ -391,12 +430,18 @@ function ProviderCard({
   meta,
   accounts,
   isLoading,
+  configLoading,
+  configured,
   isConnecting,
   onConnect,
   onDisconnect,
 }: ProviderCardProps) {
   const { t } = useTranslation("settingsIntegrations");
   const { Logo } = meta;
+  // Zolang de config-status laadt weten we nog niet of de provider ingericht
+  // is — behandel als "niet beschikbaar" om een flitsende actieve knop te
+  // voorkomen.
+  const notConfigured = !configLoading && !configured;
   return (
     <Card className="border-0 shadow-sm overflow-hidden">
       <CardHeader className="space-y-3">
@@ -407,21 +452,42 @@ function ProviderCard({
             <Logo className="h-5 w-5 text-white" />
           </div>
           <div className="min-w-0">
-            <CardTitle className="text-base">{meta.name}</CardTitle>
+            <CardTitle className="text-base">{t(meta.titleKey)}</CardTitle>
             <CardDescription className="text-xs">
               {t("providerCard.limit", { limit: meta.hourlyLimit })}
             </CardDescription>
           </div>
-          {accounts.length > 0 && (
+          {accounts.length > 0 ? (
             <Badge className="ml-auto bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-0 text-[10px]">
               {t("providerCard.connectedBadge", { count: accounts.length })}
             </Badge>
-          )}
+          ) : notConfigured ? (
+            <Badge className="ml-auto bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border-0 text-[10px]">
+              {t("notConfigured.badge")}
+            </Badge>
+          ) : null}
         </div>
         <p className="text-sm text-muted-foreground">{t(meta.descriptionKey)}</p>
       </CardHeader>
 
       <CardContent className="space-y-3">
+        {/* Niet-geconfigureerd: eerlijke melding i.p.v. kapotte OAuth-pagina */}
+        {notConfigured && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50/60 px-4 py-3 dark:border-amber-900/40 dark:bg-amber-950/20">
+            <div className="flex items-start gap-2.5">
+              <Lock className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <div className="space-y-0.5">
+                <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+                  {t("notConfigured.title", { name: t(meta.titleKey) })}
+                </p>
+                <p className="text-[11px] leading-relaxed text-amber-700/90 dark:text-amber-400/80">
+                  {t("notConfigured.description")}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Account list */}
         {isLoading ? (
           <div className="rounded-lg border border-dashed border-border px-4 py-6 text-center text-xs text-muted-foreground">
@@ -472,19 +538,77 @@ function ProviderCard({
           </div>
         )}
 
-        {/* Connect button */}
+        {/* Connect button — disabled zolang de provider niet is ingericht */}
         <Button
           onClick={onConnect}
-          disabled={isConnecting}
+          disabled={isConnecting || notConfigured || configLoading}
           className="w-full bg-zinc-900 hover:bg-zinc-800 text-white border-0 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
         >
           {isConnecting ? (
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : notConfigured ? (
+            <Lock className="h-4 w-4 mr-2" />
           ) : (
             <Plus className="h-4 w-4 mr-2" />
           )}
-          {t("providerCard.connectButton", { name: meta.name })}
-          <ExternalLink className="h-3 w-3 ml-auto opacity-60" />
+          {notConfigured
+            ? t("notConfigured.button")
+            : t("providerCard.connectButton", { name: meta.name })}
+          {!notConfigured && (
+            <ExternalLink className="h-3 w-3 ml-auto opacity-60" />
+          )}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── SMTP / IMAP card (OAuth-loos alternatief) ──────────────────────────────
+
+function SmtpCard({ onOpenSettings }: { onOpenSettings: () => void }) {
+  const { t } = useTranslation("settingsIntegrations");
+  return (
+    <Card className="border-0 shadow-sm overflow-hidden">
+      <CardHeader className="space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-purple-500 to-fuchsia-600 flex items-center justify-center shadow-sm">
+            <Server className="h-5 w-5 text-white" />
+          </div>
+          <div className="min-w-0">
+            <CardTitle className="text-base">{t("smtp.title")}</CardTitle>
+            <CardDescription className="text-xs">
+              {t("smtp.subtitle")}
+            </CardDescription>
+          </div>
+          <Badge className="ml-auto bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-0 text-[10px]">
+            {t("smtp.badge")}
+          </Badge>
+        </div>
+        <p className="text-sm text-muted-foreground">{t("smtp.description")}</p>
+      </CardHeader>
+
+      <CardContent className="space-y-3">
+        <ul className="space-y-2">
+          <li className="flex items-start gap-2.5">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+            <span className="text-xs text-zinc-700 dark:text-zinc-300">
+              {t("smtp.sendWorks")}
+            </span>
+          </li>
+          <li className="flex items-start gap-2.5">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/70" />
+            <span className="text-xs text-muted-foreground">
+              {t("smtp.receiveRoadmap")}
+            </span>
+          </li>
+        </ul>
+        <Button
+          onClick={onOpenSettings}
+          variant="outline"
+          className="w-full"
+        >
+          <Server className="h-4 w-4 mr-2" />
+          {t("smtp.button")}
         </Button>
       </CardContent>
     </Card>

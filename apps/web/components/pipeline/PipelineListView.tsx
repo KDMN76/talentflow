@@ -1,7 +1,9 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
+import { ChevronDown, ChevronsUpDown, ChevronUp } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Select,
@@ -20,6 +22,12 @@ import {
   formatRelativeDate,
 } from "@/lib/utils";
 import type { Application, PipelineStage } from "@/lib/mockData";
+import {
+  nextSortState,
+  sortApplications,
+  type SortColumn,
+  type SortState,
+} from "./pipelineData";
 
 interface PipelineListViewProps {
   applications: Application[];
@@ -28,6 +36,19 @@ interface PipelineListViewProps {
   /** Show the exact application date instead of a relative one. */
   showAbsoluteDate?: boolean;
 }
+
+/** Column definitions for the sortable table header. */
+const COLUMNS: {
+  key: SortColumn;
+  labelKey: string;
+  align: "left" | "center";
+  thClass: string;
+}[] = [
+  { key: "candidate", labelKey: "list.columns.candidate", align: "left", thClass: "py-3 pl-5 pr-4" },
+  { key: "stage", labelKey: "list.columns.stage", align: "left", thClass: "py-3 px-4" },
+  { key: "score", labelKey: "list.columns.score", align: "center", thClass: "py-3 px-4" },
+  { key: "applied", labelKey: "list.columns.applied", align: "left", thClass: "py-3 px-4" },
+];
 
 function resolve(application: Application) {
   const name =
@@ -52,6 +73,15 @@ export function PipelineListView({
   const { toast } = useToast();
   const moveApplication = useMoveApplication();
 
+  const [sort, setSort] = useState<SortState | null>(null);
+  const sortedApplications = useMemo(
+    () => sortApplications(applications, stages, sort),
+    [applications, stages, sort]
+  );
+
+  const handleSort = (column: SortColumn) =>
+    setSort((prev) => nextSortState(prev, column));
+
   const handleStageChange = async (app: Application, stageId: string) => {
     if (app.stage_id === stageId) return;
     try {
@@ -73,11 +103,52 @@ export function PipelineListView({
     <div className="overflow-x-auto rounded-xl border border-border bg-white dark:bg-zinc-900">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-border bg-zinc-50/60 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground dark:bg-zinc-800/40">
-            <th className="py-3 pl-5 pr-4">{t("list.columns.candidate")}</th>
-            <th className="py-3 px-4">{t("list.columns.stage")}</th>
-            <th className="py-3 px-4 text-center">{t("list.columns.score")}</th>
-            <th className="py-3 px-4">{t("list.columns.applied")}</th>
+          <tr className="border-b border-border bg-zinc-50/60 text-left dark:bg-zinc-800/40">
+            {COLUMNS.map((col) => {
+              const isActive = sort?.column === col.key;
+              const ariaSort = isActive
+                ? sort!.direction === "asc"
+                  ? "ascending"
+                  : "descending"
+                : "none";
+              const label = t(col.labelKey);
+              return (
+                <th
+                  key={col.key}
+                  aria-sort={ariaSort}
+                  className={cn(
+                    col.thClass,
+                    col.align === "center" && "text-center"
+                  )}
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleSort(col.key)}
+                    title={t("list.sortBy", { column: label })}
+                    className={cn(
+                      "group inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground",
+                      col.align === "center" && "justify-center"
+                    )}
+                  >
+                    <span>{label}</span>
+                    <span className="inline-flex w-3.5 justify-center">
+                      {isActive ? (
+                        sort!.direction === "asc" ? (
+                          <ChevronUp className="h-3.5 w-3.5" aria-hidden />
+                        ) : (
+                          <ChevronDown className="h-3.5 w-3.5" aria-hidden />
+                        )
+                      ) : (
+                        <ChevronsUpDown
+                          className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-40"
+                          aria-hidden
+                        />
+                      )}
+                    </span>
+                  </button>
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -91,7 +162,7 @@ export function PipelineListView({
               </td>
             </tr>
           )}
-          {applications.map((app) => {
+          {sortedApplications.map((app) => {
             const { name, email, score } = resolve(app);
             return (
               <tr

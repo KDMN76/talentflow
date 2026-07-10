@@ -81,12 +81,17 @@
     },
     "overrides": {
       "title": "Exceptions",
-      "description": "Block specific dates when you're unavailable, such as holidays or leave.",
+      "description": "Block periods when you're unavailable, such as holidays or leave.",
       "dateLabel": "Date",
+      "fromLabel": "Date from",
+      "toLabel": "Date until",
       "reasonLabel": "Reason",
       "reasonPlaceholder": "E.g. holiday or leave",
       "blockDate": "Block date",
-      "blockedHeading": "Blocked dates"
+      "blockedHeading": "Blocked dates",
+      "empty": "No exceptions added yet. Click ‘Block date’ to add a period.",
+      "removeAria": "Remove exception",
+      "rangeError": "The end date must be on or after the start date."
     },
     "toast": {
       "saved": {
@@ -95,6 +100,10 @@
       },
       "blocked": {
         "title": "Date blocked"
+      },
+      "error": {
+        "title": "Save failed",
+        "description": "Availability could not be saved. Please try again."
       }
     }
   },

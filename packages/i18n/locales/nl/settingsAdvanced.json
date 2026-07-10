@@ -81,12 +81,17 @@
     },
     "overrides": {
       "title": "Uitzonderingen",
-      "description": "Blokkeer specifieke datums waarop je niet beschikbaar bent, bijvoorbeeld vakantie of verlof.",
+      "description": "Blokkeer periodes waarin je niet beschikbaar bent, bijvoorbeeld vakantie of verlof.",
       "dateLabel": "Datum",
+      "fromLabel": "Datum van",
+      "toLabel": "Datum t/m",
       "reasonLabel": "Reden",
       "reasonPlaceholder": "Bijv. vakantie of verlof",
       "blockDate": "Datum blokkeren",
-      "blockedHeading": "Geblokkeerde datums"
+      "blockedHeading": "Geblokkeerde datums",
+      "empty": "Nog geen uitzonderingen toegevoegd. Klik op ‘Datum blokkeren’ om een periode toe te voegen.",
+      "removeAria": "Uitzondering verwijderen",
+      "rangeError": "De einddatum moet op of na de begindatum liggen."
     },
     "toast": {
       "saved": {
@@ -95,6 +100,10 @@
       },
       "blocked": {
         "title": "Datum geblokkeerd"
+      },
+      "error": {
+        "title": "Opslaan mislukt",
+        "description": "Beschikbaarheid kon niet worden opgeslagen. Probeer het opnieuw."
       }
     }
   },

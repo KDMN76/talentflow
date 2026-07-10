@@ -25,6 +25,8 @@
   },
   "row": {
     "variantsMeta": "{{count}} variants · {{language}}",
+    "variantsMetaNoLang": "{{count}} variants",
+    "untitled": "Untitled role",
     "viewJob": "View job",
     "edit": "Edit",
     "continue": "Continue"

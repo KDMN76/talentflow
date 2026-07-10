@@ -138,9 +138,11 @@ export interface RecurringHours {
 }
 
 export interface AvailabilityOverride {
-  /** ISO date `YYYY-MM-DD`. */
+  /** ISO date `YYYY-MM-DD` — start of the period (van). */
   date: string;
-  /** When false, the entire date is blocked. */
+  /** ISO date `YYYY-MM-DD` — inclusive end of the period (t/m). Equals `date` for a single day. */
+  date_end?: string;
+  /** When false, the entire period is blocked. */
   available: boolean;
   reason?: string | null;
   /** Optional alternative hours that replace the recurring weekly schedule. */

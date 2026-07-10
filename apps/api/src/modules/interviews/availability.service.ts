@@ -42,7 +42,9 @@ export interface RecurringHourBlock {
 }
 
 export interface DateOverrideInput {
-  date: string; // YYYY-MM-DD
+  date: string; // YYYY-MM-DD (van)
+  /** Einddatum (t/m), inclusief. Weggelaten/NULL = single-day (t/m == van). */
+  date_end?: string;
   blocked: boolean;
   start_time?: string;
   end_time?: string;
@@ -57,10 +59,75 @@ export interface AvailabilityRow {
   start_time: string | null;
   end_time: string | null;
   date_override: string | null;
+  /** Einddatum (t/m) van een override-periode; NULL = single-day. */
+  date_override_end: string | null;
   blocked: boolean;
   reason: string | null;
   timezone: string;
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// Weekday-mapping — frontend gebruikt ISO-string-weekdays, de DB int 0..6
+// (0=zondag..6=zaterdag, gelijk aan JS Date.getUTCDay()).
+// ────────────────────────────────────────────────────────────────────────────
+
+export const WEEKDAY_INT_TO_STR = [
+  'sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+] as const;
+
+export type WeekdayName = (typeof WEEKDAY_INT_TO_STR)[number];
+
+export const WEEKDAY_STR_TO_INT: Record<WeekdayName, number> = {
+  sunday: 0,
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6,
+};
+
+// Geconsolideerde wire-shape zoals de settings/availability-pagina die
+// consumeert (string-weekdays + overrides met een van–t/m periode).
+export interface ConsolidatedRecurringHour {
+  weekday: WeekdayName;
+  start: string; // HH:MM
+  end: string; // HH:MM
+}
+
+export interface ConsolidatedOverride {
+  date: string; // van, YYYY-MM-DD
+  date_end: string; // t/m, YYYY-MM-DD (== date bij single-day)
+  available: boolean; // false = volledige periode geblokkeerd
+  reason: string | null;
+}
+
+export interface ConsolidatedAvailability {
+  user_id: string;
+  user_name: string;
+  timezone: string;
+  recurring_hours: ConsolidatedRecurringHour[];
+  overrides: ConsolidatedOverride[];
+}
+
+export interface SetAvailabilityInput {
+  timezone?: string;
+  recurring_hours?: ConsolidatedRecurringHour[];
+  overrides?: Array<{
+    date: string;
+    date_end?: string | null;
+    available?: boolean;
+    reason?: string | null;
+  }>;
+}
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export interface AvailableSlot {
   start: string;
@@ -146,8 +213,15 @@ export async function setDateOverride(
   actorId?: string,
   ctx: AuditContext = {}
 ): Promise<void> {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(override.date)) {
+  if (!DATE_RE.test(override.date)) {
     throw new AppError(400, 'INVALID_DATE', 'date moet YYYY-MM-DD zijn');
+  }
+  const dateEnd = override.date_end ?? override.date;
+  if (!DATE_RE.test(dateEnd)) {
+    throw new AppError(400, 'INVALID_DATE', 'date_end moet YYYY-MM-DD zijn');
+  }
+  if (dateEnd < override.date) {
+    throw new AppError(400, 'INVALID_DATE_RANGE', 'date_end moet op of na date liggen');
   }
   if (override.start_time && !isHHMM(override.start_time)) {
     throw new AppError(400, 'INVALID_TIME_FORMAT', 'start_time moet HH:MM zijn');
@@ -157,7 +231,7 @@ export async function setDateOverride(
   }
 
   return withTenant(tenantId, async (client) => {
-    // Eén override-rij per (user, date). Replace bij update.
+    // Eén override-rij per (user, startdatum). Replace bij update.
     await client.query(
       `DELETE FROM interviewer_availability
        WHERE tenant_id = $1 AND user_id = $2 AND date_override = $3::date`,
@@ -165,12 +239,13 @@ export async function setDateOverride(
     );
     await client.query(
       `INSERT INTO interviewer_availability
-         (tenant_id, user_id, date_override, blocked, start_time, end_time, reason, timezone)
-       VALUES ($1, $2, $3::date, $4, $5::time, $6::time, $7, $8)`,
+         (tenant_id, user_id, date_override, date_override_end, blocked, start_time, end_time, reason, timezone)
+       VALUES ($1, $2, $3::date, $4::date, $5, $6::time, $7::time, $8, $9)`,
       [
         tenantId,
         userId,
         override.date,
+        dateEnd,
         override.blocked,
         override.start_time ?? null,
         override.end_time ?? null,
@@ -203,6 +278,7 @@ export async function getAvailability(
               to_char(start_time, 'HH24:MI') AS start_time,
               to_char(end_time,   'HH24:MI') AS end_time,
               to_char(date_override, 'YYYY-MM-DD') AS date_override,
+              to_char(date_override_end, 'YYYY-MM-DD') AS date_override_end,
               blocked, reason, timezone
        FROM interviewer_availability
        WHERE tenant_id = $1 AND user_id = $2
@@ -211,6 +287,161 @@ export async function getAvailability(
     );
     return rows as AvailabilityRow[];
   });
+}
+
+/**
+ * Geconsolideerde beschikbaarheid in de wire-shape die de
+ * settings/availability-pagina consumeert: string-weekdays + overrides met
+ * een van–t/m periode. Vervangt de losse rijen-response.
+ */
+export async function getConsolidatedAvailability(
+  tenantId: string,
+  userId: string
+): Promise<ConsolidatedAvailability> {
+  return withTenant(tenantId, async (client) => {
+    const { rows: userRows } = await client.query(
+      `SELECT name FROM users WHERE id = $1`,
+      [userId]
+    );
+    const { rows } = await client.query(
+      `SELECT weekday,
+              to_char(start_time, 'HH24:MI') AS start_time,
+              to_char(end_time,   'HH24:MI') AS end_time,
+              to_char(date_override, 'YYYY-MM-DD') AS date_override,
+              to_char(date_override_end, 'YYYY-MM-DD') AS date_override_end,
+              blocked, reason, timezone
+       FROM interviewer_availability
+       WHERE tenant_id = $1 AND user_id = $2
+       ORDER BY date_override NULLS LAST, weekday, start_time`,
+      [tenantId, userId]
+    );
+    const all = rows as AvailabilityRow[];
+    const recurring = all.filter((r) => r.date_override === null);
+    const overrides = all.filter((r) => r.date_override !== null);
+    const timezone =
+      recurring[0]?.timezone ?? overrides[0]?.timezone ?? 'Europe/Amsterdam';
+
+    return {
+      user_id: userId,
+      user_name: (userRows[0]?.name as string | undefined) ?? '',
+      timezone,
+      recurring_hours: recurring
+        .filter((r) => r.weekday !== null && r.start_time && r.end_time)
+        .map((r) => ({
+          weekday: WEEKDAY_INT_TO_STR[r.weekday as number],
+          start: r.start_time as string,
+          end: r.end_time as string,
+        })),
+      overrides: overrides.map((r) => ({
+        date: r.date_override as string,
+        date_end: r.date_override_end ?? (r.date_override as string),
+        available: !r.blocked,
+        reason: r.reason,
+      })),
+    };
+  });
+}
+
+/**
+ * Vervang de volledige beschikbaarheid (recurring + overrides) in één keer.
+ * Wordt gebruikt door de settings-pagina die het hele object opslaat.
+ *
+ * - `recurring_hours` undefined => recurring blijft ongewijzigd; een lege
+ *   array wist alle recurring rijen.
+ * - `overrides` undefined => overrides blijven ongewijzigd; een lege array
+ *   wist alle overrides.
+ * - `available === false` (default) => de hele periode wordt geblokkeerd.
+ */
+export async function replaceAvailability(
+  tenantId: string,
+  userId: string,
+  input: SetAvailabilityInput,
+  actorId?: string,
+  ctx: AuditContext = {}
+): Promise<ConsolidatedAvailability> {
+  const tz = input.timezone ?? 'Europe/Amsterdam';
+
+  // Valideer vóór we de DB raken.
+  const recurring = input.recurring_hours ?? [];
+  for (const b of recurring) {
+    if (!(b.weekday in WEEKDAY_STR_TO_INT)) {
+      throw new AppError(400, 'INVALID_WEEKDAY', `weekday '${b.weekday}' is ongeldig`);
+    }
+    if (!isHHMM(b.start) || !isHHMM(b.end)) {
+      throw new AppError(400, 'INVALID_TIME_FORMAT', 'start/end moeten HH:MM zijn');
+    }
+    if (toMinutes(b.start) >= toMinutes(b.end)) {
+      throw new AppError(400, 'INVALID_TIME_RANGE', 'end moet na start liggen');
+    }
+  }
+
+  const overrides = input.overrides ?? [];
+  for (const o of overrides) {
+    if (!DATE_RE.test(o.date)) {
+      throw new AppError(400, 'INVALID_DATE', 'date moet YYYY-MM-DD zijn');
+    }
+    const end = o.date_end ?? o.date;
+    if (!DATE_RE.test(end)) {
+      throw new AppError(400, 'INVALID_DATE', 'date_end moet YYYY-MM-DD zijn');
+    }
+    if (end < o.date) {
+      throw new AppError(400, 'INVALID_DATE_RANGE', 'date_end moet op of na date liggen');
+    }
+  }
+
+  await withTenant(tenantId, async (client) => {
+    if (input.recurring_hours !== undefined) {
+      await client.query(
+        `DELETE FROM interviewer_availability
+         WHERE tenant_id = $1 AND user_id = $2 AND date_override IS NULL`,
+        [tenantId, userId]
+      );
+      for (const b of recurring) {
+        await client.query(
+          `INSERT INTO interviewer_availability
+             (tenant_id, user_id, weekday, start_time, end_time, timezone)
+           VALUES ($1, $2, $3, $4::time, $5::time, $6)`,
+          [tenantId, userId, WEEKDAY_STR_TO_INT[b.weekday], b.start, b.end, tz]
+        );
+      }
+    }
+
+    if (input.overrides !== undefined) {
+      await client.query(
+        `DELETE FROM interviewer_availability
+         WHERE tenant_id = $1 AND user_id = $2 AND date_override IS NOT NULL`,
+        [tenantId, userId]
+      );
+      for (const o of overrides) {
+        const end = o.date_end ?? o.date;
+        const blocked = !(o.available ?? false);
+        await client.query(
+          `INSERT INTO interviewer_availability
+             (tenant_id, user_id, date_override, date_override_end, blocked, reason, timezone)
+           VALUES ($1, $2, $3::date, $4::date, $5, $6, $7)`,
+          [tenantId, userId, o.date, end, blocked, o.reason ?? null, tz]
+        );
+      }
+    }
+
+    await logAudit(
+      client,
+      tenantId,
+      {
+        action: AuditActions.INTERVIEWER_AVAILABILITY_UPDATED,
+        entityType: 'interviewer_availability',
+        entityId: userId,
+        after: {
+          recurring_blocks: input.recurring_hours !== undefined ? recurring.length : undefined,
+          overrides: input.overrides !== undefined ? overrides.length : undefined,
+        },
+        userId: actorId ?? null,
+      },
+      ctx
+    );
+  });
+
+  return getConsolidatedAvailability(tenantId, userId);
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -295,6 +526,7 @@ async function computeFreeIntervalsForUser(
             to_char(start_time, 'HH24:MI') AS start_time,
             to_char(end_time,   'HH24:MI') AS end_time,
             to_char(date_override, 'YYYY-MM-DD') AS date_override,
+            to_char(date_override_end, 'YYYY-MM-DD') AS date_override_end,
             blocked, timezone
      FROM interviewer_availability
      WHERE tenant_id = $1 AND user_id = $2`,
@@ -321,9 +553,22 @@ async function computeFreeIntervalsForUser(
   const overrides: AvailabilityRow[] = (availRows as AvailabilityRow[]).filter(
     (r) => r.date_override !== null
   );
+  // Expand elke override naar alle dagen in [date_override .. date_override_end]
+  // (inclusief). NULL end = single-day. Zo werkt de dag-voor-dag materialisatie
+  // hieronder ongewijzigd, ongeacht of een override één dag of een periode is.
   const overrideByDate = new Map<string, AvailabilityRow>();
   for (const o of overrides) {
-    if (o.date_override) overrideByDate.set(o.date_override, o);
+    if (!o.date_override) continue;
+    const endStr = o.date_override_end ?? o.date_override;
+    const cur = new Date(`${o.date_override}T00:00:00.000Z`);
+    const end = new Date(`${endStr}T00:00:00.000Z`);
+    // Defensieve cap tegen een pathologisch grote periode.
+    let guard = 0;
+    while (cur.getTime() <= end.getTime() && guard < 3660) {
+      overrideByDate.set(cur.toISOString().slice(0, 10), o);
+      cur.setUTCDate(cur.getUTCDate() + 1);
+      guard++;
+    }
   }
 
   const tz =

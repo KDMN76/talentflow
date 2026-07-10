@@ -287,6 +287,23 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: 'get',
+  path: '/api/integrations/mailbox/providers',
+  tags: ['Integrations'],
+  summary: 'Mailbox OAuth-provider config-status (welke providers zijn ingericht)',
+  security: authSecurity,
+  responses: {
+    200: jsonResponse(
+      'OK',
+      z.object({
+        providers: z.record(z.object({ configured: z.boolean() })),
+        smtp: z.object({ available: z.boolean() }),
+      })
+    ),
+  },
+});
+
+registry.registerPath({
   method: 'post',
   path: '/api/integrations/mailbox/connect',
   tags: ['Integrations'],

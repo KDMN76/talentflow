@@ -4,6 +4,7 @@ import {
   getAppHosts,
   isAppHost,
   normalizeHost,
+  CAREER_SLUG_HEADER,
 } from "@/lib/customDomain";
 
 /**
@@ -74,21 +75,34 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     request.headers.get("host") ?? request.nextUrl.hostname
   );
 
-  // App-eigen host (dashboard) → niets doen.
+  // Anti-spoofing: verwijder ALTIJD een eventueel door de client meegestuurde
+  // career-slug-header. Alleen deze middleware mag hem zetten; anders zou een
+  // request naar een app-host met een verzonnen header de app-tree kunnen laten
+  // vervangen door een career-page.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.delete(CAREER_SLUG_HEADER);
+
+  // App-eigen host (dashboard) → niets rewriten (wel de gestripte header
+  // doorzetten).
   if (isAppHost(host, APP_HOSTS)) {
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
   // Custom domein: resolve host → slug en rewrite. Geen match/fout → normale
   // flow (val terug op 404 van de app).
   const slug = await resolveHostToSlug(request.nextUrl.origin, host);
   if (!slug) {
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
+  // Zet de opgeloste slug als header zodat de root-layout hem server-side kan
+  // lezen en de host-gate de career-page rechtstreeks rendert (los van de
+  // client-router-resolutie van "/").
+  requestHeaders.set(CAREER_SLUG_HEADER, slug);
+
   const url = request.nextUrl.clone();
-  url.pathname = buildRewritePath(slug, request.nextUrl.pathname);
-  return NextResponse.rewrite(url);
+  url.pathname = buildRewritePath(slug);
+  return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
 }
 
 export const config = {

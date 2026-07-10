@@ -61,7 +61,7 @@ function RetentionCard() {
                   {t("oversight.retention.totalEvents")}
                 </p>
                 <p className="mt-1 text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                  {data.total_events.toLocaleString("nl-NL")}
+                  {(data.total_events ?? 0).toLocaleString("nl-NL")}
                 </p>
               </div>
               <div className="rounded-lg border border-border bg-zinc-50 dark:bg-zinc-800/40 p-3">
@@ -70,7 +70,7 @@ function RetentionCard() {
                   {t("oversight.retention.oldestEvent")}
                 </p>
                 <p className="mt-1 text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                  {data.total_events === 0
+                  {(data.total_events ?? 0) === 0
                     ? "—"
                     : formatDate(data.oldest_event_at)}
                 </p>
@@ -81,7 +81,7 @@ function RetentionCard() {
                   {t("oversight.retention.newestEvent")}
                 </p>
                 <p className="mt-1 text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                  {data.total_events === 0
+                  {(data.total_events ?? 0) === 0
                     ? "—"
                     : formatDate(data.newest_event_at)}
                 </p>
@@ -91,16 +91,16 @@ function RetentionCard() {
                   {t("oversight.retention.monthsCovered")}
                 </p>
                 <p className="mt-1 text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                  {data.total_events === 0 ? "—" : data.months_covered}
+                  {(data.total_events ?? 0) === 0 ? "—" : data.months_covered ?? 0}
                   <span className="ml-1 text-xs font-normal text-muted-foreground">
-                    / {data.minimum_retention_months}
+                    / {data.minimum_retention_months ?? 6}
                   </span>
                 </p>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              {data.total_events === 0 && (
+              {(data.total_events ?? 0) === 0 && (
                 <p className="text-xs text-muted-foreground">
                   {t("oversight.retention.noEvents")}
                 </p>

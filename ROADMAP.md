@@ -62,6 +62,30 @@ Niets hieruit wordt opgepakt zonder expliciete promotie door Kaan.
   career-page een dedicated fetch zonder `withCredentials`. Optie (a) is het
   meest generiek. Vereist een bewuste keuze van Kaan i.v.m. security-posture.
 
+### Eigen mailserver: IMAP-ontvangst (inbox-sync) ontbreekt nog
+- **Priority**: P2
+- **Status**: Open
+- **Source**: Claude (gevonden tijdens "eerlijke OAuth-staat + IMAP/SMTP-ontsluiting" op settings/integrations, 2026-07-10)
+- **Context**: Op `settings/integrations` kan een tenant nu zijn eigen mailserver
+  koppelen zónder OAuth. **Verzenden** werkt volledig via de bestaande per-tenant
+  SMTP (`lib/tenantMailer.ts` + `tenant_email_settings`, migratie 042) en wordt
+  vanuit de integraties-pagina ontsloten met een verwijzing naar
+  `settings/email`. **Ontvangst/inbox-sync via IMAP bestaat nog niet**: de
+  bestaande inbox-sync (`queue/workers/inboxSync.worker.ts` +
+  `lib/providers/*`) leest alleen via de Gmail/Outlook OAuth-providers
+  (`listMessagesSince`/`getMessage`). Een SMTP-only tenant kan dus wél mailen,
+  maar replies van kandidaten worden niet automatisch ingelezen/gethread.
+- **Waarom niet meegefixt**: volledige IMAP-inbox-sync (IMAP-client, folder-
+  delta/UIDVALIDITY-cursors, MIME-parsing, thread-matching op Message-ID/
+  In-Reply-To, encryptie van IMAP-credentials, SSRF-guard analoog aan SMTP,
+  worker-scheduling) is een eigen feature ter grootte van de OAuth-providers —
+  buiten de scope van deze taak.
+- **Aanbevolen richting**: een `imapProvider` die de `MailProvider`-interface
+  (deels) implementeert (minimaal `listMessagesSince`/`getMessage`), IMAP-config
+  naast de SMTP-velden in `tenant_email_settings` (host/port/secure/user/pass
+  encrypted, hergebruik `assertSafeSmtpTarget`-patroon), en aanhaken op de
+  bestaande `inboxSync.worker.ts`-pipeline.
+
 ### ✅ Opgelost op 2026-06-03 (sessie "Sectie-1 opruiming")
 
 Additieve log — de losse items hieronder zijn niet herschreven; deze sectie is
@@ -334,6 +358,36 @@ groen), en een volledige `next build`.
 - **Context**: `GET /api/jobs/:id/funnel` (`jobDetail.service.ts:getJobFunnel`) retourneert alleen `{ stages }`, terwijl de frontend-`JobFunnelResponse` (apps/web/lib/types/jobDetail.ts) ook `job_id`, `total`, `hired`, `dropped`, `computed_at` verwacht. Bovendien levert elke stage `stage_name` + `conversion_rate_from_previous`, terwijl de frontend `name` + `conversion_to_next_pct` (andere richting!) verwacht. Gevolgen in de UI: header toonde "Aangenomen: NaN" (nu defensief op 0 gezet in `JobDetailHeader.tsx`), en de conversie-badges in de pipeline-tab blijven leeg (alle `conversion_to_next_pct` zijn undefined).
 - **Fix-richting**: trek funnel in `@talentflow/contracts` (zoals JobHealth) en laat de backend de volledige shape leveren: `hired`/`dropped` via `COUNT(*) FILTER (WHERE status=...)`, `total` = som van stage-counts, stage-veld `name` (i.p.v. `stage_name`), en `conversion_to_next_pct` voor stage i = `count[i+1]/count[i]`. Frontend dropt dan de `?? 0`-workaround.
 - **Notes**: De `?? 0` in `JobDetailHeader.tsx` is een tijdelijke pleister tegen NaN, geen echte fix — de getallen zijn pas correct als de backend ze levert.
+
+### GDPR-consent-KPI: server-side aggregatie ontbreekt (steekproef i.p.v. echte telling)
+- **Priority**: P2
+- **Status**: Open
+- **Source**: Claude Code (compliance-robuustheid, 2026-07-10)
+- **Context**: De `/gdpr`-KPI's "Kandidaten met consent", de consent-gauge en
+  "Anonieme records" worden client-side berekend over de **geladen pagina** van
+  `GET /candidates` (page-size 20/50), niet over de hele tenant. De lijst-API
+  levert bovendien géén `gdpr_consent_at` en heeft geen consent-filters. Fix
+  toegepast: de KPI-teller "totaal" gebruikt nu het echte `meta.total`
+  (50.001 op load-test i.p.v. 20), en "met consent" telt `gdpr_consent === true`
+  binnen de steekproef, expliciet gelabeld als steekproef ("van N geladen · M
+  totaal"). De granted/gauge/anoniem-cijfers blijven dus een **steekproef**.
+- **Fix-richting**: backend-endpoint `GET /compliance/consent-stats` (of velden
+  op een bestaand analytics-aggregaat) dat server-side telt: totaal, met geldige
+  (niet-verlopen) consent, ingetrokken, verlopen, geanonimiseerd — met
+  `gdpr_consent_at` in de berekening. Frontend dropt dan de steekproef-heuristiek.
+
+### Pay-equity: gecorrigeerde (regressie-)gap wordt niet berekend
+- **Priority**: P2
+- **Status**: Open
+- **Source**: Claude Code (compliance-robuustheid, 2026-07-10)
+- **Context**: De pay-equity-KPI "Gecorrigeerd" toont nu de **ongecorrigeerde**
+  gap als proxy, omdat `payEquity.service.ts` alleen `pay_gap_pct` levert (geen
+  `adjusted_pay_gap_pct` gecontroleerd voor functie/senioriteit). De hint
+  "Gecontroleerd voor functie & senioriteit" is daardoor nog niet waar.
+- **Fix-richting**: backend berekent een regressie-gecorrigeerde gap (controle
+  voor job-categorie + senioriteit) en levert `adjusted_pay_gap_pct` mee; de
+  frontend-normalizer (`useCompliance.ts`) gebruikt dan de echte waarde i.p.v.
+  de proxy.
 
 ---
 

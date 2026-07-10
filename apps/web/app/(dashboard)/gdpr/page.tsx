@@ -23,13 +23,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ConsentOverview, classifyConsent } from "@/components/compliance/ConsentOverview";
+import { ConsentOverview } from "@/components/compliance/ConsentOverview";
 import { DsarManagement } from "@/components/compliance/DsarManagement";
 import { RetentionPolicies } from "@/components/compliance/RetentionPolicies";
 import { AuditTrailViewer } from "@/components/compliance/AuditTrailViewer";
 import { PayEquityDashboard } from "@/components/compliance/PayEquityDashboard";
 import { DEIFunnelViewer } from "@/components/compliance/DEIFunnelViewer";
-import { useCandidates } from "@/hooks/useCandidates";
+import { useCandidates, useCandidateCount } from "@/hooks/useCandidates";
 import {
   useDsarRequests,
   useRetentionPolicies,
@@ -151,25 +151,31 @@ function ConsentGauge({
 
 export default function GdprPage() {
   const { data: candidates, isLoading: candidatesLoading } = useCandidates();
+  const { data: totalCandidates } = useCandidateCount();
   const { data: dsars, isLoading: dsarsLoading } = useDsarRequests();
   const { data: policies, isLoading: policiesLoading } = useRetentionPolicies();
 
   const stats = useMemo(() => {
-    const total = candidates?.length ?? 0;
+    // `loaded` = kandidaten in de geladen (gepagineerde) steekproef;
+    // `total` = werkelijk aantal kandidaten in de tenant (server-side count).
+    // De consent-tellingen zijn een steekproef: de lijst-API geeft geen
+    // server-side consent-aggregatie. Zie ROADMAP (backend consent-stats).
+    const loaded = candidates?.length ?? 0;
     let granted = 0;
     let anonymized = 0;
-    candidates?.forEach((c) => {
-      if (classifyConsent(c) === "granted") granted += 1;
-      // Mock heuristic: candidates with no name characters considered anonymized
-      if (c.name?.toLowerCase().includes("geanonimiseerd")) anonymized += 1;
+    (candidates ?? []).forEach((c) => {
+      if (c?.gdpr_consent) granted += 1;
+      if (c?.name?.toLowerCase().includes("geanonimiseerd")) anonymized += 1;
     });
-    const pct = total === 0 ? 0 : Math.round((granted / total) * 100);
+    const pct = loaded === 0 ? 0 : Math.round((granted / loaded) * 100);
     const pendingDsars =
-      dsars?.filter((d) => d.status === "pending" || d.status === "in_progress")
-        .length ?? 0;
-    const activePolicies = policies?.filter((p) => p.enabled).length ?? 0;
+      (dsars ?? []).filter(
+        (d) => d?.status === "pending" || d?.status === "in_progress"
+      ).length;
+    const activePolicies = (policies ?? []).filter((p) => p?.enabled).length;
     return {
-      total,
+      loaded,
+      total: totalCandidates ?? loaded,
       granted,
       pct,
       pendingDsars,
@@ -177,7 +183,7 @@ export default function GdprPage() {
       hasActivePolicy: activePolicies > 0,
       anonymized,
     };
-  }, [candidates, dsars, policies]);
+  }, [candidates, dsars, policies, totalCandidates]);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -192,7 +198,9 @@ export default function GdprPage() {
           icon={<Users className="h-5 w-5" />}
           label="Kandidaten met consent"
           value={stats.granted}
-          hint={`Van ${stats.total} totaal`}
+          hint={`van ${stats.loaded} geladen · ${stats.total.toLocaleString(
+            "nl-NL"
+          )} totaal`}
           iconClass="bg-indigo-100 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400"
           loading={candidatesLoading}
           tooltip="Aantal kandidaten waarvoor een geldige, niet-verlopen GDPR-toestemming geregistreerd is."

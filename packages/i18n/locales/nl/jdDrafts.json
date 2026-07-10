@@ -25,6 +25,8 @@
   },
   "row": {
     "variantsMeta": "{{count}} varianten · {{language}}",
+    "variantsMetaNoLang": "{{count}} varianten",
+    "untitled": "Zonder functietitel",
     "viewJob": "Bekijk vacature",
     "edit": "Bewerken",
     "continue": "Vervolg"

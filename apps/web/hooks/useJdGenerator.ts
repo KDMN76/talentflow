@@ -11,6 +11,21 @@ import type {
 } from "@/lib/types/jdGenerator";
 
 /**
+ * De jd-drafts-endpoints zijn qua envelope inconsistent: de LIST geeft
+ * `{data:[...]}`, maar single/create/select/regenerate/publish geven de
+ * payload UNWRAPPED terug. Deze helper is tolerant voor beide vormen —
+ * `{data: X}` → X, anders de payload zelf — zodat de wizard (draft openen,
+ * variant kiezen, publiceren) niet op `undefined` crasht. (Envelope netjes
+ * standaardiseren staat als P2 in ROADMAP.)
+ */
+function pickData<T>(payload: unknown): T {
+  if (payload && typeof payload === "object" && "data" in payload) {
+    return (payload as { data: T }).data;
+  }
+  return payload as T;
+}
+
+/**
  * Hook contracts for the AI vacaturetekst-generator (Sprint Q3.2).
  *
  * Endpoints (owned by Agent VV on the backend):
@@ -50,10 +65,8 @@ export function useJdDraft(id: string | null | undefined) {
   return useQuery({
     queryKey: ["jd-drafts", id],
     queryFn: async (): Promise<JdDraft> => {
-      const { data } = await api.get<{ data: JdDraft }>(
-        `/jobs/jd-drafts/${id}`
-      );
-      return data.data;
+      const { data } = await api.get(`/jobs/jd-drafts/${id}`);
+      return pickData<JdDraft>(data);
     },
     enabled: !!id,
     staleTime: 30_000,
@@ -66,11 +79,8 @@ export function useCreateJdDraft() {
   const queryClient = useQueryClient();
   return useMutation<JdDraft, Error, JdGeneratorInput>({
     mutationFn: async (input) => {
-      const { data } = await api.post<{ data: JdDraft }>(
-        "/jobs/jd-drafts",
-        input
-      );
-      return data.data;
+      const { data } = await api.post("/jobs/jd-drafts", input);
+      return pickData<JdDraft>(data);
     },
     onSuccess: (draft) => {
       queryClient.setQueryData(["jd-drafts", draft.id], draft);
@@ -85,11 +95,11 @@ export function useSelectVariant(draftId: string) {
   const queryClient = useQueryClient();
   return useMutation<JdDraft, Error, { variant_id: string }>({
     mutationFn: async ({ variant_id }) => {
-      const { data } = await api.post<{ data: JdDraft }>(
+      const { data } = await api.post(
         `/jobs/jd-drafts/${draftId}/select-variant`,
         { variant_id }
       );
-      return data.data;
+      return pickData<JdDraft>(data);
     },
     onSuccess: (draft) => {
       queryClient.setQueryData(["jd-drafts", draft.id], draft);
@@ -104,11 +114,11 @@ export function useRegenerateVariant(draftId: string) {
   const queryClient = useQueryClient();
   return useMutation<JdDraft, Error, { variant_id: string }>({
     mutationFn: async ({ variant_id }) => {
-      const { data } = await api.post<{ data: JdDraft }>(
+      const { data } = await api.post(
         `/jobs/jd-drafts/${draftId}/regenerate`,
         { variant_id }
       );
-      return data.data;
+      return pickData<JdDraft>(data);
     },
     onSuccess: (draft) => {
       queryClient.setQueryData(["jd-drafts", draft.id], draft);
@@ -126,11 +136,11 @@ export function usePublishJdDraft(draftId: string) {
     { overrides?: JdDraftPublishOverrides }
   >({
     mutationFn: async ({ overrides }) => {
-      const { data } = await api.post<{ data: JdDraftPublishResponse }>(
+      const { data } = await api.post(
         `/jobs/jd-drafts/${draftId}/publish`,
         { overrides: overrides ?? {} }
       );
-      return data.data;
+      return pickData<JdDraftPublishResponse>(data);
     },
     onSuccess: (resp) => {
       queryClient.setQueryData(["jd-drafts", resp.draft.id], resp.draft);

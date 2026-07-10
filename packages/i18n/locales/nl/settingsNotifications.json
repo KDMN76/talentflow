@@ -8,6 +8,7 @@
     "description": "Krijg een seintje op je telefoon of desktop.",
     "unsupported": "Deze browser ondersteunt geen push-notificaties.",
     "denied": "Meldingen zijn geblokkeerd in je browser. Wijzig dit in de site-instellingen om ze opnieuw te activeren.",
+    "notConfigured": "Push-notificaties zijn nog niet geconfigureerd door de beheerder.",
     "testButton": "Verstuur test-melding"
   },
   "events": {

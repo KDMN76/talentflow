@@ -29,7 +29,7 @@ interviewsRouter.use(requireAuth, tenantMiddleware);
 // id wordt herkend.
 interviewsRouter.post('/availability/slots', ctrl.getSlots); // read-via-POST
 interviewsRouter.get('/availability/:userId', ctrl.getUserAvailability);
-interviewsRouter.put('/availability/:userId', canWriteInterviews, ctrl.putRecurringHours);
+interviewsRouter.put('/availability/:userId', canWriteInterviews, ctrl.putAvailability);
 interviewsRouter.post('/availability/:userId/override', canWriteInterviews, ctrl.postOverride);
 
 // ── Interviews CRUD

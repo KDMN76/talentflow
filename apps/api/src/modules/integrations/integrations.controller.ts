@@ -64,6 +64,31 @@ export async function listMailboxIntegrationsHandler(
   }
 }
 
+export async function getProviderConfigHandler(
+  _req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const statuses = mailboxService.getProviderConfigStatus();
+    const providers = Object.fromEntries(
+      statuses.map((s) => [s.provider, { configured: s.configured }])
+    );
+    res.json({
+      data: {
+        // Per-provider config-status (booleans, geen secrets). `outlook` dekt
+        // ook Microsoft 365 (zelfde Microsoft-OAuth).
+        providers,
+        // Eigen SMTP-server is het OAuth-loze alternatief en altijd
+        // beschikbaar (per-tenant via /settings/email).
+        smtp: { available: true },
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function startOAuthHandler(
   req: Request,
   res: Response,

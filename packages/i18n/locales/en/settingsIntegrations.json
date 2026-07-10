@@ -1,7 +1,7 @@
 {
   "header": {
     "title": "Integrations — connect your mailbox to TalentFlow",
-    "description": "Connect Gmail or Outlook to send emails directly from TalentFlow and automatically read in replies.",
+    "description": "Connect Gmail, Outlook or Microsoft 365 via OAuth, or link your own mail server via IMAP/SMTP — to send emails directly from TalentFlow.",
     "refresh": "Refresh"
   },
   "stats": {
@@ -20,11 +20,31 @@
     "invalid_state": "OAuth session expired. Start the connection again.",
     "token_exchange_failed": "Token exchange with the provider failed.",
     "scope_missing": "Not all required permissions were granted.",
+    "PROVIDER_NOT_CONFIGURED": "This connection has not been configured by the administrator yet. Use IMAP/SMTP for now.",
     "unknown": "Something went wrong while connecting."
   },
   "providers": {
-    "gmailDescription": "Connect your Gmail to send emails directly from TalentFlow and automatically read in replies.",
-    "outlookDescription": "Connect your Microsoft 365 / Outlook mailbox to correspond from TalentFlow."
+    "gmailName": "Gmail",
+    "outlookName": "Outlook / Microsoft 365",
+    "gmailDescription": "Connect your Gmail via Google OAuth to send emails directly from TalentFlow and automatically read in replies.",
+    "outlookDescription": "Connect your Outlook or Microsoft 365 mailbox via Microsoft OAuth (Microsoft Graph) to correspond from TalentFlow."
+  },
+  "notConfigured": {
+    "badge": "Not configured",
+    "title": "{{name}} connection is not configured yet",
+    "description": "The administrator has not set up the OAuth connection yet. For now, use your own mail server via IMAP/SMTP below.",
+    "button": "Not available yet",
+    "toastTitle": "Connection not configured",
+    "toastDescription": "This OAuth connection has not been set up by the administrator yet. Use IMAP/SMTP for now."
+  },
+  "smtp": {
+    "title": "Your own mail server (IMAP/SMTP)",
+    "subtitle": "Without OAuth — via your own server",
+    "badge": "Available",
+    "description": "No Gmail or Outlook? Connect your own mail server. Sending works right away via SMTP, without Google or Microsoft OAuth.",
+    "sendWorks": "Sending via your own SMTP server works immediately — configure host, port and credentials and send a test email.",
+    "receiveRoadmap": "Reading incoming mail via IMAP is coming later. For now we only connect sending.",
+    "button": "Open email settings"
   },
   "toasts": {
     "connected": {

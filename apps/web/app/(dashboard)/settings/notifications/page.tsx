@@ -37,6 +37,7 @@ import {
   isPushSupported,
   getNotificationPermission,
   getCurrentPushSubscription,
+  getPushConfig,
   subscribeToPushNotifications,
   unsubscribeFromPushNotifications,
 } from "@/lib/pushSubscription";
@@ -166,6 +167,9 @@ export default function NotificationSettingsPage() {
   const [permission, setPermission] = useState<
     NotificationPermission | "unsupported"
   >("default");
+  // null = nog onbekend (config-fetch loopt of faalde); true/false = server
+  // heeft VAPID wel/niet geconfigureerd.
+  const [pushConfigured, setPushConfigured] = useState<boolean | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
 
   const loading = devicesLoading || prefsQuery.isPending;
@@ -194,8 +198,21 @@ export default function NotificationSettingsPage() {
         }
 
         const sub = await getCurrentPushSubscription();
+        if (!mounted) return;
         setHasSubscription(!!sub);
         setPermission(getNotificationPermission());
+
+        // Server-side VAPID-configuratie ophalen zodat we de toggle kunnen
+        // grijzen + een eerlijke melding tonen als de beheerder nog geen
+        // keys heeft gezet. Bij een netwerkfout blijft de status "onbekend"
+        // (null) — dan blokkeren we niets en valt de subscribe-flow terug op
+        // haar eigen nette foutmelding.
+        try {
+          const cfg = await getPushConfig();
+          if (mounted) setPushConfigured(cfg.configured);
+        } catch {
+          if (mounted) setPushConfigured(null);
+        }
       } finally {
         if (mounted) setDevicesLoading(false);
       }
@@ -343,7 +360,12 @@ export default function NotificationSettingsPage() {
             </div>
             <ToggleSwitch
               checked={prefs.push_enabled && hasSubscription}
-              disabled={!supported || busyAction === "subscribe" || busyAction === "unsubscribe"}
+              disabled={
+                !supported ||
+                pushConfigured === false ||
+                busyAction === "subscribe" ||
+                busyAction === "unsubscribe"
+              }
               onChange={togglePushEnabled}
             />
           </div>
@@ -355,7 +377,13 @@ export default function NotificationSettingsPage() {
               text={t("master.unsupported")}
             />
           )}
-          {supported && permission === "denied" && (
+          {supported && pushConfigured === false && (
+            <StatusLine
+              variant="info"
+              text={t("master.notConfigured")}
+            />
+          )}
+          {supported && pushConfigured !== false && permission === "denied" && (
             <StatusLine
               variant="warn"
               text={t("master.denied")}

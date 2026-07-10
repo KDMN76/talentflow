@@ -65,14 +65,28 @@ export interface JdDraft {
   tenant_id: string;
   /** The role-input from step 1 — used for the list view title column. */
   role: string;
+  /**
+   * Live API alias. The backend (GET /jobs/jd-drafts) returns the role under
+   * `prompt`, not `role`. Optional so the wizard + fixtures (which set `role`)
+   * keep compiling; the list view reads `prompt ?? parameters?.role ?? role`.
+   */
+  prompt?: string;
   /** Snapshot of the entire generator-input so the wizard can be resumed. */
   input: JdGeneratorInput;
+  /**
+   * Live API alias for `input`. The backend persists the generator-parameters
+   * under `parameters` and only stores the fields the recruiter actually
+   * filled in — hence `Partial`. Read defensively: `parameters?.language`.
+   */
+  parameters?: Partial<JdGeneratorInput>;
   variants: JdVariant[];
   /** Currently selected variant (null until user picks one). */
   selected_variant_id: string | null;
   status: JdDraftStatus;
   /** Set when the draft is published — links the draft to the resulting job. */
   published_job_id: string | null;
+  /** Live API alias for `published_job_id`. */
+  job_id?: string | null;
   ai_disclosure: string;
   created_at: string;
   updated_at: string;

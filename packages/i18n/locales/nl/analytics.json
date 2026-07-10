@@ -40,12 +40,14 @@
     "funnel": {
       "title": "Pipeline Funnel",
       "tooltip": "kandidaten",
-      "hint": "Aantal kandidaten per pipelinefase — laat zien waar kandidaten vastlopen of doorstromen."
+      "hint": "Aantal kandidaten per pipelinefase — laat zien waar kandidaten vastlopen of doorstromen.",
+      "empty": "Nog geen kandidaten in de pipeline voor deze periode of dit filter."
     },
     "sources": {
       "title": "Kandidaatbronnen",
       "tooltip": "aandeel",
-      "hint": "Verdeling van waar je kandidaten vandaan komen (LinkedIn, vacaturebanken, referral, enz.)."
+      "hint": "Verdeling van waar je kandidaten vandaan komen (LinkedIn, vacaturebanken, referral, enz.).",
+      "empty": "Nog geen kandidaatbronnen voor deze periode of dit filter."
     }
   },
   "recruiters": {

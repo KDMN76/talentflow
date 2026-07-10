@@ -36,6 +36,7 @@
       "wormTrail": "WORM-trail",
       "wormNote": "Write-once, read-many — events kunnen niet worden gewijzigd of verwijderd.",
       "eventsCount": "{{shown}} van {{total}} events",
+      "eventsShown": "{{shown}} events geladen",
       "colTime": "Tijdstip",
       "colAction": "Actie",
       "colEntity": "Entiteit",

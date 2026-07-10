@@ -70,13 +70,16 @@ describe("isAppHost", () => {
 });
 
 describe("buildRewritePath", () => {
-  it("maps root to /careers/<slug>", () => {
-    expect(buildRewritePath("klant", "/")).toBe("/careers/klant");
-    expect(buildRewritePath("klant", "")).toBe("/careers/klant");
+  it("always rewrites to the single /careers/<slug> route", () => {
+    // Een white-label domein is aan één career-page gekoppeld en is een
+    // single-page site: elk pad valt terug op dezelfde bestaande route (HTTP
+    // 200 op /, /jobs, /privacy). De uiteindelijke render loopt via de host-
+    // gate (root-layout), dus alleen de route-match/HTTP-status telt hier.
+    expect(buildRewritePath("klant")).toBe("/careers/klant");
   });
 
-  it("prefixes subpaths so /jobs and /privacy keep working", () => {
-    expect(buildRewritePath("klant", "/jobs")).toBe("/careers/klant/jobs");
-    expect(buildRewritePath("klant", "/privacy")).toBe("/careers/klant/privacy");
+  it("is stable regardless of the requested slug value", () => {
+    expect(buildRewritePath("kdmn")).toBe("/careers/kdmn");
+    expect(buildRewritePath("acme-bv")).toBe("/careers/acme-bv");
   });
 });

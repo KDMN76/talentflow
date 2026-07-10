@@ -51,6 +51,34 @@ export function getNotificationPermission(): NotificationPermission | "unsupport
 }
 
 // ----------------------------------------------------------------
+// Server-side push-configuratie (VAPID)
+// ----------------------------------------------------------------
+
+export type PushConfig = {
+  /** True zodra de beheerder VAPID-keys als env heeft gezet (server-side). */
+  configured: boolean;
+  /** De VAPID public key, of null als push nog niet geconfigureerd is. */
+  key: string | null;
+};
+
+/**
+ * Haal de push-configuratie op bij de backend. Het endpoint
+ * `GET /notifications/vapid-public-key` geeft `{ key, configured }` terug:
+ * de key is `null` (en `configured` false) zolang de VAPID-env niet gezet is.
+ *
+ * Gooit door bij een netwerk-/serverfout, zodat de caller "onbekend" kan
+ * onderscheiden van "niet geconfigureerd" en niet ten onrechte meldt dat de
+ * beheerder niets heeft ingesteld.
+ */
+export async function getPushConfig(): Promise<PushConfig> {
+  const { data } = await api.get<{ key: string | null; configured?: boolean }>(
+    "/notifications/vapid-public-key",
+  );
+  const key = data?.key ?? null;
+  return { configured: data?.configured ?? key !== null, key };
+}
+
+// ----------------------------------------------------------------
 // Read current subscription
 // ----------------------------------------------------------------
 
@@ -92,11 +120,15 @@ export async function subscribeToPushNotifications(): Promise<SubscribeResult | 
 
   if (!subscription) {
     // 4. VAPID key ophalen
-    const { data } = await api.get<{ key: string }>(
+    const { data } = await api.get<{ key: string | null }>(
       "/notifications/vapid-public-key",
     );
     if (!data?.key) {
-      throw new Error("Server gaf geen VAPID public key terug.");
+      // Geen key = VAPID niet geconfigureerd door de beheerder. Geef een
+      // eerlijke, niet-technische melding i.p.v. een raw serverfout.
+      throw new Error(
+        "Push-notificaties zijn nog niet geconfigureerd door de beheerder.",
+      );
     }
 
     // 5. Subscriben.

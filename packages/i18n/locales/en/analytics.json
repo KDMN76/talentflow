@@ -40,12 +40,14 @@
     "funnel": {
       "title": "Pipeline Funnel",
       "tooltip": "candidates",
-      "hint": "Number of candidates per pipeline stage — shows where candidates progress or stall."
+      "hint": "Number of candidates per pipeline stage — shows where candidates progress or stall.",
+      "empty": "No candidates in the pipeline yet for this period or filter."
     },
     "sources": {
       "title": "Candidate sources",
       "tooltip": "share",
-      "hint": "Distribution of where your candidates come from (LinkedIn, job boards, referral, etc.)."
+      "hint": "Distribution of where your candidates come from (LinkedIn, job boards, referral, etc.).",
+      "empty": "No candidate sources yet for this period or filter."
     }
   },
   "recruiters": {

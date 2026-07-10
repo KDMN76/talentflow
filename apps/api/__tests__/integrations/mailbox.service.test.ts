@@ -65,7 +65,9 @@ import {
   completeOAuth,
   listIntegrations,
   disconnectIntegration,
+  getProviderConfigStatus,
 } from '../../src/modules/integrations/mailbox.service';
+import { isProviderMockMode } from '../../src/lib/providers';
 
 const TENANT_ID = '11111111-1111-1111-1111-111111111111';
 const USER_ID = '22222222-2222-2222-2222-222222222222';
@@ -84,6 +86,39 @@ describe('mailbox.service.startOAuth', () => {
     expect(fakeRedisStore.get(`oauth:state:${state}`)).toBeTruthy();
     const stored = JSON.parse(fakeRedisStore.get(`oauth:state:${state}`)!);
     expect(stored).toEqual({ tenantId: TENANT_ID, userId: USER_ID, provider: 'gmail' });
+  });
+
+  it('weigert met PROVIDER_NOT_CONFIGURED als de OAuth-client ontbreekt', async () => {
+    vi.mocked(isProviderMockMode).mockReturnValueOnce(true);
+    await expect(startOAuth(TENANT_ID, USER_ID, 'gmail')).rejects.toMatchObject({
+      code: 'PROVIDER_NOT_CONFIGURED',
+      statusCode: 501,
+    });
+    // Geen state gelekt naar Redis wanneer de provider niet ingericht is.
+    expect(fakeRedisStore.size).toBe(0);
+  });
+});
+
+describe('mailbox.service.getProviderConfigStatus', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('rapporteert configured=true voor beide providers wanneer niet in mock-mode', () => {
+    vi.mocked(isProviderMockMode).mockReturnValue(false);
+    const statuses = getProviderConfigStatus();
+    expect(statuses).toEqual([
+      { provider: 'gmail', configured: true },
+      { provider: 'outlook', configured: true },
+    ]);
+  });
+
+  it('rapporteert configured=false wanneer de provider in mock-mode draait', () => {
+    // gmail = mock (niet ingericht), outlook = ingericht
+    vi.mocked(isProviderMockMode).mockImplementation((p) => p === 'gmail');
+    const statuses = getProviderConfigStatus();
+    expect(statuses).toContainEqual({ provider: 'gmail', configured: false });
+    expect(statuses).toContainEqual({ provider: 'outlook', configured: true });
   });
 });
 

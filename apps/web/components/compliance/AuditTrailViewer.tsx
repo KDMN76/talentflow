@@ -151,6 +151,13 @@ function downloadCsv(events: AuditEvent[]) {
 
 // ─── Row ─────────────────────────────────────────────────────────────────────
 
+function formatTimestamp(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("nl-NL", { dateStyle: "short", timeStyle: "medium" });
+}
+
 function AuditRow({ event }: { event: AuditEvent }) {
   const [open, setOpen] = useState(false);
   const hasDiff = !!(event.before || event.after);
@@ -178,10 +185,7 @@ function AuditRow({ event }: { event: AuditEvent }) {
         </td>
         <td className="px-3 py-2.5 align-top">
           <div className="text-xs font-mono text-muted-foreground">
-            {new Date(event.timestamp).toLocaleString("nl-NL", {
-              dateStyle: "short",
-              timeStyle: "medium",
-            })}
+            {formatTimestamp(event.timestamp)}
           </div>
         </td>
         <td className="px-3 py-2.5 align-top">

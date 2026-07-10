@@ -175,6 +175,31 @@ function CustomTooltip({ active, payload, label, formatter }: CustomTooltipProps
   );
 }
 
+// ─── Empty-state voor een grafiek ─────────────────────────────────────────────
+// Recharts tekent bij lege data een blanco vlak (funnel = alle staven 0, bronnen
+// = witte cirkel). Dat leest als "kapot". Toon i.p.v. de grafiek een duidelijke
+// NL-boodschap wanneer er geen data voor de gekozen periode/het filter is.
+
+function EmptyChartState({
+  icon: Icon,
+  message,
+  height,
+}: {
+  icon: React.ElementType;
+  message: string;
+  height: number;
+}) {
+  return (
+    <div
+      className="flex flex-col items-center justify-center gap-2 text-center px-4"
+      style={{ height }}
+    >
+      <Icon className="h-8 w-8 text-zinc-300 dark:text-zinc-600" />
+      <p className="text-sm text-muted-foreground max-w-[240px]">{message}</p>
+    </div>
+  );
+}
+
 // ─── Tab: Overzicht ───────────────────────────────────────────────────────────
 
 function OverviewTab({ filters }: { filters: AnalyticsFilters }) {
@@ -186,6 +211,17 @@ function OverviewTab({ filters }: { filters: AnalyticsFilters }) {
   const isLoading = loadingOverview || loadingFunnel || loadingSources;
 
   if (isLoading) return <OverviewSkeleton />;
+
+  // Leeg = geen array, lege array, of uitsluitend nul-waarden. In alle drie de
+  // gevallen valt er niets te tekenen → toon de empty-state i.p.v. een blanco kaart.
+  const funnelIsEmpty =
+    !Array.isArray(funnel) ||
+    funnel.length === 0 ||
+    funnel.every((s) => (s?.count ?? 0) === 0);
+  const sourcesIsEmpty =
+    !Array.isArray(sources) ||
+    sources.length === 0 ||
+    sources.every((s) => (s?.percentage ?? 0) === 0);
 
   // Guard tegen deling door nul: zonder kandidaten is funnel[0].count 0 →
   // 0/0 = NaN → "NaN%" in de UI. Toon dan 0.0%.
@@ -261,6 +297,13 @@ function OverviewTab({ filters }: { filters: AnalyticsFilters }) {
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
+            {funnelIsEmpty ? (
+              <EmptyChartState
+                icon={BarChart3}
+                message={t("overview.funnel.empty")}
+                height={280}
+              />
+            ) : (
             <ResponsiveContainer width="100%" height={280}>
               <BarChart
                 data={funnel}
@@ -297,6 +340,7 @@ function OverviewTab({ filters }: { filters: AnalyticsFilters }) {
                 />
               </BarChart>
             </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -310,6 +354,13 @@ function OverviewTab({ filters }: { filters: AnalyticsFilters }) {
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0 flex flex-col items-center">
+            {sourcesIsEmpty ? (
+              <EmptyChartState
+                icon={Users}
+                message={t("overview.sources.empty")}
+                height={230}
+              />
+            ) : (
             <ResponsiveContainer width="100%" height={230}>
               <PieChart>
                 <Pie
@@ -354,6 +405,7 @@ function OverviewTab({ filters }: { filters: AnalyticsFilters }) {
                 />
               </PieChart>
             </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
       </div>

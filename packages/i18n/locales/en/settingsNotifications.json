@@ -8,6 +8,7 @@
     "description": "Get a nudge on your phone or desktop.",
     "unsupported": "This browser does not support push notifications.",
     "denied": "Notifications are blocked in your browser. Change this in your site settings to enable them again.",
+    "notConfigured": "Push notifications haven't been configured by your administrator yet.",
     "testButton": "Send test notification"
   },
   "events": {

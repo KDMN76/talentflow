@@ -10,6 +10,8 @@ import {
   getAvailableSlots,
   setRecurringHours,
   setDateOverride,
+  replaceAvailability,
+  getConsolidatedAvailability,
   mergeIntervals,
   subtractBusy,
   intersectIntervals,
@@ -405,5 +407,211 @@ describe('setRecurringHours / setDateOverride', () => {
     await expect(
       setDateOverride(TENANT, USER_A, { date: '2026/01/05', blocked: true })
     ).rejects.toMatchObject({ code: 'INVALID_DATE' });
+  });
+
+  it('rejects date_end before date in setDateOverride', async () => {
+    client = mockClient({});
+    teardown = installPoolMock(client);
+    await expect(
+      setDateOverride(TENANT, USER_A, {
+        date: '2026-01-10',
+        date_end: '2026-01-05',
+        blocked: true,
+      })
+    ).rejects.toMatchObject({ code: 'INVALID_DATE_RANGE' });
+  });
+});
+
+describe('replaceAvailability / getConsolidatedAvailability', () => {
+  let teardown: () => void;
+  let client: MockClient;
+
+  afterEach(() => {
+    teardown?.();
+    vi.clearAllMocks();
+  });
+
+  it('rejects an unknown weekday name', async () => {
+    client = mockClient({});
+    teardown = installPoolMock(client);
+    await expect(
+      replaceAvailability(TENANT, USER_A, {
+        recurring_hours: [{ weekday: 'someday' as never, start: '09:00', end: '17:00' }],
+      })
+    ).rejects.toMatchObject({ code: 'INVALID_WEEKDAY' });
+  });
+
+  it('rejects an override whose t/m is before its van', async () => {
+    client = mockClient({});
+    teardown = installPoolMock(client);
+    await expect(
+      replaceAvailability(TENANT, USER_A, {
+        overrides: [{ date: '2026-01-10', date_end: '2026-01-05' }],
+      })
+    ).rejects.toMatchObject({ code: 'INVALID_DATE_RANGE' });
+  });
+
+  it('replaces recurring (weekday name → int) and overrides (with a period)', async () => {
+    const calls: Array<{ sql: string; params: unknown[] }> = [];
+    client = mockClient({
+      __matcher: (sql, params) => {
+        calls.push({ sql, params });
+        if (/SELECT name FROM users/i.test(sql)) {
+          return { rows: [{ name: 'Test User' }], rowCount: 1 };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    teardown = installPoolMock(client);
+
+    const result = await replaceAvailability(TENANT, USER_A, {
+      timezone: 'Europe/Amsterdam',
+      recurring_hours: [
+        { weekday: 'monday', start: '09:00', end: '17:00' },
+        { weekday: 'wednesday', start: '10:00', end: '15:00' },
+      ],
+      overrides: [
+        { date: '2026-01-05', date_end: '2026-01-07', available: false, reason: 'Vakantie' },
+      ],
+    });
+
+    const inserts = calls.filter((c) =>
+      /^INSERT INTO interviewer_availability/i.test(c.sql)
+    );
+    const recurringInserts = inserts.filter((c) => /\bweekday\b/i.test(c.sql));
+    const overrideInserts = inserts.filter((c) => /date_override/i.test(c.sql));
+    const deletes = calls.filter((c) =>
+      /^DELETE FROM interviewer_availability/i.test(c.sql)
+    );
+
+    expect(deletes.length).toBe(2); // recurring-set + override-set beide vervangen
+    expect(recurringInserts.length).toBe(2);
+    expect(overrideInserts.length).toBe(1);
+
+    // weekday-namen → ints (monday=1, wednesday=3).
+    expect(recurringInserts[0].params).toContain(1);
+    expect(recurringInserts[1].params).toContain(3);
+
+    // Override-periode: zowel van als t/m in de params, blocked = !available.
+    expect(overrideInserts[0].params).toContain('2026-01-05');
+    expect(overrideInserts[0].params).toContain('2026-01-07');
+    expect(overrideInserts[0].params).toContain(true);
+
+    expect(result.user_name).toBe('Test User');
+  });
+
+  it('shapes rows into the consolidated wire format (int→name, date_end fallback)', async () => {
+    client = mockClient({
+      __matcher: (sql) => {
+        if (/SELECT name FROM users/i.test(sql)) {
+          return { rows: [{ name: 'Alice' }], rowCount: 1 };
+        }
+        if (/FROM interviewer_availability/i.test(sql)) {
+          return {
+            rows: [
+              {
+                weekday: 1,
+                start_time: '09:00',
+                end_time: '17:00',
+                date_override: null,
+                date_override_end: null,
+                blocked: false,
+                reason: null,
+                timezone: 'Europe/Amsterdam',
+              },
+              {
+                weekday: null,
+                start_time: null,
+                end_time: null,
+                date_override: '2026-02-10',
+                date_override_end: '2026-02-14',
+                blocked: true,
+                reason: 'Verlof',
+                timezone: 'Europe/Amsterdam',
+              },
+              {
+                weekday: null,
+                start_time: null,
+                end_time: null,
+                date_override: '2026-03-01',
+                date_override_end: null,
+                blocked: true,
+                reason: null,
+                timezone: 'Europe/Amsterdam',
+              },
+            ],
+            rowCount: 3,
+          };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    teardown = installPoolMock(client);
+
+    const result = await getConsolidatedAvailability(TENANT, USER_A);
+    expect(result.user_name).toBe('Alice');
+    expect(result.timezone).toBe('Europe/Amsterdam');
+    expect(result.recurring_hours).toEqual([
+      { weekday: 'monday', start: '09:00', end: '17:00' },
+    ]);
+    expect(result.overrides).toEqual([
+      { date: '2026-02-10', date_end: '2026-02-14', available: false, reason: 'Verlof' },
+      // date_override_end NULL → t/m valt terug op de startdatum.
+      { date: '2026-03-01', date_end: '2026-03-01', available: false, reason: null },
+    ]);
+  });
+
+  it('a multi-day override blocks a day that is not the start date', async () => {
+    client = mockClient({
+      __matcher: (sql) => {
+        if (/FROM interviewer_availability/i.test(sql)) {
+          return {
+            rows: [
+              // Dinsdag recurring 09:00-17:00.
+              {
+                weekday: 2,
+                start_time: '09:00',
+                end_time: '17:00',
+                date_override: null,
+                date_override_end: null,
+                blocked: false,
+                timezone: 'Europe/Amsterdam',
+              },
+              // Periode-blok 2026-01-05 (ma) t/m 2026-01-07 (wo).
+              {
+                weekday: null,
+                start_time: null,
+                end_time: null,
+                date_override: '2026-01-05',
+                date_override_end: '2026-01-07',
+                blocked: true,
+                timezone: 'Europe/Amsterdam',
+              },
+            ],
+            rowCount: 2,
+          };
+        }
+        if (/FROM interviews i/i.test(sql)) return { rows: [], rowCount: 0 };
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    teardown = installPoolMock(client);
+
+    // 2026-01-06 is een dinsdag BINNEN het blok 05..07 → geen slots, ook al
+    // is het niet de startdatum van de override.
+    const blockedDay = await getAvailableSlots(TENANT, [USER_A], {
+      from: new Date(tIso('2026-01-06', '00:00')),
+      to: new Date(tIso('2026-01-06', '23:59')),
+      durationMinutes: 60,
+    });
+    expect(blockedDay).toEqual([]);
+
+    // 2026-01-13 is een dinsdag BUITEN het blok → recurring geldt weer.
+    const freeDay = await getAvailableSlots(TENANT, [USER_A], {
+      from: new Date(tIso('2026-01-13', '00:00')),
+      to: new Date(tIso('2026-01-13', '23:59')),
+      durationMinutes: 60,
+    });
+    expect(freeDay.length).toBeGreaterThan(0);
   });
 });

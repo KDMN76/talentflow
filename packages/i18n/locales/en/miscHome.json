@@ -36,6 +36,7 @@
       "wormTrail": "WORM trail",
       "wormNote": "Write-once, read-many — events cannot be modified or deleted.",
       "eventsCount": "{{shown}} of {{total}} events",
+      "eventsShown": "{{shown}} events loaded",
       "colTime": "Time",
       "colAction": "Action",
       "colEntity": "Entity",

@@ -52,6 +52,8 @@ import { useMoveApplication } from "@/hooks/usePipeline";
 import { useToast } from "@/components/ui/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { filterApplicationsByStages } from "./pipelineData";
 import type { Application, PipelineStage } from "@/lib/mockData";
 
 interface KanbanBoardProps {
@@ -68,6 +70,14 @@ export function KanbanBoard({ stages, applications, jobId }: KanbanBoardProps) {
   const [search, setSearch] = useState("");
   const [showAbsoluteDate, setShowAbsoluteDate] = useState(false);
   const [view, setView] = useState<"board" | "list">("board");
+  const [selectedStages, setSelectedStages] = useState<string[]>([]);
+
+  const toggleStage = (stageId: string) =>
+    setSelectedStages((prev) =>
+      prev.includes(stageId)
+        ? prev.filter((id) => id !== stageId)
+        : [...prev, stageId]
+    );
 
   const { toast } = useToast();
   const moveApplication = useMoveApplication();
@@ -116,16 +126,21 @@ export function KanbanBoard({ stages, applications, jobId }: KanbanBoardProps) {
     })
   );
 
-  // Candidate quick-search filters which cards render (drag logic keeps using
-  // the full list so moves still resolve while a filter is active).
+  // Candidate quick-search + stage filter decide which cards render (drag logic
+  // keeps using the full `applications` list so moves still resolve while a
+  // filter is active). Both filters compose and apply to board + list alike.
   const q = search.trim().toLowerCase();
-  const visibleApplications = q
+  const searchFiltered = q
     ? applications.filter((a) => {
         const name = (a.candidate?.name ?? a.candidate_name ?? "").toLowerCase();
         const email = (a.candidate?.email ?? a.candidate_email ?? "").toLowerCase();
         return name.includes(q) || email.includes(q);
       })
     : applications;
+  const visibleApplications = filterApplicationsByStages(
+    searchFiltered,
+    selectedStages
+  );
 
   const getApplicationsForStage = (stageId: string) =>
     visibleApplications.filter((a) => a.stage_id === stageId);
@@ -243,6 +258,47 @@ export function KanbanBoard({ stages, applications, jobId }: KanbanBoardProps) {
           </button>
         </div>
       </div>
+
+      {stages.length > 0 && (
+        <div
+          className="flex flex-wrap items-center gap-1.5"
+          role="group"
+          aria-label={t("filters.filterByStage")}
+        >
+          {stages.map((stage) => {
+            const active = selectedStages.includes(stage.id);
+            return (
+              <button
+                key={stage.id}
+                type="button"
+                onClick={() => toggleStage(stage.id)}
+                aria-pressed={active}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+                  active
+                    ? "border-transparent bg-foreground text-background"
+                    : "border-border bg-background text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <span
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{ background: stage.color }}
+                />
+                {stage.name}
+              </button>
+            );
+          })}
+          {selectedStages.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setSelectedStages([])}
+              className="ml-1 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            >
+              {t("filters.clearStages")}
+            </button>
+          )}
+        </div>
+      )}
 
       {view === "list" ? (
         <PipelineListView

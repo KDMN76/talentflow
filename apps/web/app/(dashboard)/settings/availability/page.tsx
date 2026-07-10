@@ -13,7 +13,6 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -34,7 +33,6 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
 import {
-  useAddAvailabilityOverride,
   useAvailability,
   useSetAvailability,
 } from "@/hooks/useAvailability";
@@ -44,6 +42,24 @@ import type {
   RecurringHours,
   Weekday,
 } from "@/lib/types/interviews";
+
+/**
+ * Lokale, bewerkbare rij voor een uitzondering (van–t/m + reden). `id` is
+ * enkel een client-side key voor de lijst; de server kent geen override-id.
+ */
+type OverrideDraft = {
+  id: string;
+  date: string; // van, YYYY-MM-DD
+  dateEnd: string; // t/m, YYYY-MM-DD
+  reason: string;
+};
+
+function makeOverrideId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `ov-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
 
 const WEEKDAYS: Array<{ value: Weekday; short: string }> = [
   { value: "monday", short: "Ma" },
@@ -72,12 +88,10 @@ export default function AvailabilitySettingsPage() {
   const { toast } = useToast();
   const { data, isLoading, isError } = useAvailability(userId);
   const save = useSetAvailability(userId ?? "");
-  const addOverride = useAddAvailabilityOverride(userId ?? "");
 
   const [timezone, setTimezone] = useState("Europe/Amsterdam");
   const [hours, setHours] = useState<RecurringHours[]>([]);
-  const [overrideDate, setOverrideDate] = useState("");
-  const [overrideReason, setOverrideReason] = useState("");
+  const [overrides, setOverrides] = useState<OverrideDraft[]>([]);
 
   useEffect(() => {
     if (!data) return;
@@ -86,6 +100,17 @@ export default function AvailabilitySettingsPage() {
     // `hours.filter` de pagina (witte pagina /settings/availability).
     if (data.timezone) setTimezone(data.timezone);
     setHours(Array.isArray(data.recurring_hours) ? data.recurring_hours : []);
+    const serverOverrides = Array.isArray(data.overrides) ? data.overrides : [];
+    setOverrides(
+      serverOverrides
+        .filter((o) => !o.available)
+        .map((o) => ({
+          id: makeOverrideId(),
+          date: o.date,
+          dateEnd: o.date_end ?? o.date,
+          reason: o.reason ?? "",
+        }))
+    );
   }, [data]);
 
   const blocksForDay = (day: Weekday): RecurringHours[] =>
@@ -123,31 +148,75 @@ export default function AvailabilitySettingsPage() {
     });
   };
 
-  const handleSave = async () => {
-    await save.mutateAsync({ timezone, recurring_hours: hours });
-    toast({
-      title: t("availability.toast.saved.title"),
-      description: t("availability.toast.saved.description", {
-        count: hours.length,
-        timezone,
-      }),
-    });
-  };
+  const addOverride = () =>
+    setOverrides((cur) => [
+      ...cur,
+      { id: makeOverrideId(), date: "", dateEnd: "", reason: "" },
+    ]);
 
-  const handleAddOverride = async () => {
-    if (!overrideDate) return;
-    const ov: AvailabilityOverride = {
-      date: overrideDate,
-      available: false,
-      reason: overrideReason.trim() || null,
-    };
-    await addOverride.mutateAsync(ov);
-    toast({
-      title: t("availability.toast.blocked.title"),
-      description: `${overrideDate}${overrideReason ? ` — ${overrideReason}` : ""}`,
-    });
-    setOverrideDate("");
-    setOverrideReason("");
+  const updateOverride = (id: string, patch: Partial<Omit<OverrideDraft, "id">>) =>
+    setOverrides((cur) =>
+      cur.map((o) => {
+        if (o.id !== id) return o;
+        const next = { ...o, ...patch };
+        // Als 'van' verandert en 't/m' leeg is of vóór 'van' ligt: sync 't/m'.
+        if (patch.date && (!next.dateEnd || next.dateEnd < patch.date)) {
+          next.dateEnd = patch.date;
+        }
+        return next;
+      })
+    );
+
+  const removeOverride = (id: string) =>
+    setOverrides((cur) => cur.filter((o) => o.id !== id));
+
+  const handleSave = async () => {
+    // Valideer periodes vóór we opslaan: t/m mag niet vóór van liggen.
+    for (const o of overrides) {
+      if (!o.date) continue;
+      const end = o.dateEnd || o.date;
+      if (end < o.date) {
+        toast({
+          title: t("availability.toast.error.title"),
+          description: t("availability.overrides.rangeError"),
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    const overridesPayload: AvailabilityOverride[] = overrides
+      .filter((o) => o.date)
+      .map((o) => ({
+        date: o.date,
+        date_end: o.dateEnd || o.date,
+        available: false,
+        reason: o.reason.trim() || null,
+      }));
+
+    try {
+      await save.mutateAsync({
+        timezone,
+        recurring_hours: hours,
+        overrides: overridesPayload,
+      });
+      toast({
+        title: t("availability.toast.saved.title"),
+        description: t("availability.toast.saved.description", {
+          count: hours.length,
+          timezone,
+        }),
+      });
+    } catch (err) {
+      toast({
+        title: t("availability.toast.error.title"),
+        description:
+          err instanceof Error
+            ? err.message
+            : t("availability.toast.error.description"),
+        variant: "destructive",
+      });
+    }
   };
 
   if (userLoading || isLoading) {
@@ -328,64 +397,75 @@ export default function AvailabilitySettingsPage() {
             {t("availability.overrides.description")}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="ov-date">
-                {t("availability.overrides.dateLabel")}
-              </Label>
-              <Input
-                id="ov-date"
-                type="date"
-                value={overrideDate}
-                onChange={(e) => setOverrideDate(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="ov-reason">
-                {t("availability.overrides.reasonLabel")}
-              </Label>
-              <Input
-                id="ov-reason"
-                value={overrideReason}
-                onChange={(e) => setOverrideReason(e.target.value)}
-                placeholder={t("availability.overrides.reasonPlaceholder")}
-              />
-            </div>
-          </div>
-          <Button
-            onClick={handleAddOverride}
-            disabled={!overrideDate || addOverride.isPending}
-            size="sm"
-          >
-            {addOverride.isPending ? (
-              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-            ) : (
-              <Plus className="h-3.5 w-3.5 mr-1.5" />
-            )}
-            {t("availability.overrides.blockDate")}
-          </Button>
-
-          {(data?.overrides?.length ?? 0) > 0 && (
-            <div className="space-y-1.5 pt-3 border-t border-border">
-              <p className="text-xs uppercase tracking-wide font-semibold text-muted-foreground">
-                {t("availability.overrides.blockedHeading")}
-              </p>
-              {data!.overrides
-                .filter((o) => !o.available)
-                .map((o) => (
-                  <div
-                    key={o.date}
-                    className="flex items-center gap-2 rounded-md bg-zinc-50 dark:bg-zinc-900/40 px-2.5 py-1.5 text-xs"
-                  >
-                    <Badge variant="warning">{o.date}</Badge>
-                    {o.reason && (
-                      <span className="text-muted-foreground">— {o.reason}</span>
-                    )}
+        <CardContent className="space-y-3">
+          {overrides.length === 0 ? (
+            <p className="text-xs text-muted-foreground italic">
+              {t("availability.overrides.empty")}
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {overrides.map((o) => (
+                <div
+                  key={o.id}
+                  className="grid gap-2 sm:grid-cols-[1fr_1fr_2fr_auto] sm:items-end rounded-lg border border-border p-3"
+                >
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`ov-from-${o.id}`}>
+                      {t("availability.overrides.fromLabel")}
+                    </Label>
+                    <Input
+                      id={`ov-from-${o.id}`}
+                      type="date"
+                      value={o.date}
+                      onChange={(e) =>
+                        updateOverride(o.id, { date: e.target.value })
+                      }
+                    />
                   </div>
-                ))}
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`ov-to-${o.id}`}>
+                      {t("availability.overrides.toLabel")}
+                    </Label>
+                    <Input
+                      id={`ov-to-${o.id}`}
+                      type="date"
+                      value={o.dateEnd}
+                      min={o.date || undefined}
+                      onChange={(e) =>
+                        updateOverride(o.id, { dateEnd: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`ov-reason-${o.id}`}>
+                      {t("availability.overrides.reasonLabel")}
+                    </Label>
+                    <Input
+                      id={`ov-reason-${o.id}`}
+                      value={o.reason}
+                      onChange={(e) =>
+                        updateOverride(o.id, { reason: e.target.value })
+                      }
+                      placeholder={t("availability.overrides.reasonPlaceholder")}
+                    />
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-rose-500 hover:text-rose-600 justify-self-end"
+                    onClick={() => removeOverride(o.id)}
+                    aria-label={t("availability.overrides.removeAria")}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
             </div>
           )}
+          <Button onClick={addOverride} variant="outline" size="sm">
+            <Plus className="h-3.5 w-3.5 mr-1.5" />
+            {t("availability.overrides.blockDate")}
+          </Button>
         </CardContent>
       </Card>
     </div>

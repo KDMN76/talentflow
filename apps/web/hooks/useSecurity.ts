@@ -31,6 +31,7 @@ import type {
   SecuritySettings,
   IpAllowlistEntry,
   ExtAuditEvent,
+  ExtAuditCategory,
   ExtAuditFilters,
   AuditEventsPage,
   PermissionGrant,
@@ -446,18 +447,133 @@ export function useCurrentIp() {
 
 // ─── Audit-events (ext) ─────────────────────────────────────────────────────
 
+// De WORM-audit-API levert een platte event-shape (`created_at`, `user_name`,
+// `diff_summary`, geen `category`/`label`/`worm_hash`) en pagineert cursor-based
+// via `meta.next_cursor` — niet de `{ data, cursor }`-envelope die de viewer
+// verwacht. We leiden category + label af en normaliseren naar `AuditEventsPage`
+// zodat de pagina niet crasht op `cursor.total` / een afwijkende event-shape.
+
+function deriveAuditCategory(action: string): ExtAuditCategory {
+  const a = (action ?? "").toLowerCase();
+  if (
+    a.includes("login") ||
+    a.includes("logout") ||
+    a.includes("logged_in") ||
+    a.includes("logged_out") ||
+    a.startsWith("auth") ||
+    a.includes("2fa") ||
+    a.includes("password")
+  )
+    return "auth";
+  if (a.includes("consent")) return "consent";
+  if (a.includes("export") || a.includes("download")) return "exports";
+  if (
+    a.includes("ai") ||
+    a.includes("match") ||
+    a.includes("talent_fit") ||
+    a.includes("embedding") ||
+    a.includes("dei_funnel") ||
+    a.includes("pay_equity") ||
+    a.includes("monitoring")
+  )
+    return "ai";
+  if (
+    a.includes("email") ||
+    a.includes("whatsapp") ||
+    a.includes("sms") ||
+    a.includes("communication") ||
+    a.includes("message") ||
+    a.includes("call")
+  )
+    return "communications";
+  if (
+    a.includes("role") ||
+    a.includes("permission") ||
+    a.includes("sso") ||
+    a.includes("scim") ||
+    a.includes("api_key") ||
+    a.includes("ip_") ||
+    a.includes("security")
+  )
+    return "security";
+  if (a.includes("settings") || a.startsWith("admin")) return "admin";
+  if (a.includes("view") || a.includes("access") || a.includes("read"))
+    return "access";
+  return "writes";
+}
+
+function humanizeAction(action: string): string {
+  if (!action) return "Onbekende actie";
+  return action
+    .replace(/[._]/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function normalizeExtAuditEvent(raw: unknown): ExtAuditEvent {
+  const r = (raw ?? {}) as Record<string, unknown>;
+  const asRecord = (v: unknown) =>
+    v && typeof v === "object" ? (v as Record<string, unknown>) : null;
+  const action = (r.action as string) ?? "unknown";
+  return {
+    id: (r.id as string) ?? "",
+    tenant_id: (r.tenant_id as string) ?? "",
+    occurred_at:
+      (r.occurred_at as string) ?? (r.created_at as string) ?? "",
+    action,
+    category:
+      (r.category as ExtAuditCategory) ?? deriveAuditCategory(action),
+    label: (r.label as string) ?? (r.diff_summary as string) ?? humanizeAction(action),
+    actor_id: (r.actor_id as string) ?? (r.user_id as string) ?? null,
+    actor_name:
+      (r.actor_name as string) ?? (r.user_name as string) ?? "systeem",
+    actor_email: (r.actor_email as string) ?? null,
+    actor_role: (r.actor_role as string) ?? null,
+    entity_type: (r.entity_type as string) ?? "",
+    entity_id: (r.entity_id as string) ?? "",
+    entity_label:
+      (r.entity_label as string) ?? (r.related_entity_name as string) ?? null,
+    ip_address: (r.ip_address as string) ?? null,
+    user_agent: (r.user_agent as string) ?? null,
+    request_id: (r.request_id as string) ?? "",
+    before: asRecord(r.before),
+    after: asRecord(r.after),
+    metadata: asRecord(r.metadata),
+    worm_hash: (r.worm_hash as string) ?? "",
+  };
+}
+
+function normalizeAuditEventsPage(raw: unknown): AuditEventsPage {
+  const body = (raw ?? {}) as Record<string, unknown>;
+  const list = Array.isArray(body.data) ? (body.data as unknown[]) : [];
+  const meta = (body.meta ?? {}) as Record<string, unknown>;
+  const cursor = (body.cursor ?? {}) as Record<string, unknown>;
+  const nextCursor =
+    (cursor.next_cursor as string | null | undefined) ??
+    (meta.next_cursor as string | null | undefined) ??
+    null;
+  const total =
+    typeof cursor.total === "number"
+      ? cursor.total
+      : typeof meta.total === "number"
+        ? (meta.total as number)
+        : 0;
+  return {
+    data: list.map(normalizeExtAuditEvent),
+    cursor: { next_cursor: nextCursor ?? null, total },
+  };
+}
+
 export function useAuditEvents(filters: ExtAuditFilters = {}) {
   return useInfiniteQuery({
     queryKey: ["security", "audit", "events", filters],
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage: AuditEventsPage) =>
-      lastPage.cursor.next_cursor ?? undefined,
+      lastPage.cursor?.next_cursor ?? undefined,
     queryFn: async ({ pageParam }): Promise<AuditEventsPage> => {
-      const { data } = await api.get<AuditEventsPage>(
-        "/compliance/audit-events",
-        { params: { ...filters, cursor: pageParam } }
-      );
-      return data;
+      const { data } = await api.get<unknown>("/compliance/audit-events", {
+        params: { ...filters, cursor: pageParam },
+      });
+      return normalizeAuditEventsPage(data);
     },
   });
 }

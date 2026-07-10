@@ -81,7 +81,7 @@ export function PayEquityDashboard() {
   const genderChart = useMemo(() => buildChart(report?.by_gender ?? []), [report]);
   const ageChart = useMemo(() => buildChart(report?.by_age_bracket ?? []), [report]);
 
-  const cfg = report ? gapColor(report.pay_gap_pct) : null;
+  const cfg = report ? gapColor(report.pay_gap_pct ?? 0) : null;
 
   return (
     <div className="space-y-5">
@@ -137,18 +137,18 @@ export function PayEquityDashboard() {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <KpiCard
                   label="Ongecorrigeerde gap"
-                  value={`${report.pay_gap_pct.toFixed(1)}%`}
+                  value={`${(report.pay_gap_pct ?? 0).toFixed(1)}%`}
                   badge={cfg?.label}
                   badgeCls={cfg?.cls}
                 />
                 <KpiCard
                   label="Gecorrigeerd"
-                  value={`${report.adjusted_pay_gap_pct.toFixed(1)}%`}
+                  value={`${(report.adjusted_pay_gap_pct ?? 0).toFixed(1)}%`}
                   hint="Gecontroleerd voor functie & senioriteit"
                 />
                 <KpiCard
                   label="Records"
-                  value={String(report.total_records)}
+                  value={String(report.total_records ?? 0)}
                   hint={`Periode ${range.from} → ${range.to}`}
                 />
               </div>
@@ -258,7 +258,7 @@ export function PayEquityDashboard() {
           <CardContent className="p-0">
             <div className="divide-y divide-border">
               {snapshots.map((s) => {
-                const sCfg = gapColor(s.pay_gap_pct);
+                const sCfg = gapColor(s.pay_gap_pct ?? 0);
                 return (
                   <div
                     key={s.id}
@@ -273,7 +273,7 @@ export function PayEquityDashboard() {
                       </p>
                     </div>
                     <Badge variant="secondary" className={cn("border", sCfg.cls)}>
-                      {s.pay_gap_pct.toFixed(1)}% gap
+                      {(s.pay_gap_pct ?? 0).toFixed(1)}% gap
                     </Badge>
                   </div>
                 );
@@ -287,9 +287,10 @@ export function PayEquityDashboard() {
 }
 
 function buildChart(rows: PayBucket[]) {
+  if (!Array.isArray(rows)) return [];
   return rows
-    .filter((r) => !r.suppressed && r.median_salary !== null)
-    .map((r) => ({ label: r.group_label, median: r.median_salary }));
+    .filter((r) => r && !r.suppressed && r.median_salary !== null)
+    .map((r) => ({ label: r.group_label ?? "—", median: r.median_salary }));
 }
 
 function KpiCard({
@@ -349,24 +350,34 @@ function BucketTable({ title, rows }: { title: string; rows: PayBucket[] }) {
           <span className="col-span-3 text-right">Aantal</span>
           <span className="col-span-4 text-right">Median</span>
         </div>
-        {rows.map((r, i) => (
-          <div
-            key={`${title}-${i}`}
-            className="grid grid-cols-12 gap-2 px-3 py-2 text-sm items-center border-t border-border/40"
-          >
-            <span className="col-span-5 truncate">{r.group_label}</span>
-            <span className="col-span-3 text-right tabular-nums">
-              {r.suppressed ? <span className="italic text-muted-foreground">verborgen</span> : r.count}
-            </span>
-            <span className="col-span-4 text-right tabular-nums">
-              {r.suppressed ? (
-                <span className="italic text-muted-foreground">k&lt;5</span>
-              ) : (
-                eur(r.median_salary)
-              )}
-            </span>
+        {(rows ?? []).length === 0 ? (
+          <div className="px-3 py-4 text-center text-xs text-muted-foreground">
+            Nog geen data
           </div>
-        ))}
+        ) : (
+          (rows ?? []).map((r, i) => (
+            <div
+              key={`${title}-${i}`}
+              className="grid grid-cols-12 gap-2 px-3 py-2 text-sm items-center border-t border-border/40"
+            >
+              <span className="col-span-5 truncate">{r?.group_label ?? "—"}</span>
+              <span className="col-span-3 text-right tabular-nums">
+                {r?.suppressed ? (
+                  <span className="italic text-muted-foreground">verborgen</span>
+                ) : (
+                  r?.count ?? 0
+                )}
+              </span>
+              <span className="col-span-4 text-right tabular-nums">
+                {r?.suppressed ? (
+                  <span className="italic text-muted-foreground">k&lt;5</span>
+                ) : (
+                  eur(r?.median_salary ?? null)
+                )}
+              </span>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

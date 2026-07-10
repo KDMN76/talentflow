@@ -25,6 +25,8 @@ router.get('/mailbox/oauth/callback', integrationsController.oauthCallbackHandle
 router.use(requireAuth, tenantMiddleware);
 
 router.get('/mailbox', integrationsController.listMailboxIntegrationsHandler);
+// Config-status: welke OAuth-providers zijn ingericht (client-id/secret gezet).
+router.get('/mailbox/providers', integrationsController.getProviderConfigHandler);
 router.get(
   '/mailbox/oauth/:provider/start',
   integrationsController.startOAuthHandler

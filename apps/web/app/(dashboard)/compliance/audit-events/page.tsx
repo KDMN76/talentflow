@@ -64,6 +64,17 @@ function diffKeys(a: Record<string, unknown> | null, b: Record<string, unknown> 
   return Array.from(new Set([...Object.keys(a ?? {}), ...Object.keys(b ?? {})]));
 }
 
+/** Veilige datum-render: geen "Invalid Date" bij ontbrekende timestamp. */
+function formatTimestamp(iso: string | null | undefined, withTime = true): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString(
+    "nl-NL",
+    withTime ? { dateStyle: "short", timeStyle: "medium" } : undefined
+  );
+}
+
 function DiffViewer({
   before,
   after,
@@ -167,10 +178,9 @@ export default function AuditEventsPage() {
   }, [realtime, refetch]);
 
   const events: ExtAuditEvent[] = useMemo(
-    () => data?.pages.flatMap((p) => p.data) ?? [],
+    () => data?.pages?.flatMap((p) => p?.data ?? []) ?? [],
     [data]
   );
-  const total = data?.pages[0]?.cursor.total ?? 0;
 
   const handleExport = async () => {
     const result = await exportMutation.mutateAsync({
@@ -337,10 +347,8 @@ export default function AuditEventsPage() {
             {t("auditEvents.table.wormNote")}
           </span>
           <span className="ml-auto text-muted-foreground">
-            {t("auditEvents.table.eventsCount", {
-              shown: events.length,
-              total,
-            })}
+            {t("auditEvents.table.eventsShown", { shown: events.length })}
+            {hasNextPage ? "+" : ""}
           </span>
         </div>
         <div className="overflow-x-auto">
@@ -382,10 +390,7 @@ export default function AuditEventsPage() {
                   >
                     <td className="px-3 py-2.5 align-top">
                       <div className="text-xs font-mono text-muted-foreground">
-                        {new Date(e.occurred_at).toLocaleString("nl-NL", {
-                          dateStyle: "short",
-                          timeStyle: "medium",
-                        })}
+                        {formatTimestamp(e.occurred_at)}
                       </div>
                     </td>
                     <td className="px-3 py-2.5 align-top">
@@ -393,12 +398,13 @@ export default function AuditEventsPage() {
                         <Badge
                           className={cn(
                             "text-[10px] border-0",
-                            EXT_AUDIT_CATEGORY_COLORS[e.category]
+                            EXT_AUDIT_CATEGORY_COLORS[e.category] ??
+                              "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
                           )}
                         >
-                          {EXT_AUDIT_CATEGORY_LABELS[e.category]}
+                          {EXT_AUDIT_CATEGORY_LABELS[e.category] ?? e.category ?? "—"}
                         </Badge>
-                        <div className="text-xs font-medium">{e.label}</div>
+                        <div className="text-xs font-medium">{e.label ?? e.action}</div>
                         <div className="text-[10px] font-mono text-muted-foreground">
                           {e.action}
                         </div>
@@ -411,7 +417,7 @@ export default function AuditEventsPage() {
                       </div>
                     </td>
                     <td className="px-3 py-2.5 align-top">
-                      <div className="text-xs">{e.actor_name}</div>
+                      <div className="text-xs">{e.actor_name ?? "—"}</div>
                       {e.actor_email && (
                         <div className="text-[10px] text-muted-foreground">
                           {e.actor_email}
@@ -467,12 +473,12 @@ export default function AuditEventsPage() {
           {detail && (
             <div className="space-y-4 py-2">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Field label={t("auditEvents.detail.time")} value={new Date(detail.occurred_at).toLocaleString("nl-NL")} />
-                <Field label={t("auditEvents.detail.action")} value={detail.label} mono />
-                <Field label={t("auditEvents.detail.actionKey")} value={detail.action} mono />
+                <Field label={t("auditEvents.detail.time")} value={formatTimestamp(detail.occurred_at, false)} />
+                <Field label={t("auditEvents.detail.action")} value={detail.label ?? detail.action ?? "—"} mono />
+                <Field label={t("auditEvents.detail.actionKey")} value={detail.action ?? "—"} mono />
                 <Field
                   label={t("auditEvents.detail.category")}
-                  value={EXT_AUDIT_CATEGORY_LABELS[detail.category]}
+                  value={EXT_AUDIT_CATEGORY_LABELS[detail.category] ?? detail.category ?? "—"}
                 />
                 <Field label={t("auditEvents.detail.entity")} value={detail.entity_label ?? "—"} />
                 <Field
@@ -482,11 +488,11 @@ export default function AuditEventsPage() {
                 />
                 <Field
                   label={t("auditEvents.detail.performedBy")}
-                  value={`${detail.actor_name}${detail.actor_email ? ` (${detail.actor_email})` : ""}`}
+                  value={`${detail.actor_name ?? "—"}${detail.actor_email ? ` (${detail.actor_email})` : ""}`}
                 />
                 <Field label={t("auditEvents.detail.role")} value={detail.actor_role ?? "—"} />
                 <Field label={t("auditEvents.detail.ip")} value={detail.ip_address ?? "—"} mono />
-                <Field label={t("auditEvents.detail.requestId")} value={detail.request_id} mono />
+                <Field label={t("auditEvents.detail.requestId")} value={detail.request_id ?? "—"} mono />
               </div>
 
               {detail.user_agent && (
@@ -522,7 +528,7 @@ export default function AuditEventsPage() {
                 <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="text-[11px] text-muted-foreground">
                   {t("auditEvents.detail.wormSeal")}{" "}
-                  <code className="font-mono text-[11px]">{detail.worm_hash}</code>
+                  <code className="font-mono text-[11px]">{detail.worm_hash || "—"}</code>
                 </span>
               </div>
             </div>

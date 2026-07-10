@@ -24,6 +24,24 @@ export function useCandidates(search?: string) {
   });
 }
 
+/**
+ * Werkelijk aantal kandidaten in de tenant (server-side `meta.total`), los van
+ * de gepagineerde lijst. Nodig omdat compliance-KPI's anders het paginagrootte
+ * (bv. 20) als "totaal" tonen i.p.v. het echte aantal.
+ */
+export function useCandidateCount() {
+  return useQuery({
+    queryKey: ["candidates", "count"],
+    queryFn: async (): Promise<number> => {
+      const { data } = await api.get<{
+        data?: Candidate[];
+        meta?: { total?: number };
+      }>("/candidates", { params: { limit: 1 } });
+      return data.meta?.total ?? data.data?.length ?? 0;
+    },
+  });
+}
+
 export function useCandidate(id: string) {
   return useQuery({
     queryKey: ["candidates", id],

@@ -380,7 +380,7 @@ function EventRow({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <code className="hidden rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-[10px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400 sm:inline-block">
-            {event.worm_hash.slice(0, 10)}…
+            {(event.worm_hash ?? "—").slice(0, 10)}…
           </code>
           {expandable ? (
             expanded ? (

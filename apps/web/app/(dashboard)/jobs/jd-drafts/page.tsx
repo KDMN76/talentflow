@@ -68,7 +68,9 @@ export default function JdDraftsPage() {
   });
   const discard = useDiscardJdDraft();
 
-  const drafts = useMemo(() => data ?? [], [data]);
+  // Defensief: de API kan (bij een leeg/gedeeltelijk antwoord) iets anders
+  // dan een array teruggeven — nooit crashen op `.map`/`.length`.
+  const drafts = useMemo(() => (Array.isArray(data) ? data : []), [data]);
 
   const handleDiscard = async (id: string) => {
     if (!confirm(t("discard.confirm"))) return;
@@ -216,6 +218,18 @@ export default function JdDraftsPage() {
   );
 }
 
+/** Guard tegen een ontbrekende/ongeldige created_at — nooit "Invalid Date". */
+function formatDraftDate(value: string | null | undefined): string {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("nl-NL", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 function DraftRow({
   draft,
   onDiscard,
@@ -226,14 +240,23 @@ function DraftRow({
   isDiscarding: boolean;
 }) {
   const { t } = useTranslation("jdDrafts");
-  const created = new Date(draft.created_at).toLocaleDateString("nl-NL", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-  const selectedVariant = draft.variants.find(
-    (v) => v.id === draft.selected_variant_id
+
+  // De live API stuurt `prompt`/`parameters`/`job_id`; oudere fixtures gebruiken
+  // `role`/`input`/`published_job_id`. Lees beide, guard alles — de rij mag
+  // nooit crashen op een ontbrekend veld (bv. `draft.input` = undefined).
+  const created = formatDraftDate(draft.created_at);
+  const variants = Array.isArray(draft.variants) ? draft.variants : [];
+  const roleLabel =
+    draft.prompt?.trim() ||
+    draft.parameters?.role?.trim() ||
+    draft.role?.trim() ||
+    t("row.untitled");
+  const language = draft.parameters?.language ?? draft.input?.language;
+  const selectedVariant = variants.find(
+    (v) => v?.id === draft.selected_variant_id
   );
+  const badge = STATUS_BADGE[draft.status] ?? STATUS_BADGE.draft;
+  const publishedJobId = draft.job_id ?? draft.published_job_id;
 
   return (
     <tr className="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-colors">
@@ -242,22 +265,22 @@ function DraftRow({
       </td>
       <td className="px-4 py-3">
         <p className="font-semibold text-zinc-900 dark:text-zinc-100">
-          {draft.role}
+          {roleLabel}
         </p>
         <p className="text-xs text-muted-foreground">
-          {t("row.variantsMeta", {
-            count: draft.variants.length,
-            language: draft.input.language,
-          })}
+          {language
+            ? t("row.variantsMeta", {
+                count: variants.length,
+                language: String(language).toUpperCase(),
+              })
+            : t("row.variantsMetaNoLang", { count: variants.length })}
         </p>
       </td>
       <td className="px-4 py-3">
-        <Badge variant={STATUS_BADGE[draft.status].variant}>
-          {t(STATUS_BADGE[draft.status].labelKey)}
-        </Badge>
+        <Badge variant={badge.variant}>{t(badge.labelKey)}</Badge>
       </td>
       <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
-        {selectedVariant ? (
+        {selectedVariant?.title ? (
           <span className="truncate max-w-[260px] block">
             {selectedVariant.title}
           </span>
@@ -267,9 +290,9 @@ function DraftRow({
       </td>
       <td className="px-4 py-3 text-right">
         <div className="flex items-center justify-end gap-1">
-          {draft.status === "published" && draft.published_job_id ? (
+          {draft.status === "published" && publishedJobId ? (
             <Button asChild variant="ghost" size="sm" className="text-xs">
-              <Link href={`/jobs/${draft.published_job_id}`}>
+              <Link href={`/jobs/${publishedJobId}`}>
                 <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
                 {t("row.viewJob")}
               </Link>

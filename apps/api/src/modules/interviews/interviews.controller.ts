@@ -83,19 +83,46 @@ const slotsBodySchema = z.object({
   step_minutes: z.number().int().min(5).max(120).optional(),
 });
 
-const recurringHoursSchema = z.object({
-  recurring_hours: z.array(
-    z.object({
-      weekday: z.number().int().min(0).max(6),
-      start: z.string().min(1),
-      end: z.string().min(1),
-      timezone: z.string().optional(),
-    })
-  ),
+const weekdayNameSchema = z.enum([
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+  'sunday',
+]);
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+// Geconsolideerde availability-payload zoals de settings/availability-pagina
+// die verstuurt: string-weekdays + overrides met een van–t/m periode.
+const setAvailabilitySchema = z.object({
+  timezone: z.string().optional(),
+  recurring_hours: z
+    .array(
+      z.object({
+        weekday: weekdayNameSchema,
+        start: z.string().min(1),
+        end: z.string().min(1),
+      })
+    )
+    .optional(),
+  overrides: z
+    .array(
+      z.object({
+        date: z.string().regex(DATE_RE),
+        date_end: z.string().regex(DATE_RE).nullable().optional(),
+        available: z.boolean().optional(),
+        reason: z.string().max(500).nullable().optional(),
+      })
+    )
+    .optional(),
 });
 
 const overrideSchema = z.object({
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  date: z.string().regex(DATE_RE),
+  date_end: z.string().regex(DATE_RE).optional(),
   blocked: z.boolean(),
   start_time: z.string().optional(),
   end_time: z.string().optional(),
@@ -251,24 +278,27 @@ export async function getSlots(req: Request, res: Response, next: NextFunction):
 
 export async function getUserAvailability(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const list = await availability.getAvailability(req.user!.tenantId, req.params.userId);
-    res.json({ data: list });
+    const data = await availability.getConsolidatedAvailability(
+      req.user!.tenantId,
+      req.params.userId
+    );
+    res.json(data);
   } catch (err) {
     next(err);
   }
 }
 
-export async function putRecurringHours(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function putAvailability(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const body = recurringHoursSchema.parse(req.body);
-    await availability.setRecurringHours(
+    const body = setAvailabilitySchema.parse(req.body);
+    const data = await availability.replaceAvailability(
       req.user!.tenantId,
       req.params.userId,
-      body.recurring_hours,
+      body,
       req.user!.userId,
       auditCtxFromReq(req)
     );
-    res.json({ message: 'Werkuren bijgewerkt' });
+    res.json(data);
   } catch (err) {
     next(err);
   }

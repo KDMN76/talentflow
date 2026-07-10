@@ -72,16 +72,16 @@ export function DEIFunnelViewer() {
 
   // Build a stacked chart per stage with gender breakdown.
   const chartData = useMemo(() => {
-    if (!data) return [];
+    if (!data || !Array.isArray(data.stages)) return [];
     return data.stages.map((s) => {
       const findCount = (label: string) =>
-        s.breakdown.gender.find((g) => g.label === label)?.count ?? 0;
+        s.breakdown?.gender?.find((g) => g?.label === label)?.count ?? 0;
       return {
-        stage: s.stage_name,
+        stage: s.stage_name ?? "—",
         Man: findCount("Man"),
         Vrouw: findCount("Vrouw"),
         "Non-binair": findCount("Non-binair"),
-        total: s.total,
+        total: s.total ?? 0,
       };
     });
   }, [data]);
@@ -113,7 +113,7 @@ export function DEIFunnelViewer() {
       </Card>
 
       {/* Alerts */}
-      {data && data.alerts.length > 0 && (
+      {data && Array.isArray(data.alerts) && data.alerts.length > 0 && (
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
@@ -127,11 +127,11 @@ export function DEIFunnelViewer() {
                 key={i}
                 className={cn(
                   "rounded-md border px-3 py-2.5 text-sm",
-                  ALERT_CLS[a.severity]
+                  ALERT_CLS[a?.severity] ?? ALERT_CLS.info
                 )}
               >
-                <p className="font-semibold">{a.stage_name}</p>
-                <p className="text-xs leading-relaxed mt-0.5">{a.message}</p>
+                <p className="font-semibold">{a?.stage_name ?? "—"}</p>
+                <p className="text-xs leading-relaxed mt-0.5">{a?.message ?? ""}</p>
               </div>
             ))}
           </CardContent>
@@ -150,6 +150,14 @@ export function DEIFunnelViewer() {
         <CardContent>
           {isLoading || !data ? (
             <Skeleton className="h-72 w-full" />
+          ) : chartData.length === 0 ? (
+            <div className="flex h-72 flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border bg-muted/30 text-center">
+              <Users className="h-6 w-6 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground max-w-[280px]">
+                Nog geen data — er zijn geen sollicitaties in de geselecteerde
+                periode.
+              </p>
+            </div>
           ) : (
             <ResponsiveContainer width="100%" height={320}>
               <BarChart
@@ -188,7 +196,11 @@ export function DEIFunnelViewer() {
       {/* Stage cards */}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         {(data?.stages ?? []).map((stage, i, arr) => (
-          <StageCard key={stage.stage_id} stage={stage} previous={arr[i - 1]} />
+          <StageCard
+            key={stage?.stage_id ?? i}
+            stage={stage}
+            previous={arr[i - 1]}
+          />
         ))}
       </div>
 
@@ -234,12 +246,12 @@ export function DEIFunnelViewer() {
                   <Badge
                     variant="secondary"
                     className={
-                      s.total_alerts > 0
+                      (s.total_alerts ?? 0) > 0
                         ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-0"
                         : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-0"
                     }
                   >
-                    {s.total_alerts} alerts
+                    {s.total_alerts ?? 0} alerts
                   </Badge>
                 </div>
               ))}
@@ -258,25 +270,25 @@ function StageCard({
   stage: DeiFunnelStage;
   previous?: DeiFunnelStage;
 }) {
-  const cfg = BIAS_COPY[stage.bias_level];
+  const cfg = BIAS_COPY[stage.bias_level] ?? BIAS_COPY.low;
+  const prevTotal = previous?.total ?? 0;
+  const stageTotal = stage.total ?? 0;
   const dropPct =
-    previous && previous.total > 0
-      ? Math.round((1 - stage.total / previous.total) * 100)
-      : null;
+    prevTotal > 0 ? Math.round((1 - stageTotal / prevTotal) * 100) : null;
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-sm">{stage.stage_name}</CardTitle>
+          <CardTitle className="text-sm">{stage.stage_name ?? "—"}</CardTitle>
           <Badge variant="secondary" className={cn("gap-1 border", cfg.cls)}>
             {cfg.icon}
-            Bias: {cfg.label} ({stage.bias_score})
+            Bias: {cfg.label} ({stage.bias_score ?? 0})
           </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex items-baseline gap-3">
-          <span className="text-2xl font-bold tabular-nums">{stage.total}</span>
+          <span className="text-2xl font-bold tabular-nums">{stageTotal}</span>
           <span className="text-xs text-muted-foreground">kandidaten</span>
           {dropPct !== null && (
             <span
@@ -294,9 +306,9 @@ function StageCard({
           )}
         </div>
 
-        <BreakdownRow title="Gender" rows={stage.breakdown.gender} colors={["#6366f1", "#a855f7", "#06b6d4"]} />
-        <BreakdownRow title="Leeftijd" rows={stage.breakdown.age_bracket} colors={["#10b981", "#06b6d4", "#6366f1", "#f59e0b"]} />
-        <BreakdownRow title="Nationaliteit" rows={stage.breakdown.nationality} colors={["#6366f1", "#a855f7", "#f59e0b"]} />
+        <BreakdownRow title="Gender" rows={stage.breakdown?.gender ?? []} colors={["#6366f1", "#a855f7", "#06b6d4"]} />
+        <BreakdownRow title="Leeftijd" rows={stage.breakdown?.age_bracket ?? []} colors={["#10b981", "#06b6d4", "#6366f1", "#f59e0b"]} />
+        <BreakdownRow title="Nationaliteit" rows={stage.breakdown?.nationality ?? []} colors={["#6366f1", "#a855f7", "#f59e0b"]} />
       </CardContent>
     </Card>
   );
@@ -311,47 +323,52 @@ function BreakdownRow({
   rows: { label: string; count: number; pct: number; suppressed: boolean }[];
   colors: string[];
 }) {
-  const visibleTotal = rows
-    .filter((r) => !r.suppressed)
-    .reduce((sum, r) => sum + r.pct, 0);
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const visibleTotal = safeRows
+    .filter((r) => r && !r.suppressed)
+    .reduce((sum, r) => sum + (r?.pct ?? 0), 0);
   return (
     <div>
       <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
         {title}
       </p>
       <div className="flex h-2 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
-        {rows.map((r, i) => {
-          if (r.suppressed) return null;
-          const pct = visibleTotal === 0 ? 0 : (r.pct / visibleTotal) * 100;
+        {safeRows.map((r, i) => {
+          if (!r || r.suppressed) return null;
+          const pct = visibleTotal === 0 ? 0 : ((r.pct ?? 0) / visibleTotal) * 100;
           return (
             <span
-              key={r.label}
+              key={r.label ?? i}
               className="h-full"
               style={{ width: `${pct}%`, backgroundColor: colors[i % colors.length] }}
-              title={`${r.label}: ${r.count} (${r.pct.toFixed(1)}%)`}
+              title={`${r.label ?? "—"}: ${r.count ?? 0} (${(r.pct ?? 0).toFixed(1)}%)`}
             />
           );
         })}
       </div>
       <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
-        {rows.map((r, i) => (
-          <span key={r.label} className="flex items-center gap-1">
-            <span
-              className="inline-block h-1.5 w-1.5 rounded-full"
-              style={{
-                backgroundColor: r.suppressed ? "#a1a1aa" : colors[i % colors.length],
-              }}
-            />
-            {r.label}:{" "}
-            {r.suppressed ? (
-              <span className="italic">k&lt;5</span>
-            ) : (
-              <span className="tabular-nums">
-                {r.count} ({r.pct.toFixed(1)}%)
-              </span>
-            )}
-          </span>
-        ))}
+        {safeRows.length === 0 ? (
+          <span className="italic">Nog geen data</span>
+        ) : (
+          safeRows.map((r, i) => (
+            <span key={r?.label ?? i} className="flex items-center gap-1">
+              <span
+                className="inline-block h-1.5 w-1.5 rounded-full"
+                style={{
+                  backgroundColor: r?.suppressed ? "#a1a1aa" : colors[i % colors.length],
+                }}
+              />
+              {r?.label ?? "—"}:{" "}
+              {r?.suppressed ? (
+                <span className="italic">k&lt;5</span>
+              ) : (
+                <span className="tabular-nums">
+                  {r?.count ?? 0} ({(r?.pct ?? 0).toFixed(1)}%)
+                </span>
+              )}
+            </span>
+          ))
+        )}
       </div>
     </div>
   );
