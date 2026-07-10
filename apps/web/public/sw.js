@@ -15,7 +15,7 @@
  * 'activate' geleegd. Doe dit bij elke breaking SW-wijziging.
  */
 
-const CACHE_VERSION = 'tf-v2';
+const CACHE_VERSION = 'tf-v3';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 const PAGE_CACHE = `${CACHE_VERSION}-pages`;
