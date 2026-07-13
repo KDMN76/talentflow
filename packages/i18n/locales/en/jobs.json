@@ -19,6 +19,27 @@
       "noResultsTitle": "No jobs found — adjust your filters",
       "noResultsDescription": "Try less strict filters or reset to see everything.",
       "resetFilters": "Reset filters"
+    },
+    "export": {
+      "button": "Export",
+      "tooltip": "Only exports the currently loaded and filtered jobs.",
+      "filenamePrefix": "jobs",
+      "success": "Jobs exported",
+      "error": "Export failed",
+      "columns": {
+        "title": "Title",
+        "jobReference": "Reference",
+        "status": "Status",
+        "department": "Department",
+        "location": "Location",
+        "employmentType": "Employment type",
+        "salaryMin": "Salary min",
+        "salaryMax": "Salary max",
+        "salaryCurrency": "Currency",
+        "recruiterName": "Recruiter",
+        "applicationCount": "Applications",
+        "createdAt": "Created at"
+      }
     }
   },
   "form": {
@@ -147,7 +168,7 @@
       "dialogTitle": "Health breakdown",
       "dialogDescription": "Aggregated score based on time to fill, drop-off and recruiter activity. Higher is healthier.",
       "total": "Total",
-      "noData": "Health data not available yet."
+      "noData": "No data"
     },
     "openSince": "Open for:",
     "daysOpenHint": "Number of days since this job was opened.",
@@ -186,6 +207,7 @@
     "quickFilterLabel": "Quick filter:",
     "reset": "Reset ({{count}})",
     "openFiltersAria": "Open filters",
+    "moreFilters": "More filters",
     "dialogTitle": "Filters",
     "searchPlaceholder": "Search by title, reference or location...",
     "searchAria": "Search jobs",
@@ -193,13 +215,21 @@
     "recruiterAria": "Filter by recruiter",
     "locationAria": "Filter by location",
     "sortAria": "Sort",
+    "tagsAria": "Filter by tags",
     "allRecruiters": "All recruiters",
     "fields": {
       "status": "Status",
       "recruiter": "Recruiter",
       "location": "Location",
       "openedBetween": "Opened between",
-      "sorting": "Sort order"
+      "sorting": "Sort order",
+      "tags": "Tags"
+    },
+    "tags": {
+      "all": "All tags",
+      "clear": "Clear",
+      "selected_one": "{{count}} selected",
+      "selected_other": "{{count}} selected"
     },
     "status": {
       "all": "All statuses",

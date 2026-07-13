@@ -53,7 +53,7 @@ const VALID_SORTS: ReadonlySet<JobsFilterSort> = new Set([
 ]);
 
 /** Parse the current `URLSearchParams` into a `JobsFilters` shape. */
-function parseFromSearchParams(sp: URLSearchParams): JobsFilters {
+export function parseFromSearchParams(sp: URLSearchParams): JobsFilters {
   const status = sp.get("status");
   const sort = sp.get("sort");
   const tagsParam = sp.get("tags");
@@ -80,7 +80,7 @@ function parseFromSearchParams(sp: URLSearchParams): JobsFilters {
 }
 
 /** Serialise a `JobsFilters` into a URL query string, omitting defaults. */
-function buildQueryString(filters: JobsFilters): string {
+export function buildQueryString(filters: JobsFilters): string {
   const params = new URLSearchParams();
   if (filters.search) params.set("search", filters.search);
   if (filters.status !== DEFAULTS.status) params.set("status", filters.status);
@@ -94,7 +94,12 @@ function buildQueryString(filters: JobsFilters): string {
   return params.toString();
 }
 
-function countActive(filters: JobsFilters): number {
+/**
+ * Count active *filters* for the reset badge. `sort` is intentionally excluded:
+ * sorting is a view preference, not a filter, so it must not inflate the badge
+ * or make "Reset (n)" appear when only the sort order changed.
+ */
+export function countActive(filters: JobsFilters): number {
   let n = 0;
   if (filters.search !== DEFAULTS.search) n++;
   if (filters.status !== DEFAULTS.status) n++;
@@ -102,7 +107,6 @@ function countActive(filters: JobsFilters): number {
   if (filters.location !== DEFAULTS.location) n++;
   if (filters.date_from !== DEFAULTS.date_from) n++;
   if (filters.date_to !== DEFAULTS.date_to) n++;
-  if (filters.sort !== DEFAULTS.sort) n++;
   if (filters.tags.length !== DEFAULTS.tags.length) n++;
   return n;
 }
@@ -194,8 +198,10 @@ export function useJobsFilters(): UseJobsFiltersReturn {
   const resetFilters = useCallback(() => {
     setSearchInputState(DEFAULTS.search);
     lastUrlSearchRef.current = DEFAULTS.search;
-    replaceUrl({ ...DEFAULTS });
-  }, [replaceUrl]);
+    // Reset clears filters only; the chosen sort order (a view preference) is
+    // preserved so it stays consistent with `countActive` not counting sort.
+    replaceUrl({ ...DEFAULTS, sort: filtersFromUrl.sort });
+  }, [replaceUrl, filtersFromUrl.sort]);
 
   const activeCount = useMemo(() => countActive(filtersFromUrl), [filtersFromUrl]);
 

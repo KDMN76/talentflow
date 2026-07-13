@@ -19,6 +19,27 @@
       "noResultsTitle": "Geen jobs gevonden — pas filters aan",
       "noResultsDescription": "Probeer minder strikte filters of reset om alles te zien.",
       "resetFilters": "Reset filters"
+    },
+    "export": {
+      "button": "Exporteren",
+      "tooltip": "Exporteert alleen de nu geladen en gefilterde vacatures.",
+      "filenamePrefix": "vacatures",
+      "success": "Vacatures geëxporteerd",
+      "error": "Export mislukt",
+      "columns": {
+        "title": "Titel",
+        "jobReference": "Referentie",
+        "status": "Status",
+        "department": "Afdeling",
+        "location": "Locatie",
+        "employmentType": "Dienstverband",
+        "salaryMin": "Salaris min",
+        "salaryMax": "Salaris max",
+        "salaryCurrency": "Valuta",
+        "recruiterName": "Recruiter",
+        "applicationCount": "Sollicitaties",
+        "createdAt": "Aangemaakt op"
+      }
     }
   },
   "form": {
@@ -147,7 +168,7 @@
       "dialogTitle": "Health-breakdown",
       "dialogDescription": "Geaggregeerde score op basis van doorlooptijd, drop-off en recruiter-activiteit. Hoger is gezonder.",
       "total": "Totaal",
-      "noData": "Health-data nog niet beschikbaar."
+      "noData": "Geen data"
     },
     "openSince": "Open sinds:",
     "daysOpenHint": "Aantal dagen sinds deze vacature is geopend.",
@@ -186,6 +207,7 @@
     "quickFilterLabel": "Snel filter:",
     "reset": "Reset ({{count}})",
     "openFiltersAria": "Filters openen",
+    "moreFilters": "Meer filters",
     "dialogTitle": "Filters",
     "searchPlaceholder": "Zoek op titel, referentie of locatie...",
     "searchAria": "Zoek vacatures",
@@ -193,13 +215,21 @@
     "recruiterAria": "Filter op recruiter",
     "locationAria": "Filter op locatie",
     "sortAria": "Sorteren",
+    "tagsAria": "Filter op tags",
     "allRecruiters": "Alle recruiters",
     "fields": {
       "status": "Status",
       "recruiter": "Recruiter",
       "location": "Locatie",
       "openedBetween": "Geopend tussen",
-      "sorting": "Sortering"
+      "sorting": "Sortering",
+      "tags": "Tags"
+    },
+    "tags": {
+      "all": "Alle tags",
+      "clear": "Wissen",
+      "selected_one": "{{count}} geselecteerd",
+      "selected_other": "{{count}} geselecteerd"
     },
     "status": {
       "all": "Alle statussen",

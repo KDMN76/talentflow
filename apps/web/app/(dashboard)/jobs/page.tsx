@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
-import { Plus, Briefcase, Wand2 } from "lucide-react";
+import { Plus, Briefcase, Wand2, Download } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { JobCard } from "@/components/jobs/JobCard";
 import { JobRowBoundary } from "@/components/jobs/JobRowBoundary";
@@ -12,14 +12,17 @@ import {
   type QuickFilter,
   type RecruiterOption,
 } from "@/components/jobs/JobsFilterBar";
+import type { MultiSelectOption } from "@/components/ui/multi-select";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/components/ui/use-toast";
 import { useJobs } from "@/hooks/useJobs";
 import {
   useJobsFilters,
   type JobsFilters,
 } from "@/hooks/useJobsFilters";
 import { getCurrentUserId } from "@/lib/auth";
+import { downloadCsv } from "@/lib/downloadHelper";
 import type { JobListItem as Job } from "@talentflow/contracts";
 
 // `tags` is not yet a first-class field on `Job`, but the filter UI exposes
@@ -30,6 +33,7 @@ type JobWithOptionalTags = Job & { tags?: string[] | null };
 
 export default function JobsPage() {
   const { t } = useTranslation("jobs");
+  const { toast } = useToast();
   // Resolve the current user once per render from the JWT in session
   // storage. Falls back to `null` when the user can't be identified — in
   // that case the "Mijn open jobs" quick-filter simply has no effect
@@ -66,6 +70,23 @@ export default function JobsPage() {
       }
     }
     return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
+  }, [jobs]);
+
+  // Tag options for the (previously dead) tags filter. Derived from the loaded
+  // jobs; `tags` is not yet a first-class field on `Job`, so we read it via the
+  // optional-tags cast. When no job carries tags the filter simply isn't shown.
+  const tagOptions = useMemo<MultiSelectOption[]>(() => {
+    if (!jobs) return [];
+    const set = new Set<string>();
+    for (const job of jobs as JobWithOptionalTags[]) {
+      for (const tag of job.tags ?? []) {
+        const trimmed = tag.trim();
+        if (trimmed) set.add(trimmed);
+      }
+    }
+    return Array.from(set)
+      .sort((a, b) => a.localeCompare(b, "nl"))
+      .map((tag) => ({ value: tag, label: tag }));
   }, [jobs]);
 
   // Quick-filter chips. `current_user` valt terug op de JWT-uitgelezen
@@ -114,6 +135,52 @@ export default function JobsPage() {
 
   const visibleCount = filteredJobs.length;
 
+  // Client-side CSV export of the currently loaded + filtered/sorted jobs.
+  // Mirrors the dashboard export pattern (downloadCsv + toast). Note: this only
+  // covers the set already in memory — the tooltip on the button says so.
+  const handleExportCsv = () => {
+    const headers = [
+      t("list.export.columns.title"),
+      t("list.export.columns.jobReference"),
+      t("list.export.columns.status"),
+      t("list.export.columns.department"),
+      t("list.export.columns.location"),
+      t("list.export.columns.employmentType"),
+      t("list.export.columns.salaryMin"),
+      t("list.export.columns.salaryMax"),
+      t("list.export.columns.salaryCurrency"),
+      t("list.export.columns.recruiterName"),
+      t("list.export.columns.applicationCount"),
+      t("list.export.columns.createdAt"),
+    ];
+    const rows: Array<Array<string | number>> = filteredJobs.map((job) => [
+      job.title,
+      job.job_reference ?? "",
+      job.status,
+      job.department ?? "",
+      job.location ?? "",
+      job.employment_type ?? "",
+      job.salary_min ?? "",
+      job.salary_max ?? "",
+      job.currency ?? "",
+      job.recruiter_name ?? "",
+      job.application_count,
+      job.created_at,
+    ]);
+    try {
+      downloadCsv(
+        `${t("list.export.filenamePrefix")}-${new Date()
+          .toISOString()
+          .slice(0, 10)}.csv`,
+        headers,
+        rows
+      );
+      toast({ title: t("list.export.success") });
+    } catch {
+      toast({ title: t("list.export.error"), variant: "destructive" });
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
@@ -121,6 +188,16 @@ export default function JobsPage() {
         description={t("list.description")}
         actions={
           <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleExportCsv}
+              disabled={visibleCount === 0}
+              title={t("list.export.tooltip")}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              {t("list.export.button")}
+            </Button>
             <Button
               asChild
               variant="outline"
@@ -153,6 +230,7 @@ export default function JobsPage() {
         resetFilters={resetFilters}
         activeCount={activeCount}
         recruiterOptions={recruiterOptions}
+        tagOptions={tagOptions}
         quickFilters={quickFilters}
       />
 

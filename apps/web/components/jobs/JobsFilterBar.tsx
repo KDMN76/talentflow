@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { MultiSelect, type MultiSelectOption } from "@/components/ui/multi-select";
 import { cn, formatDate } from "@/lib/utils";
 import type {
   JobsFilters,
@@ -90,6 +91,12 @@ interface JobsFilterBarProps
   > {
   /** Recruiter list to populate the recruiter dropdown. */
   recruiterOptions?: RecruiterOption[];
+  /**
+   * Available tag values for the tags multi-select. Derived from the loaded
+   * jobs by the page. When empty the tags control is not rendered at all — no
+   * empty dropdown.
+   */
+  tagOptions?: MultiSelectOption[];
   /** Quick-filter chips rendered above the bar. */
   quickFilters?: QuickFilter[];
 }
@@ -105,10 +112,11 @@ export function JobsFilterBar({
   resetFilters,
   activeCount,
   recruiterOptions,
+  tagOptions,
   quickFilters,
 }: JobsFilterBarProps) {
   const { t } = useTranslation(["jobs", "common"]);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   const recruiters = useMemo<RecruiterOption[]>(
     () =>
@@ -117,6 +125,17 @@ export function JobsFilterBar({
         : FALLBACK_RECRUITERS,
     [recruiterOptions]
   );
+
+  const tags = tagOptions ?? [];
+
+  // Count of the *low-frequency* filters that live behind "Meer filters", so
+  // the button can show a badge for what's hidden inside it.
+  const advancedActiveCount =
+    (filters.recruiter_id !== "all" ? 1 : 0) +
+    (filters.location ? 1 : 0) +
+    (filters.date_from ? 1 : 0) +
+    (filters.date_to ? 1 : 0) +
+    (filters.tags.length > 0 ? 1 : 0);
 
   return (
     <div className="space-y-3">
@@ -148,67 +167,37 @@ export function JobsFilterBar({
         </div>
       )}
 
-      {/* Desktop filter bar */}
-      <div className="hidden md:flex md:flex-wrap md:items-center md:gap-2">
-        <SearchControl value={searchInput} onChange={setSearchInput} />
+      {/* Filter bar — Zoeken + Status + Sortering blijven inline; de
+          laag-frequente filters (Recruiter, Locatie, Datumbereik, Tags)
+          vouwen op elk formaat weg achter "Meer filters". */}
+      <div className="flex flex-wrap items-center gap-2">
+        <SearchControl
+          value={searchInput}
+          onChange={setSearchInput}
+          className="w-full sm:w-72"
+        />
         <StatusControl
           value={filters.status}
           onChange={(v) => setFilter("status", v)}
-        />
-        <RecruiterControl
-          value={filters.recruiter_id}
-          onChange={(v) => setFilter("recruiter_id", v)}
-          recruiters={recruiters}
-        />
-        <LocationControl
-          value={filters.location}
-          onChange={(v) => setFilter("location", v)}
-        />
-        <DateRangeControl
-          from={filters.date_from}
-          to={filters.date_to}
-          onChange={(from, to) =>
-            setFilters({ date_from: from, date_to: to })
-          }
         />
         <SortControl
           value={filters.sort}
           onChange={(v) => setFilter("sort", v)}
         />
-        {activeCount > 0 && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={resetFilters}
-            className="ml-auto h-10 gap-1.5 text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-3.5 w-3.5" />
-            {t("filters.reset", { count: activeCount })}
-          </Button>
-        )}
-      </div>
 
-      {/* Mobile: search + filters-toggle */}
-      <div className="flex items-center gap-2 md:hidden">
-        <SearchControl
-          value={searchInput}
-          onChange={setSearchInput}
-          className="flex-1 min-w-0"
-        />
-        <Dialog open={mobileOpen} onOpenChange={setMobileOpen}>
+        <Dialog open={moreOpen} onOpenChange={setMoreOpen}>
           <DialogTrigger asChild>
             <Button
               type="button"
               variant="outline"
-              size="icon"
-              className="relative shrink-0"
-              aria-label={t("filters.openFiltersAria")}
+              className="h-10 shrink-0 gap-2"
+              aria-label={t("filters.moreFilters")}
             >
               <SlidersHorizontal className="h-4 w-4" />
-              {activeCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-600 px-1 text-[10px] font-semibold text-white">
-                  {activeCount}
+              <span>{t("filters.moreFilters")}</span>
+              {advancedActiveCount > 0 && (
+                <span className="ml-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-indigo-600 px-1 text-[10px] font-semibold text-white">
+                  {advancedActiveCount}
                 </span>
               )}
             </Button>
@@ -218,13 +207,6 @@ export function JobsFilterBar({
               <DialogTitle>{t("filters.dialogTitle")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-3">
-              <LabelledField label={t("filters.fields.status")}>
-                <StatusControl
-                  value={filters.status}
-                  onChange={(v) => setFilter("status", v)}
-                  fullWidth
-                />
-              </LabelledField>
               <LabelledField label={t("filters.fields.recruiter")}>
                 <RecruiterControl
                   value={filters.recruiter_id}
@@ -250,13 +232,22 @@ export function JobsFilterBar({
                   fullWidth
                 />
               </LabelledField>
-              <LabelledField label={t("filters.fields.sorting")}>
-                <SortControl
-                  value={filters.sort}
-                  onChange={(v) => setFilter("sort", v)}
-                  fullWidth
-                />
-              </LabelledField>
+              {/* Tags: alleen tonen als er daadwerkelijk tag-waarden zijn —
+                  geen lege dropdown. */}
+              {tags.length > 0 && (
+                <LabelledField label={t("filters.fields.tags")}>
+                  <MultiSelect
+                    options={tags}
+                    selected={filters.tags}
+                    onChange={(next) => setFilter("tags", next)}
+                    placeholder={t("filters.tags.all")}
+                    countLabel={(count) => t("filters.tags.selected", { count })}
+                    clearLabel={t("filters.tags.clear")}
+                    aria-label={t("filters.tagsAria")}
+                    className="w-full"
+                  />
+                </LabelledField>
+              )}
               <div className="flex items-center justify-between pt-2">
                 {activeCount > 0 ? (
                   <Button
@@ -277,7 +268,7 @@ export function JobsFilterBar({
                 <Button
                   type="button"
                   size="sm"
-                  onClick={() => setMobileOpen(false)}
+                  onClick={() => setMoreOpen(false)}
                   className="bg-indigo-600 hover:bg-indigo-700 border-0"
                 >
                   {t("common:actions.close")}
@@ -286,6 +277,19 @@ export function JobsFilterBar({
             </div>
           </DialogContent>
         </Dialog>
+
+        {activeCount > 0 && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={resetFilters}
+            className="ml-auto h-10 gap-1.5 text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-3.5 w-3.5" />
+            {t("filters.reset", { count: activeCount })}
+          </Button>
+        )}
       </div>
     </div>
   );
