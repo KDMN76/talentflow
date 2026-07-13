@@ -5,7 +5,11 @@ import { auditCtxFromReq } from '../../lib/audit';
 
 const createSchema = z.object({
   name: z.string().min(1).max(120),
-  description: z.string().max(2000).optional(),
+  // Beschrijving is optioneel (zo labelt de UI het ook). De client stuurt een
+  // lege beschrijving als `null`; `.optional()` alleen accepteert enkel
+  // `undefined` → een lege template-save gaf een 400. `.nullable()` erbij zodat
+  // het UI-gedrag en de validatie overeenkomen. controller doet `?? null`.
+  description: z.string().max(2000).nullable().optional(),
   job_data: z.record(z.unknown()).default({}),
 });
 

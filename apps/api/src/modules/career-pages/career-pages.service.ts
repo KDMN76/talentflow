@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import type { PoolClient } from 'pg';
 import { promises as dns } from 'dns';
 import { withTenant, withoutTenant } from '../../db/pool';
 import { AppError } from '../../middleware/errorHandler';
@@ -162,9 +163,36 @@ function buildMockCareerPageRow(
   };
 }
 
-function suggestSlug(slug: string): string {
-  const suffix = Math.random().toString(36).slice(2, 8);
-  return `${slug}-${suffix}`;
+/**
+ * Vaste-lengte, nette random suffix (6 hex-tekens). `Math.random().toString(36)`
+ * liet trailing-zeros vallen → variabele/korte suffixen zoals "4u4" (bug: slug
+ * "job-4u4"). Hex is altijd 6 tekens.
+ */
+function slugSuffix(bytes = 3): string {
+  return crypto.randomBytes(bytes).toString('hex');
+}
+
+/**
+ * Bepaalt een globaal-unieke slug. Slugs zijn publieke career-URL's en dus
+ * tenant-overstijgend uniek (constraint). De oude code checkte maar één keer en
+ * her-checkte de gesuggereerde slug NIET → een tweede botsing liet de INSERT
+ * falen op de unique-constraint. Nu her-checken we tot de slug vrij is.
+ */
+async function ensureUniqueSlug(
+  client: PoolClient,
+  base: string
+): Promise<string> {
+  let candidate = base;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const { rows } = await client.query(
+      `SELECT 1 FROM career_pages WHERE slug = $1 LIMIT 1`,
+      [candidate]
+    );
+    if (rows.length === 0) return candidate;
+    candidate = `${base}-${slugSuffix()}`;
+  }
+  // Extreem onwaarschijnlijk; val terug op een langere suffix.
+  return `${base}-${slugSuffix(6)}`;
 }
 
 // ─── Admin Functions ──────────────────────────────────────────────────────────
@@ -230,15 +258,8 @@ export async function createCareerPage(
 ): Promise<CareerPage> {
   try {
     return await withTenant(tenantId, async (client) => {
-      // Check slug uniqueness — auto-suggest with random suffix on conflict
-      let slug = data.slug;
-      const { rows: existing } = await client.query(
-        `SELECT id FROM career_pages WHERE slug = $1`,
-        [slug]
-      );
-      if (existing.length > 0) {
-        slug = suggestSlug(data.slug);
-      }
+      // Globaal-unieke slug (her-checkt tot vrij; vaste-lengte hex suffix).
+      const slug = await ensureUniqueSlug(client, data.slug);
 
       const { rows: [page] } = await client.query(
         `INSERT INTO career_pages (tenant_id, slug, template, config, language)
