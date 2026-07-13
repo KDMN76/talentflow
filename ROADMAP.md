@@ -1088,3 +1088,355 @@ portal-mock alleen non-prod). Testsuite bij oplevering: **1805 api + 25 web groe
 - **[✅ 2026-07-09] Manatal-cijfer in beschermde bestanden gecorrigeerd** — CLAUDE.md regel 6 + ROADMAP.md regel 890 stonden nog op "~€1.000/mo";
   na akkoord Kaan gecorrigeerd naar ≈€620/mo (echte factuur, docs/TCO_ROI.md). ~~Origineel item:~~
   de echte factuur is ≈€620/mo (zie `docs/TCO_ROI.md`). Mag ik die twee regels corrigeren?
+
+---
+
+## Sectie 8: Volledige systeem-audit — top-tot-teen (2026-07-13)
+
+> Uitgevoerd op verzoek van Kaan: 6 read-only code-audits (per domein) + 1 live-UI-audit (Playwright op de draaiende app, 27 pagina's). Doel: alle bugs, inconsistenties en UI/UX-onnetheid vastleggen — NIET fixen. **162 bevindingen: 33 P1, 62 P2, 67 P3.**
+> 
+> **Prioriteitsnoot (ROADMAP-conventie):** de P1/P2/P3-labels hieronder zijn de *audit-inschatting* van ernst, niet automatisch de sprint-prioriteit. Formele promotie naar P0/P1 is aan Kaan. Enkele bevindingen zijn 'te verifiëren' (in de tekst gemarkeerd).
+
+### Systemische patronen (fix één keer, dekt tientallen items)
+
+1. **Envelope-drift (grootste patroon, ~30+ items).** React-Query-hooks lezen inconsistent `.items` / `.data` / de rauwe body, terwijl de API `{data}` / `{data,next_cursor}` / een kaal object teruggeeft (axios unwrapt niet automatisch). Gevolg: lijsten permanent leeg en detailpagina's crashen. Raakt inbox, communications/campagnes, contracten, facturen, timesheets, commissies, nurture, sourcing, outreach, interviews, email-templates. Aanbevolen: één gedeelde `unwrap()`-helper + hooks gelijktrekken.
+2. **Nep-succes bij DB-fout (mock-fallback maskeert fouten).** Services retourneren verzonnen/mock-data of `{}` bij een niet-AppError i.p.v. een 5xx: career-pages (publieke career-page + apply + admin-CRUD), webhooks, workflows, communications. Een storing wordt als succes gepresenteerd; een publieke sollicitatie kan geruisloos verloren gaan.
+3. **Nep-opslag op de settings-hub.** Wachtwoord wijzigen, gebruiker uitnodigen en bedrijfsgegevens opslaan zijn `setTimeout`-stubs met een succes-toast maar zonder API-call.
+4. **Lijsten gecapt op 20 zonder paginering.** Kandidaten- én vacaturelijst tonen max 20 met een misleidende totaalteller (bv. '20 totaal' terwijl er 50.001 kandidaten / 209 vacatures zijn).
+5. **Webhook-HMAC over geherserialiseerde JSON i.p.v. raw body.** WhatsApp (360dialog/Meta), Resend inbound e-mail en outreach inbound verifiëren de handtekening over `JSON.stringify(req.body)` → in productie (met secret) worden álle legitieme webhooks 401. WhatsApp STOP-consent werkt daardoor niet (AVG-risico).
+6. **i18n-gaten.** Diverse pagina's/componenten hardcoded NL (kandidaat-detail, email-templates, custom-fields, workflows, facturen, career-pages create, inbox-verwijderen, CRM) + zichtbare rauwe keys (`topJobs.applicants`) + rauwe `snake_case` activity-codes + Engelse grafiek-legenda's in NL-UI.
+7. **Ontbrekende UUID-validatie op `:id`** (hm, users, deels career-pages) → Postgres 22P02 → 500 i.p.v. nette 400/404.
+8. **Commissie/facturatie overtime-factor 1.25 vs canonieke 1.5** — structureel afwijkende commissie- en factuurbedragen.
+9. **Ontbrekende `tenant_id` op JOINs** (dashboard top-jobs, CRM deals→users, interviews availability, commissies) — defense-in-depth-gaten omdat de app onder de owner-rol draait (RLS inert).
+
+### P1 — audit-inschatting (33 items)
+
+
+**[/candidates]**
+- (bug) **Kandidatenlijst gecapt op 20 + verkeerd totaal** — `/candidates — header 'X kandidaten totaal' + lijst` — Lijst laadt exact 20 kandidaten, header zegt '20 totaal' terwijl echt totaal 50.001 is; geen paginering/infinite-scroll. _Impact:_ Recruiter kan 99,96% van kandidaten niet bereiken via de lijst; teller misleidend. (Dubbel met candidates-code-audit.)
+
+**[/jobs]**
+- (bug) **Vacaturelijst gecapt op 20 + verkeerde teller** — `/jobs — teller '20 resultaten' + lijst` — 20 vacatures met '20 resultaten' terwijl dashboard 209 open vacatures meldt; geen paginering. _Impact:_ Overige honderden vacatures onbereikbaar; teller klopt niet.
+
+**[billing]**
+- (bug) **useInvoice() geeft {invoice,lines} door → factuurdetail crasht** — `apps/web/hooks/useBackOffice.ts:571` — GET /invoices/:id geeft {invoice,lines}; hook geeft wrapper → invoice.status undefined → pill.cls crasht. _Impact:_ Elke factuur-detailpagina crasht; versturen/betaald/void/sync/PDF onbereikbaar.
+
+**[candidates]**
+- (bug) **CSV bulk-import heeft geen backend-routes (404)** — `apps/api/src/modules/candidates/candidates.router.ts:57 / bulkImport.service.ts:220` — previewCsv/startCsvImport/getImportStatus zijn aan geen route gekoppeld; frontend POST't naar /candidates/import/preview|start + GET /candidates/imports/:id — geen bestaat. _Impact:_ 'CSV import'-knop faalt altijd met 404; volledige bulk-import is dood.
+- (bug) **Kandidaat-merge endpoint bestaat niet (404) + shape-drift** — `apps/api/src/modules/candidates/dedupe.service.ts:173 / apps/web/hooks/useDedupe.ts:34` — mergeCandidates() bestaat + heeft tests maar is aan geen route gekoppeld; UI POST't naar /candidates/merge (niet geregistreerd) en stuurt {duplicate_id,choices} terwijl service {duplicate_ids[],field_choices} verwacht. _Impact:_ 'Samenvoegen'-knop levert altijd 404; merge-feature volledig niet-functioneel.
+- (inconsistency) **Dedupe-match contract-drift: frontend leest verkeerde veldnamen** — `dedupe.service.ts:157 / candidates/[id]/page.tsx:345` — API geeft {candidate_id,candidate_name,match_reason,confidence}; frontend leest matched_candidate_id/matched_name/reason/score → undefined. _Impact:_ Duplicaten-banner toont 'lijkt op undefined, undefined'; MergeDialog krijgt undefined duplicate-id → laadt oneindig.
+
+**[commissions]**
+- (bug) **useCommissionSchemes() pakt {data} niet uit → Schemes-tab crasht op .map** — `apps/web/hooks/useBackOffice.ts:743` — GET /commissions/schemes geeft {data}; hook returnt wrapper → schemes.map op object → TypeError. _Impact:_ Tabblad Commissie-schemes crasht bij openen.
+- (bug) **useCommissionAssignments() pakt {data} niet uit → Assignments-tab crasht op .map** — `apps/web/hooks/useBackOffice.ts:805` — GET /commissions/assignments geeft {data}; hook geeft wrapper → assignments.map crasht. _Impact:_ Assignments-tab + commissie-sectie op contractpagina crashen.
+
+**[communications]**
+- (inconsistency) **Bulk-campagne aanmaken: frontend-payload matcht backend-zod niet → altijd 400** — `apps/web/components/communications/CampaignBuilder.tsx:150-159` — Frontend postt {audience,provider,...}; backend vereist candidate_ids.min(1) + via enum. candidate_ids/via ontbreken → zod 400. _Impact:_ Elke campagne-aanmaak faalt (400); bulk-e-mail vanuit UI volledig kapot.
+- (inconsistency) **Bulk-campagne lijst leest body als array maar API wrapt in {data}** — `apps/web/hooks/useBulkCampaigns.ts:26-31` — useBulkCampaigns returnt het hele body-object i.p.v. data → campaigns.length undefined. _Impact:_ Campagne-overzicht toont altijd lege staat.
+
+**[compliance]**
+- (security) **Self-service kandidaat-token wordt PLAINTEXT opgeslagen (alle andere token-tabellen hashen)** — `apps/api/src/modules/compliance/selfService.service.ts:152-157,199-203 (+ migratie 012 candidate_self_tokens.token TEXT UNIQUE)` — candidate_self_tokens.token bewaart de rauwe 32-byte token; INSERT slaat raw op en lookup doet WHERE token=$1 op raw. Alle andere secret-tokens (refresh/password_reset/user_invite/data_export/scim) bewaren alleen sha256/bcrypt-hash. Docstring beweert dat er gehasht wordt maar dat gebeurt niet. _Impact:_ DB-lek levert direct werkende self-service portaallinks op → toegang tot kandidaat-PII + consent wijzigen/verwijderverzoek/export zonder verdere auth. Token 7 dagen geldig, niet single-use.
+
+**[contracts]**
+- (bug) **useContract() geeft {data}-envelope door → detailpagina crasht** — `apps/web/hooks/useBackOffice.ts:100` — GET /contracts/:id geeft {data:contract}; hook returnt zonder .data → contract.status undefined → STATUS_PILL[undefined] crasht. _Impact:_ Elke contract-detailpagina witte pagina; verlengen/beëindigen/factuur onbereikbaar.
+- (bug) **Nieuw-contract stuurt niet-UUID candidate_id/client_organization_id → altijd 400** — `apps/web/app/(dashboard)/contracts/new/page.tsx:69` — Submit stuurt cand-new-<ts>/org-new-<ts>; backend eist uuid(); canSubmit checkt candidateId niet → zod 400. _Impact:_ Contract aanmaken via formulier faalt structureel tenzij toevallig geldige UUID.
+
+**[inbox]**
+- (inconsistency) **Inbox thread-lijst leest .items maar API stuurt .data → lijst altijd leeg** — `apps/web/hooks/useInbox.ts:49-53` — useInboxThreads returnt data.items maar backend stuurt {data:[...],next_cursor}. data.items is undefined → threads altijd leeg. _Impact:_ Omni-channel inbox toont NOOIT threads; kernfeature onbruikbaar.
+- (inconsistency) **Thread-timeline leest .items maar API stuurt .data → timeline altijd leeg** — `apps/web/hooks/useInbox.ts:79-83` — useThreadTimeline returnt data.items terwijl API {data:[...]} stuurt. _Impact:_ Gespreksgeschiedenis van een thread altijd leeg.
+
+**[integrations]**
+- (bug) **E-mailtemplate opslaan zonder plain-text faalt (body_text:null geweigerd door zod)** — `apps/web/app/(dashboard)/email-templates/page.tsx:176` — handleSave stuurt body_text:null; server-schema body_text:z.string().optional() weigert null → 400. Shared type staat string|null wél toe. _Impact:_ Template aanmaken/updaten zonder de als optioneel gelabelde plain-text faalt met 400.
+
+**[interviews]**
+- (bug) **Interview inplannen faalt altijd met 400 (payload-veldnamen + scheduled_end ontbreekt)** — `apps/web/components/interviews/SchedulerDialog.tsx:229` — Post {interviewer_ids,...} zonder scheduled_end; backend vereist scheduled_end + interviewer_user_ids → zod 400. _Impact:_ 'Nieuw interview inplannen' werkt nooit.
+- (bug) **Interview-detailpagina crasht (participant.role undefined; backend levert participant_type)** — `apps/web/app/(dashboard)/interviews/[id]/page.tsx:381` — Rendert p.role.replace + p.user_name; SELECT * interview_participants levert participant_type/user_id/email → undefined.role.replace crasht. Details-tab default → crash bij openen. _Impact:_ Elke interview-detailpagina met deelnemers crasht; kit/opnames/scorecards onbereikbaar.
+- (bug) **Interview verzetten faalt altijd met 400 NO_OP (scheduled_end ontbreekt)** — `apps/web/hooks/useInterviews.ts:84` — Reschedule PATCH't {scheduled_start,duration_minutes} zonder scheduled_end; controller neemt reschedule-tak alleen als beide gezet, anders 400 NO_OP; duration_minutes gestript. _Impact:_ Verzetten onmogelijk via UI.
+
+**[nurture]**
+- (bug) **Sequence-builder crasht (hook leest {sequence,steps}, API geeft {data:{...seq,steps}})** — `apps/web/hooks/useNurture.ts:66` — GET /nurture/sequences/:id geeft {data:{...seq,steps}}; hook returnt rauwe body → sequence/steps undefined → steps.length/sequence.name crasht. _Impact:_ Hele nurture sequence-builder crasht.
+- (inconsistency) **Sequences- & enrollments-lijsten altijd leeg (data.items vs {data,next_cursor})** — `apps/web/hooks/useNurture.ts:48,221` — useSequences/useEnrollments returnen data.items; API geeft {data,next_cursor}. _Impact:_ Sequence-overzicht + reactivatie-sequencekiezer leeg; enrollment-stats 0.
+
+**[outreach]**
+- (inconsistency) **Berichten-lijsten altijd leeg (data.items vs {data,next_cursor})** — `apps/web/hooks/useOutreach.ts:61` — useOutreachMessages returnt data.items; API geeft {data,next_cursor}. _Impact:_ Pending/Sent/inbox permanent leeg — recruiter ziet geen berichten.
+- (inconsistency) **Replies-tab altijd leeg + shape-mismatch (flat rows vs {classification,reply,original})** — `apps/web/hooks/useOutreach.ts:200` — useReplies verwacht {items:[{classification,reply,original}]}; API geeft {data:ClassificationRow[]} platte rijen → data.items undefined; zelfs na fix crasht row.classification.id. _Impact:_ Replies-tab + inbox tonen nooit geclassificeerde antwoorden.
+
+**[reports]**
+- (bug) **time_to_hire metric verwijst naar niet-bestaande kolom jobs.filled_at → rapport-run 500** — `apps/api/src/lib/reports/aggregator.ts:207` — METRIC_REGISTRY.time_to_hire gebruikt j.filled_at; die kolom bestaat in geen migratie (jobDetail.service.ts:565 bevestigt 'we don't have it'). Elke block met time_to_hire gooit 'column j.filled_at does not exist'. runReport → REPORT_RUN_FAILED (500). System-templates 'manager' + 'chro' shippen deze metric → falen out-of-the-box. _Impact:_ Rapporten met time_to_hire mislukken volledig (500); twee meegeleverde templates werken niet.
+
+**[settings]**
+- (bug) **Wachtwoord wijzigen op settings-hub is nep (setTimeout + succes-toast, geen API)** — `apps/web/app/(dashboard)/settings/page.tsx:299` — handleSavePassword doet enkel setTimeout(800), reset formulier, toont succes; roept nooit PATCH /users/me aan. _Impact:_ Gebruiker denkt wachtwoord gewijzigd terwijl oud wachtwoord geldig blijft — misleidende security-flow.
+- (bug) **Gebruiker uitnodigen op settings-hub is nep (toont succes, nodigt niemand uit)** — `apps/web/app/(dashboard)/settings/page.tsx:310` — handleInvite toont 'inviteSent'-toast maar roept geen POST /users/invite aan; verzamelt alleen e-mail terwijl echte inviteUser name+role vereist. _Impact:_ Uitnodigen vanaf hoofd-settings doet niets; uitgenodigde krijgt nooit invite.
+
+**[sourcing]**
+- (bug) **Run-detail crasht (hook leest AgentRun rauw, API geeft {data:run,actions})** — `apps/web/hooks/useSourcing.ts:197` — GET /sourcing/runs/:id geeft {data:run,actions}; hook returnt rauw → run.status undefined → StatusIcon/pill crasht. _Impact:_ Run-detailpagina crasht; findings niet te bekijken.
+- (bug) **Brief-detail crasht (hook rauw, API geeft {data:brief})** — `apps/web/hooks/useSourcing.ts:97` — GET /sourcing/briefs/:id geeft {data:brief}; brief.search_locations.join crasht op undefined. _Impact:_ Brief-detailpagina crasht; geen run te starten.
+- (inconsistency) **Briefs- & runs-lijsten altijd leeg (data.items vs {data,nextCursor})** — `apps/web/hooks/useSourcing.ts:86,176` — useAgentBriefs/useAgentRuns returnen data.items; API geeft {data,nextCursor}. _Impact:_ Briefs/Runs-tab permanent leeg; hub-cards + stats werken niet.
+- (bug) **Bulk-approve/reject stuurt {ids} terwijl backend {finding_ids} eist → 400** — `apps/web/hooks/useSourcing.ts:336,357` — Post {ids,note}/{ids,reason}; backend vereist finding_ids.min(1) → zod 400. _Impact:_ Bulk goedkeuren/afwijzen faalt altijd in findings-tab + run-detail.
+
+**[timesheets]**
+- (bug) **useTimesheets() leest data.items maar API geeft {data,next_cursor} → lijst altijd leeg** — `apps/web/hooks/useBackOffice.ts:240` — listTimesheets geeft {data,next_cursor}; hook leest data.items → undefined. useContracts/useInvoices doen wél data.data??items. _Impact:_ Timesheets-overzicht + tab altijd leeg; goedkeuren onmogelijk; KPI blijft 0.
+- (bug) **Publiek kandidaat-urenportaal crasht (verkeerde shape + geen contract-object)** — `apps/web/hooks/useBackOffice.ts:483` — GET /public/timesheets/:token geeft {data:{contract_id,candidate_id,timesheet,...}}; hook geeft wrapper; type verwacht contract-object dat API nooit stuurt → contract.weekly_hours crasht. _Impact:_ Kandidaten-urenportaal crasht; kandidaten kunnen geen uren invullen/indienen.
+
+**[whatsapp]**
+- (missing-guard) **Webhook HMAC over geherserialiseerde JSON i.p.v. raw body → alle inbound 401 in prod** — `apps/api/src/modules/whatsapp/webhookRoutes.ts:55` — Globale express.json() draait vóór webhook-router; geen raw-body middleware; req.rawBody nooit gezet → HMAC over JSON.stringify(req.body) byte-ongelijk. Twee agents bevestigd. _Impact:_ WhatsApp inbound volledig kapot in prod (berichten/status/STOP geweigerd). STOP-consent werkt niet → GDPR-risico.
+
+### P2 — audit-inschatting (62 items)
+
+
+**[/api-explorer]**
+- (bug) **API Playground laadt geen endpoints (OpenAPI-spec 404)** — `/api-explorer — /api-docs/openapi.json 404 (3x)` — Pagina laadt /api-docs/openapi.json → 404 → 'Geen endpoints gevonden'. _Impact:_ API Playground functioneel leeg/onbruikbaar; console-404's.
+
+**[/candidates]**
+- (bug) **Kaartjes dupliceren de eerste skill-tag** — `/candidates — skill-tags op kandidaatkaart` — 'Rust Rust TypeScript', 'Kubernetes Vue Vue', 'Java PHP PHP' — eerste tag dubbel; detailpagina toont skill één keer. _Impact:_ Oogt als databug; verkeerde indruk skillprofiel.
+
+**[/candidates/<id>]**
+- (visual) **Vacature-match-kaarten kappen tekst tot 'F...'/'St...'** — `kandidaat-detail → rechterkolom 'Vacature-matches'` — Match-kaarten te nauw: vacaturetitel afgekapt tot 'F...', 'Status: Open' tot 'St...'. _Impact:_ Gebruiker ziet niet welke vacature de match betreft zonder doorklikken.
+
+**[/crm]**
+- (visual) **Deals-kolomkoppen afgekapt en samengepropt** — `/crm → Deals — kanban-kolomkoppen` — 'Onderh...', 'Gewon...', 'Ve...'; laatste kop propt '(1)€ 7.036' zonder spatie. _Impact:_ Onduidelijk welke stage; oogt rommelig.
+
+**[/dashboard]**
+- (i18n) **Onvertaalde i18n-key 'topJobs.applicants' zichtbaar** — `/dashboard → widget 'Top vacatures'` — Elke rij toont letterlijke sleutel 'topJobs.applicants' i.p.v. aantal sollicitanten. _Impact:_ Zichtbare onvertaalde sleutel op hoofdpagina; oogt onaf.
+
+**[/reports]**
+- (visual) **Rapportkaart-titels en 3e actieknop afgekapt** — `/reports → 'Mijn rapporten' — kaarten` — Titels afgekapt ('Kandida...'), knop 'Dupliceren' geclipt tot 'Dup...' terwijl er rechts lege ruimte is; kaartbreedte onnodig krap. _Impact:_ Titels onleesbaar en actie deels afgeknipt.
+
+**[/skills]**
+- (bug) **'Demand-groei' lijngrafiek rendert leeg** — `/skills → Trending → 'Demand-groei over de laatste weken'` — Leeg plotvlak met legenda maar 0 line-series; tabel eronder heeft wél data en 'Vraag vs aanbod'-staaf rendert wél. _Impact:_ Belangrijkste visual op Skills toont geen data; oogt gebroken.
+
+**[/workflows]**
+- (bug) **Trigger-chip toont letterlijke placeholder 'X dagen'** — `/workflows — trigger-badge` — Chip toont 'X dagen geen activiteit' — X niet vervangen, terwijl beschrijving eronder wél '30 dagen' zegt. _Impact:_ Gebruiker ziet trigger-drempel niet; oogt onafgemaakt.
+
+**[analytics]**
+- (calc) **getRecruiterStats avg_time_to_hire_days opgeblazen door applications fan-out** — `apps/api/src/modules/analytics/analytics.service.ts:191` — AVG(close_date-created_at) over users⋈jobs⋈applications ZONDER DISTINCT → time-to-hire telt 1x per sollicitatie. Andere metrics gebruiken COUNT(DISTINCT). getOverview doet het correct in aparte jobs-only query. _Impact:_ Vertekend gemiddelde time-to-hire in Recruiters-tab; wijkt af van overzicht-KPI.
+- (calc) **Dashboard conversionRate-KPI kan >100% en gebruikt verkeerde noemer** — `apps/web/app/(dashboard)/analytics/page.tsx:229` — conversionRate = laatste_stage/eerste_stage*100 op momentopname-bezetting → kan >100%; laatste stage op position is niet per se 'Aangenomen'. Zelfde bug-klasse als de gefixte report-funnel maar op het analytics-dashboard. _Impact:_ Toplijn-KPI toont onmogelijke percentages >100% of misleidende conversie.
+
+**[auth]**
+- (security) **SSO access-token (JWT) wordt in de redirect-URL query meegegeven** — `apps/api/src/modules/auth/sso.controller.ts:129-131` — ACS redirect naar /auth/sso-callback?token=<accessToken>. Refresh-token gaat correct als httpOnly-cookie maar het bearer access-token (15m) staat in de URL-query. _Impact:_ JWT lekt via browserhistorie, Referer-headers en proxy/access-logs; 15 min bruikbaar als sessie-credential.
+- (inconsistency) **SSO-instellingen: provider-enum frontend != backend — Google/Generic niet opslaanbaar** — `apps/web/app/(dashboard)/settings/security/sso/page.tsx:54-59 vs apps/api/src/modules/auth/sso.controller.ts:211` — Frontend stuurt provider 'google'/'generic'; backend enum accepteert alleen okta/azure_ad/google_workspace/generic_saml → PUT faalt op zod (400). Bij hydrateren toont de Select niets voor bestaande google_workspace/generic_saml. _Impact:_ 2 van 4 aangeboden identity providers niet configureerbaar; opslaan geeft generieke 'Opslaan mislukt'.
+- (inconsistency) **SSO-instellingen: default-rol veld-drift (default_role_id vs default_role) — selectie nooit opgeslagen** — `apps/web/app/(dashboard)/settings/security/sso/page.tsx:107,139 vs apps/api/.../sso.controller.ts:200-202,218` — Pagina PUT't default_role_id (rol-UUID); backend kent alleen default_role (rolnaam-string), strip't default_role_id. Default-rol hydrateert nooit en persisteert nooit. _Impact:_ Auto-provisioning bij SSO gebruikt altijd stil de hardcoded 'recruiter'; UI-keuze heeft geen effect.
+
+**[billing]**
+- (bug) **useCreateInvoice geeft {invoice,lines} → redirect naar /invoices/undefined** — `apps/web/hooks/useBackOffice.ts:587` — POST /invoices geeft {invoice,lines}; hook geeft wrapper → inv.id undefined → /invoices/undefined; toast invoice_number undefined. Factuur wordt wél aangemaakt. _Impact:_ Na genereren kapotte URL + verwarrende toast.
+
+**[candidates]**
+- (bug) **Kandidatenlijst gecapt op 20, geen paginatie** — `apps/web/app/(dashboard)/candidates/page.tsx:40 / useCandidates.ts:17` — useCandidates() haalt zonder page/limit → server-default 20. Geen paginatie/load-more; chips+filtering enkel over 20. Teller toont paginagrootte i.p.v. meta.total (useCandidateCount bestaat maar ongebruikt). _Impact:_ Bij >20 kandidaten (bv. 50k load-test) zijn de meeste onzichtbaar/niet filterbaar; totaal-label misleidend.
+- (inconsistency) **current_position/current_company ontbreken in create/update zod-schema** — `candidates.schema.ts:75 / candidates.service.ts:55` — MUTABLE_CANDIDATE_COLUMNS + shared input + CSV + MergeDialog gebruiken current_position/company maar candidateFieldsSchema/updateCandidateSchema bevatten ze niet → zod strip't stil. _Impact:_ Functie/werkgever nooit via formulier/PATCH te zetten; alleen CSV kan ze vullen.
+- (inconsistency) **Bulk-actie move_to_stage: schema/hook adverteren, service weigert (400)** — `candidates.controller.ts:56 / candidates.service.ts:1129` — bulkActionSchema + useBulkMoveToStage kennen 'move_to_stage' maar VALID_BULK_ACTIONS/switch niet → 400 INVALID_ACTION. Latent (toolbar zonder stages-prop → knop verborgen). _Impact:_ Zodra toolbar met stages wordt gebruikt geeft 'Verplaats naar fase' 400; half-afgemaakt over 3 lagen.
+- (i18n) **Kandidaat-detailpagina + kern-componenten volledig hardcoded NL** — `apps/web/app/(dashboard)/candidates/[id]/page.tsx:159 (+ CandidateForm/MergeDialog/BulkActionsToolbar/MultiCVUpload)` — Hele detailpagina + genoemde componenten gebruiken geen t() maar hardcoded NL. _Impact:_ Bij EN blijven deze schermen Nederlands; geen pariteit met vertaalde lijst/pipeline.
+
+**[career-pages]**
+- (bug) **Publieke career-page valt bij DB-fout terug op FAKE vacatures** — `apps/api/src/modules/career-pages/career-pages.service.ts:520-526` — getPublicCareerPage vangt elke niet-AppError en retourneert buildMockCareerPage(slug) met verzonnen vacatures + random UUID's i.p.v. 404/foutpagina. _Impact:_ Publiek: tijdens DB-storing zien sollicitanten nep-vacatures; kan tot 'solliciteren' op niet-bestaande jobs leiden.
+- (bug) **submitApplication doet bij DB-fout stil een mock-success (sollicitatie verdwijnt)** — `apps/api/src/modules/career-pages/career-pages.service.ts:902-912` — Bij niet-AppError returnt submitApplication {success:true, candidate_id:'mock-…'}. UI toont 'Bedankt voor je sollicitatie!' terwijl niets is opgeslagen. _Impact:_ Bij DB-probleem gaat een echte sollicitatie geruisloos verloren terwijl kandidaat succesbevestiging ziet.
+- (bug) **Gekozen hoofdkleur bij aanmaken career page wordt stil weggegooid** — `apps/web/app/(dashboard)/career-pages/page.tsx:427-432 + career-pages.controller.ts:23-28` — Dialog stuurt primary_color top-level; backend verwacht kleur binnen config, strip't onbekende key → config={}. _Impact:_ Nieuwe career page start altijd met default-kleur; kleurenkiezer in create-flow heeft geen effect.
+
+**[commissions]**
+- (bug) **recurring_monthly slaat config.monthly_amount op, backend leest config.amount → commissie €0** — `apps/web/app/(dashboard)/commissions/page.tsx:545` — buildConfig schrijft {monthly_amount}; computeCommissionAmount leest cfg.amount. Sleutels matchen niet. _Impact:_ Elke recurring_monthly-regeling berekent commissie 0; recruiters krijgen niets terwijl UI bedrag toont.
+- (inconsistency) **Marge-berekening gebruikt overtime-factor 1.25 i.p.v. canonieke 1.5** — `apps/api/src/modules/commissions/commissions.service.ts:526` — Kandidaatkosten met ot*1.25; canonieke billing-summary gebruikt 1.5 (of metadata.overtime_multiplier). _Impact:_ percent_of_margin-commissies structureel te hoog uitbetaald; metadata-override genegeerd.
+
+**[communications]**
+- (inconsistency) **BulkCampaign veld-contract drift (provider/counts/failures/name) → crash op failures.length** — `apps/web/lib/mockData.ts:3475-3499 + campaigns/page.tsx:372` — Frontend verwacht name/provider/eligible_count/failures[]; backend heeft via/total_*, geen name/failures/created_at. campaign.failures.length → TypeError op echt object. _Impact:_ Detail/overzicht tonen undefined + crashen op failures.length zodra envelope-bug verholpen is.
+- (bug) **Inbound e-mail werkt unified_threads niet bij (geen recordCommunication)** — `apps/api/src/modules/email-inbound/email-inbound.service.ts:172-191` — handleInboundEmail roept recordCommunication (inboxProjector) niet aan terwijl outbound dat wél doet en inbox.service het als contract voorschrijft. _Impact:_ Inkomende replies verschijnen niet als ongelezen in de unified inbox, bumpen preview/teller niet.
+- (bug) **Per-kandidaat e-mail-endpoint registreert 'sent' maar verstuurt niets** — `apps/api/src/modules/communications/communications.service.ts:169-201` — POST /communications/candidates/:id/email INSERT't status='sent' zonder queue/provider; echte verzending zit alleen in /send. DB-fout-fallback returnt ook 'sent' mock. _Impact:_ UI/threads melden 'verzonden' terwijl geen e-mail is afgeleverd — misleidende leverstatus.
+- (bug) **Resend inbound-signature over her-geserialiseerde body i.p.v. raw body** — `apps/api/src/modules/email-inbound/email-inbound.controller.ts:33-34` — HMAC over JSON.stringify(req.body) i.p.v. raw body; Svix/Resend tekent raw. Met gezette RESEND_WEBHOOK_SECRET krijgen geldige webhooks 401. Exact Svix-schema te verifiëren. _Impact:_ In prod (secret gezet) worden legitieme inbound-mails afgewezen → inbound e-mail werkt niet.
+
+**[contracts]**
+- (bug) **useContractExtensions roept niet-bestaande route /contracts/:id/extensions aan (404)** — `apps/web/hooks/useBackOffice.ts:112` — Route bestaat niet (alleen /:id,/extend,/terminate,/notifications); extensions komen embedded via getContract maar pagina gebruikt losse hook. _Impact:_ Verlengingshistorie 404't → toont permanent 'geen verlengingen'.
+- (bug) **useCreateContract geeft {data} → redirect naar /contracts/undefined** — `apps/web/hooks/useBackOffice.ts:140` — POST /contracts geeft {data:contract}; hook pakt .data niet uit → created.id undefined. _Impact:_ Na aanmaak navigatie naar niet-bestaand contract.
+
+**[crm]**
+- (missing-guard) **Contact aanmaken met null organization_id geeft 500 i.p.v. 4xx** — `apps/api/src/modules/crm/contacts.service.ts:96-110` — Schema staat organization_id nullable toe maar crm_contacts.organization_id is NOT NULL (migr 034). Null → 23502; alleen 42P01 afgevangen → 500. Zelfde bij updateContact. _Impact:_ API accepteert payload die DB weigert → 500 i.p.v. nette validatiefout.
+
+**[dashboard]**
+- (tenant-scope) **topJobs + recentActivity joins missen tenant-scope** — `apps/api/src/modules/dashboard/dashboard.service.ts:43,31` — LEFT JOIN applications a ON a.job_id=j.id mist AND a.tenant_id=$1; recentActivity users-join mist u.tenant_id. Onder owner-rol (RLS uit) moet elke JOIN zelf scopen. _Impact:_ Mogelijk cross-tenant meetelling/lek in 'top jobs by application count' op dashboard.
+
+**[email-templates]**
+- (inconsistency) **Single-template endpoints geven kaal object, hooks lezen data.data → undefined** — `apps/api/src/modules/email-templates/email-templates.controller.ts:33` — get/create/update geven kaal template; hooks lezen data.data → undefined (list geeft wél {data}). _Impact:_ useEmailTemplate(id) + mutation-resultaat undefined; fragiele drift.
+
+**[integrations]**
+- (inconsistency) **Stat 'Gesynct (24u)' permanent 0 (API levert emails_synced_24h niet) + scope/scopes-drift** — `apps/web/app/(dashboard)/settings/integrations/page.tsx:150` — stats.synced24h leest emails_synced_24h maar PUBLIC_COLUMNS bevat het niet; type verwacht scopes[] maar API geeft scope. _Impact:_ Tweede statuskaart altijd 0 (misleidend); verborgen contract-drift.
+
+**[interviews]**
+- (inconsistency) **Transcript-viewer toont nooit resultaat (envelope niet uitgepakt + veldnamen mismatch)** — `apps/web/hooks/useInterviewRecordings.ts:80` — useTranscript returnt hele body ({data:...}) → status undefined → altijd ProcessingState + poll 10s. Na fix: backend text/summary/strengths vs viewer ai_summary/utterances (bestaat niet → crash). _Impact:_ Voltooide transcriptie/AI-samenvatting nooit getoond; UI hangt op 'wordt verwerkt'.
+- (inconsistency) **Interview-kit en vragen tonen nooit (kit_name/kit_id vs kit{}/interview_kit_id)** — `apps/web/app/(dashboard)/interviews/[id]/page.tsx:399` — Leest kit_name/kit_id; API levert interview_kit_id + genest kit:{id,name}. _Impact:_ Gekoppelde kit + vragenlijst nooit zichtbaar op detailpagina.
+- (inconsistency) **Locatie/meeting-URL tonen nooit (location_url/location_address vs meeting_url/location)** — `apps/web/app/(dashboard)/interviews/[id]/page.tsx:339` — Leest location_url/location_address; API levert meeting_url + location. _Impact:_ Meeting-link en adres/telefoon nooit getoond aan interviewers.
+- (bug) **Zoeken in interview-lijst kan crashen op null candidate_name/job_title** — `apps/web/app/(dashboard)/interviews/page.tsx:148` — Filter doet iv.candidate_name.toLowerCase() zonder null-guard; LEFT JOINs kunnen null geven. Te verifiëren of c.name null kan zijn. _Impact:_ Typen in zoekveld kan hele interviews-lijst laten crashen.
+- (inconsistency) **Interviewer-filter permanent leeg (list-API levert geen participants)** — `apps/web/app/(dashboard)/interviews/page.tsx:123` — interviewerOptions/avatars uit iv.participants; listInterviews selecteert geen participants → undefined. _Impact:_ Interviewer-filter is dood; filteren op interviewer werkt niet.
+- (tenant-scope) **Ontbrekende tenant-scoping op users-lookup in getConsolidatedAvailability** — `apps/api/src/modules/interviews/availability.service.ts:303` — SELECT name FROM users WHERE id=$1 mist AND tenant_id=$2; endpoint heeft geen membership-check op userId (RLS no-op onder owner-rol). _Impact:_ Cross-tenant lek van gebruikersnaam (PII) via availability-endpoint.
+
+**[jobs]**
+- (ux) **JobForm gooit 'Vereisten'-textarea bij submit volledig weg** — `apps/web/components/jobs/JobForm.tsx:178,349-360,143` — requirements_raw wordt in onSubmit gestript en nergens heen gestuurd (niet naar required_skills/description). handlePickTemplate leest jobData.requirements terwijl templates required_skills opslaan → prefill werkt ook niet. _Impact:_ Ingevoerde vereisten gaan verloren bij aanmaken; required_skills nooit via formulier gevuld (raakt comparable-jobs matching).
+- (bug) **Custom-field-waarden in JobForm niet meegestuurd bij aanmaken** — `apps/web/components/jobs/JobForm.tsx:182-185,457-463` — CustomFieldsRenderer vult customValues maar onSubmit stuurt alleen createInput; customValues wordt nooit meegegeven; JobCreateInputSchema is .strict() zonder custom_fields. _Impact:_ Bij geconfigureerde job-custom-fields verdwijnen ingevulde waarden bij aanmaken (data-loss).
+- (bug) **Comparable-jobs contract drift: match altijd ~0%, undefined velden** — `apps/web/hooks/useJobDetail.ts:253-261 + JobPerformanceTab.tsx:306-335` — API levert {job_id,title,candidates_total,days_to_fill,similarity_score(0..1)}; UI verwacht {id,client,filled,total_candidates}. Math.round(similarity_score) → 0%; c.id/c.client/c.total_candidates undefined. _Impact:_ Vergelijkbare-vacatures toont overal 0% match, 'undefined kandidaten', verkeerde badge, geen React key. Visueel kapot.
+- (inconsistency) **Sourcing ROI: 'Hires'-kolom altijd 0 (hired_count niet in API-respons)** — `apps/api/src/modules/jobs/jobDetail.service.ts:640-647 + useJobDetail.ts:279` — getJobSourcing berekent hired_count maar mapt het weg; hook leest s.hired_count → undefined → 0. cost_per_hire_cents niet geleverd → '—'. _Impact:_ 'Hires: 0' met tegelijk niet-nul hire-conversie: misleidend/inconsistent.
+- (tech-debt) **PATCH/POST /jobs lekt embedding-vector (RETURNING *) in respons** — `apps/api/src/modules/jobs/jobs.service.ts:457-462,264 + jobs.controller.ts:77` — updateJob/createJob/duplicateJob doen RETURNING * en de controller stuurt de rij ongefilterd; jobs heeft embedding vector(1536). getJob vermijdt dit juist met kolomlijst. _Impact:_ Elke job-update stuurt ~15-30KB embedding-data mee; payload-bloat + lek van intern matching-veld.
+- (i18n) **Bias-flag labels tonen rauwe enum-strings (stale label-maps)** — `apps/web/hooks/useJobDetail.ts:299-307 + JobAISuiteTab.tsx:49-56` — API-enum age_indicator/unrealistic_requirement/exclusionary; flagLabels/FLAG_TYPE_COPY kennen alleen oude keys → val terug op rauwe snake_case. _Impact:_ JD-kwaliteitscheck toont 'age_indicator'/'unrealistic_requirement'/'exclusionary' i.p.v. NL-labels.
+
+**[outreach]**
+- (bug) **Inbound reply-webhook HMAC over geherserialiseerde JSON i.p.v. raw body** — `apps/api/src/modules/outreach/inboundWebhook.routes.ts:62` — JSON.stringify(req.body) vs vendor raw-bytes; geen raw-body middleware zichtbaar (te verifiëren). _Impact:_ Legitieme inbound replies 401; reply-tracking ontvangt niets.
+- (bug) **Reply-classifier schrijft naar niet-bestaande tasks-kolommen** — `apps/api/src/modules/outreach/replyClassifier.service.ts:451` — INSERT INTO tasks (entity_type,entity_id,due_at,metadata) — tabel heeft die kolommen niet (wel candidate_id/job_id/due_date). INSERT faalt stil in try/catch. _Impact:_ Bij 'interested'-reply met schedule_call wordt nooit een taak aangemaakt; recruiter mist opvolgtaak.
+- (bug) **draft-reactivation zoekt signal alleen binnen eerste 200 rijen** — `apps/api/src/modules/outreach/outreach.routes.ts:275` — listSignals(limit:200).find(id) → signal buiten 200 → 404; inefficiënt. _Impact:_ Reactivatie opstellen faalt met 404 voor oudere signals.
+- (inconsistency) **Quota- en Signals-tab altijd leeg (data.items vs {data}/{data,next_cursor})** — `apps/web/hooks/useOutreach.ts:151,220` — useOutreachQuotas/useSignals returnen data.items; API geeft {data}/{data,next_cursor}. _Impact:_ Quota-tab + Signals-tab permanent leeg; limieten/reactivatie onbereikbaar.
+
+**[pipeline]**
+- (missing-guard) **Gearchiveerde (soft-deleted) kandidaten blijven in de pipeline zichtbaar** — `apps/api/src/modules/pipeline/pipeline.service.ts:299` — getApplicationsForJob JOIN candidates zonder c.deleted_at IS NULL; bulk-archive zet alleen kandidaat.deleted_at, applications blijven active. _Impact:_ Gearchiveerde kandidaat blijft in kanban-board hangen; inconsistent met kandidatenlijst die deleted_at wél filtert.
+- (bug) **Applications zonder fase (stage_id null) onzichtbaar op board** — `apps/web/components/pipeline/KanbanBoard.tsx:146 / pipeline.service.ts:263` — Board rendert alleen bestaande stages; geen 'niet-toegewezen'-kolom. deleteStage van de eerste fase zet stage_id=NULL → die applications verschijnen nergens (Application.stage_id is als non-null getypt). _Impact:_ Eerste fase verwijderen laat kandidaten van het board verdwijnen; niet meer te slepen.
+
+**[settings]**
+- (bug) **Bedrijfsgegevens opslaan (Algemeen-tab) is nep (setTimeout + succes, geen API)** — `apps/web/app/(dashboard)/settings/page.tsx:289` — handleSaveTenant wacht 800ms + toast zonder company_name/timezone te persisteren. _Impact:_ Wijzigingen bedrijfsnaam/tijdzone gaan verloren; valse bevestiging.
+- (i18n) **i18n-gap: custom-fields pagina volledig hardcoded NL** — `apps/web/app/(dashboard)/settings/custom-fields/page.tsx:100` — Geen react-i18next; labels/toasts hardcoded. _Impact:_ Blijft NL bij taal=en.
+- (i18n) **i18n-gap: talent-fit pagina deels hardcoded ondanks useTranslation** — `apps/web/app/(dashboard)/settings/talent-fit/page.tsx:113` — Grote delen (StatTiles, MetricTiles, secties) hardcoded NL. _Impact:_ Halfvertaalde pagina bij taalwissel.
+- (inconsistency) **Roles-lijst neemt permissions als array aan terwijl backend matrix-object levert** — `apps/web/app/(dashboard)/settings/roles/page.tsx:234` — r.permissions.length op object (backend: {resource:{action:bool}}); detail-pagina itereert met for..of → mogelijk crash (te verifiëren). _Impact:_ 'X resources'-teller leeg; mogelijk crash op rol-detail.
+
+**[sourcing]**
+- (missing-guard) **existing_db-source filtert deleted_at niet → soft-deleted kandidaten als findings** — `apps/api/src/modules/sourcing/sources/existingDb.ts:118` — Candidates-query WHERE alleen tenant_id + keyword/location, zonder deleted_at IS NULL (elders wél). _Impact:_ Verwijderde kandidaten duiken opnieuw op als findings, kunnen via approve benaderd worden — AVG-risico.
+- (bug) **Start-run navigeert naar /runs/undefined** — `apps/web/hooks/useSourcing.ts:219` — POST briefs/:id/runs geeft {data:run}; hook returnt rauw → run.id undefined → router.push(/runs/undefined). _Impact:_ Na starten run kapotte URL.
+
+**[timesheets]**
+- (bug) **Detail-dialog toont nooit entries (lijst levert geen entries, geen detail-fetch)** — `apps/web/app/(dashboard)/timesheets/page.tsx:424` — Dialog rendert detail.entries maar detail komt uit lijst zonder entries; geen useTimesheet(id). _Impact:_ Urenregels-tabel permanent leeg; goedkeuren zonder inzicht in uren.
+
+**[voice]**
+- (inconsistency) **Gesprekkenlijst/-detail tonen kandidaat-UUID i.p.v. naam (candidate_name nooit geleverd)** — `apps/api/src/modules/voice/voice.service.ts:682` — listCalls/getCall SELECT * voice_calls zonder join candidates → geen candidate_name; frontend leest c.candidate_name (fallback id / 'onbekende kandidaat'). _Impact:_ Gesprekkenlijst toont rauwe UUID; detail 'onbekende kandidaat'.
+
+**[webhooks]**
+- (bug) **webhooks.service slikt DB-fouten en geeft nep-succes (leeg object / fake webhook)** — `apps/api/src/modules/webhooks/webhooks.service.ts:154` — update/toggle/rotate returnen bij niet-AppError {} / fake secret; create verzint webhook met random UUID; delete slikt fout. Controller stuurt 200 met lege/verzonnen data. _Impact:_ DB-fouten gemaskeerd als succes; frontend leest .id/.secret = undefined.
+- (bug) **Bij herhaalbare delivery-failure blijft oorspronkelijke rij 'pending' i.p.v. 'failed'** — `apps/api/src/modules/webhooks/deliveries.service.ts:397` — Failure-pad zet rij op 'pending' + maakt nieuwe retry-rij; oorspronkelijke rij blijft pending zonder job. _Impact:_ Stuck pending-rijen; retry-knop niet beschikbaar; mogelijk dubbele deliveries via sweeper (te verifiëren).
+
+**[workflows]**
+- (bug) **createWorkflow verzint bij DB-fout een nep-workflow (all-zero id) + 201** — `apps/api/src/modules/workflows/workflows.service.ts:109` — Catch returnt fake stub id 00000000-… active:true; controller stuurt 201 → 'Workflow aangemaakt' terwijl niets opgeslagen. _Impact:_ Stille dataverlies-illusie; vervolgacties op nep-id falen.
+
+### P3 — audit-inschatting (67 items)
+
+
+**[/activity]**
+- (i18n) **Ruwe snake_case event-codes i.p.v. leesbare labels** — `/activity + dashboard-widget 'Recente activiteit'` — Titels tonen 'resume_parsed','skill_profile_updated','email_queued','duplicated' i.p.v. vertaalde omschrijvingen. (Deels geraakt door recente activity-humanisering die alleen created/updated/etc. dekt.) _Impact:_ Technisch/onaf voor eindgebruikers.
+
+**[/analytics]**
+- (inconsistency) **Nav-label 'Rapporten' leidt naar Analytiek; aparte /reports heet óók 'Rapporten'** — `zijbalk ANALYSE 'Rapporten' → /analytics vs pagina /reports` — Menu-item 'Rapporten' opent /analytics (titel 'Analytiek'); de pagina die 'Rapporten' heet (/reports) is niet via dit label bereikbaar. _Impact:_ Verwarrende navigatie; twee pagina's heten 'Rapporten'.
+
+**[/candidates]**
+- (ux) **AI-score-badge zonder label in de lijst** — `/candidates — amberkleurig getal naast naam` — Getal (53/30/66) zonder uitleg; pas op detail blijkt het 'AI Score'. _Impact:_ Betekenis onduidelijk in de lijst.
+
+**[/gdpr]**
+- (visual) **KPI-kaarten kappen/proppen tekst** — `/gdpr — KPI-kaarten (o.a. Consent-dekking)` — 'Aandac[ht] vereist' en '% kandidaten met geldige GDPR-toestemmi[ng]' afgeknipt; kaarten te krap. _Impact:_ Compliance-status deels onleesbaar.
+
+**[/jobs/<id>]**
+- (inconsistency) **Pipeline-telling inconsistent tussen job-detail en pipeline** — `job-detail '450 kandidaten actief' vs pipeline/jobs-lijst '366'` — Job-detail toont 450 (badge 450); pipeline-pagina, /pipeline-selector én jobs-lijst tonen 366 voor dezelfde vacature. _Impact:_ Onbetrouwbare cijfers over dezelfde pipeline afhankelijk van waar je kijkt.
+
+**[/settings/users]**
+- (bug) **/settings/users 404 + 404-pagina zonder app-shell** — `/settings/users` — Route bestaat niet (404); gebruikers/rollen zit op /settings/roles. 404-pagina rendert kaal zonder zijbalk/topbalk. Geen in-app menu linkt hierheen (niet-bestaande route). _Impact:_ Verwacht pad bestaat niet; 404 verliest navigatie-context.
+
+**[/skills]**
+- (i18n) **Grafiek-legenda Engels ('Demand/Supply') in NL UI** — `/skills → 'Vraag vs aanbod' — legenda` — Legenda 'Demand'/'Supply' terwijl titel/tabel NL ('Vraag'/'Aanbod'). _Impact:_ Taalinconsistentie.
+
+**[/sourcing-agent]**
+- (ux) **Interne sprint-naam zichtbaar in de UI** — `/sourcing-agent — hero-badge` — Badge 'Sprint Q4.5 — Agentic AI sourcing' lekt interne roadmap/sprint-aanduiding naar eindgebruiker. _Impact:_ Oogt als dev-labeling in productie-UI.
+
+**[analytics]**
+- (missing-guard) **Match-score-histogram dropt negatieve cosine-scores maar telt ze in total/avg** — `apps/api/src/modules/analytics/analytics.service.ts:634` — bucket_idx=LEAST(FLOOR(score*10),9) zonder ondergrens 0; cosine-score ∈[-1,1] → negatieve bucket valt buiten 0..9 maar telt in total/AVG. _Impact:_ Som staven < total; avg_score_pct kan negatief; inconsistent histogram.
+- (inconsistency) **KPI-label 'Kandidaten deze maand' telt sollicitaties + periode-mismatch** — `packages/i18n/locales/nl/analytics.json:25` — Label 'Kandidaten deze maand' hoort bij applications_this_month (telt sollicitaties; hint zegt zelf 'Nieuwe sollicitaties'). Verkeerd zn. Waarde volgt gekozen periode-from terwijl label 'deze maand' zegt (idem 'hired'). _Impact:_ Misleidend KPI-label: verkeerde eenheid + periode-aanduiding bij niet-maand-presets.
+- (inconsistency) **getFunnel.conversion_rate is aandeel-van-totaal, verkeerd gelabeld en ongebruikt** — `apps/api/src/modules/analytics/analytics.service.ts:152` — conversion_rate = count/SUM(alle stages)*100 (verdeling die tot 100% optelt), geen funnel-conversie. Staat in type maar wordt nergens gerenderd. _Impact:_ Dode, misleidend genoemde output; risico op verkeerde interpretatie door toekomstige consumer.
+- (i18n) **Back-office analytics hardcoded NL-strings (rest gebruikt t())** — `apps/web/app/(dashboard)/analytics/back-office/page.tsx:383-391` — 'Commissie per recruiter — MTD', omschrijving en 'Nog geen commissie geboekt deze maand.' hardcoded terwijl bestand verder useTranslation('analytics') gebruikt. _Impact:_ Titel/omschrijving/empty-state vertalen niet mee naar EN.
+- (missing-guard) **Trends-tab charts missen empty-state** — `apps/web/app/(dashboard)/analytics/page.tsx:562` — Time-to-hire LineChart + applications BarChart renderen zonder guard bij lege data → lege assen; funnel/bronnen kregen wél EmptyChartState. _Impact:_ Lege Trends-tab lijkt kapot i.p.v. nette 'geen data'-melding.
+
+**[auth]**
+- (inconsistency) **SSO SP-metadata tab leest velden die de backend niet teruggeeft** — `apps/web/app/(dashboard)/settings/security/sso/page.tsx:399-401,422 vs sso.controller.ts:190-203` — Tab toont sp_entity_id/sp_acs_url/sp_metadata_url; GET config bevat die velden niet. _Impact:_ SP Entity ID/ACS/Metadata tonen altijd '—' en Download-knop rendert nooit; admin kan SP-gegevens niet uit UI kopiëren (endpoint bestaat wel).
+- (security) **SAML ACS: validateInResponseTo uitgeschakeld (geen replay-binding aan AuthnRequest)** — `apps/api/src/modules/auth/sso.controller.ts:59 + saml.service.ts:279` — validateInResponseTo:false + geen AuthnRequest-ID bewaard → ongevraagde/ontkoppelde SAMLResponses geaccepteerd. Handtekening + NotOnOrAfter nog wel gevalideerd (beperkt venster). _Impact:_ Onderschepte geldig-ondertekende SAMLResponse kan binnen geldigheidsvenster opnieuw worden ingediend; zwakkere binding.
+
+**[billing]**
+- (inconsistency) **Factuurregels tonen uurtarief/aantal op 1.25-factor terwijl bedrag 1.5-basis is** — `apps/api/src/modules/billing/invoicing.service.ts:382` — billable=hours+ot*1.25 voor quantity/unit_price; line_total=amount_client (1.5). Totaal klopt, getoond tarief/aantal wijkt af. _Impact:_ Opgeblazen 'prijs per uur' + te laag urenaantal op factuur/PDF.
+- (inconsistency) **timesheetsBridge fallback gebruikt 1.25 vs canonieke 1.5 (latent)** — `apps/api/src/modules/billing/timesheetsBridge.ts:131` — fallbackSummary (hours+ot*1.25)*rate vs canoniek 1.5; alleen bij falende dynamic import. _Impact:_ Latente afwijking factuurbedragen bij fallback.
+- (i18n) **Factuurdetailpagina hardcoded strings (i18n-gat)** — `apps/web/app/(dashboard)/invoices/[id]/page.tsx:145` — Vrijwel alle labels/toasts/kolomkoppen hardcoded NL; alleen status-badge t(). _Impact:_ Pagina vertaalt niet mee.
+
+**[candidates]**
+- (ux) **Merge-dialog kan maar één duplicaat tegelijk samenvoegen** — `apps/web/app/(dashboard)/candidates/[id]/page.tsx:363` — MergeDialog krijgt vast duplicates[0]; service ondersteunt duplicate_ids[] maar UI biedt alleen de eerste. _Impact:_ Bij >1 duplicaat kan gebruiker de overige niet samenvoegen zonder herhaald navigeren.
+- (inconsistency) **BulkActionResult-type belooft velden die API niet teruggeeft** — `apps/web/lib/types/atsExtensions.ts:250 / candidates.service.ts:1221` — Type vereist {affected,failed,errors?} maar handler retourneert alleen {affected}. _Impact:_ Consumers die failed/errors lezen krijgen undefined; verborgen contract-mismatch.
+
+**[career-pages]**
+- (tech-debt) **Admin career-page CRUD maskeert DB-fouten met mock-rows/lege lijst** — `apps/api/src/modules/career-pages/career-pages.service.ts:241-246,290-300,372-383,212-214` — get/create/updateCareerPage retourneren bij niet-AppError een mock-row; list een lege array → DB-fout als 'succes' met verzonnen id. _Impact:_ Admin denkt career page is aangemaakt/bijgewerkt terwijl niets persisteerde; fouten verborgen.
+- (tech-debt) **Notes-fallback in submitApplication is dode code (transactie al aborted)** — `apps/api/src/modules/career-pages/career-pages.service.ts:849-874` — Eerste INSERT in BEGIN-transactie; bij fout is transactie aborted (25P02) → retry-zonder-notes kan nooit slagen (geen SAVEPOINT). _Impact:_ Backwards-compat fallback werkt niet; bij ontbrekende notes-kolom faalt apply alsnog.
+- (missing-guard) **updateCareerPage slug-conflict → 500 i.p.v. 409 onder RLS-rol** — `apps/api/src/modules/career-pages/career-pages.service.ts:328-339` — Slug-precheck filtert niet op tenant en leunt op owner-bypass; na non-owner-cutover mist cross-tenant botsing → UPDATE raakt globale unique → 23505 niet naar 409 gemapt (create wél). Te verifiëren tegen RLS-status. _Impact:_ Latent: onder non-owner-RLS geeft cross-tenant slug-conflict 500 i.p.v. 409.
+- (inconsistency) **Create-dialog mist 'agency'-template die wél ondersteund is** — `apps/web/app/(dashboard)/career-pages/page.tsx:55` — TEMPLATES mist 'agency' terwijl agency in TEMPLATE_LABELS/CareerPageTemplate staat en HeroSection agency-styling heeft. _Impact:_ Agency-template niet kiesbaar bij aanmaken hoewel render hem ondersteunt.
+- (i18n) **Career-pages create-dialog + header hardcoded Nederlands (i18n-gat)** — `apps/web/app/(dashboard)/career-pages/page.tsx:453-586` — Create-dialog + PageHeader hardcoded NL terwijl CareerPageCard/TemplatePreview wél useTranslation('careerPages') gebruiken. _Impact:_ Bij EN blijven create-dialog + paginakop Nederlands.
+- (inconsistency) **useSubmitApplication retourtype {id} matcht API-respons niet** — `apps/web/hooks/useCareerPages.ts:475-483` — Hook typeert apply-respons als {id} maar API geeft {success,candidate_id,application_id}. _Impact:_ data.id altijd undefined; drift die breekt zodra consumer op .id vertrouwt.
+
+**[commissions]**
+- (tenant-scope) **Marge-query mist expliciete tenant_id op timesheets/contracts join** — `apps/api/src/modules/commissions/commissions.service.ts:530` — candidate_total-query filtert alleen t.contract_id, zonder tenant_id (RLS inert). contract_id tenant-gescoped → geen aangetoonde lek. Te verifiëren. _Impact:_ Geen aangetoonde lek maar mist defense-in-depth.
+- (inconsistency) **Scheme bewerken: 'type' wordt door backend genegeerd (zod strip)** — `apps/api/src/modules/commissions/commissions.routes.ts:67` — Edit-dialog stuurt type; updateSchemeBody kent geen type → gestript. Config onder nieuwe sleutels, DB houdt oude type. _Impact:_ Scheme-type wijzigen heeft geen effect; config kan niet bij type passen.
+
+**[communications]**
+- (inconsistency) **Campagne-status enum drift (frontend vs backend)** — `apps/web/app/(dashboard)/communications/campaigns/page.tsx:39-47` — Frontend kent draft/queued/running/completed/failed/paused; backend zet running/completed/cancelled/failed. 'cancelled' mist stijl+i18n-key. _Impact:_ Status 'cancelled' → lege/kapotte badge (latent).
+
+**[compliance]**
+- (inconsistency) **DSAR-status 'expired' ontbreekt in frontend labels/kleuren (contract-drift)** — `apps/web/lib/complianceLabels.ts:37-42 + DsarManagement.tsx:68-77 vs dsar.service.ts:55-60` — Backend DsarStatus omvat 'expired' maar labels/kleuren dekken dat niet → lege badge. Latent: momenteel schrijft geen codepad 'expired'. _Impact:_ Zodra een DSAR ooit 'expired' wordt (toekomstige cron) toont UI naamloze/kleurloze status.
+- (bug) **Self-service token blijft na anonimisatie bruikbaar voor consent-wijziging/verwijderverzoek** — `apps/api/src/modules/compliance/selfService.service.ts:403-439,516-558` — recordCandidateConsentChange en recordCandidateDeletionRequest checken deleted_at/anonymized_at niet (andere paden wel); tokens worden bij anonimisatie niet ingetrokken. Geldige token kan consent op geanonimiseerde rij wijzigen + dubbele deletion-DSARs maken. _Impact:_ Misleidende consent/audit-registratie op geanonimiseerde kandidaten (geen PII-leak).
+
+**[crm]**
+- (i18n) **CRM zoek-placeholders + deal-stage-labels hardcoded Nederlands** — `apps/web/app/(dashboard)/crm/page.tsx:482,831 + hooks/useCrm.ts:36-42` — Zoekvelden + DEAL_STAGE_LABELS hardcoded NL terwijl rest t('crmPage') gebruikt. _Impact:_ CRM-labels/placeholders vertalen niet mee naar EN.
+- (tenant-scope) **users-join in deals mist tenant-scoping (recruiter_id niet tenant-gevalideerd)** — `apps/api/src/modules/crm/deals.service.ts:60` — LEFT JOIN users u ON u.id=d.recruiter_id zonder AND u.tenant_id=d.tenant_id (org/jobs-joins wél). recruiter_id niet tegen tenant gevalideerd. _Impact:_ Onder RLS-bypass potentiële cross-tenant lek van een gebruikersnaam via geraden UUID; scoping-gap.
+- (tech-debt) **Contacts/deals hard-delete terwijl schema soft-delete-kolom heeft** — `apps/api/src/modules/crm/contacts.service.ts:176` — deleteContact/deleteDeal doen harde DELETE; list/get filteren niet op deleted_at, terwijl migr 034 deleted_at + partiële index aanmaakt (organizations doet wél soft-delete). _Impact:_ Inconsistente delete-semantiek binnen CRM; ongebruikte deleted_at-kolom/index.
+
+**[email-templates]**
+- (tech-debt) **Dead code: NO_FIELDS-guard in updateEmailTemplate onbereikbaar** — `apps/api/src/modules/email-templates/email-templates.service.ts:176` — merge_variables + updated_at altijd toegevoegd → fields.length>=2; if(===1) vuurt nooit. Lege PATCH slaagt als no-op. _Impact:_ Dead code; lege PATCH bumpt updated_at.
+- (i18n) **email-templates pagina geen i18n (hardcoded NL)** — `apps/web/app/(dashboard)/email-templates/page.tsx:533` — Hele pagina hardcoded NL terwijl settings/email + integrations react-i18next gebruiken. _Impact:_ Inconsistente i18n.
+- (inconsistency) **Lege categorie-badge mogelijk (category kan null) + type-drift** — `apps/web/app/(dashboard)/email-templates/page.tsx:428` — categoryLabel(null) → lege badge; DB staat null toe maar shared type non-null. Te verifiëren. _Impact:_ Tekstloze categorie-badge; type verbergt null-mogelijkheid.
+
+**[hm]**
+- (bug) **HM: ontbrekende UUID-validatie op :id → 500 i.p.v. 4xx** — `apps/api/src/modules/hm/hm.controller.ts:90` — getApplicationDetails/review geven req.params.id ongevalideerd door → 22P02 → 500. _Impact:_ Malformed id → 500; log-ruis.
+- (inconsistency) **reviewApplication geeft inconsistente response-shape voor 'later' vs approve/reject** — `apps/api/src/modules/hm/hm.service.ts:251` — 'later' returnt partiële SELECT; approve/reject volledige RETURNING *. _Impact:_ Frontend krijgt afhankelijk van beslissing andere/onvolledige shape.
+
+**[inbox]**
+- (inconsistency) **assignee_name wordt nooit door API teruggegeven** — `apps/api/src/modules/inbox/inbox.service.ts:220-224` — get/listThreads joinen users niet → geen assignee_name; frontend toont thread.assignee_name ?? 'noAssignee'. _Impact:_ Toegewezen threads tonen altijd 'geen toegewezen'.
+- (bug) **Timeline-dedup van voice-calls werkt nooit (call_id niet op comm-rows)** — `apps/api/src/modules/inbox/inbox.service.ts:452-459` — Dedup filtert op metadata.call_id maar de comm-SELECT selecteert metadata niet en bouwt {message_id,subject}. call_id altijd undefined. _Impact:_ Een naar communications gespiegelde voice-call verschijnt dubbel in de timeline (spiegeling te verifiëren).
+- (bug) **formatRelative op nullable last_message_at → 1970** — `apps/web/app/(dashboard)/inbox/page.tsx:480` — last_message_at is API-nullable maar frontend-type zegt string; new Date(null) → 1970. _Impact:_ Threads zonder bericht tonen tijd uit 1970 / verkeerde relatieve weergave.
+- (missing-guard) **channelCounts indexeert op mogelijk-null last_channel → NaN** — `apps/web/app/(dashboard)/inbox/page.tsx:141` — counts[t.last_channel] += ... met nullable last_channel → NaN onder key 'null'. _Impact:_ Onbetrouwbare kanaal-badge-tellers bij threads zonder/onbekend kanaal.
+- (i18n) **Verwijder-dialoog/knop hardcoded Nederlands (i18n-gat)** — `apps/web/app/(dashboard)/inbox/page.tsx:680,780,783,787,795,799` — Verwijder-teksten hardcoded terwijl de rest via useTranslation('miscInbox') loopt. _Impact:_ Deze teksten vertalen niet mee naar EN.
+
+**[interviews]**
+- (inconsistency) **Opname-uploader toont 'uploaded by undefined' (uploaded_by_name vs uploaded_by)** — `apps/web/app/(dashboard)/interviews/[id]/page.tsx:261` — Rendert uploaded_by_name; API levert uploaded_by (id). Ook transcript_status vs transcription_status. _Impact:_ 'geüpload door undefined' per opname.
+- (inconsistency) **Opname-/scorecard-badges verschijnen nooit in lijst (has_recording/scorecard_count niet geleverd)** — `apps/web/app/(dashboard)/interviews/page.tsx:381` — Rendert iv.has_recording/scorecard_count; listInterviews levert ze niet. _Impact:_ Gebruiker ziet nooit of interview opname/scorecards heeft.
+- (bug) **Annulerings-reden gaat verloren (notes_append vs cancel_reason) + verkeerde cache-invalidatie** — `apps/web/hooks/useInterviews.ts:64` — Stuurt notes_append (gestript); backend gebruikt cancel_reason. Cancel-tak geeft {message} → data.id undefined → invalidatet ['interview',undefined]. _Impact:_ Annuleringsreden niet opgeslagen; cache niet correct geïnvalideerd.
+
+**[jobs]**
+- (inconsistency) **Funnel-tegel labelt 'dropped' als 'Afgewezen' terwijl semantiek breder is** — `apps/web/components/jobs/tabs/JobPerformanceTab.tsx:188-190 + jobDetail.service.ts:522-528` — funnel.dropped = status NOT IN (active,hired) = rejected+withdrawn+offer_declined, maar UI labelt 'Afgewezen'. _Impact:_ 'Afgewezen' overschat echte afwijzingen (bevat teruggetrokken/afgewezen aanbod).
+- (inconsistency) **useCreateJob/useUpdateJob typeren respons als JobDetail maar shape klopt niet** — `apps/web/hooks/useJobs.ts:84-88` — Respons getypt als JobDetail (met stages+recruiter_name) maar create/update geven rauwe RETURNING *-row zonder stages/recruiter_name + met embedding. _Impact:_ Consumers die .stages van create/update lezen krijgen undefined; latente drift.
+
+**[outreach]**
+- (inconsistency) **Diverse mutatie-hooks returnen {data}-wrapper i.p.v. object** — `apps/web/hooks/useNurture.ts:141 (+ useSourcing/useReorderSteps)` — useAddStep e.a. returnen rauwe body; API geeft {data:row} → draft-velden undefined. _Impact:_ Flows die mutatie-return gebruiken werken met undefined-velden.
+- (inconsistency) **draft-reactivation-hook leest data.enrollment_id maar API geeft {data:enrollment}** — `apps/web/hooks/useOutreach.ts:245` — API geeft {data:enrollment} met .id; hook verwacht enrollment_id. _Impact:_ enrollment_id undefined (nu alleen toast, lage impact).
+- (tech-debt) **Inbound-webhook: candidate_external_id geparsed maar nooit doorgegeven aan recordReply** — `apps/api/src/modules/outreach/inboundWebhook.routes.ts:101` — Schema accepteert candidate_external_id; recordReply krijgt alleen thread-velden → zonder match 400 CANNOT_LINK_REPLY. _Impact:_ Replies zonder thread-match geweigerd hoewel kandidaat-id meegestuurd.
+
+**[pipeline]**
+- (bug) **Activity-log labelt fase→NULL move als 'status_changed'** — `apps/api/src/modules/pipeline/pipeline.service.ts:429` — action = data.stage_id ? 'stage_changed' : 'status_changed'; bij expliciete stage_id=null is het feitelijk een fase-wijziging (audit-log doet het wél correct met !== undefined). _Impact:_ Timeline toont fout label bij fase leegmaken; inconsistentie activity vs audit.
+- (ux) **Dode '+'-knop per kolomkop zonder handler/aria-label** — `apps/web/components/pipeline/KanbanColumn.tsx:35` — Plus-knop per fase-kolom heeft geen onClick + geen aria-label; klikken doet niets. _Impact:_ Suggereert 'kandidaat aan fase toevoegen' maar niet functioneel; verwarrend + niet toegankelijk.
+- (inconsistency) **ApplicationStatus-type mist 'withdrawn'** — `apps/web/lib/mockData.ts:46 / pipeline.controller.ts:26` — API staat status active|rejected|withdrawn|hired toe; frontend-type mist 'withdrawn' (gemaskeerd door status='active'-filter). _Impact:_ Type dekt API-set niet; toekomstige withdrawn-UI zou typefouten geven.
+
+**[reports]**
+- (tech-debt) **aggregateChart met group_by negeert series na series[0]** — `apps/api/src/lib/reports/aggregator.ts:801,733` — Bij group_by wordt per punt alleen series[0].key gelezen; overige series vallen stil weg. baseEntity ook alleen uit series[0]. _Impact:_ Multi-series grafiek met groepering toont alleen eerste metric; stille weglating zonder foutmelding.
+
+**[settings]**
+- (i18n) **Hardcoded NL 'terug'-link op availability-pagina (i18n-gat)** — `apps/web/app/(dashboard)/settings/availability/page.tsx:258` — Tweede 'Terug naar instellingen' hardcoded terwijl eerste identieke t() gebruikt. _Impact:_ Deze link blijft NL bij taalwissel.
+
+**[sourcing]**
+- (tech-debt) **findStaleRuns is lege placeholder die de input teruggeeft als 'count'** — `apps/api/src/modules/sourcing/runs.service.ts:770` — Geen query; returnt autoCloseDays. _Impact:_ Cron krijgt misleidende data; stale runs nooit auto-afgesloten.
+
+**[timesheets]**
+- (inconsistency) **TimesheetSummary-type + useTimesheetSummary mismatchen API-shape (latent)** — `apps/web/lib/types/backOffice.ts:89` — Type verwacht total_revenue/margin_amount/weeks; API geeft total_amount_candidate/client/by_week; hook pakt {data} niet uit. Hooks nergens aangeroepen → latent. _Impact:_ Zodra gebruikt: velden undefined (kans op .toFixed-crash).
+
+**[users]**
+- (bug) **Users: ontbrekende UUID-validatie op :id → 500 i.p.v. 4xx** — `apps/api/src/modules/users/users.controller.ts:63` — updateUser/deactivateUser zonder uuid()-validatie → 22P02 → 500. _Impact:_ Malformed id → 500.
+
+**[webhooks]**
+- (tenant-scope) **getWebhookLogs inner-query mist tenant_id (leunt op ownership-check + RLS)** — `apps/api/src/modules/webhooks/webhooks.service.ts:251` — webhook_deliveries WHERE alleen subscription_id; afgedekt door voorafgaande ownership-check + withTenant. Bij afwezige RLS → latente lek. Te verifiëren. _Impact:_ Bij afwezige RLS delivery-logs buiten tenant lekbaar; nu afgedekt.
+
+**[whatsapp]**
+- (ux) **Consent 'Opnieuw uitnodigen' opent leeg invite-dialog zonder kandidaat** — `apps/web/app/(dashboard)/settings/whatsapp/page.tsx:1117` — Reinvite-knop roept alleen setInviteOpen(true); geen candidate_id/telefoon voorgevuld. _Impact:_ Verwarrende flow; kans op verkeerde kandidaat.
+- (tech-debt) **Cursor-paginatie kan rijen met identieke created_at overslaan/dupliceren** — `apps/api/src/modules/whatsapp/consent.service.ts:413` — listConsents/Messages/Templates sorteren op created_at,id maar pagineren op alleen created_at<cursor; mist id-tiebreaker. _Impact:_ Zeldzame gemiste/dubbele items bij gelijke timestamps.
+- (inconsistency) **Contract-drift: useSendWhatsAppMessage stuurt variables als object, backend verwacht array** — `apps/web/hooks/useWhatsApp.ts:236` — Hook typeert Record; backend valideert z.array; connector doet .map. Te verifiëren of aanroeper al array stuurt. _Impact:_ Template-berichten met variabelen kunnen 400/500 geven.
+- (bug) **Media-bericht buiten 24u-venster niet geblokkeerd (geen window/template-check)** — `apps/api/src/modules/whatsapp/messaging.service.ts:161` — media checkt alleen mediaUrl-aanwezigheid; geen 24u-window/template-vereiste (text wél). Te verifiëren of bewust. _Impact:_ Media buiten venster gaat queue in en faalt pas bij 360dialog i.p.v. nette 409.
+
+**[workflows]**
+- (tech-debt) **listWorkflows/getWorkflowRuns slikken fouten en returnen []** — `apps/api/src/modules/workflows/workflows.service.ts:58,215` — Bij DB-fout log + lege array; controller stuurt {data:[]}. _Impact:_ Storingen als valse lege staat gepresenteerd.
+- (i18n) **i18n-restanten: create-dialog/pagina hardcoded NL** — `apps/web/app/(dashboard)/workflows/page.tsx:557` — CreateWorkflowDialog/StepIndicator/toasts/labels hardcoded; TRIGGER_LABELS/ACTION_LABELS hardcoded. _Impact:_ Inconsistente i18n-dekking.
+
