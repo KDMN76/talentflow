@@ -408,10 +408,10 @@ export async function getCandidate(tenantId: string, candidateId: string) {
     const resumeRows = await fetchResumesForCandidate(client, candidateId, tenantId);
     const applicationRows = await client.query(
       `SELECT a.id, a.job_id, a.stage_id, a.status, a.applied_at, a.updated_at,
-              j.title as job_title, ps.name as stage_name
+              j.title as job_title, ps.name as stage_name, ps.color as stage_color
        FROM applications a
-       JOIN jobs j ON j.id = a.job_id
-       LEFT JOIN pipeline_stages ps ON ps.id = a.stage_id
+       JOIN jobs j ON j.id = a.job_id AND j.tenant_id = a.tenant_id
+       LEFT JOIN pipeline_stages ps ON ps.id = a.stage_id AND ps.tenant_id = a.tenant_id
        WHERE a.candidate_id = $1 AND a.tenant_id = $2`,
       [candidateId, tenantId]
     );

@@ -49,7 +49,7 @@ import { SkillsGapViewer } from "@/components/skills/SkillsGapViewer";
 import { Merge, AlertCircle, ShieldCheck } from "lucide-react";
 import { useCandidateExportLink } from "@/hooks/useCompliance";
 import { CandidateAiSummary } from "@/components/compliance/CandidateAiSummary";
-import type { Application, PipelineStage } from "@/lib/mockData";
+import type { Application } from "@/lib/mockData";
 import { cn, getInitials, getScoreColor, formatDate } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import Link from "next/link";
@@ -171,12 +171,13 @@ export default function CandidateProfilePage() {
 
   // Applications come embedded on the candidate via the API contract
   // (see useCandidate — returns `Candidate & { applications: unknown[] }`).
-  // Each row carries enough info to resolve the linked job + current stage
-  // via the embedded `stage` shape returned by the backend.
+  // De backend levert de fase plat aan: `stage_name` + `stage_color` (geen
+  // genest stage-object). Het type weerspiegelt dat contract nu correct.
   const candidateApplications = ((candidate as { applications?: unknown[] }).applications ??
     []) as Array<
     Application & {
-      stage?: PipelineStage | null;
+      stage_name?: string | null;
+      stage_color?: string | null;
       job_title?: string | null;
     }
   >;
@@ -703,7 +704,8 @@ export default function CandidateProfilePage() {
                 </p>
               ) : (
                 candidateApplications.map((app) => {
-                  const stage = app.stage ?? null;
+                  const stageName = app.stage_name ?? null;
+                  const stageColor = app.stage_color ?? null;
                   const jobTitle = resolveJobTitle(app.job_id, app.job_title);
                   return (
                     <div
@@ -719,14 +721,12 @@ export default function CandidateProfilePage() {
                         </p>
                         <div className="mt-1.5 flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
-                            {stage && (
-                              <span
-                                className="h-2 w-2 rounded-full"
-                                style={{ background: stage.color }}
-                              />
-                            )}
+                            <span
+                              className="h-2 w-2 rounded-full"
+                              style={{ background: stageColor ?? "#a1a1aa" }}
+                            />
                             <span className="text-xs text-muted-foreground">
-                              {stage?.name ?? "Onbekend"}
+                              {stageName ?? "Onbekend"}
                             </span>
                           </div>
                           <span className="text-xs text-muted-foreground">
