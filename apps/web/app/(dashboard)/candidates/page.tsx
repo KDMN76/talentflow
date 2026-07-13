@@ -214,7 +214,7 @@ export default function CandidatesPage() {
           ))}
         </div>
       ) : (
-        <div className="rounded-xl border border-border overflow-hidden bg-white dark:bg-zinc-900">
+        <div className="rounded-xl border border-border overflow-x-auto bg-white dark:bg-zinc-900">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-zinc-50/50 dark:bg-zinc-800/50">
@@ -254,17 +254,17 @@ export default function CandidatesPage() {
                     />
                   </td>
                   <td className="px-4 py-3">
-                    <Link href={`/candidates/${candidate.id}`} className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
+                    <Link href={`/candidates/${candidate.id}`} className="flex items-center gap-3 min-w-0">
+                      <Avatar className="h-8 w-8 shrink-0">
                         <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-500 text-white text-xs font-semibold">
                           {getInitials(candidate.name)}
                         </AvatarFallback>
                       </Avatar>
-                      <div>
-                        <p className="font-medium text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 transition-colors">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 transition-colors">
                           {candidate.name}
                         </p>
-                        <p className="text-xs text-muted-foreground">{candidate.email ?? ""}</p>
+                        <p className="truncate text-xs text-muted-foreground">{candidate.email ?? ""}</p>
                       </div>
                     </Link>
                   </td>

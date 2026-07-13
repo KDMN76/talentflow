@@ -14,8 +14,12 @@ function activeLocale(): string {
   return i18next.language || "nl";
 }
 
-export function formatDate(date: string | Date): string {
+export function formatDate(date: string | Date | null | undefined): string {
+  // Null-guard: nullable velden (bv. applied_at) gaven `new Date(null)` → 1 jan
+  // 1970. Toon een streepje i.p.v. een misleidende datum.
+  if (date === null || date === undefined || date === "") return "—";
   const d = typeof date === "string" ? new Date(date) : date;
+  if (Number.isNaN(d.getTime())) return "—";
   return d.toLocaleDateString(activeLocale(), {
     day: "numeric",
     month: "short",
@@ -23,8 +27,27 @@ export function formatDate(date: string | Date): string {
   });
 }
 
-export function formatRelativeDate(date: string | Date): string {
+/**
+ * Exacte datum + tijd (uur:minuut) in de actieve UI-taal. Voor audit/activity
+ * waar "wanneer exact" ertoe doet i.p.v. alleen een relatieve of datum-waarde.
+ */
+export function formatDateTime(date: string | Date | null | undefined): string {
+  if (date === null || date === undefined || date === "") return "—";
   const d = typeof date === "string" ? new Date(date) : date;
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString(activeLocale(), {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+export function formatRelativeDate(date: string | Date | null | undefined): string {
+  if (date === null || date === undefined || date === "") return "—";
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (Number.isNaN(d.getTime())) return "—";
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));

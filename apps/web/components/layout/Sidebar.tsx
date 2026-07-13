@@ -428,7 +428,7 @@ export function Sidebar({ onClose }: SidebarProps) {
             />
           </div>
         )}
-        <span className="truncate text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+        <span className="min-w-0 truncate text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
           {brandName}
         </span>
       </div>
