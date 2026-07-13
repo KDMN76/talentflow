@@ -56,6 +56,20 @@
       "colUser": "Gebruiker",
       "success": "Logboek geëxporteerd",
       "error": "Export mislukt"
+    },
+    "action": {
+      "created": "Aangemaakt",
+      "updated": "Bijgewerkt",
+      "deleted": "Verwijderd",
+      "stage_changed": "Fase gewijzigd",
+      "status_changed": "Status gewijzigd",
+      "archived": "Gearchiveerd",
+      "restored": "Hersteld",
+      "note_added": "Notitie toegevoegd",
+      "hired": "Aangenomen",
+      "anonymize": "Geanonimiseerd",
+      "delete": "Verwijderd",
+      "archive": "Gearchiveerd"
     }
   },
   "topJobs": {

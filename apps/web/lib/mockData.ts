@@ -1480,6 +1480,7 @@ export const mockJobHealth: Record<string, JobHealthBreakdown> = {
   "job-1": {
     job_id: "job-1",
     score: 78,
+    has_data: true,
     components: [
       {
         key: "velocity",
@@ -1513,6 +1514,7 @@ export const mockJobHealth: Record<string, JobHealthBreakdown> = {
   "job-2": {
     job_id: "job-2",
     score: 54,
+    has_data: true,
     components: [
       {
         key: "velocity",
@@ -1543,6 +1545,7 @@ export const mockJobHealth: Record<string, JobHealthBreakdown> = {
   "job-3": {
     job_id: "job-3",
     score: 34,
+    has_data: true,
     components: [
       {
         key: "velocity",
@@ -3256,6 +3259,8 @@ export interface AuditEvent {
   action: AuditAction;
   entity_type: string;
   entity_id: string;
+  /** Leesbare naam van het geraakte object (kandidaat/vacature/…) i.p.v. kale UUID. */
+  related_entity_name: string | null;
   actor_name: string | null;
   actor_email: string | null;
   ip_address: string | null;
@@ -3369,6 +3374,10 @@ function generateAuditEvents(): AuditEvent[] {
       action,
       entity_type: entityGroup.type,
       entity_id: eid,
+      related_entity_name:
+        (after?.name as string | undefined) ??
+        (after?.title as string | undefined) ??
+        null,
       actor_name: actor.name,
       actor_email: actor.email,
       ip_address: actor.ip,

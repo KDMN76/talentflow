@@ -56,6 +56,20 @@
       "colUser": "User",
       "success": "Log exported",
       "error": "Export failed"
+    },
+    "action": {
+      "created": "Created",
+      "updated": "Updated",
+      "deleted": "Deleted",
+      "stage_changed": "Stage changed",
+      "status_changed": "Status changed",
+      "archived": "Archived",
+      "restored": "Restored",
+      "note_added": "Note added",
+      "hired": "Hired",
+      "anonymize": "Anonymized",
+      "delete": "Deleted",
+      "archive": "Archived"
     }
   },
   "topJobs": {

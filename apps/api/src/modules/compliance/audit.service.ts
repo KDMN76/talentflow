@@ -42,6 +42,7 @@ export interface AuditEventDetailed {
   entity_id: string | null;
   user_id: string | null;
   user_name: string | null;
+  user_email: string | null;
   before: Record<string, unknown> | null;
   after: Record<string, unknown> | null;
   ip_address: string | null;
@@ -83,6 +84,7 @@ interface AuditRow {
   request_id: string | null;
   created_at: string;
   user_name: string | null;
+  user_email: string | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -236,7 +238,7 @@ export async function listAuditEvents(
       `SELECT e.id, e.action, e.entity_type, e.entity_id, e.user_id,
               e.before, e.after, e.ip_address::text AS ip_address,
               e.user_agent, e.request_id, e.created_at,
-              u.name AS user_name
+              u.name AS user_name, u.email AS user_email
          FROM audit_events e
          LEFT JOIN users u ON u.id = e.user_id
         WHERE ${conds.join(' AND ')}
@@ -255,6 +257,7 @@ export async function listAuditEvents(
       entity_id: r.entity_id,
       user_id: r.user_id,
       user_name: r.user_name,
+      user_email: r.user_email,
       before: r.before,
       after: r.after,
       ip_address: r.ip_address,
@@ -295,7 +298,7 @@ export async function getEntityAuditHistory(
       `SELECT e.id, e.action, e.entity_type, e.entity_id, e.user_id,
               e.before, e.after, e.ip_address::text AS ip_address,
               e.user_agent, e.request_id, e.created_at,
-              u.name AS user_name
+              u.name AS user_name, u.email AS user_email
          FROM audit_events e
          LEFT JOIN users u ON u.id = e.user_id
         WHERE e.tenant_id = $1
@@ -311,6 +314,7 @@ export async function getEntityAuditHistory(
       entity_id: r.entity_id,
       user_id: r.user_id,
       user_name: r.user_name,
+      user_email: r.user_email,
       before: r.before,
       after: r.after,
       ip_address: r.ip_address,

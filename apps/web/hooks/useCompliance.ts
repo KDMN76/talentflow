@@ -324,8 +324,10 @@ export function useBulkConsentRequest() {
 // ─── Audit-trail ─────────────────────────────────────────────────────────────
 
 /**
- * De audit-API levert `created_at` / `user_name` (en geen `actor_email`),
- * terwijl de UI `timestamp` / `actor_name` verwacht. Normaliseer defensief.
+ * De audit-API levert `created_at` / `user_name` / `user_email` /
+ * `related_entity_name`, terwijl de UI `timestamp` / `actor_name` /
+ * `actor_email` verwacht en het object-label wil tonen. Normaliseer defensief
+ * en tolereer beide contract-vormen.
  */
 function normalizeAuditEvent(raw: unknown): AuditEvent {
   const r = (raw ?? {}) as Record<string, unknown>;
@@ -341,9 +343,12 @@ function normalizeAuditEvent(raw: unknown): AuditEvent {
     action: ((r.action as string) ?? "unknown") as AuditAction,
     entity_type: (r.entity_type as string) ?? "",
     entity_id: (r.entity_id as string) ?? "",
+    related_entity_name:
+      (r.related_entity_name as string) ?? null,
     actor_name:
       (r.actor_name as string) ?? (r.user_name as string) ?? null,
-    actor_email: (r.actor_email as string) ?? null,
+    actor_email:
+      (r.actor_email as string) ?? (r.user_email as string) ?? null,
     ip_address: (r.ip_address as string) ?? null,
     before: asRecord(r.before),
     after: asRecord(r.after),

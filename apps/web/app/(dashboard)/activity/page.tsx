@@ -11,7 +11,32 @@ import { useToast } from "@/components/ui/use-toast";
 import { useActivityLog, type ActivityItem } from "@/hooks/useActivity";
 import { api } from "@/lib/api";
 import { downloadCsv } from "@/lib/downloadHelper";
-import { formatRelativeDate, formatDate, getInitials } from "@/lib/utils";
+import { formatRelativeDate, formatDate, formatDateTime, getInitials } from "@/lib/utils";
+
+/**
+ * Bouwt een leesbare feed-regel: "{werkwoord}: {objectnaam}" i.p.v. het kale
+ * verb (bv. 'created'). De objectnaam komt uit de activity-payload (name/title
+ * — die de writers al meesturen). Onbekende acties vallen terug op het ruwe
+ * verb, zodat er nooit een lege regel is.
+ */
+function activityLine(
+  item: ActivityItem,
+  t: (key: string, opts?: Record<string, unknown>) => string
+): string {
+  const p = (item.payload ?? {}) as Record<string, unknown>;
+  const pick = (k: string) =>
+    typeof p[k] === "string" && p[k] ? (p[k] as string) : undefined;
+  const objectName =
+    pick("name") ??
+    pick("title") ??
+    pick("candidate_name") ??
+    pick("job_title") ??
+    null;
+  const verb = t(`activityLog.action.${item.action}`, {
+    defaultValue: item.action,
+  });
+  return objectName ? `${verb}: ${objectName}` : verb;
+}
 
 function activityColor(type: string): string {
   switch (type) {
@@ -119,7 +144,7 @@ export default function ActivityLogPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                      {item.action}
+                      {activityLine(item, t)}
                     </p>
                     <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
                       {item.user_name && <span>{item.user_name}</span>}
@@ -129,9 +154,9 @@ export default function ActivityLogPage() {
                   </div>
                   <span
                     className="shrink-0 whitespace-nowrap text-xs text-muted-foreground"
-                    title={formatDate(item.created_at)}
+                    title={formatRelativeDate(item.created_at)}
                   >
-                    {formatRelativeDate(item.created_at)}
+                    {formatDateTime(item.created_at)}
                   </span>
                 </div>
               ))}
