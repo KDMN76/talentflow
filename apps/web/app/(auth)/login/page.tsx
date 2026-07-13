@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -28,6 +29,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const { t } = useTranslation("auth");
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   // Rate-limit-UX: aftellende lockout na een 429 + waarschuwing bij weinig
@@ -62,6 +64,12 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
+      // Tenant-scope-veiligheid: leeg de React-Query cache vóór elke inlog zodat
+      // in dezelfde tab nooit gecachte data van een vorige tenant/gebruiker kan
+      // doorlekken (queryKeys bevatten geen tenant-id). Logout doet dit al; het
+      // inlog-pad deed het niet.
+      queryClient.clear();
+
       // Explicit dev-only mock-mode: ONLY when developer opts in via
       // NEXT_PUBLIC_USE_MOCK_DATA=true. Never used as silent fallback.
       if (isMockMode()) {

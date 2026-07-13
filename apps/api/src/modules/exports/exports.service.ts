@@ -7,9 +7,12 @@
  * Ontwerpprincipes:
  *
  *   1. Geen duplicate query-logica — we hergebruiken de bestaande
- *      list-services (`listCandidates`, `listJobs`, etc.). Hierdoor erven
- *      we automatisch RLS-isolatie, filter-shape en eventuele toekomstige
- *      kolomtoevoegingen.
+ *      list-services (`listCandidates`, `listJobs`, etc.), zodat we filter-shape
+ *      en toekomstige kolomtoevoegingen automatisch overnemen.
+ *      LET OP tenant-isolatie: die komt NIET van RLS maar van de expliciete
+ *      `AND tenant_id = $1` in elke list-service. De app verbindt in productie
+ *      met een owner-rol die RLS bypasst (zie db/pool.ts + docs/RLS_HARDENING.md),
+ *      dus het WHERE-filter is de ENIGE backstop — nooit weglaten.
  *   2. Eigen mini-CSV-builder. RFC 4180 is klein genoeg om in 30 regels te
  *      doen — geen libdependency, geen security-attack-surface.
  *   3. UTF-8 BOM aan het begin zodat Microsoft Excel onder NL-locale
