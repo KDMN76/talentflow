@@ -21,6 +21,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
+import { api } from "@/lib/api";
+import { useTenantUsers } from "@/hooks/useUsers";
 import {
   useAuditEvents,
   type AuditFilters,
@@ -102,53 +104,6 @@ function DiffPanel({
   );
 }
 
-// ─── CSV export ──────────────────────────────────────────────────────────────
-
-function eventsToCsv(events: AuditEvent[]): string {
-  const header = [
-    "id",
-    "timestamp",
-    "action",
-    "entity_type",
-    "entity_id",
-    "actor_name",
-    "actor_email",
-    "ip_address",
-    "before",
-    "after",
-  ];
-  const rows = events.map((e) =>
-    [
-      e.id,
-      e.timestamp,
-      e.action,
-      e.entity_type,
-      e.entity_id,
-      e.actor_name ?? "",
-      e.actor_email ?? "",
-      e.ip_address ?? "",
-      JSON.stringify(e.before ?? {}),
-      JSON.stringify(e.after ?? {}),
-    ]
-      .map((v) => `"${String(v).replace(/"/g, '""')}"`)
-      .join(",")
-  );
-  return [header.join(","), ...rows].join("\n");
-}
-
-function downloadCsv(events: AuditEvent[]) {
-  const csv = eventsToCsv(events);
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `audit-trail-${new Date().toISOString().slice(0, 10)}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
 // ─── Row ─────────────────────────────────────────────────────────────────────
 
 function formatTimestamp(iso: string | null | undefined): string {
@@ -202,9 +157,17 @@ function AuditRow({ event }: { event: AuditEvent }) {
           </div>
         </td>
         <td className="px-3 py-2.5 align-top">
-          <div className="text-xs font-medium">{event.entity_type}</div>
+          {/* Toon de leesbare objectnaam als die er is; anders alleen het type.
+              De kale UUID staat eronder als subtekst voor traceerbaarheid. */}
+          <div className="text-xs font-medium">
+            {event.related_entity_name
+              ? event.related_entity_name
+              : event.entity_type}
+          </div>
           <div className="text-[10px] font-mono text-muted-foreground">
-            {event.entity_id}
+            {event.related_entity_name
+              ? `${event.entity_type} · ${event.entity_id ?? "—"}`
+              : event.entity_id}
           </div>
         </td>
         <td className="px-3 py-2.5 align-top">
@@ -246,40 +209,78 @@ export function AuditTrailViewer() {
   const [search, setSearch] = useState("");
   const [entityType, setEntityType] = useState<string>("all");
   const [action, setAction] = useState<AuditAction | "all">("all");
+  const [userId, setUserId] = useState<string>("all");
   const [from, setFrom] = useState<string>("");
   const [to, setTo] = useState<string>("");
+  const [isExporting, setIsExporting] = useState(false);
+
+  // Personen-filter: /users is admin-only; bij een 403 blijft de lijst leeg en
+  // tonen we simpelweg geen personen-dropdown (geen crash).
+  const { data: tenantUsers } = useTenantUsers();
 
   const filters: AuditFilters = useMemo(() => {
     const f: AuditFilters = {};
     if (entityType !== "all") f.entity_type = entityType;
     if (action !== "all") f.action = action;
+    if (userId !== "all") f.user_id = userId;
     if (search.trim()) f.search = search.trim();
     if (from) f.from = new Date(from).toISOString();
     if (to) f.to = new Date(to + "T23:59:59").toISOString();
     return f;
-  }, [search, entityType, action, from, to]);
+  }, [search, entityType, action, userId, from, to]);
 
   const { data, isLoading } = useAuditEvents(filters);
 
-  const handleExport = () => {
-    if (!data || data.length === 0) {
-      toast({
-        title: "Geen events",
-        description: "Er zijn geen events om te exporteren.",
+  // Export via de SERVER-endpoint (respecteert álle filters en cap NIET op de
+  // 100-rij page-limit). De oude client-side CSV exporteerde stil alleen de
+  // eerste 100 opgehaalde events terwijl de toast "volledig" suggereerde.
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      // De server verwacht ListAuditFilters met `action_pattern` (niet `action`).
+      const exportFilters: Record<string, unknown> = {
+        ...filters,
+      };
+      if (filters.action && filters.action !== "all") {
+        exportFilters.action_pattern = filters.action;
+      }
+      delete (exportFilters as { action?: unknown }).action;
+
+      const res = await api.post(
+        "/compliance/audit-events/export",
+        { filters: exportFilters, format: "csv" },
+        { responseType: "blob" }
+      );
+      const blob = new Blob([res.data as BlobPart], {
+        type: "text/csv;charset=utf-8",
       });
-      return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `audit-trail-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({
+        title: "Audit-trail geëxporteerd",
+        description: "De volledige gefilterde audit-trail is gedownload.",
+      });
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Export mislukt",
+        description: "Kon de audit-trail niet exporteren. Probeer het opnieuw.",
+      });
+    } finally {
+      setIsExporting(false);
     }
-    downloadCsv(data);
-    toast({
-      title: "CSV gedownload",
-      description: `${data.length} events geëxporteerd.`,
-    });
   };
 
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
         <div className="lg:col-span-2 relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -301,6 +302,23 @@ export function AuditTrailViewer() {
             ))}
           </SelectContent>
         </Select>
+        {/* Personen-filter — alleen tonen als de gebruiker de tenant-users mag
+            zien (admin). Voedt de bestaande user_id-backendfilter. */}
+        {tenantUsers && tenantUsers.length > 0 && (
+          <Select value={userId} onValueChange={setUserId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Alle personen" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle personen</SelectItem>
+              {tenantUsers.map((u) => (
+                <SelectItem key={u.id} value={u.id}>
+                  {u.name || u.email}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         <Select
           value={action}
           onValueChange={(v) => setAction(v as AuditAction | "all")}
@@ -320,10 +338,11 @@ export function AuditTrailViewer() {
         <Button
           variant="outline"
           onClick={handleExport}
+          disabled={isExporting}
           className="gap-1.5"
         >
           <Download className="h-4 w-4" />
-          Export CSV
+          {isExporting ? "Exporteren…" : "Export CSV"}
         </Button>
       </div>
 
