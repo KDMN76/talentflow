@@ -427,10 +427,16 @@ export function JobDetailHeader({
             <div className="flex items-center gap-2">
               <Activity className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-xs text-muted-foreground">{t("detail.health.label")}</span>
-              <HelpHint text={t("detail.health.hint")} />
+              {/* De hint belooft "klik voor de opbouw"; maak het (?)-icoon dus
+                  óók een klikdoel dat de breakdown opent (naast de score-badge),
+                  zodat tekst en interactie kloppen. Alleen als er health-data is. */}
+              <HelpHint
+                text={t("detail.health.hint")}
+                onClick={health ? () => setHealthOpen(true) : undefined}
+              />
               {isHealthLoading ? (
                 <Skeleton className="h-6 w-14" />
-              ) : health ? (
+              ) : health && health.has_data ? (
                 <button
                   type="button"
                   onClick={() => setHealthOpen(true)}
@@ -441,6 +447,17 @@ export function JobDetailHeader({
                   aria-label={t("detail.health.openBreakdownAria")}
                 >
                   {health.score}/100
+                </button>
+              ) : health ? (
+                // Nog geen sollicitaties → neutrale "Geen data"-badge i.p.v. een
+                // misleidend laag/rood getal.
+                <button
+                  type="button"
+                  onClick={() => setHealthOpen(true)}
+                  className="inline-flex items-center rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-500 ring-1 ring-inset ring-zinc-200 transition-shadow hover:shadow-sm dark:bg-zinc-800 dark:text-zinc-400 dark:ring-zinc-700"
+                  aria-label={t("detail.health.openBreakdownAria")}
+                >
+                  {t("detail.health.noData")}
                 </button>
               ) : (
                 <span className="text-xs text-muted-foreground">—</span>
@@ -493,14 +510,20 @@ export function JobDetailHeader({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">{t("detail.health.total")}</span>
-                <span
-                  className={cn(
-                    "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ring-inset",
-                    healthColor(health.score)
-                  )}
-                >
-                  {health.score}/100
-                </span>
+                {health.has_data ? (
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ring-1 ring-inset",
+                      healthColor(health.score)
+                    )}
+                  >
+                    {health.score}/100
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-500 ring-1 ring-inset ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:ring-zinc-700">
+                    {t("detail.health.noData")}
+                  </span>
+                )}
               </div>
               <div className="space-y-3">
                 {health.components.map((comp) => (

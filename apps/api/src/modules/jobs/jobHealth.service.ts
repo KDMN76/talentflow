@@ -87,6 +87,7 @@ function buildBreakdown(jobId: string, flat: FlatHealthScores): JobHealth {
   return {
     job_id: jobId,
     score: flat.health_score,
+    has_data: flat.candidates_total > 0,
     components,
     predicted_close_date: flat.predicted_close_date,
     days_open: flat.days_open,
@@ -213,7 +214,11 @@ export async function getJobHealth(
 
     // Drop-off: candidates concentrated in stage 1 = bad.
     // Score = 100 - (stage1_count / total) * 100, clamped.
-    let dropOffScore = 100;
+    // Default 0 (NIET 100) bij een lege pijplijn: een default van 100 gaf via
+    // het 30%-gewicht een misleidende score van 30 aan een net gekopieerde/lege
+    // vacature. Bij total===0 is er geen data → has_data=false vlagt dat en de
+    // UI toont een neutrale "Geen data"-badge i.p.v. dit getal.
+    let dropOffScore = 0;
     if (total > 0) {
       const { rows: [stage1] } = await client.query(
         `SELECT COUNT(*)::int as cnt

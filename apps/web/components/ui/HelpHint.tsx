@@ -15,6 +15,13 @@ export interface HelpHintProps {
   side?: "top" | "right" | "bottom" | "left";
   className?: string;
   ariaLabel?: string;
+  /**
+   * Optionele klik-actie. Wanneer gezet wordt het (?)-icoon een echt klikdoel
+   * (cursor-pointer) dat deze handler aanroept — gebruik dit als de tooltip-
+   * tekst "klik voor …" belooft. Zonder deze prop blijft het gedrag hover-only
+   * (backwards-compatible met alle bestaande gebruiksplekken).
+   */
+  onClick?: () => void;
 }
 
 /**
@@ -27,6 +34,7 @@ export function HelpHint({
   side = "top",
   className,
   ariaLabel,
+  onClick,
 }: HelpHintProps) {
   return (
     <TooltipProvider delayDuration={150}>
@@ -35,9 +43,17 @@ export function HelpHint({
           <button
             type="button"
             aria-label={ariaLabel ?? text}
-            onClick={(e) => e.preventDefault()}
+            onClick={(e) => {
+              if (onClick) {
+                e.preventDefault();
+                onClick();
+              } else {
+                e.preventDefault();
+              }
+            }}
             className={cn(
-              "inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full align-middle text-muted-foreground transition-colors hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full align-middle text-muted-foreground transition-colors hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              onClick ? "cursor-pointer" : "cursor-help",
               className
             )}
           >

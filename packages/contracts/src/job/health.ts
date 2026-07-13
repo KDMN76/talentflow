@@ -46,8 +46,15 @@ export type JobHealthComponent = z.infer<typeof JobHealthComponentSchema>;
 export const JobHealthSchema = z
   .object({
     job_id: z.string().uuid(),
-    /** Gewogen aggregaat 0..100. */
+    /** Gewogen aggregaat 0..100. Alleen zinvol als has_data === true. */
     score: scoreField,
+    /**
+     * Of er genoeg data (≥1 sollicitatie) is om een betekenisvolle score te
+     * berekenen. Bij false toont de UI een neutrale "Geen data"-badge i.p.v.
+     * een misleidend laag/rood getal (een lege of net gekopieerde vacature
+     * heeft nog geen pijplijn om op te scoren).
+     */
+    has_data: z.boolean(),
     /** Ontleding van de score in sub-scores (velocity/drop_off/recency). */
     components: z.array(JobHealthComponentSchema),
     /** ISO-datum (yyyy-mm-dd) — server-voorspelde sluitingsdatum, of null. */
