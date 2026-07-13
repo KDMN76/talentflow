@@ -20,9 +20,12 @@ export function FunnelBlock({ title, config, result, placeholder }: FunnelBlockP
   const renderStages = result?.stages ?? [];
   const max = renderStages[0]?.count || 1;
   const lastStage = renderStages[renderStages.length - 1];
+  // Backend levert cumulatieve 'bereikt'-counts (monotoon niet-stijgend) → de
+  // ratio's hieronder zijn ≤100%. De Math.min-clamp is een extra vangnet zodat
+  // een funnel nooit >100% kan tonen, ongeacht de databron.
   const overallPct =
     lastStage && renderStages[0] && renderStages[0].count > 0
-      ? (lastStage.count / renderStages[0].count) * 100
+      ? Math.min(100, (lastStage.count / renderStages[0].count) * 100)
       : null;
 
   return (
@@ -51,10 +54,10 @@ export function FunnelBlock({ title, config, result, placeholder }: FunnelBlockP
       ) : (
         <div className="space-y-1">
           {renderStages.map((stage, i) => {
-            const pct = (stage.count / max) * 100;
+            const pct = Math.min(100, (stage.count / max) * 100);
             const prev = i > 0 ? renderStages[i - 1] : null;
             const stepConversion =
-              prev && prev.count > 0 ? stage.count / prev.count : null;
+              prev && prev.count > 0 ? Math.min(1, stage.count / prev.count) : null;
             return (
               <div key={i}>
                 {i > 0 && stepConversion !== null && (

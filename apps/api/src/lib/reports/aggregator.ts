@@ -16,9 +16,12 @@
  *   - Filter-velden worden gevalideerd tegen FILTERABLE_FIELDS per entity en
  *     gebruiken parameterized queries ($1, $2, ...). Onbekende velden worden
  *     stilletjes gedropt zodat een client geen 500 krijgt op legitieme typo's.
- *   - RLS via withTenant garandeert dat queries automatisch tenant-isolated
- *     zijn — een ontbrekend tenant_id-filter in een SELECT zou nog steeds
- *     gefilterd worden door PostgreSQL's row-level security.
+ *   - Tenant-isolatie komt van de expliciete `tenant_id = current_setting(
+ *     'app.tenant_id')` die tenantPrefix() aan elke base-query toevoegt, plus
+ *     `AND <alias>.tenant_id` op elke JOIN. NIET van RLS: de app draait in
+ *     productie onder een owner-rol die RLS bypasst (zie db/pool.ts +
+ *     docs/RLS_HARDENING.md). Een ontbrekend tenant-filter zou dus NIET door
+ *     PostgreSQL worden opgevangen — elke SELECT/JOIN moet zelf scopen.
  *
  * Performance (geschat):
  *   - kpi: 1 query (of 2 bij comparison) — meestal <50ms.
@@ -114,7 +117,7 @@ const DIMENSION_REGISTRY: Record<string, DimensionEntry> = {
     select: "COALESCE(u.name, 'Onbekend')",
     alias: 'recruiter',
     groupBy: 'u.name',
-    joins: 'LEFT JOIN users u ON u.id = j.recruiter_id',
+    joins: 'LEFT JOIN users u ON u.id = j.recruiter_id AND u.tenant_id = j.tenant_id',
   },
   source: {
     select: "COALESCE(c.source, 'Onbekend')",
@@ -125,7 +128,7 @@ const DIMENSION_REGISTRY: Record<string, DimensionEntry> = {
     select: "COALESCE(ps.name, 'Onbekend')",
     alias: 'stage',
     groupBy: 'ps.name',
-    joins: 'LEFT JOIN pipeline_stages ps ON ps.id = a.stage_id',
+    joins: 'LEFT JOIN pipeline_stages ps ON ps.id = a.stage_id AND ps.tenant_id = a.tenant_id',
   },
   job_title: {
     select: "COALESCE(j.title, 'Onbekend')",
@@ -258,13 +261,21 @@ const DEFAULT_DATE_COL: Record<ReportEntity, string> = {
   recruiters: 'u.created_at',
 };
 
+// Defense-in-depth: elke bridge-JOIN scopet óók op tenant_id. De base-tabel is
+// al tenant-gefilterd (tenantPrefix), en de FK's zijn tenant-lokaal, maar omdat
+// RLS in prod inactief is (owner-rol) mag geen JOIN puur op FK-integriteit
+// leunen — een gecorrumpeerde/cross-tenant FK zou anders lekken.
 const BRIDGES: Record<string, string> = {
-  'candidates->applications': 'LEFT JOIN applications a ON a.candidate_id = c.id',
-  'applications->candidates': 'LEFT JOIN candidates c ON c.id = a.candidate_id',
-  'applications->jobs': 'LEFT JOIN jobs j ON j.id = a.job_id',
-  'jobs->applications': 'LEFT JOIN applications a ON a.job_id = j.id',
+  'candidates->applications':
+    'LEFT JOIN applications a ON a.candidate_id = c.id AND a.tenant_id = c.tenant_id',
+  'applications->candidates':
+    'LEFT JOIN candidates c ON c.id = a.candidate_id AND c.tenant_id = a.tenant_id',
+  'applications->jobs':
+    'LEFT JOIN jobs j ON j.id = a.job_id AND j.tenant_id = a.tenant_id',
+  'jobs->applications':
+    'LEFT JOIN applications a ON a.job_id = j.id AND a.tenant_id = j.tenant_id',
   'candidates->jobs':
-    'LEFT JOIN applications a ON a.candidate_id = c.id LEFT JOIN jobs j ON j.id = a.job_id',
+    'LEFT JOIN applications a ON a.candidate_id = c.id AND a.tenant_id = c.tenant_id LEFT JOIN jobs j ON j.id = a.job_id AND j.tenant_id = a.tenant_id',
 };
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -867,18 +878,9 @@ async function aggregateFunnel(
   const { rows } = await client.query(sql, params);
   const r = rows[0] ?? {};
 
-  let firstCount = 0;
-  const stages: FunnelAggregateResult['stages'] = block.stages.map((stage, idx) => {
-    const count = Number(r[`stage_${idx}`] ?? 0);
-    if (idx === 0) firstCount = count;
-    const pct =
-      idx === 0
-        ? 100
-        : firstCount === 0
-          ? null
-          : Math.round((count / firstCount) * 1000) / 10;
-    return { stage, count, conversion_pct: pct };
-  });
+  const rawCounts = block.stages.map((_, idx) => Number(r[`stage_${idx}`] ?? 0));
+  const stages = buildFunnelStages(block.stages, rawCounts);
+  const firstCount = stages[0]?.count ?? 0;
 
   return {
     result: {
@@ -887,8 +889,51 @@ async function aggregateFunnel(
       title: blockEntry.title,
       stages,
     },
-    rows_scanned: stages.reduce((sum, s) => sum + s.count, 0),
+    // Alle rijen zitten in stage 0 (= cumulatief 'bereikt de eerste stap of later').
+    rows_scanned: firstCount,
   };
+}
+
+/**
+ * Bouwt de funnel-stages uit de HUIDIGE bezettingscounts per stap.
+ *
+ * Waarom cumulatief: `rawCounts[idx]` is het aantal sollicitaties dat NU in
+ * stap `idx` staat (elke sollicitatie in precies één stap). Dat is een
+ * momentopname/verdeling, geen funnel — een latere stap kan meer huidige
+ * bezetting hebben dan de eerste, waardoor `count / firstCount` boven 100%
+ * uitkomt (het gerapporteerde 122%-bug).
+ *
+ * Een funnel toont "hoeveel hebben stap X bereikt". Zonder stage-transitie-
+ * historie in de DB benaderen we dat forward-only: wie NU in een latere stap
+ * (in de door de rapportauteur gekozen funnel-volgorde) staat, heeft de eerdere
+ * stappen doorlopen. Dus reached[idx] = som van de huidige bezetting van stap
+ * `idx` t/m de laatste stap. Die reeks is monotoon niet-stijgend, dus
+ * conversion_pct (t.o.v. reached[0]) is altijd ≤ 100%.
+ *
+ * Sollicitaties in stappen die niet in de funnel staan (bv. Afgewezen) tellen
+ * nergens mee — ze hebben de forward-pijplijn verlaten. Puur functioneel +
+ * unit-testbaar zodat de ≤100%-garantie geborgd is.
+ */
+export function buildFunnelStages(
+  stageNames: string[],
+  rawCounts: number[]
+): FunnelAggregateResult['stages'] {
+  // Cumulatief van achter naar voren: reached[idx] = som(rawCounts[idx..einde]).
+  const reached: number[] = new Array(stageNames.length).fill(0);
+  let acc = 0;
+  for (let idx = stageNames.length - 1; idx >= 0; idx--) {
+    acc += Number.isFinite(rawCounts[idx]) ? rawCounts[idx] : 0;
+    reached[idx] = acc;
+  }
+  const firstCount = reached[0] ?? 0;
+  return stageNames.map((stage, idx) => {
+    const count = reached[idx] ?? 0;
+    const pct =
+      firstCount === 0
+        ? null
+        : Math.round((count / firstCount) * 1000) / 10;
+    return { stage, count, conversion_pct: pct };
+  });
 }
 
 async function aggregatePie(

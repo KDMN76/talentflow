@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import {
   aggregateBlock,
+  buildFunnelStages,
 } from '../../src/lib/reports/aggregator';
 import {
   AVAILABLE_DIMENSIONS,
@@ -219,12 +220,13 @@ describe('aggregator', () => {
     }
   });
 
-  it('aggregateFunnel computes per-stage conversion', async () => {
+  it('aggregateFunnel cumuleert huidige-stage-bezetting tot een dalende funnel', async () => {
     client = mockClient({
       __matcher: (sql) => {
         if (/^\s*(BEGIN|COMMIT|ROLLBACK|SET)/i.test(sql)) {
           return { rows: [], rowCount: 0 };
         }
+        // Huidige bezetting per stap (elke sollicitatie in precies één stap).
         return {
           rows: [{ stage_0: 100, stage_1: 60, stage_2: 20 }],
           rowCount: 1,
@@ -248,12 +250,54 @@ describe('aggregator', () => {
       dateRange: DATE_RANGE,
     });
     if (out.result.block_type === 'funnel') {
-      expect(out.result.stages[0].count).toBe(100);
+      // reached = [180, 80, 20]; pct t.o.v. reached[0]=180
+      expect(out.result.stages[0].count).toBe(180);
       expect(out.result.stages[0].conversion_pct).toBe(100);
-      expect(out.result.stages[1].count).toBe(60);
-      expect(out.result.stages[1].conversion_pct).toBe(60);
-      expect(out.result.stages[2].conversion_pct).toBe(20);
+      expect(out.result.stages[1].count).toBe(80);
+      expect(out.result.stages[1].conversion_pct).toBe(44.4);
+      expect(out.result.stages[2].count).toBe(20);
+      expect(out.result.stages[2].conversion_pct).toBe(11.1);
     }
+  });
+
+  describe('buildFunnelStages (regressie: conversie nooit >100%)', () => {
+    it('cumuleert huidige bezetting van achter naar voren', () => {
+      const stages = buildFunnelStages(['A', 'B', 'C'], [100, 60, 20]);
+      expect(stages.map((s) => s.count)).toEqual([180, 80, 20]);
+      expect(stages[0].conversion_pct).toBe(100);
+    });
+
+    it('geeft NOOIT een conversie >100%, ook niet als een latere stap meer huidige bezetting heeft', () => {
+      // Eerste stap bijna leeg, midden vol → oude formule gaf 500% (50/10).
+      const stages = buildFunnelStages(['A', 'B', 'C'], [10, 50, 30]);
+      // reached = [90, 80, 30]
+      expect(stages.map((s) => s.count)).toEqual([90, 80, 30]);
+      for (const s of stages) {
+        expect(s.conversion_pct).not.toBeNull();
+        expect(s.conversion_pct as number).toBeLessThanOrEqual(100);
+      }
+      // Monotoon niet-stijgend
+      expect(stages[0].conversion_pct as number).toBeGreaterThanOrEqual(
+        stages[1].conversion_pct as number
+      );
+      expect(stages[1].conversion_pct as number).toBeGreaterThanOrEqual(
+        stages[2].conversion_pct as number
+      );
+    });
+
+    it('geeft null (geen NaN/Infinity) als de funnel leeg is', () => {
+      const stages = buildFunnelStages(['A', 'B'], [0, 0]);
+      expect(stages.map((s) => s.count)).toEqual([0, 0]);
+      expect(stages[0].conversion_pct).toBeNull();
+      expect(stages[1].conversion_pct).toBeNull();
+    });
+
+    it('negeert niet-eindige counts zonder te crashen', () => {
+      const stages = buildFunnelStages(['A', 'B'], [Number.NaN, 5]);
+      expect(stages[0].count).toBe(5);
+      expect(stages[1].count).toBe(5);
+      expect(stages[0].conversion_pct).toBe(100);
+    });
   });
 
   it('aggregatePie returns slices with pct', async () => {
