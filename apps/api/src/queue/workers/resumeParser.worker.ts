@@ -340,6 +340,19 @@ async function applyParsedResume(
   fragments.push(`skills = $${idx++}::text[]`);
   values.push(skillNames);
 
+  // Kandidaat-omschrijving (candidates.description) vullen vanuit de geparste
+  // samenvatting — maar NON-DESTRUCTIEF: alleen als er nog geen omschrijving is.
+  // Zo verschijnt de profieltekst automatisch op de kandidaat (voorheen belandde
+  // hij alleen op candidate_resumes.ai_summary), zonder ooit een handmatig
+  // ingevoerde of eerder gevulde omschrijving te overschrijven. Bij meerdere
+  // CV's "wint" de eerste parse — precies wat we willen.
+  if (parsed.summary && parsed.summary.trim().length > 0) {
+    fragments.push(`description = CASE
+      WHEN description IS NULL OR length(trim(description)) = 0 THEN $${idx++}
+      ELSE description END`);
+    values.push(parsed.summary.trim());
+  }
+
   fragments.push(`updated_at = now()`);
 
   values.push(candidateId, tenantId);
