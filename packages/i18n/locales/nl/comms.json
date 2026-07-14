@@ -31,6 +31,7 @@
       "queued": "In wachtrij",
       "running": "Bezig",
       "completed": "Voltooid",
+      "cancelled": "Geannuleerd",
       "failed": "Mislukt",
       "paused": "Gepauzeerd"
     },

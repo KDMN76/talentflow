@@ -34,11 +34,15 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   "export.downloaded": "Export gedownload",
 };
 
-export const DSAR_STATUS_LABELS: Record<DsarStatus, string> = {
+// `expired` is set server-side (backend DsarStatus + migration 012 CHECK) once a
+// request passes its deadline; the shared frontend DsarStatus type is still
+// stale, so we widen here to avoid an empty badge at runtime.
+export const DSAR_STATUS_LABELS: Record<DsarStatus | "expired", string> = {
   pending: "Open",
   in_progress: "In behandeling",
   fulfilled: "Vervuld",
   rejected: "Geweigerd",
+  expired: "Verlopen",
 };
 
 export const DSAR_TYPE_LABELS: Record<DsarRequestType, string> = {

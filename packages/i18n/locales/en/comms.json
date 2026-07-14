@@ -31,6 +31,7 @@
       "queued": "Queued",
       "running": "Running",
       "completed": "Completed",
+      "cancelled": "Cancelled",
       "failed": "Failed",
       "paused": "Paused"
     },

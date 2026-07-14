@@ -5,10 +5,10 @@ import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import {
   AlertCircle,
+  Ban,
   CheckCircle2,
   ChevronRight,
   Mail,
-  Pause,
   Plus,
   Send,
   XCircle,
@@ -36,28 +36,25 @@ import { CampaignBuilder } from "@/components/communications/CampaignBuilder";
 
 // ─── Status helpers ─────────────────────────────────────────────────────────
 
+// Only the four statuses the backend actually sets (bulk_campaigns_status_check).
 const STATUS_STYLES: Record<BulkCampaign["status"], string> = {
-  draft: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
-  queued: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400",
   running: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400",
   completed:
     "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400",
+  cancelled: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
   failed: "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400",
-  paused: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
 };
 
-const PROVIDER_LABELS: Record<BulkCampaign["provider"], string> = {
+const VIA_LABELS: Record<BulkCampaign["via"], string> = {
   resend: "Resend",
-  gmail: "Gmail",
-  outlook: "Outlook",
+  mailbox_integration: "Mailbox",
 };
 
 function StatusIcon({ status }: { status: BulkCampaign["status"] }) {
-  if (status === "running" || status === "queued")
-    return <Loader2 className="h-3 w-3 animate-spin" />;
+  if (status === "running") return <Loader2 className="h-3 w-3 animate-spin" />;
   if (status === "completed") return <CheckCircle2 className="h-3 w-3" />;
   if (status === "failed") return <XCircle className="h-3 w-3" />;
-  if (status === "paused") return <Pause className="h-3 w-3" />;
+  if (status === "cancelled") return <Ban className="h-3 w-3" />;
   return <Mail className="h-3 w-3" />;
 }
 
@@ -180,10 +177,10 @@ function CampaignRow({
   onClick: () => void;
 }) {
   const { t } = useTranslation("comms");
-  const total = campaign.eligible_count;
-  const sent = campaign.sent_count;
-  const failed = campaign.failed_count;
-  const skipped = campaign.skipped_count;
+  const total = campaign.total_eligible;
+  const sent = campaign.total_sent;
+  const failed = campaign.total_failed;
+  const skipped = campaign.total_skipped_consent;
   const pct = total > 0 ? Math.min(100, Math.round((sent / total) * 100)) : 0;
 
   return (
@@ -196,7 +193,7 @@ function CampaignRow({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2 mb-1">
             <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">
-              {campaign.name}
+              {campaign.subject}
             </p>
             <Badge
               className={`text-[10px] px-1.5 py-0 border-0 inline-flex items-center gap-1 ${STATUS_STYLES[campaign.status]}`}
@@ -208,12 +205,9 @@ function CampaignRow({
               variant="outline"
               className="text-[10px] px-1.5 py-0 font-mono"
             >
-              {t("campaigns.row.via", { provider: PROVIDER_LABELS[campaign.provider] })}
+              {t("campaigns.row.via", { provider: VIA_LABELS[campaign.via] })}
             </Badge>
           </div>
-          <p className="text-xs text-muted-foreground truncate">
-            {campaign.subject}
-          </p>
         </div>
         <ChevronRight className="h-4 w-4 text-zinc-300 group-hover:text-indigo-500 transition-colors shrink-0 mt-1" />
       </div>
@@ -245,7 +239,7 @@ function CampaignRow({
             </span>
           )}
           <span className="ml-auto">
-            {new Date(campaign.created_at).toLocaleDateString("nl-NL", {
+            {new Date(campaign.started_at).toLocaleDateString("nl-NL", {
               day: "numeric",
               month: "short",
               year: "numeric",
@@ -267,11 +261,10 @@ function CampaignDetailDialog({
   onClose: () => void;
 }) {
   const { t } = useTranslation("comms");
-  const [showFailures, setShowFailures] = useState(false);
   if (!campaign) return null;
 
-  const total = campaign.eligible_count;
-  const sent = campaign.sent_count;
+  const total = campaign.total_eligible;
+  const sent = campaign.total_sent;
   const pct = total > 0 ? Math.min(100, Math.round((sent / total) * 100)) : 0;
 
   return (
@@ -280,7 +273,7 @@ function CampaignDetailDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 pr-8">
             <Send className="h-4 w-4 text-indigo-600" />
-            {campaign.name}
+            {campaign.subject}
           </DialogTitle>
         </DialogHeader>
 
@@ -294,7 +287,7 @@ function CampaignDetailDialog({
               {t(`campaigns.status.${campaign.status}`)}
             </Badge>
             <Badge variant="outline" className="text-xs">
-              {t("campaigns.row.via", { provider: PROVIDER_LABELS[campaign.provider] })}
+              {t("campaigns.row.via", { provider: VIA_LABELS[campaign.via] })}
             </Badge>
             {campaign.mailbox_integration_id && (
               <Link
@@ -335,17 +328,17 @@ function CampaignDetailDialog({
             <CountTile label={t("campaigns.detail.counts.inAudience")} value={total} />
             <CountTile
               label={t("campaigns.detail.counts.skipped")}
-              value={campaign.skipped_count}
+              value={campaign.total_skipped_consent}
             />
             <CountTile
               label={t("campaigns.detail.counts.sent")}
-              value={campaign.sent_count}
+              value={campaign.total_sent}
               accent="emerald"
             />
             <CountTile
               label={t("campaigns.detail.counts.failed")}
-              value={campaign.failed_count}
-              accent={campaign.failed_count > 0 ? "red" : undefined}
+              value={campaign.total_failed}
+              accent={campaign.total_failed > 0 ? "red" : undefined}
             />
           </div>
 
@@ -368,57 +361,9 @@ function CampaignDetailDialog({
             </p>
           </div>
 
-          {/* Failures */}
-          {campaign.failures.length > 0 && (
-            <div className="rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-950/10 overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setShowFailures((s) => !s)}
-                className="w-full flex items-center justify-between px-4 py-3 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
-              >
-                <span className="flex items-center gap-2 text-sm font-semibold text-red-800 dark:text-red-300">
-                  <AlertCircle className="h-4 w-4" />
-                  {t("campaigns.detail.failures.heading", {
-                    count: campaign.failures.length,
-                  })}
-                </span>
-                <ChevronRight
-                  className={`h-4 w-4 text-red-600 transition-transform ${showFailures ? "rotate-90" : ""}`}
-                />
-              </button>
-              {showFailures && (
-                <div className="border-t border-red-200 dark:border-red-900/50 divide-y divide-red-200/60 dark:divide-red-900/40">
-                  {campaign.failures.map((f, i) => (
-                    <div key={i} className="px-4 py-2.5 text-xs">
-                      <div className="flex items-baseline justify-between gap-2 mb-0.5">
-                        <span className="font-medium text-zinc-900 dark:text-zinc-100">
-                          {f.candidate_name}
-                        </span>
-                        <span className="text-muted-foreground text-[10px]">
-                          {new Date(f.failed_at).toLocaleString("nl-NL")}
-                        </span>
-                      </div>
-                      {f.email && (
-                        <p className="text-muted-foreground font-mono text-[11px]">
-                          {f.email}
-                        </p>
-                      )}
-                      <p className="text-red-700 dark:text-red-400 mt-0.5">
-                        {f.reason}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Timestamps */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-            <TimeBox
-              label={t("campaigns.detail.timestamps.created")}
-              iso={campaign.created_at}
-            />
+          {/* Timestamps — the backend row has no `created_at`; started_at is
+              the creation moment (INSERT default now()). */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <TimeBox
               label={t("campaigns.detail.timestamps.started")}
               iso={campaign.started_at}

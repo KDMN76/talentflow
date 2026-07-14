@@ -3406,7 +3406,8 @@ export interface MailboxIntegration {
   /** Total emails synced via this mailbox in the last 24h */
   emails_synced_24h: number;
   active: boolean;
-  scopes: string[];
+  /** Space-separated OAuth scope string as returned by the provider (API: `scope`) */
+  scope: string;
   created_at: string;
 }
 
@@ -3421,10 +3422,8 @@ export const mockMailboxIntegrations: MailboxIntegration[] = [
     last_sync_at: "2026-05-07T08:14:00Z",
     emails_synced_24h: 23,
     active: true,
-    scopes: [
-      "https://www.googleapis.com/auth/gmail.send",
-      "https://www.googleapis.com/auth/gmail.readonly",
-    ],
+    scope:
+      "https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly",
     created_at: "2026-04-12T10:00:00Z",
   },
 ];
@@ -3472,29 +3471,33 @@ export interface BulkCampaignInput {
   audience: BulkCampaignAudience;
 }
 
+/**
+ * Mirrors the real `bulk_campaigns` row (backend `BulkCampaign`): the DB has no
+ * `name`, `provider`, `failures[]` or `created_at`. It uses `via` for the send
+ * channel and `total_*` aggregate counters, and `started_at` as the creation
+ * timestamp. Keep this aligned with apps/api bulkCampaign.service.ts.
+ */
 export interface BulkCampaign {
   id: string;
   tenant_id: string;
-  name: string;
+  user_id: string;
   subject: string;
   body_html: string;
   template_id: string | null;
-  provider: BulkCampaignProvider;
+  /** Send channel — Resend (transactional) or a personal mailbox integration */
+  via: "resend" | "mailbox_integration";
+  /** Required when via === "mailbox_integration" */
   mailbox_integration_id: string | null;
-  status: BulkCampaignStatus;
-  /** Total candidates that matched the audience filter */
-  eligible_count: number;
+  /** Total candidates that matched + passed the consent check */
+  total_eligible: number;
   /** Skipped because they had no consent or no email address */
-  skipped_count: number;
+  total_skipped_consent: number;
   /** Successfully sent so far */
-  sent_count: number;
+  total_sent: number;
   /** Permanently failed sends */
-  failed_count: number;
-  audience: BulkCampaignAudience;
-  failures: BulkCampaignFailure[];
-  created_by: string;
-  created_at: string;
-  started_at: string | null;
+  total_failed: number;
+  status: "running" | "completed" | "cancelled" | "failed";
+  started_at: string;
   completed_at: string | null;
 }
 
@@ -3502,99 +3505,53 @@ export const mockBulkCampaigns: BulkCampaign[] = [
   {
     id: "camp-1",
     tenant_id: "tenant-1",
-    name: "Lente-update senior frontend",
+    user_id: "user-1",
     subject: "Nieuwe rol bij {{tenant.name}} — wellicht iets voor jou?",
     body_html:
       "<p>Hi {{candidate.first_name}},</p><p>We hebben een nieuwe senior frontend-rol open. Heb je interesse om kennis te maken?</p><p>Groet,<br/>{{recruiter.name}}</p>",
     template_id: null,
-    provider: "resend",
+    via: "resend",
     mailbox_integration_id: null,
+    total_eligible: 145,
+    total_skipped_consent: 12,
+    total_sent: 87,
+    total_failed: 2,
     status: "running",
-    eligible_count: 145,
-    skipped_count: 12,
-    sent_count: 87,
-    failed_count: 2,
-    audience: {
-      tags: ["senior", "remote-ok"],
-      status: ["active"],
-      has_email_consent: true,
-    },
-    failures: [
-      {
-        candidate_id: "cand-2",
-        candidate_name: "Thomas Janssen",
-        email: "t.janssen@hotmail.com",
-        reason: "Bounce — mailbox vol",
-        failed_at: "2026-05-07T07:42:00Z",
-      },
-      {
-        candidate_id: "cand-9",
-        candidate_name: "Onbekende Kandidaat",
-        email: "obscure@example.com",
-        reason: "Rate-limited door provider",
-        failed_at: "2026-05-07T07:55:00Z",
-      },
-    ],
-    created_by: "user-1",
-    created_at: "2026-05-07T07:00:00Z",
     started_at: "2026-05-07T07:05:00Z",
     completed_at: null,
   },
   {
     id: "camp-2",
     tenant_id: "tenant-1",
-    name: "Re-engagement Q1 dropouts",
+    user_id: "user-1",
     subject: "We willen graag opnieuw met je in gesprek",
     body_html:
       "<p>Hi {{candidate.first_name}},</p><p>We zagen dat je eerder hebt gesolliciteerd. Er zijn nieuwe rollen die wellicht passen.</p>",
     template_id: null,
-    provider: "gmail",
+    via: "mailbox_integration",
     mailbox_integration_id: "mbx-1",
+    total_eligible: 62,
+    total_skipped_consent: 4,
+    total_sent: 62,
+    total_failed: 0,
     status: "completed",
-    eligible_count: 62,
-    skipped_count: 4,
-    sent_count: 62,
-    failed_count: 0,
-    audience: {
-      status: ["inactive"],
-      has_email_consent: true,
-    },
-    failures: [],
-    created_by: "user-1",
-    created_at: "2026-04-22T09:00:00Z",
     started_at: "2026-04-22T09:02:00Z",
     completed_at: "2026-04-22T15:48:00Z",
   },
   {
     id: "camp-3",
     tenant_id: "tenant-1",
-    name: "Data engineers — externe lijst",
+    user_id: "user-1",
     subject: "Vacature data engineer bij {{tenant.name}}",
     body_html: "<p>Hallo {{candidate.first_name}},</p><p>...</p>",
     template_id: null,
-    provider: "outlook",
+    via: "mailbox_integration",
     mailbox_integration_id: "mbx-2",
+    total_eligible: 38,
+    total_skipped_consent: 0,
+    total_sent: 4,
+    total_failed: 34,
     status: "failed",
-    eligible_count: 38,
-    skipped_count: 0,
-    sent_count: 4,
-    failed_count: 34,
-    audience: {
-      tags: ["data-engineer"],
-      has_email_consent: true,
-    },
-    failures: [
-      {
-        candidate_id: "cand-x",
-        candidate_name: "Niet beschikbaar",
-        email: null,
-        reason:
-          "OAuth-token verlopen — herverbind je Outlook-account onder Integraties",
-        failed_at: "2026-04-30T11:30:00Z",
-      },
-    ],
-    created_by: "user-1",
-    created_at: "2026-04-30T11:00:00Z",
     started_at: "2026-04-30T11:02:00Z",
     completed_at: "2026-04-30T11:34:00Z",
   },
@@ -4929,7 +4886,7 @@ export const mockSsoConfig: SamlConfig = {
     groups: "user.groups",
   },
   auto_create_users: false,
-  default_role_id: "role-recruiter",
+  default_role: "recruiter",
   sp_entity_id: "https://app.talentflow.nl/sso/tenant-1",
   sp_acs_url: "https://app.talentflow.nl/api/sso/tenant-1/acs",
   sp_metadata_url: "https://app.talentflow.nl/api/sso/tenant-1/metadata.xml",

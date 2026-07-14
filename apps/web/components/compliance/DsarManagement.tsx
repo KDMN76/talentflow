@@ -65,7 +65,9 @@ const TYPE_COLOR: Record<DsarRequestType, string> = {
     "bg-red-100 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900",
 };
 
-const STATUS_COLOR: Record<DsarStatus, string> = {
+// `expired` is a real backend status (see complianceLabels.ts) not yet in the
+// shared DsarStatus type — widen so an expired request gets a proper badge.
+const STATUS_COLOR: Record<DsarStatus | "expired", string> = {
   pending:
     "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
   in_progress:
@@ -74,6 +76,8 @@ const STATUS_COLOR: Record<DsarStatus, string> = {
     "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400",
   rejected:
     "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400",
+  expired:
+    "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400",
 };
 
 interface CountdownPill {

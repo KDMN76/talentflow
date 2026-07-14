@@ -44,10 +44,11 @@ export function useBulkCampaign(id: string | undefined) {
       );
       return data;
     },
-    // Poll while running so the progress bar updates live.
+    // Poll while running so the progress bar updates live. "running" is the
+    // only non-terminal status the backend sets (bulk_campaigns_status_check).
     refetchInterval: (query) => {
       const data = query.state.data;
-      if (data && (data.status === "running" || data.status === "queued")) {
+      if (data && data.status === "running") {
         return 4000;
       }
       return false;
