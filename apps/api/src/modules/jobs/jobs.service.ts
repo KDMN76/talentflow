@@ -451,6 +451,13 @@ export async function updateJob(
       throw new AppError(400, 'NO_FIELDS', 'Geen velden om bij te werken');
     }
 
+    // Leg het hire-moment vast zodra de vacature 'filled' wordt (en dat niet al
+    // was). time-to-hire (aggregator + analytics) leunt hierop. filled_at zit
+    // niet in MUTABLE_JOB_COLUMNS, dus dit dubbelt niet.
+    if (data.status === 'filled' && existing.status !== 'filled') {
+      fields.push(`filled_at = now()`);
+    }
+
     fields.push(`updated_at = now()`);
     values.push(jobId, tenantId);
 

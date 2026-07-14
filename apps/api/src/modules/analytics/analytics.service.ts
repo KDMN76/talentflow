@@ -69,12 +69,15 @@ export async function getOverview(
 
       // Periode-cijfer (default: all-time) + recruiter.
       const { rows: [avgTimeRow] } = await client.query(
-        `SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (close_date::timestamptz - created_at)) / 86400), 0) as avg_days
+        // time-to-hire = tijd tot het job 'filled' werd. filled_at is het echte
+        // hire-moment (gezet op de status→filled-transitie), niet de handmatige
+        // close_date; consistent met de report-aggregator.
+        `SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (filled_at - created_at)) / 86400), 0) as avg_days
          FROM jobs
-         WHERE tenant_id = $1 AND close_date::timestamptz IS NOT NULL AND deleted_at IS NULL
+         WHERE tenant_id = $1 AND filled_at IS NOT NULL AND deleted_at IS NULL
            AND ($2::uuid IS NULL OR recruiter_id = $2)
-           AND ($3::timestamptz IS NULL OR close_date::timestamptz >= $3)
-           AND ($4::timestamptz IS NULL OR close_date::timestamptz < $4)`,
+           AND ($3::timestamptz IS NULL OR filled_at >= $3)
+           AND ($4::timestamptz IS NULL OR filled_at < $4)`,
         [tenantId, recruiterId, from, to]
       );
 
@@ -188,7 +191,7 @@ export async function getRecruiterStats(
                AND a.updated_at >= COALESCE($3::timestamptz, date_trunc('month', now()))
                AND ($4::timestamptz IS NULL OR a.updated_at < $4)
            ) as hires_this_month,
-           COALESCE(AVG(EXTRACT(EPOCH FROM (j.close_date::timestamptz - j.created_at)) / 86400) FILTER (WHERE j.close_date::timestamptz IS NOT NULL), 0) as avg_time_to_hire_days
+           COALESCE(AVG(EXTRACT(EPOCH FROM (j.filled_at - j.created_at)) / 86400) FILTER (WHERE j.filled_at IS NOT NULL), 0) as avg_time_to_hire_days
          FROM users u
          LEFT JOIN jobs j ON j.recruiter_id = u.id AND j.tenant_id = $1 AND j.deleted_at IS NULL
          LEFT JOIN applications a ON a.job_id = j.id AND a.tenant_id = $1
