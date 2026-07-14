@@ -19,7 +19,7 @@
  *   - Rate-limiting (30 req/uur per token) wordt op router-niveau gedaan.
  */
 
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
 import type { PoolClient } from 'pg';
 import { withTenant, withoutTenant } from '../../db/pool';
 import { AppError } from '../../middleware/errorHandler';
@@ -118,6 +118,15 @@ function generateOpaqueToken(): string {
   return randomBytes(TOKEN_BYTES).toString('hex');
 }
 
+/**
+ * Hash een raw token met sha256 (hex). Zelfde conventie als
+ * password_reset_tokens (041) en data_export_tokens (046): at rest
+ * bewaren we alléén de hash, de raw token zit enkel in de URL.
+ */
+function hashToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
+}
+
 function buildSelfServiceUrl(token: string): string {
   const base =
     process.env.PUBLIC_APP_URL?.replace(/\/$/, '') ??
@@ -137,6 +146,7 @@ export async function generateCandidateSelfToken(
   ctx: AuditContext = {}
 ): Promise<{ token: string; url: string; expires_at: string }> {
   const token = generateOpaqueToken();
+  const tokenHash = hashToken(token);
   const expiresAt = new Date(Date.now() + TOKEN_TTL_MS);
 
   await withTenant(tenantId, async (client) => {
@@ -149,11 +159,12 @@ export async function generateCandidateSelfToken(
       throw new AppError(404, 'CANDIDATE_NOT_FOUND', 'Kandidaat niet gevonden');
     }
 
+    // Alléén de hash bewaren; de raw token zit in de URL (buildSelfServiceUrl).
     await client.query(
       `INSERT INTO candidate_self_tokens
-         (tenant_id, candidate_id, token, expires_at)
+         (tenant_id, candidate_id, token_hash, expires_at)
        VALUES ($1, $2, $3, $4)`,
-      [tenantId, candidateId, token, expiresAt.toISOString()]
+      [tenantId, candidateId, tokenHash, expiresAt.toISOString()]
     );
 
     await logAudit(
@@ -198,8 +209,8 @@ async function findAndTouchToken(
     const { rows } = await client.query<TokenRow>(
       `SELECT id, tenant_id, candidate_id, expires_at::text, used_count
          FROM candidate_self_tokens
-        WHERE token = $1`,
-      [token]
+        WHERE token_hash = $1`,
+      [hashToken(token)]
     );
     const row = rows[0];
     if (!row) {
@@ -412,12 +423,16 @@ export async function recordCandidateConsentChange(
   await withTenant(tenantId, async (client) => {
     const col = type === 'gdpr' ? 'gdpr_consent' : 'email_consent';
     const tsCol = type === 'gdpr' ? 'gdpr_consent_at' : 'email_consent_at';
+    // Guard: geen consent-wijziging op een verwijderde/geanonimiseerde
+    // kandidaat (zelfde check als getCandidateSelfData/export). Atomisch via
+    // de WHERE-clause: 0 rijen → 404.
     const { rowCount } = await client.query(
       `UPDATE candidates
           SET ${col} = $1,
               ${tsCol} = CASE WHEN $1 THEN now() ELSE NULL END,
               updated_at = now()
-        WHERE id = $2 AND tenant_id = $3`,
+        WHERE id = $2 AND tenant_id = $3
+          AND deleted_at IS NULL AND anonymized_at IS NULL`,
       [granted, candidateId, tenantId]
     );
     if (rowCount === 0) {
@@ -521,19 +536,30 @@ export async function recordCandidateDeletionRequest(
   const tokenRow = await findAndTouchToken(token);
   const { tenant_id: tenantId, candidate_id: candidateId } = tokenRow;
 
+  // Guard: geen (dubbele) deletion-DSAR op een verwijderde/geanonimiseerde
+  // kandidaat (zelfde check als getCandidateSelfData/export).
   const candidate = await withTenant(tenantId, async (client) => {
     const { rows } = await client.query(
-      `SELECT email FROM candidates WHERE id = $1 AND tenant_id = $2`,
+      `SELECT email FROM candidates
+        WHERE id = $1 AND tenant_id = $2
+          AND deleted_at IS NULL AND anonymized_at IS NULL`,
       [candidateId, tenantId]
     );
     return rows[0] ?? null;
   });
+  if (!candidate) {
+    throw new AppError(
+      404,
+      'CANDIDATE_NOT_FOUND',
+      'Je gegevens zijn niet meer beschikbaar'
+    );
+  }
 
   const dsar = await createDsarRequest(
     tenantId,
     candidateId,
     'deletion',
-    candidate?.email ?? 'self-portal@talentflow.local',
+    candidate.email ?? 'self-portal@talentflow.local',
     'self_portal',
     reason,
     ctx

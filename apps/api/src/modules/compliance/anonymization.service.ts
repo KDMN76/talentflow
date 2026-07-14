@@ -131,6 +131,15 @@ export async function anonymizeCandidatePermanently(
       [placeholderName, `#${reference}`, candidateId, tenantId]
     );
 
+    // 1b. Trek nog-geldige self-service-tokens in: na anonimisatie mag geen
+    //     enkele /profile/<token>-link nog data tonen of muteren. Binnen
+    //     dezelfde transactie zodat het atomisch met anonymized_at gebeurt.
+    await client.query(
+      `DELETE FROM candidate_self_tokens
+        WHERE candidate_id = $1 AND tenant_id = $2`,
+      [candidateId, tenantId]
+    );
+
     // 2. Verzamel resumes voor delete + scrub metadata.
     const { rows: resumeRows } = await client.query<ResumeRow>(
       `SELECT id, filename, storage_key, storage_url, mime_type
