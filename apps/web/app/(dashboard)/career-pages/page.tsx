@@ -52,7 +52,7 @@ import {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const TEMPLATES: CareerPageTemplate[] = ["modern", "classic", "minimal", "tech", "creative"];
+const TEMPLATES: CareerPageTemplate[] = ["modern", "classic", "minimal", "tech", "creative", "agency"];
 const LANGUAGES: CareerPageLanguage[] = ["nl", "en", "de", "fr", "es"];
 
 // ─── TemplatePreview ─────────────────────────────────────────────────────────

@@ -30,6 +30,7 @@ import type { CustomFieldValue } from "@/lib/types/atsExtensions";
 import {
   JOB_SALARY_FREQUENCY_VALUES,
   JobCreateInputSchema,
+  type JobCreateInput,
   type JobSalaryFrequency,
 } from "@talentflow/contracts";
 
@@ -140,8 +141,12 @@ export function JobForm({ showTemplatePicker = false }: JobFormProps) {
     if (jobData.department) setValue("department", jobData.department as string);
     if (jobData.location) setValue("location", jobData.location as string);
     if (jobData.description) setValue("description", jobData.description as string);
-    if (Array.isArray(jobData.requirements)) {
-      setValue("requirements_raw", (jobData.requirements as string[]).join("\n"));
+    // Templates bewaren de vereisten in `required_skills` (zie backend
+    // TEMPLATEABLE_JOB_FIELDS); de UI toont ze als newline-tekst in
+    // `requirements_raw`. Vroeger las dit `jobData.requirements` (fantoomveld) →
+    // vereisten kwamen nooit terug bij het kiezen van een template.
+    if (Array.isArray(jobData.required_skills)) {
+      setValue("requirements_raw", (jobData.required_skills as string[]).join("\n"));
     }
     setPickerDone(true);
   };
@@ -171,11 +176,35 @@ export function JobForm({ showTemplatePicker = false }: JobFormProps) {
       return;
     }
     try {
-      // Strip UI-only `requirements_raw` (backend kent het veld niet).
       // `data` is al door Zod gevalideerd via resolver — salary_min/max
-      // zijn nu numbers of undefined, niet null. Lege compensation_criteria
-      // niet meesturen (DB laat het veld dan NULL).
-      const { requirements_raw: _requirements_raw, ...createInput } = data;
+      // zijn nu numbers of undefined, niet null. We splitsen het UI-only
+      // `requirements_raw` af en herbouwen de create-payload expliciet.
+      const { requirements_raw, ...rest } = data;
+      const createInput: JobCreateInput = { ...rest };
+
+      // Vereisten-textarea (newline-gescheiden) → `required_skills[]`. Dit sluit
+      // de round-trip met de template-picker (die vult requirements_raw juist
+      // vanuit required_skills). Vroeger werd dit veld volledig weggegooid.
+      const requirements = (requirements_raw ?? "")
+        .split("\n")
+        .map((r) => r.trim())
+        .filter(Boolean);
+      if (requirements.length > 0) {
+        createInput.required_skills = requirements;
+      }
+
+      // Custom-field waarden (CustomFieldsRenderer) meesturen; lege waarden
+      // weglaten. Vroeger werd `customValues` nergens heen gestuurd.
+      const customFieldsPayload = Object.fromEntries(
+        Object.entries(customValues).filter(
+          ([, v]) => v !== undefined && v !== null && v !== ""
+        )
+      );
+      if (Object.keys(customFieldsPayload).length > 0) {
+        createInput.custom_fields = customFieldsPayload;
+      }
+
+      // Lege compensation_criteria niet meesturen (DB laat het veld dan NULL).
       if (!createInput.compensation_criteria?.trim()) {
         delete createInput.compensation_criteria;
       }

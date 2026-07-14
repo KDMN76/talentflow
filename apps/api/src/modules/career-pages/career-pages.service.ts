@@ -264,12 +264,26 @@ export async function updateCareerPage(
 
     values.push(id, tenantId);
 
-    const { rows: [page] } = await client.query(
-      `UPDATE career_pages SET ${fields.join(', ')}
-       WHERE id = $${idx++} AND tenant_id = $${idx} AND deleted_at IS NULL
-       RETURNING *`,
-      values
-    );
+    // Slugs zijn globaal-uniek (cross-tenant). De precheck hierboven filtert
+    // niet op tenant en ziet onder een tenant-gescopte RLS-rol geen conflict in
+    // een andere tenant → de UPDATE botst dan op de unique-constraint (23505).
+    // Die vangen we af en mappen we naar een nette 409 (zoals de custom-domain-
+    // en create-flow), i.p.v. een generieke 500.
+    let page;
+    try {
+      const res = await client.query(
+        `UPDATE career_pages SET ${fields.join(', ')}
+         WHERE id = $${idx++} AND tenant_id = $${idx} AND deleted_at IS NULL
+         RETURNING *`,
+        values
+      );
+      page = res.rows[0];
+    } catch (err) {
+      if ((err as { code?: string }).code === '23505') {
+        throw new AppError(409, 'SLUG_TAKEN', 'Deze slug is al in gebruik');
+      }
+      throw err;
+    }
 
     return page;
   });

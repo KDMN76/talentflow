@@ -253,6 +253,12 @@ export const JobCreateInputSchema = z
     pay_transparency_required: z.boolean().optional(),
     compensation_criteria: z.string().max(2000).optional(),
 
+    // Custom fields (EAV, geen jobs-kolom) — `key → value` map. Wordt ná de
+    // job-insert door createJob via setValuesForEntity gepersisteerd + tegen de
+    // per-tenant custom_field_definitions gevalideerd. Zonder dit veld werden
+    // de CustomFieldsRenderer-waarden in JobForm stilletjes gedropt.
+    custom_fields: z.record(z.unknown()).optional(),
+
     // Business-logica (niet in jobs-kolom)
     pipeline_template_id: z.string().uuid().optional(),
   })
@@ -272,12 +278,16 @@ export type JobCreateInput = z.infer<typeof JobCreateInputSchema>;
  *       * `pipeline_template_id` — swappen ná create zou bestaande
  *          applications losmaken van stages; backend heeft een aparte
  *          route POST `/jobs/:id/pipeline-template` voor template-rotatie.
+ *       * `custom_fields` — updateJob verwerkt (nog) geen custom-field-waarden;
+ *          ze worden via een aparte custom-fields-route bijgewerkt. Weglaten
+ *          i.p.v. accepteren voorkomt een silent-drop op PATCH.
  *   - Server-immutable velden (id, tenant_id, created_at, job_reference)
  *     waren al niet in CreateInput aanwezig → blijven afwezig.
  *   - `.strict()` blijft aan om silent-drop te voorkomen.
  */
 export const JobUpdateInputSchema = JobCreateInputSchema.omit({
   pipeline_template_id: true,
+  custom_fields: true,
 }).partial();
 
 export type JobUpdateInput = z.infer<typeof JobUpdateInputSchema>;

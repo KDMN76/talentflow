@@ -9,6 +9,7 @@ import { queueEmbedding } from '../matching/matchingEmitter';
 import { autoPostJobToBoards } from '../job-boards/autoPost.service';
 import { logAudit, type AuditContext } from '../../lib/audit';
 import { AuditActions } from '../../lib/auditActions';
+import { setValuesForEntity } from '../custom-fields/customFields.service';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -62,6 +63,23 @@ const MUTABLE_JOB_COLUMNS = [
 ] as const;
 
 type MutableJobColumn = (typeof MUTABLE_JOB_COLUMNS)[number];
+
+/**
+ * Expliciete kolom-projectie voor RETURNING-clauses (create/update/duplicate).
+ * Mirror't JobRowSchema en sluit `embedding`(vector(1536)) +
+ * `embedding_updated_at` BEWUST uit: die horen niet in de API-wire-shape (intern,
+ * alleen voor matching) en zouden per job ~15-30KB payload-bloat + een lek van
+ * een intern veld opleveren. `RETURNING *` deed dat wél. getJob gebruikt exact
+ * dezelfde lijst (met `j.`-alias) — hier zonder alias want RETURNING op de
+ * ongeprefixte `jobs`-tabel.
+ */
+const JOB_RETURNING_COLUMNS = `id, tenant_id, title, description, department, location,
+       salary_min, salary_max, employment_type, status, recruiter_id, organization_id,
+       deleted_at, created_at, updated_at, job_reference, headcount, experience_level,
+       contract_type, contract_details, open_date, close_date, industry, remote_type,
+       office_address, package_details, currency, salary_frequency, required_skills,
+       nice_to_have_skills, pay_transparency_required, salary_band_disclosed,
+       compensation_criteria`;
 
 /**
  * Alphabet excluding visually ambiguous chars (O/0, I/1) — matches the
@@ -216,6 +234,13 @@ export interface CreateJobInput {
   compensation_criteria?: string | null;
 
   /**
+   * Per-tenant custom-field waarden (`key → value`). Geen `jobs`-kolom: wordt
+   * ná de job-insert via setValuesForEntity (EAV-store) gepersisteerd +
+   * gevalideerd tegen de tenant-definities.
+   */
+  custom_fields?: Record<string, unknown> | null;
+
+  /**
    * Optional. Defaults to the system "Bureau Pipeline" template
    * (resolved by `resolvePipelineTemplateId`).
    */
@@ -229,6 +254,8 @@ export async function createJob(
   ctx: AuditContext = {}
 ) {
   const userSuppliedReference = data.job_reference !== undefined && data.job_reference !== null;
+  // custom_fields is geen jobs-kolom → apart houden en ná de insert persisteren.
+  const customFields = data.custom_fields ?? undefined;
 
   const job = await withTenant(tenantId, async (client) => {
     const maxAttempts = REFERENCE_RETRY_LIMIT + 1;
@@ -247,8 +274,10 @@ export async function createJob(
       if (payload.status === undefined) {
         payload.status = 'draft';
       }
-      // Strip pipeline_template_id from the row payload (separately resolved).
+      // Strip niet-kolom-velden uit de row payload (buildInsertColumns negeert
+      // ze al, maar expliciet weg voor duidelijkheid).
       delete payload.pipeline_template_id;
+      delete payload.custom_fields;
 
       const { cols, placeholders, values } = buildInsertColumns(payload, 2); // $1 = tenant_id
 
@@ -258,7 +287,7 @@ export async function createJob(
 
       const sql = `INSERT INTO jobs (${allCols.join(', ')})
                    VALUES (${allPlaceholders.join(', ')})
-                   RETURNING *`;
+                   RETURNING ${JOB_RETURNING_COLUMNS}`;
 
       try {
         const { rows: [job] } = await client.query(sql, allValues);
@@ -329,6 +358,14 @@ export async function createJob(
       { lastError: (lastErr as Error | null)?.message }
     );
   });
+
+  // Custom-field waarden persisteren ná de commit (de job-row bestaat dan en is
+  // zichtbaar voor de eigen withTenant-transactie van setValuesForEntity).
+  // Validatie tegen de tenant-definities zit in setValuesForEntity. Alleen
+  // aanroepen bij daadwerkelijke waarden zodat de gewone flow ongemoeid blijft.
+  if (customFields && Object.keys(customFields).length > 0) {
+    await setValuesForEntity(tenantId, userId, 'job', job.id, customFields, ctx);
+  }
 
   // Post-commit emit so workflow worker only sees rows that actually persisted.
   await emitWorkflowEvent(tenantId, 'job.created', job.id, {
@@ -464,7 +501,7 @@ export async function updateJob(
     const { rows: [job] } = await client.query(
       `UPDATE jobs SET ${fields.join(', ')}
        WHERE id = $${idx++} AND tenant_id = $${idx}
-       RETURNING *`,
+       RETURNING ${JOB_RETURNING_COLUMNS}`,
       values
     );
 
@@ -627,7 +664,7 @@ export async function duplicateJob(
         const { rows: [row] } = await client.query(
           `INSERT INTO jobs (${allCols.join(', ')})
            VALUES (${allPlaceholders.join(', ')})
-           RETURNING *`,
+           RETURNING ${JOB_RETURNING_COLUMNS}`,
           allValues
         );
         newJob = row;

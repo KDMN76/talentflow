@@ -25,6 +25,10 @@ const createSchema = z.object({
   template: z.string().min(1).max(50).default('modern'),
   config: configSchema.optional().default({}),
   language: z.string().max(10).optional(),
+  // De create-dialog (web) stuurt de hoofdkleur top-level i.p.v. binnen `config`.
+  // Zonder dit veld strip't zod het weg → config bleef {} en de gekozen kleur
+  // ging verloren. We accepteren het hier en mergen het hieronder in config.
+  primary_color: z.string().max(20).optional(),
 });
 
 const updateSchema = z.object({
@@ -102,11 +106,16 @@ export async function create(
   next: NextFunction
 ): Promise<void> {
   try {
-    const data = createSchema.parse(req.body);
+    const { primary_color, ...data } = createSchema.parse(req.body);
+    // Top-level primary_color (van de create-dialog) in config mergen zodat de
+    // gekozen hoofdkleur behouden blijft. Expliciete config-waarde wint.
+    const config = primary_color
+      ? { primary_color, ...data.config }
+      : data.config;
     const page = await careerPagesService.createCareerPage(
       req.user!.tenantId,
       req.user!.userId,
-      data
+      { ...data, config }
     );
     res.status(201).json(page);
   } catch (err) {
