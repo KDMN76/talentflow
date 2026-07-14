@@ -457,12 +457,15 @@ function RepliesTab() {
   }
   return (
     <div className="space-y-3">
+      {/* De API levert platte classificatie-rijen; het bijbehorende reply-/
+          origineel-bericht wordt (nog) niet meegejoined → reply/original null
+          (ReplyCard is daar tolerant voor). Backend-join = Fase-2-uitbreiding. */}
       {data.map((row) => (
         <ReplyCard
-          key={row.classification.id}
-          classification={row.classification}
-          reply={row.reply}
-          original={row.original}
+          key={row.id}
+          classification={row}
+          reply={null}
+          original={null}
         />
       ))}
     </div>

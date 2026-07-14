@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { unwrapData, unwrapList } from "@/lib/apiEnvelope";
 import type {
   CandidateSignal,
   OutreachChannel,
@@ -54,11 +55,10 @@ export function useOutreachMessages(filters: MessageFilters = {}) {
   return useQuery({
     queryKey: ["outreach", "messages", filters],
     queryFn: async (): Promise<OutreachMessage[]> => {
-      const { data } = await api.get<{ items: OutreachMessage[] }>(
-        "/outreach/messages",
-        { params: filters }
-      );
-      return data.items;
+      const { data } = await api.get<unknown>("/outreach/messages", {
+        params: filters,
+      });
+      return unwrapList<OutreachMessage>(data);
     },
   });
 }
@@ -144,10 +144,8 @@ export function useOutreachQuotas() {
   return useQuery({
     queryKey: ["outreach", "quotas"],
     queryFn: async (): Promise<OutreachQuota[]> => {
-      const { data } = await api.get<{ items: OutreachQuota[] }>(
-        "/outreach/quotas"
-      );
-      return data.items;
+      const { data } = await api.get<unknown>("/outreach/quotas");
+      return unwrapList<OutreachQuota>(data);
     },
   });
 }
@@ -183,21 +181,11 @@ export interface ReplyFilters {
 export function useReplies(filters: ReplyFilters = {}) {
   return useQuery({
     queryKey: ["outreach", "replies", filters],
-    queryFn: async (): Promise<
-      Array<{
-        classification: ReplyClassification;
-        reply: OutreachMessage | null;
-        original: OutreachMessage | null;
-      }>
-    > => {
-      const { data } = await api.get<{
-        items: Array<{
-          classification: ReplyClassification;
-          reply: OutreachMessage | null;
-          original: OutreachMessage | null;
-        }>;
-      }>("/outreach/replies", { params: filters });
-      return data.items;
+    queryFn: async (): Promise<ReplyClassification[]> => {
+      const { data } = await api.get<unknown>("/outreach/replies", {
+        params: filters,
+      });
+      return unwrapList<ReplyClassification>(data);
     },
   });
 }
@@ -213,11 +201,10 @@ export function useSignals(filters: SignalFilters = {}) {
   return useQuery({
     queryKey: ["outreach", "signals", filters],
     queryFn: async (): Promise<CandidateSignal[]> => {
-      const { data } = await api.get<{ items: CandidateSignal[] }>(
-        "/outreach/signals",
-        { params: filters }
-      );
-      return data.items;
+      const { data } = await api.get<unknown>("/outreach/signals", {
+        params: filters,
+      });
+      return unwrapList<CandidateSignal>(data);
     },
   });
 }
@@ -241,12 +228,12 @@ export function useDraftReactivation() {
     }: {
       signalId: string;
       sequenceId: string;
-    }): Promise<{ enrollment_id: string }> => {
-      const { data } = await api.post<{ enrollment_id: string }>(
+    }): Promise<{ id: string }> => {
+      const { data } = await api.post<unknown>(
         `/outreach/signals/${signalId}/draft-reactivation`,
         { sequence_id: sequenceId }
       );
-      return data;
+      return unwrapData<{ id: string }>(data);
     },
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: ["outreach", "signals"] }),

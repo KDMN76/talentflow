@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { unwrapData, unwrapList } from "@/lib/apiEnvelope";
 import type {
   AccountingCatalogEntry,
   AccountingIntegration,
@@ -80,13 +81,11 @@ export function useContracts(filters: ContractFilters = {}) {
   return useQuery({
     queryKey: ["contracts", filters],
     queryFn: async (): Promise<Contract[]> => {
-      // Backend levert { data: [...], next_cursor } (niet { items }). Onder-
-      // steun beide + bare array, en val terug op [] zodat `.reduce`/`.filter`
-      // in consumers nooit op een niet-array draait.
-      const { data } = await api.get<
-        { data?: Contract[]; items?: Contract[] } | Contract[]
-      >("/contracts", { params: filters });
-      return Array.isArray(data) ? data : data.data ?? data.items ?? [];
+      // Backend levert { data: [...], next_cursor } (niet { items }). unwrapList
+      // tolereert { data } / { items } / bare array en valt terug op [] zodat
+      // `.reduce`/`.filter` in consumers nooit op een niet-array draait.
+      const { data } = await api.get<unknown>("/contracts", { params: filters });
+      return unwrapList<Contract>(data);
     },
   });
 }
@@ -97,8 +96,10 @@ export function useContract(id: string | undefined) {
     enabled: !!id,
     queryFn: async (): Promise<Contract> => {
       if (!id) throw new Error("Geen contract-ID");
-      const { data } = await api.get<Contract>(`/contracts/${id}`);
-      return data;
+      // Backend levert { data: contract } → uitpakken (anders leest de detail-
+      // pagina velden op de wrapper → "niet gevonden"/crash).
+      const { data } = await api.get<unknown>(`/contracts/${id}`);
+      return unwrapData<Contract>(data);
     },
   });
 }
@@ -109,6 +110,9 @@ export function useContractExtensions(contractId: string | undefined) {
     enabled: !!contractId,
     queryFn: async (): Promise<ContractExtension[]> => {
       if (!contractId) return [];
+      // TODO: de route GET /contracts/:id/extensions BESTAAT NIET (404) — wordt
+      // in een aparte backend-workstream toegevoegd. Bewust niet aangeraakt in
+      // de envelope-fix; envelope/unwrap volgt zodra de route er is.
       const { data } = await api.get<ContractExtension[]>(
         `/contracts/${contractId}/extensions`
       );
@@ -137,8 +141,10 @@ export function useCreateContract() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: CreateContractInput): Promise<Contract> => {
-      const { data } = await api.post<Contract>("/contracts", input);
-      return data;
+      // Backend levert { data: contract } → uitpakken (consument leest `.id`
+      // voor de redirect naar /contracts/:id).
+      const { data } = await api.post<unknown>("/contracts", input);
+      return unwrapData<Contract>(data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["contracts"] });
@@ -233,11 +239,10 @@ export function useTimesheets(filters: TimesheetFilters = {}) {
   return useQuery({
     queryKey: ["timesheets", filters],
     queryFn: async (): Promise<Timesheet[]> => {
-      const { data } = await api.get<{ items: Timesheet[] } | Timesheet[]>(
-        "/timesheets",
-        { params: filters }
-      );
-      return Array.isArray(data) ? data : data.items;
+      // Backend levert { data: [...], next_cursor } — NIET { items }. De oude
+      // `.items`-lezing gaf undefined → lege lijst. unwrapList pakt { data }.
+      const { data } = await api.get<unknown>("/timesheets", { params: filters });
+      return unwrapList<Timesheet>(data);
     },
   });
 }
@@ -248,8 +253,9 @@ export function useTimesheet(id: string | undefined) {
     enabled: !!id,
     queryFn: async (): Promise<Timesheet> => {
       if (!id) throw new Error("Geen timesheet-ID");
-      const { data } = await api.get<Timesheet>(`/timesheets/${id}`);
-      return data;
+      // Backend levert { data: timesheet } → uitpakken.
+      const { data } = await api.get<unknown>(`/timesheets/${id}`);
+      return unwrapData<Timesheet>(data);
     },
   });
 }
@@ -444,17 +450,15 @@ export function useTimesheetSummary(
     enabled: !!contractId,
     queryFn: async (): Promise<TimesheetSummary> => {
       if (!contractId) throw new Error("Geen contract");
-      const { data } = await api.get<TimesheetSummary>(
-        "/timesheets/summary",
-        {
-          params: {
-            contract_id: contractId,
-            period_start: periodStart,
-            period_end: periodEnd,
-          },
-        }
-      );
-      return data;
+      // Backend levert { data: summary } → uitpakken.
+      const { data } = await api.get<unknown>("/timesheets/summary", {
+        params: {
+          contract_id: contractId,
+          period_start: periodStart,
+          period_end: periodEnd,
+        },
+      });
+      return unwrapData<TimesheetSummary>(data);
     },
   });
 }
@@ -462,8 +466,18 @@ export function useTimesheetSummary(
 // ─── Public timesheet portaal (token-based) ─────────────────────────────────
 
 export interface PublicTimesheetData {
+  contract_id: string;
+  candidate_id: string;
   timesheet: Timesheet;
-  contract: Pick<
+  token_expires_at: string;
+  /**
+   * NB: GET /public/timesheets/:token levert (nog) GEEN contract-object — de
+   * portaalpagina leest contract.candidate_name/client_name/weekly_hours.
+   * Optioneel gehouden zodat de page compileert én met optional-chaining niet
+   * crasht; het daadwerkelijk meesturen van deze velden hoort in een aparte
+   * backend/page-workstream, niet in deze envelope-fix.
+   */
+  contract?: Pick<
     Contract,
     | "id"
     | "candidate_name"
@@ -480,10 +494,11 @@ export function usePublicTimesheet(token: string | undefined) {
     enabled: !!token,
     queryFn: async (): Promise<PublicTimesheetData> => {
       if (!token) throw new Error("Geen token");
-      const { data } = await api.get<PublicTimesheetData>(
-        `/public/timesheets/${token}`
-      );
-      return data;
+      // Backend levert { data: { contract_id, candidate_id, timesheet,
+      // token_expires_at } } → uitpakken (anders krijgt de page de wrapper en
+      // is data.timesheet undefined → leeg formulier).
+      const { data } = await api.get<unknown>(`/public/timesheets/${token}`);
+      return unwrapData<PublicTimesheetData>(data);
     },
   });
 }
@@ -567,8 +582,15 @@ export function useInvoice(id: string | undefined) {
     enabled: !!id,
     queryFn: async (): Promise<Invoice> => {
       if (!id) throw new Error("Geen factuur");
-      const { data } = await api.get<Invoice>(`/invoices/${id}`);
-      return data;
+      // Non-standaard envelope: GET /invoices/:id levert { invoice, lines }
+      // (GEEN { data }). De detailpagina leest één Invoice met `.lines` erin →
+      // lines expliciet in het invoice-object mergen.
+      const { data } = await api.get<unknown>(`/invoices/${id}`);
+      const { invoice, lines } = data as {
+        invoice: Invoice;
+        lines: InvoiceLine[];
+      };
+      return { ...invoice, lines };
     },
   });
 }
@@ -583,8 +605,14 @@ export function useCreateInvoice() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: CreateInvoiceInput): Promise<Invoice> => {
-      const { data } = await api.post<Invoice>("/invoices", input);
-      return data;
+      // Non-standaard envelope: POST /invoices levert { invoice, lines }. De
+      // consument leest `.id`/`.invoice_number` → het invoice-object teruggeven.
+      const { data } = await api.post<unknown>("/invoices", input);
+      const { invoice, lines } = data as {
+        invoice: Invoice;
+        lines: InvoiceLine[];
+      };
+      return { ...invoice, lines };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["invoices"] });
@@ -739,10 +767,10 @@ export function useCommissionSchemes() {
   return useQuery({
     queryKey: ["commissions", "schemes"],
     queryFn: async (): Promise<CommissionScheme[]> => {
-      const { data } = await api.get<CommissionScheme[]>(
-        "/commissions/schemes"
-      );
-      return data;
+      // Backend wikkelt in { data: [...] } → uitpakken naar array (anders lege
+      // lijst omdat de wrapper geen array is).
+      const { data } = await api.get<unknown>("/commissions/schemes");
+      return unwrapList<CommissionScheme>(data);
     },
   });
 }
@@ -798,11 +826,11 @@ export function useCommissionAssignments(
   return useQuery({
     queryKey: ["commissions", "assignments", filters],
     queryFn: async (): Promise<CommissionAssignment[]> => {
-      const { data } = await api.get<CommissionAssignment[]>(
-        "/commissions/assignments",
-        { params: filters }
-      );
-      return data;
+      // Backend wikkelt in { data: [...] } → uitpakken naar array.
+      const { data } = await api.get<unknown>("/commissions/assignments", {
+        params: filters,
+      });
+      return unwrapList<CommissionAssignment>(data);
     },
   });
 }

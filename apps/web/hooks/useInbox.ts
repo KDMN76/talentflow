@@ -19,6 +19,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { unwrapList } from "@/lib/apiEnvelope";
 import type {
   ChannelType,
   UnifiedThread,
@@ -46,11 +47,11 @@ export function useInboxThreads(filters: InboxFilters = {}) {
   return useQuery({
     queryKey: ["inbox", "threads", filters],
     queryFn: async (): Promise<UnifiedThread[]> => {
-      const { data } = await api.get<{ items: UnifiedThread[] }>(
-        "/inbox/threads",
-        { params: filters }
-      );
-      return data.items;
+      // Backend levert { data, next_cursor } — niet { items }.
+      const { data } = await api.get<unknown>("/inbox/threads", {
+        params: filters,
+      });
+      return unwrapList<UnifiedThread>(data);
     },
     refetchInterval: 10_000,
   });
@@ -76,10 +77,10 @@ export function useThreadTimeline(threadId: string | undefined) {
     enabled: !!threadId,
     queryFn: async (): Promise<TimelineEvent[]> => {
       if (!threadId) throw new Error("Geen thread-ID");
-      const { data } = await api.get<{ items: TimelineEvent[] }>(
+      const { data } = await api.get<unknown>(
         `/inbox/threads/${threadId}/timeline`
       );
-      return data.items;
+      return unwrapList<TimelineEvent>(data);
     },
     refetchInterval: 6_000,
   });

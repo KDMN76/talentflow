@@ -124,7 +124,7 @@ export default function PublicTimesheetPortalPage() {
     (s, r) => s + (parseInt(r.break_minutes, 10) || 0),
     0
   );
-  const expectedWeekHours = contract.weekly_hours ?? 40;
+  const expectedWeekHours = contract?.weekly_hours ?? 40;
   const isReadonly =
     timesheet.status === "submitted" ||
     timesheet.status === "approved" ||
@@ -219,12 +219,12 @@ export default function PublicTimesheetPortalPage() {
             Urenstaat · Kandidaten-portaal
           </p>
           <h1 className="mt-1 text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 sm:text-2xl">
-            Hallo {contract.candidate_name?.split(" ")[0] ?? "kandidaat"}
+            Hallo {contract?.candidate_name?.split(" ")[0] ?? "kandidaat"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Werkweek bij{" "}
             <span className="font-medium text-zinc-700 dark:text-zinc-300">
-              {contract.client_name ?? "—"}
+              {contract?.client_name ?? "—"}
             </span>{" "}
             · {formatDate(timesheet.week_start)} t/m{" "}
             {formatDate(timesheet.week_end)}

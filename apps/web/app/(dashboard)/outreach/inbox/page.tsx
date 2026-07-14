@@ -67,12 +67,14 @@ export default function InboxPage() {
       list.push({ kind: "draft", ts: m.created_at, message: m });
     }
     for (const r of replies.data ?? []) {
+      // De API levert platte classificatie-rijen; het reply-/origineel-bericht
+      // wordt (nog) niet meegejoined (Fase-2-uitbreiding).
       list.push({
         kind: "reply",
-        ts: r.classification.classified_at,
-        classification: r.classification,
-        reply: r.reply,
-        original: r.original,
+        ts: r.classified_at,
+        classification: r,
+        reply: null,
+        original: null,
       });
     }
     return list.sort((a, b) => b.ts.localeCompare(a.ts));
@@ -83,7 +85,7 @@ export default function InboxPage() {
     (drafts.data?.length ?? 0) + (pending.data?.length ?? 0);
   const replyCount = replies.data?.length ?? 0;
   const interestedCount = (replies.data ?? []).filter(
-    (r) => r.classification.category === "interested"
+    (r) => r.category === "interested"
   ).length;
 
   return (

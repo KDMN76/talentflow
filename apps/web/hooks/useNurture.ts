@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { unwrapData, unwrapList } from "@/lib/apiEnvelope";
 import type {
   NurtureEnrollment,
   NurtureSequence,
@@ -41,11 +42,10 @@ export function useSequences(filters: { active?: boolean } = {}) {
   return useQuery({
     queryKey: ["nurture", "sequences", filters],
     queryFn: async (): Promise<NurtureSequence[]> => {
-      const { data } = await api.get<{ items: NurtureSequence[] }>(
-        "/nurture/sequences",
-        { params: filters }
-      );
-      return data.items;
+      const { data } = await api.get<unknown>("/nurture/sequences", {
+        params: filters,
+      });
+      return unwrapList<NurtureSequence>(data);
     },
   });
 }
@@ -59,11 +59,11 @@ export function useSequence(id: string | undefined) {
       steps: NurtureStep[];
     }> => {
       if (!id) throw new Error("Geen sequence-ID");
-      const { data } = await api.get<{
-        sequence: NurtureSequence;
-        steps: NurtureStep[];
-      }>(`/nurture/sequences/${id}`);
-      return data;
+      // Backend geeft { data: { ...sequence, steps } } — de sequence-velden en
+      // de steps zitten samen in het uitgepakte object.
+      const { data } = await api.get<unknown>(`/nurture/sequences/${id}`);
+      const seq = unwrapData<NurtureSequence & { steps?: NurtureStep[] }>(data);
+      return { sequence: seq, steps: seq.steps ?? [] };
     },
   });
 }
@@ -77,11 +77,8 @@ export function useCreateSequence() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: CreateSequenceInput): Promise<NurtureSequence> => {
-      const { data } = await api.post<NurtureSequence>(
-        "/nurture/sequences",
-        input
-      );
-      return data;
+      const { data } = await api.post<unknown>("/nurture/sequences", input);
+      return unwrapData<NurtureSequence>(data);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["nurture"] }),
   });
@@ -97,11 +94,11 @@ export function useUpdateSequence() {
       id: string;
       patch: Partial<{ name: string; description: string | null; active: boolean }>;
     }): Promise<NurtureSequence> => {
-      const { data } = await api.patch<NurtureSequence>(
+      const { data } = await api.patch<unknown>(
         `/nurture/sequences/${id}`,
         patch
       );
-      return data;
+      return unwrapData<NurtureSequence>(data);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["nurture"] }),
   });
@@ -134,11 +131,11 @@ export function useAddStep() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: AddStepInput): Promise<NurtureStep> => {
-      const { data } = await api.post<NurtureStep>(
+      const { data } = await api.post<unknown>(
         `/nurture/sequences/${input.sequenceId}/steps`,
         input
       );
-      return data;
+      return unwrapData<NurtureStep>(data);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["nurture"] }),
   });
@@ -156,11 +153,11 @@ export function useUpdateStep() {
       stepId: string;
       patch: Partial<Omit<NurtureStep, "id" | "sequence_id">>;
     }): Promise<NurtureStep> => {
-      const { data } = await api.patch<NurtureStep>(
+      const { data } = await api.patch<unknown>(
         `/nurture/sequences/${sequenceId}/steps/${stepId}`,
         patch
       );
-      return data;
+      return unwrapData<NurtureStep>(data);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["nurture"] }),
   });
@@ -176,11 +173,11 @@ export function useReorderSteps() {
       sequenceId: string;
       orderedIds: string[];
     }): Promise<NurtureStep[]> => {
-      const { data } = await api.post<{ items: NurtureStep[] }>(
+      const { data } = await api.post<unknown>(
         `/nurture/sequences/${sequenceId}/steps/reorder`,
         { ordered_ids: orderedIds }
       );
-      return data.items;
+      return unwrapList<NurtureStep>(data);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["nurture"] }),
   });
@@ -214,11 +211,10 @@ export function useEnrollments(filters: EnrollmentFilters = {}) {
   return useQuery({
     queryKey: ["nurture", "enrollments", filters],
     queryFn: async (): Promise<NurtureEnrollment[]> => {
-      const { data } = await api.get<{ items: NurtureEnrollment[] }>(
-        "/nurture/enrollments",
-        { params: filters }
-      );
-      return data.items;
+      const { data } = await api.get<unknown>("/nurture/enrollments", {
+        params: filters,
+      });
+      return unwrapList<NurtureEnrollment>(data);
     },
   });
 }
@@ -233,11 +229,8 @@ export function useEnrollCandidate() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: EnrollCandidateInput): Promise<NurtureEnrollment> => {
-      const { data } = await api.post<NurtureEnrollment>(
-        "/nurture/enrollments",
-        input
-      );
-      return data;
+      const { data } = await api.post<unknown>("/nurture/enrollments", input);
+      return unwrapData<NurtureEnrollment>(data);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["nurture"] }),
   });

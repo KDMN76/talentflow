@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { unwrapData } from "@/lib/apiEnvelope";
 import type {
   InterviewRecording,
   InterviewTranscript,
@@ -77,17 +78,21 @@ export function useTranscript(recordingId: string | null) {
     queryKey: ["interview-transcript", recordingId],
     queryFn: async (): Promise<InterviewTranscript | null> => {
       if (!recordingId) return null;
-      const { data } = await api.get<InterviewTranscript>(
+      const { data } = await api.get<unknown>(
         `/interviews/recordings/${recordingId}/transcript`
       );
-      return data;
+      return unwrapData<InterviewTranscript>(data);
     },
     enabled: !!recordingId,
     // Refetch every 10s while still processing — long-poll style.
     refetchInterval: (query) => {
       const data = query.state.data as InterviewTranscript | null | undefined;
       if (!data) return 10_000;
-      return data.status === "done" || data.status === "failed" ? false : 10_000;
+      const terminal =
+        data.status === "done" ||
+        data.status === "failed" ||
+        data.status === "skipped";
+      return terminal ? false : 10_000;
     },
   });
 }

@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { unwrapData, unwrapList } from "@/lib/apiEnvelope";
 import type {
   AgentAction,
   AgentBrief,
@@ -79,11 +80,10 @@ export function useAgentBriefs(filters: BriefFilters = {}) {
   return useQuery({
     queryKey: ["sourcing", "briefs", filters],
     queryFn: async (): Promise<AgentBrief[]> => {
-      const { data } = await api.get<{ items: AgentBrief[] }>(
-        "/sourcing/briefs",
-        { params: filters }
-      );
-      return data.items;
+      const { data } = await api.get<unknown>("/sourcing/briefs", {
+        params: filters,
+      });
+      return unwrapList<AgentBrief>(data);
     },
   });
 }
@@ -94,8 +94,8 @@ export function useAgentBrief(id: string | undefined) {
     enabled: !!id,
     queryFn: async (): Promise<AgentBrief> => {
       if (!id) throw new Error("Geen brief-ID");
-      const { data } = await api.get<AgentBrief>(`/sourcing/briefs/${id}`);
-      return data;
+      const { data } = await api.get<unknown>(`/sourcing/briefs/${id}`);
+      return unwrapData<AgentBrief>(data);
     },
   });
 }
@@ -115,8 +115,8 @@ export function useCreateBrief() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: CreateBriefInput): Promise<AgentBrief> => {
-      const { data } = await api.post<AgentBrief>("/sourcing/briefs", input);
-      return data;
+      const { data } = await api.post<unknown>("/sourcing/briefs", input);
+      return unwrapData<AgentBrief>(data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sourcing", "briefs"] });
@@ -169,11 +169,10 @@ export function useAgentRuns(filters: RunFilters = {}) {
   return useQuery({
     queryKey: ["sourcing", "runs", filters],
     queryFn: async (): Promise<AgentRun[]> => {
-      const { data } = await api.get<{ items: AgentRun[] }>(
-        "/sourcing/runs",
-        { params: filters }
-      );
-      return data.items;
+      const { data } = await api.get<unknown>("/sourcing/runs", {
+        params: filters,
+      });
+      return unwrapList<AgentRun>(data);
     },
     refetchInterval: (query) => {
       const data = query.state.data;
@@ -194,8 +193,8 @@ export function useAgentRun(id: string | undefined) {
     enabled: !!id,
     queryFn: async (): Promise<AgentRun> => {
       if (!id) throw new Error("Geen run-ID");
-      const { data } = await api.get<AgentRun>(`/sourcing/runs/${id}`);
-      return data;
+      const { data } = await api.get<unknown>(`/sourcing/runs/${id}`);
+      return unwrapData<AgentRun>(data);
     },
     refetchInterval: (query) => {
       const data = query.state.data;
@@ -216,11 +215,11 @@ export function useStartRun() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: StartRunInput): Promise<AgentRun> => {
-      const { data } = await api.post<AgentRun>(
+      const { data } = await api.post<unknown>(
         `/sourcing/briefs/${input.briefId}/runs`,
         { trigger: input.trigger ?? "manual" }
       );
-      return data;
+      return unwrapData<AgentRun>(data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sourcing"] });
@@ -287,11 +286,11 @@ export function useApproveFinding() {
       id: string;
       note?: string;
     }): Promise<AgentFinding> => {
-      const { data } = await api.post<AgentFinding>(
+      const { data } = await api.post<unknown>(
         `/sourcing/findings/${id}/approve`,
         { note }
       );
-      return data;
+      return unwrapData<AgentFinding>(data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sourcing"] });
@@ -309,11 +308,11 @@ export function useRejectFinding() {
       id: string;
       reason: string;
     }): Promise<AgentFinding> => {
-      const { data } = await api.post<AgentFinding>(
+      const { data } = await api.post<unknown>(
         `/sourcing/findings/${id}/reject`,
         { reason }
       );
-      return data;
+      return unwrapData<AgentFinding>(data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sourcing"] });
@@ -333,7 +332,7 @@ export function useBulkApproveFindings() {
     }): Promise<{ approved: number }> => {
       const { data } = await api.post<{ approved: number }>(
         "/sourcing/findings/bulk-approve",
-        { ids, note }
+        { finding_ids: ids, note }
       );
       return data;
     },
@@ -355,7 +354,7 @@ export function useBulkRejectFindings() {
     }): Promise<{ rejected: number }> => {
       const { data } = await api.post<{ rejected: number }>(
         "/sourcing/findings/bulk-reject",
-        { ids, reason }
+        { finding_ids: ids, reason }
       );
       return data;
     },

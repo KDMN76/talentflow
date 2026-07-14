@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { unwrapList } from "@/lib/apiEnvelope";
 import {
   type BulkCampaign,
   type BulkCampaignInput,
@@ -24,10 +25,10 @@ export function useBulkCampaigns() {
   return useQuery({
     queryKey: ["bulk-campaigns"],
     queryFn: async (): Promise<BulkCampaign[]> => {
-      const { data } = await api.get<BulkCampaign[]>(
+      const { data } = await api.get<unknown>(
         "/communications/bulk-campaigns"
       );
-      return data;
+      return unwrapList<BulkCampaign>(data);
     },
   });
 }
