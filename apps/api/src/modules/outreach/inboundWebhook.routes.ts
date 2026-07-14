@@ -59,7 +59,12 @@ function verifySignature(req: Request): boolean {
     (req.headers['x-talentflow-signature'] as string | undefined);
   if (!provided) return false;
 
-  const raw = JSON.stringify(req.body ?? {});
+  // HMAC over de RAW request-body (exact wat de afzender tekende). De
+  // express.json()-verify-callback zet req.rawBody; val alleen terug op een
+  // her-geserialiseerde body voor oude callers zonder raw-body.
+  const raw =
+    (req as unknown as { rawBody?: Buffer }).rawBody ??
+    JSON.stringify(req.body ?? {});
   const expected = crypto.createHmac('sha256', secret).update(raw).digest('hex');
   const candidates = provided.split(',').map((s) => s.split('=').pop() ?? '');
   const expectedBuf = Buffer.from(expected, 'hex');

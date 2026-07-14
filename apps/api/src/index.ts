@@ -214,7 +214,19 @@ app.use((req, res, next) =>
 );
 
 // ── Body parsing ─────────────────────────────────────────────────────────────
-app.use(express.json({ limit: '1mb' }));
+// `verify` bewaart de RAW request-body op req.rawBody. Webhook-handlers (WhatsApp
+// 360dialog/Meta, Resend inbound, outreach inbound) moeten hun HMAC-handtekening
+// over exact de door de afzender getekende bytes berekenen — niet over een
+// her-geserialiseerde JSON.stringify(req.body) (sleutelvolgorde/whitespace/unicode
+// wijken af → valse INVALID_SIGNATURE). Strikt additief; geen route-herordening.
+app.use(
+  express.json({
+    limit: '1mb',
+    verify: (req, _res, buf) => {
+      (req as unknown as { rawBody?: Buffer }).rawBody = buf;
+    },
+  })
+);
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
