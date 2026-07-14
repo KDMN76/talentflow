@@ -129,9 +129,10 @@ export function BulkImportDialog({
   };
 
   const handleStart = async () => {
-    if (!preview) return;
+    if (!preview || !file) return;
     try {
       const initial = await startImport.mutateAsync({
+        file,
         import_id: preview.import_id,
         mapping,
       });

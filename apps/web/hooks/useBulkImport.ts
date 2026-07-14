@@ -30,14 +30,24 @@ export function usePreviewCsv() {
 
 /**
  * Kick off the actual import after the user finalises the column mapping.
+ * The backend `previewCsv` does not persist the file, so `start` re-uploads
+ * the original CSV alongside the finalised mapping (multipart, veld 'file').
  * Returns the initial status row so the consumer can start polling.
  */
 export function useStartImport() {
   return useMutation({
-    mutationFn: async (input: StartImportInput): Promise<ImportStatusResponse> => {
+    mutationFn: async (
+      input: StartImportInput & { file: File }
+    ): Promise<ImportStatusResponse> => {
+      const formData = new FormData();
+      formData.append("file", input.file);
+      formData.append("mapping", JSON.stringify(input.mapping));
+      formData.append("import_id", input.import_id);
+
       const { data } = await api.post<ImportStatusResponse>(
         "/candidates/import/start",
-        input
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
       );
       return data;
     },

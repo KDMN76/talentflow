@@ -48,6 +48,31 @@ const uploadMulti = multer({
   fileFilter: resumeFileFilter,
 });
 
+// CSV bulk-import — MEMORY storage zodat de service de bytes als Buffer krijgt
+// (previewCsv/startCsvImport verwachten `req.file.buffer`, geen disk-pad). 5MB
+// limiet spiegelt de UI-tekst ("Maximaal 5 MB"). Mimetype van CSV varieert per
+// browser/OS (text/csv, application/vnd.ms-excel, application/octet-stream) →
+// accepteer op extensie als de mimetype niet matcht.
+const ALLOWED_CSV_MIME = [
+  'text/csv',
+  'application/csv',
+  'application/vnd.ms-excel',
+  'application/octet-stream',
+  'text/plain',
+];
+
+const csvUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_CSV_MIME.includes(file.mimetype) || /\.csv$/i.test(file.originalname)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Alleen CSV-bestanden zijn toegestaan'));
+    }
+  },
+});
+
 const router = Router();
 
 router.use(requireAuth, tenantMiddleware);
@@ -62,6 +87,23 @@ router.get('/pipeline-templates', candidatesController.listPipelineTemplates);
 // hier eerst zonder check schrijven/verwijderen (viewer-gap gedicht).
 // Bewust 'write' (niet 'delete') op DELETE zodat recruiter-gedrag intact blijft.
 router.post('/bulk-actions', requirePermission('candidates', 'write'), candidatesController.bulkActionsHandler);
+
+// Merge (dedupe) + CSV bulk-import — SPECIFIEKE paden MOETEN vóór de /:id-routes
+// staan, anders vangt `:id` ze af ("merge"/"import"/"imports" als candidate-id).
+router.post('/merge', requirePermission('candidates', 'write'), candidatesController.mergeCandidatesHandler);
+router.post(
+  '/import/preview',
+  requirePermission('candidates', 'write'),
+  csvUpload.single('file'),
+  candidatesController.previewCsvImport
+);
+router.post(
+  '/import/start',
+  requirePermission('candidates', 'write'),
+  csvUpload.single('file'),
+  candidatesController.startCsvImportHandler
+);
+router.get('/imports/:id', candidatesController.getImportStatusHandler);
 
 // Candidates CRUD
 router.get('/', candidatesController.listCandidates);
