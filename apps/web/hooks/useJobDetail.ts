@@ -251,10 +251,30 @@ export function useComparableJobs(jobId: string) {
   return useQuery({
     queryKey: ["jobs", jobId, "comparable"],
     queryFn: async (): Promise<ComparableJob[]> => {
-      const { data } = await api.get<{ data: ComparableJob[] }>(
-        `/jobs/${jobId}/comparable`
-      );
-      return data.data;
+      // API levert { job_id, title, status, candidates_total, days_to_fill,
+      // similarity_score(0..1 Jaccard) }. Map naar de UI-shape (ComparableJob),
+      // anders leest de tab velden die niet bestaan (id/filled/total_candidates)
+      // en doet `Math.round(similarity_score)` op een 0..1-waarde → altijd 0%.
+      const { data } = await api.get<{
+        data: Array<{
+          job_id: string;
+          title: string;
+          status: string;
+          candidates_total: number;
+          days_to_fill: number | null;
+          similarity_score: number;
+        }>;
+      }>(`/jobs/${jobId}/comparable`);
+      return (data.data ?? []).map((c) => ({
+        id: c.job_id,
+        title: c.title,
+        client: null,
+        similarity_score: (c.similarity_score ?? 0) * 100,
+        filled: c.status === "filled",
+        days_to_fill: c.days_to_fill ?? null,
+        total_candidates: c.candidates_total ?? 0,
+        closed_at: null,
+      }));
     },
     enabled: !!jobId,
     staleTime: 5 * 60_000,
@@ -296,13 +316,15 @@ export function useJobBiasCheck(jobId: string) {
       const { data } = await api.get<Record<string, unknown>>(
         `/jobs/${jobId}/bias-check`
       );
+      // Keys = de echte API-enum (jobBiasCheck.service.ts):
+      // gendered_language | age_indicator | unrealistic_requirement |
+      // exclusionary | jargon. Oude keys (gender_coded/age_coded/…) matchten
+      // nooit → label viel terug op de rauwe snake_case enum.
       const flagLabels: Record<string, string> = {
         gendered_language: "Gender-gekleurde taal",
-        gender_coded: "Gender-gekleurde taal",
-        age_coded: "Leeftijd-gekleurd",
-        vague_requirement: "Vage eis",
-        exclusive_language: "Uitsluitende taal",
-        salary_undisclosed: "Salaris niet vermeld",
+        age_indicator: "Leeftijdsindicatie",
+        unrealistic_requirement: "Onrealistische eis",
+        exclusionary: "Uitsluitende taal",
         jargon: "Jargon",
       };
       const rawFlags = (data.bias_flags as Array<Record<string, string>>) ?? [];

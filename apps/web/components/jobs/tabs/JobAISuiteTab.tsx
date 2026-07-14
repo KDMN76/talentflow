@@ -46,12 +46,15 @@ const SEVERITY_COPY: Record<BiasFlag["severity"], { label: string; cls: string }
   },
 };
 
+// Korte NL-categorietags voor de badge naast het label. Keys = de echte
+// API-enum (jobBiasCheck.service.ts): gendered_language | age_indicator |
+// unrealistic_requirement | exclusionary | jargon. Oude keys matchten nooit
+// → de badge toonde de rauwe snake_case enum.
 const FLAG_TYPE_COPY: Record<string, string> = {
-  gender_coded: "Geslacht-gecodeerd",
-  age_coded: "Leeftijd-gecodeerd",
-  vague_requirement: "Vage vereiste",
-  exclusive_language: "Uitsluitend taalgebruik",
-  salary_undisclosed: "Geen salaris vermeld",
+  gendered_language: "Gender",
+  age_indicator: "Leeftijd",
+  unrealistic_requirement: "Onrealistisch",
+  exclusionary: "Uitsluitend",
   jargon: "Jargon",
 };
 

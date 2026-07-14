@@ -76,6 +76,8 @@ export interface ComparableJob {
 export interface JobSourcingItem {
   source: string;
   count: number;
+  /** Applications from this source with status = 'hired'. */
+  hired_count: number;
   conversion_to_hire: number;
 }
 
@@ -640,6 +642,11 @@ export async function getJobSourcing(
     return rows.map((r) => ({
       source: r.source as string,
       count: Number(r.count),
+      // `hired_count` wordt in de query al berekend maar werd eerder weggemapt
+      // → de UI-kolom "Hires" stond altijd op 0. Nu meesturen. Er is (nog) geen
+      // kostenbron in het schema, dus cost-per-hire blijft aan de frontend-kant
+      // op 0 staan tot een cost-tabel bestaat.
+      hired_count: Number(r.hired_count),
       conversion_to_hire:
         Number(r.count) > 0
           ? Math.round((Number(r.hired_count) / Number(r.count)) * 100)

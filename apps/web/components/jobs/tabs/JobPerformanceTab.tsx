@@ -187,7 +187,9 @@ export function JobPerformanceTab({ jobId }: JobPerformanceTabProps) {
                     <div className="font-semibold text-zinc-900 dark:text-zinc-100">
                       {funnel.dropped}
                     </div>
-                    <div className="text-muted-foreground">Afgewezen</div>
+                    {/* funnel.dropped = rejected + withdrawn + offer_declined,
+                        dus breder dan alleen 'Afgewezen'. */}
+                    <div className="text-muted-foreground">Uitgestroomd</div>
                   </div>
                 </div>
               </div>
@@ -310,27 +312,29 @@ export function JobPerformanceTab({ jobId }: JobPerformanceTabProps) {
                     <Briefcase className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
                         {c.title}
                       </span>
                       {c.filled ? (
                         <Badge
                           variant="outline"
-                          className="bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300"
+                          className="shrink-0 bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300"
                         >
                           Vervuld
                         </Badge>
                       ) : (
-                        <Badge variant="outline">Open</Badge>
+                        <Badge variant="outline" className="shrink-0">
+                          Open
+                        </Badge>
                       )}
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {c.client ?? "Onbekende klant"} · {c.total_candidates}{" "}
-                      kandidaten · Time-to-fill {formatDays(c.days_to_fill)}
+                    <div className="truncate text-xs text-muted-foreground">
+                      {c.total_candidates} kandidaten · Time-to-fill{" "}
+                      {formatDays(c.days_to_fill)}
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="shrink-0 text-right">
                     <div className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">
                       {Math.round(c.similarity_score)}%
                     </div>
