@@ -126,8 +126,14 @@
       "noKit": "No kit linked — open conversation.",
       "notesTitle": "Notes"
     },
+    "participantTypes": {
+      "interviewer": "Interviewer",
+      "observer": "Observer",
+      "candidate": "Candidate"
+    },
     "recording": {
-      "uploadedBy": "Uploaded by {{name}}"
+      "uploadedBy": "Uploaded by {{name}}",
+      "uploadedAt": "Uploaded on {{date}}"
     },
     "questionsPanel": {
       "noKit": "No kit is linked to this interview. Add one via \"Edit\" to show questions.",

@@ -58,38 +58,44 @@ export function useScheduleInterview() {
 
 export function useCancelInterview() {
   const queryClient = useQueryClient();
-  return useMutation<Interview, Error, { id: string; reason?: string }>({
+  // The cancel branch returns `{ message }` (not an Interview), so we invalidate
+  // using the known id from the mutation variables rather than the response.
+  return useMutation<{ message: string }, Error, { id: string; reason?: string }>({
     mutationFn: async ({ id, reason }) => {
-      const { data } = await api.patch<Interview>(`/interviews/${id}`, {
+      const { data } = await api.patch<{ message: string }>(`/interviews/${id}`, {
         status: "cancelled",
-        notes_append: reason,
+        cancel_reason: reason?.trim() || undefined,
       });
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["interviews"] });
-      queryClient.invalidateQueries({ queryKey: ["interview", data.id] });
+      queryClient.invalidateQueries({ queryKey: ["interview", variables.id] });
     },
   });
 }
 
 export function useRescheduleInterview() {
   const queryClient = useQueryClient();
+  // The backend reschedule branch requires BOTH scheduled_start and
+  // scheduled_end; sending only start (or duration_minutes) yields 400 NO_OP.
   return useMutation<
     Interview,
     Error,
-    { id: string; scheduled_start: string; duration_minutes?: number }
+    { id: string; scheduled_start: string; scheduled_end: string }
   >({
-    mutationFn: async ({ id, scheduled_start, duration_minutes }) => {
+    mutationFn: async ({ id, scheduled_start, scheduled_end }) => {
       const { data } = await api.patch<Interview>(`/interviews/${id}`, {
         scheduled_start,
-        duration_minutes,
+        scheduled_end,
       });
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["interviews"] });
-      queryClient.invalidateQueries({ queryKey: ["interview", data.id] });
+      queryClient.invalidateQueries({
+        queryKey: ["interview", data?.id ?? variables.id],
+      });
     },
   });
 }

@@ -225,20 +225,24 @@ export function SchedulerDialog({
 
   const handleSubmit = async () => {
     if (!state.selected_slot) return;
+    // Backend requires scheduled_end (derived from start + duration) and
+    // interviewer_user_ids (min 1). Location goes into meeting_url (link
+    // providers) or location (in-person address / phone number).
+    const scheduledStart = state.selected_slot.start;
+    const scheduledEnd = new Date(
+      new Date(scheduledStart).getTime() + state.duration_minutes * 60_000
+    ).toISOString();
     try {
       await schedule.mutateAsync({
         application_id: state.application_id,
-        candidate_id: state.candidate_id,
-        job_id: state.job_id,
-        scheduled_start: state.selected_slot.start,
-        duration_minutes: state.duration_minutes,
-        timezone: "Europe/Amsterdam",
-        interviewer_ids: state.interviewer_ids,
-        location_type: state.location_type,
-        location_url: state.location_url || null,
-        location_address: state.location_address || null,
-        kit_id: state.kit_id,
-        notes: state.notes.trim() || null,
+        scheduled_start: scheduledStart,
+        scheduled_end: scheduledEnd,
+        interviewer_user_ids: state.interviewer_ids,
+        meeting_provider: state.location_type,
+        meeting_url: state.location_url.trim() || undefined,
+        location: state.location_address.trim() || undefined,
+        interview_kit_id: state.kit_id ?? undefined,
+        notes: state.notes.trim() || undefined,
       });
       toast({
         title: "Interview ingepland",

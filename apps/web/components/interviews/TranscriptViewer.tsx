@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -10,7 +10,7 @@ import {
   Download,
   FileText,
   Loader2,
-  Search,
+  MinusCircle,
   ThumbsDown,
   ThumbsUp,
   XCircle,
@@ -28,18 +28,20 @@ import type {
 } from "@/lib/types/interviews";
 
 const STATUS_LABEL: Record<TranscriptStatus, string> = {
-  queued: "In wachtrij",
+  pending: "In wachtrij",
   processing: "Wordt verwerkt",
   done: "Klaar",
   failed: "Mislukt",
+  skipped: "Overgeslagen",
 };
 
 const STATUS_CLASS: Record<TranscriptStatus, string> = {
-  queued: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+  pending: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
   processing:
     "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
   done: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
   failed: "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300",
+  skipped: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
 };
 
 const RECOMMENDATION_META: Record<
@@ -67,12 +69,6 @@ const RECOMMENDATION_META: Record<
     cls: "bg-rose-600 text-white",
   },
 };
-
-function formatSeconds(s: number): string {
-  const mins = Math.floor(s / 60);
-  const secs = Math.floor(s % 60);
-  return `${mins}:${secs.toString().padStart(2, "0")}`;
-}
 
 export interface TranscriptViewerProps {
   recordingId: string;
@@ -108,20 +104,27 @@ export function TranscriptViewer({
 
   return (
     <div className="space-y-4">
-      <StatusHeader status={transcript.status} language={transcript.language} />
+      <StatusHeader
+        status={transcript.status}
+        language={transcript.language ?? null}
+      />
 
       {transcript.status !== "done" ? (
         <ProcessingState status={transcript.status} />
       ) : (
         <>
-          <SummarySection transcript={transcript} />
+          <SummarySection summary={transcript.summary ?? null} />
           <SignalsSection
-            strengths={transcript.ai_strengths}
-            concerns={transcript.ai_concerns}
+            strengths={transcript.strengths ?? []}
+            concerns={transcript.concerns ?? []}
           />
-          <RecommendationSection rec={transcript.ai_recommendation} />
-          <FullTranscriptSection transcript={transcript} />
-          <DownloadButtons transcript={transcript} />
+          <RecommendationSection rec={transcript.recommendation ?? null} />
+          <FullTranscriptSection text={transcript.text ?? null} />
+          <DownloadButtons
+            recordingId={recordingId}
+            text={transcript.text ?? null}
+            summary={transcript.summary ?? null}
+          />
         </>
       )}
     </div>
@@ -147,7 +150,8 @@ function StatusHeader({
         {status === "processing" && (
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
         )}
-        {status === "queued" && <Clock className="h-3.5 w-3.5" />}
+        {status === "pending" && <Clock className="h-3.5 w-3.5" />}
+        {status === "skipped" && <MinusCircle className="h-3.5 w-3.5" />}
         {status === "failed" && <XCircle className="h-3.5 w-3.5" />}
         {STATUS_LABEL[status]}
       </span>
@@ -173,6 +177,18 @@ function ProcessingState({ status }: { status: TranscriptStatus }) {
       </div>
     );
   }
+  if (status === "skipped") {
+    return (
+      <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:bg-zinc-900/40 dark:border-zinc-800">
+        <p className="text-sm text-zinc-700 dark:text-zinc-300 font-semibold">
+          Transcriptie overgeslagen
+        </p>
+        <p className="text-xs text-muted-foreground mt-1">
+          Voor deze opname is geen transcript gegenereerd.
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:bg-blue-950/30 dark:border-blue-900/40">
       <p className="text-sm text-blue-700 dark:text-blue-300 font-semibold flex items-center gap-2">
@@ -187,7 +203,7 @@ function ProcessingState({ status }: { status: TranscriptStatus }) {
   );
 }
 
-function SummarySection({ transcript }: { transcript: InterviewTranscript }) {
+function SummarySection({ summary }: { summary: string | null }) {
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-2">
@@ -210,8 +226,7 @@ function SummarySection({ transcript }: { transcript: InterviewTranscript }) {
       </CardHeader>
       <CardContent>
         <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300 whitespace-pre-line">
-          {transcript.ai_summary ??
-            "Geen samenvatting gegenereerd voor deze opname."}
+          {summary ?? "Nog geen AI-samenvatting gegenereerd voor deze opname."}
         </p>
       </CardContent>
     </Card>
@@ -312,24 +327,9 @@ function RecommendationSection({ rec }: { rec: AIRecommendation | null }) {
   );
 }
 
-function FullTranscriptSection({
-  transcript,
-}: {
-  transcript: InterviewTranscript;
-}) {
+function FullTranscriptSection({ text }: { text: string | null }) {
   const [expanded, setExpanded] = useState(false);
-  const [search, setSearch] = useState("");
-
-  const filtered = useMemo(() => {
-    if (!search.trim()) return transcript.utterances;
-    const needle = search.toLowerCase();
-    return transcript.utterances.filter(
-      (u) =>
-        u.text.toLowerCase().includes(needle) ||
-        u.speaker.toLowerCase().includes(needle)
-    );
-  }, [search, transcript.utterances]);
-
+  if (!text) return null;
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader className="pb-2">
@@ -344,57 +344,28 @@ function FullTranscriptSection({
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           )}
           <CardTitle className="text-sm">Volledig transcript</CardTitle>
-          <span className="ml-auto text-[11px] text-muted-foreground">
-            {transcript.utterances.length} segmenten
-          </span>
         </button>
       </CardHeader>
       {expanded && (
-        <CardContent className="space-y-3">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Zoek in transcript…"
-              className="h-9 w-full rounded-md border border-input bg-background pl-8 pr-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-          </div>
-          {filtered.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-4 text-center">
-              Geen resultaten voor "{search}".
-            </p>
-          ) : (
-            <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
-              {filtered.map((u, i) => (
-                <div
-                  key={i}
-                  className="rounded-md border border-border p-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors"
-                >
-                  <div className="flex items-center gap-2 mb-1 text-[11px]">
-                    <span className="font-semibold text-zinc-700 dark:text-zinc-200">
-                      {u.speaker}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {formatSeconds(u.start_seconds)}–
-                      {formatSeconds(u.end_seconds)}
-                    </span>
-                  </div>
-                  <p className="text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
-                    {u.text}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
+        <CardContent>
+          <p className="text-xs leading-relaxed text-zinc-600 dark:text-zinc-400 whitespace-pre-line max-h-96 overflow-y-auto pr-2">
+            {text}
+          </p>
         </CardContent>
       )}
     </Card>
   );
 }
 
-function DownloadButtons({ transcript }: { transcript: InterviewTranscript }) {
+function DownloadButtons({
+  recordingId,
+  text,
+  summary,
+}: {
+  recordingId: string;
+  text: string | null;
+  summary: string | null;
+}) {
   const downloadAs = (format: "txt" | "json" | "pdf") => {
     if (format === "pdf") {
       alert(
@@ -405,21 +376,22 @@ function DownloadButtons({ transcript }: { transcript: InterviewTranscript }) {
     let blob: Blob;
     let filename: string;
     if (format === "json") {
-      blob = new Blob([JSON.stringify(transcript, null, 2)], {
-        type: "application/json",
-      });
-      filename = `transcript-${transcript.recording_id}.json`;
+      blob = new Blob(
+        [
+          JSON.stringify(
+            { recording_id: recordingId, summary, text },
+            null,
+            2
+          ),
+        ],
+        { type: "application/json" }
+      );
+      filename = `transcript-${recordingId}.json`;
     } else {
-      const text =
-        (transcript.ai_summary ? `Samenvatting:\n${transcript.ai_summary}\n\n` : "") +
-        transcript.utterances
-          .map(
-            (u) =>
-              `[${formatSeconds(u.start_seconds)}] ${u.speaker}: ${u.text}`
-          )
-          .join("\n");
-      blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-      filename = `transcript-${transcript.recording_id}.txt`;
+      const body =
+        (summary ? `Samenvatting:\n${summary}\n\n` : "") + (text ?? "");
+      blob = new Blob([body], { type: "text/plain;charset=utf-8" });
+      filename = `transcript-${recordingId}.txt`;
     }
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

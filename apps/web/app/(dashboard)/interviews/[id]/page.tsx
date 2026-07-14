@@ -220,17 +220,12 @@ export default function InterviewDetailPage() {
           </TabsTrigger>
           <TabsTrigger value="recording">
             {t("interview.tabs.recording")}
-            {interview.has_recording && (
+            {(recordings ?? []).length > 0 && (
               <span className="ml-1.5 h-1.5 w-1.5 rounded-full bg-rose-500" />
             )}
           </TabsTrigger>
           <TabsTrigger value="scorecards">
             {t("interview.tabs.scorecards")}
-            {interview.scorecard_count > 0 && (
-              <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-semibold text-white">
-                {interview.scorecard_count}
-              </span>
-            )}
           </TabsTrigger>
         </TabsList>
 
@@ -239,7 +234,7 @@ export default function InterviewDetailPage() {
         </TabsContent>
 
         <TabsContent value="questions" className="mt-4">
-          <QuestionsPanel kitId={interview.kit_id} />
+          <QuestionsPanel kitId={interview.interview_kit_id ?? null} />
         </TabsContent>
 
         <TabsContent value="recording" className="mt-4 space-y-4">
@@ -256,10 +251,15 @@ export default function InterviewDetailPage() {
                     </CardTitle>
                     <CardDescription>
                       {formatBytes(rec.size_bytes)} ·{" "}
-                      {formatDuration(rec.duration_seconds)} ·{" "}
-                      {t("interview.recording.uploadedBy", {
-                        name: rec.uploaded_by_name,
-                      })}
+                      {formatDuration(rec.duration_seconds)}
+                      {rec.uploaded_at && (
+                        <>
+                          {" · "}
+                          {t("interview.recording.uploadedAt", {
+                            date: formatLong(rec.uploaded_at),
+                          })}
+                        </>
+                      )}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -300,9 +300,15 @@ export default function InterviewDetailPage() {
         onOpenChange={setRescheduleOpen}
         currentStart={interview.scheduled_start}
         onConfirm={async (start) => {
+          // Backend needs both start and end — derive end from the existing
+          // interview duration.
+          const end = new Date(
+            new Date(start).getTime() + interview.duration_minutes * 60_000
+          ).toISOString();
           await reschedule.mutateAsync({
             id: interview.id,
             scheduled_start: start,
+            scheduled_end: end,
           });
           toast({
             title: t("interview.toasts.rescheduled"),
@@ -320,7 +326,8 @@ export default function InterviewDetailPage() {
 
 function DetailsPanel({ interview }: { interview: Interview }) {
   const { t } = useTranslation("interviewKits");
-  const LocIcon = LOC_ICON[interview.location_type] ?? Video;
+  const LocIcon =
+    (interview.location_type && LOC_ICON[interview.location_type]) || Video;
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <Card>
@@ -336,19 +343,19 @@ function DetailsPanel({ interview }: { interview: Interview }) {
               ? t(`interview.locations.${interview.location_type}`)
               : "Onbekend"}
           </p>
-          {interview.location_url && (
+          {interview.meeting_url && (
             <a
-              href={interview.location_url}
+              href={interview.meeting_url}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline mt-1 block break-all"
             >
-              {interview.location_url}
+              {interview.meeting_url}
             </a>
           )}
-          {interview.location_address && (
+          {interview.location && (
             <p className="text-xs text-muted-foreground mt-1">
-              {interview.location_address}
+              {interview.location}
             </p>
           )}
         </CardContent>
@@ -363,27 +370,29 @@ function DetailsPanel({ interview }: { interview: Interview }) {
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {interview.participants.map((p) => (
-              <div
-                key={p.id}
-                className="flex items-center gap-2.5"
-              >
-                <Avatar className="h-7 w-7 shrink-0">
-                  <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-500 text-white text-[10px] font-semibold">
-                    {getInitials(p.user_name)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold truncate">
-                    {p.user_name}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground truncate">
-                    {p.role.replace("_", " ")}
-                  </p>
-                </div>
-                {p.rsvp && <RsvpBadge rsvp={p.rsvp} />}
-              </div>
-            ))}
+            {(interview.participants ?? [])
+              .filter((p) => (p.participant_type ?? p.role) !== "candidate")
+              .map((p) => {
+                const label = p.user_name ?? p.email ?? "Onbekend";
+                const type = p.participant_type ?? p.role ?? "interviewer";
+                return (
+                  <div key={p.id} className="flex items-center gap-2.5">
+                    <Avatar className="h-7 w-7 shrink-0">
+                      <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-500 text-white text-[10px] font-semibold">
+                        {getInitials(label)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold truncate">{label}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">
+                        {t(`interview.participantTypes.${type}`, {
+                          defaultValue: type,
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
           </div>
         </CardContent>
       </Card>
@@ -396,17 +405,15 @@ function DetailsPanel({ interview }: { interview: Interview }) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {interview.kit_name ? (
+          {interview.kit ? (
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold">{interview.kit_name}</p>
-              {interview.kit_id && (
-                <Link
-                  href={`/interview-kits/${interview.kit_id}`}
-                  className="text-xs text-indigo-600 hover:underline"
-                >
-                  {t("interview.details.kitView")}
-                </Link>
-              )}
+              <p className="text-sm font-semibold">{interview.kit.name}</p>
+              <Link
+                href={`/interview-kits/${interview.kit.id}`}
+                className="text-xs text-indigo-600 hover:underline"
+              >
+                {t("interview.details.kitView")}
+              </Link>
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">
@@ -431,24 +438,6 @@ function DetailsPanel({ interview }: { interview: Interview }) {
         </Card>
       )}
     </div>
-  );
-}
-
-function RsvpBadge({
-  rsvp,
-}: {
-  rsvp: NonNullable<Interview["participants"][number]["rsvp"]>;
-}) {
-  const map = {
-    accepted: { label: "✓", cls: "text-emerald-600" },
-    declined: { label: "✗", cls: "text-rose-600" },
-    pending: { label: "?", cls: "text-zinc-500" },
-  };
-  const m = map[rsvp];
-  return (
-    <span className={cn("text-xs font-semibold", m.cls)} title={rsvp}>
-      {m.label}
-    </span>
   );
 }
 
@@ -736,13 +725,15 @@ function formatLong(iso: string): string {
   });
 }
 
-function formatBytes(b: number): string {
+function formatBytes(b: number | null | undefined): string {
+  if (b == null) return "—";
   if (b < 1024) return `${b} B`;
   if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
   return `${(b / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function formatDuration(s: number): string {
+function formatDuration(s: number | null | undefined): string {
+  if (s == null) return "—";
   const m = Math.floor(s / 60);
   return m < 60 ? `${m} min` : `${Math.floor(m / 60)}u ${m % 60}m`;
 }

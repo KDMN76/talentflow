@@ -6,20 +6,15 @@ import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import {
   Calendar,
-  CheckCircle2,
   Clock,
   Filter,
   MapPin,
-  Mic,
   Phone,
   Plus,
   Search,
-  Users,
   Video,
   X,
-  XCircle,
 } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,13 +37,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { SchedulerDialog } from "@/components/interviews/SchedulerDialog";
 import { useInterviews } from "@/hooks/useInterviews";
-import { cn, getInitials } from "@/lib/utils";
-
-// TODO: replace with a real `useTenantUsers()` hook once a backend
-// `/users` endpoint exists. The interviewer filter currently only offers
-// "Alle interviewers" plus the interviewers derived from the interviews
-// payload itself, so we never invent users that don't exist.
-const tenantUsers: Array<{ id: string; name: string }> = [];
+import { useTenantUsers } from "@/hooks/useUsers";
+import { cn } from "@/lib/utils";
 import type {
   Interview,
   InterviewLocationType,
@@ -115,26 +105,14 @@ export default function InterviewsPage() {
 
   const { data, isLoading, isError, error } = useInterviews(filters);
 
-  // Build the interviewer dropdown from the actual interviews that came
-  // back from the API (de-duplicated by user_id). Falls back to the empty
-  // `tenantUsers` constant above once a dedicated users-endpoint exists.
-  const interviewerOptions = useMemo(() => {
-    const seen = new Map<string, string>();
-    for (const iv of data ?? []) {
-      for (const p of iv.participants ?? []) {
-        if (
-          (p.role === "interviewer" || p.role === "hiring_manager") &&
-          !seen.has(p.user_id)
-        ) {
-          seen.set(p.user_id, p.user_name);
-        }
-      }
-    }
-    for (const u of tenantUsers) {
-      if (!seen.has(u.id)) seen.set(u.id, u.name);
-    }
-    return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
-  }, [data]);
+  // Populate the interviewer dropdown from the tenant users endpoint. The list
+  // endpoint doesn't return participants, but the backend DOES support the
+  // `interviewer_id` query param, so filtering is fully functional server-side.
+  const { data: teamUsers } = useTenantUsers();
+  const interviewerOptions = useMemo(
+    () => (teamUsers ?? []).map((u) => ({ id: u.id, name: u.name })),
+    [teamUsers]
+  );
 
   const tabbed = useMemo(() => {
     if (!data) return [];
@@ -145,8 +123,8 @@ export default function InterviewsPage() {
         if (!search.trim()) return true;
         const needle = search.toLowerCase();
         return (
-          iv.candidate_name.toLowerCase().includes(needle) ||
-          iv.job_title.toLowerCase().includes(needle)
+          (iv.candidate_name?.toLowerCase() ?? "").includes(needle) ||
+          (iv.job_title?.toLowerCase() ?? "").includes(needle)
         );
       })
       .sort((a, b) => {
@@ -345,10 +323,7 @@ function CountChip({ n }: { n: number }) {
 function InterviewRow({ iv }: { iv: Interview }) {
   const { t } = useTranslation("interviews");
   const status = STATUS_BADGE[iv.status] ?? STATUS_BADGE.scheduled;
-  const LocIcon = LOCATION_ICON[iv.location_type] ?? Video;
-  const interviewers = (iv.participants ?? []).filter(
-    (p) => p.role === "interviewer" || p.role === "hiring_manager"
-  );
+  const LocIcon = (iv.location_type && LOCATION_ICON[iv.location_type]) || Video;
   return (
     <Link
       href={`/interviews/${iv.id}`}
@@ -378,18 +353,6 @@ function InterviewRow({ iv }: { iv: Interview }) {
             >
               {t(status.labelKey)}
             </Badge>
-            {iv.has_recording && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-rose-600 dark:text-rose-400">
-                <Mic className="h-3 w-3" />
-                {t("row.recording")}
-              </span>
-            )}
-            {iv.scorecard_count > 0 && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-                <CheckCircle2 className="h-3 w-3" />
-                {t("row.scorecards", { count: iv.scorecard_count })}
-              </span>
-            )}
           </div>
           <p className="text-xs text-muted-foreground mt-0.5 truncate">
             {iv.job_title}
@@ -406,24 +369,6 @@ function InterviewRow({ iv }: { iv: Interview }) {
             </span>
           </div>
         </div>
-        <div className="flex -space-x-2 shrink-0">
-          {interviewers.slice(0, 3).map((p) => (
-            <Avatar
-              key={p.id}
-              className="h-7 w-7 ring-2 ring-background"
-              title={p.user_name}
-            >
-              <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-500 text-white text-[10px] font-semibold">
-                {getInitials(p.user_name)}
-              </AvatarFallback>
-            </Avatar>
-          ))}
-          {interviewers.length > 3 && (
-            <span className="h-7 w-7 ring-2 ring-background rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
-              +{interviewers.length - 3}
-            </span>
-          )}
-        </div>
         <Button variant="outline" size="sm" className="shrink-0">
           {t("row.view")}
         </Button>
@@ -433,7 +378,10 @@ function InterviewRow({ iv }: { iv: Interview }) {
 }
 
 // Merknamen (Google Meet, Teams, Zoom) blijven onvertaald.
-function locationLabel(t: TFunction, type: InterviewLocationType): string {
+function locationLabel(
+  t: TFunction,
+  type: InterviewLocationType | null
+): string {
   switch (type) {
     case "google_meet":
       return "Google Meet";
@@ -445,6 +393,8 @@ function locationLabel(t: TFunction, type: InterviewLocationType): string {
       return t("location.inPerson");
     case "phone":
       return t("location.phone");
+    default:
+      return "—";
   }
 }
 

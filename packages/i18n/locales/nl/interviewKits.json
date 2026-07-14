@@ -126,8 +126,14 @@
       "noKit": "Geen kit gekoppeld — vrij gesprek.",
       "notesTitle": "Notities"
     },
+    "participantTypes": {
+      "interviewer": "Interviewer",
+      "observer": "Observer",
+      "candidate": "Kandidaat"
+    },
     "recording": {
-      "uploadedBy": "Geüpload door {{name}}"
+      "uploadedBy": "Geüpload door {{name}}",
+      "uploadedAt": "Geüpload op {{date}}"
     },
     "questionsPanel": {
       "noKit": "Aan dit interview is geen kit gekoppeld. Voeg er één toe via \"Bewerken\" om vragen te tonen.",

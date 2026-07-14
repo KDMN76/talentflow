@@ -50,12 +50,23 @@ export type InterviewParticipantRole =
   | "observer"
   | "hiring_manager";
 
+/** Backend `interview_participants.participant_type` (GET /interviews/:id). */
+export type InterviewParticipantType = "candidate" | "interviewer" | "observer";
+
 export interface InterviewParticipant {
   id: string;
-  user_id: string;
-  user_name: string;
-  user_email: string;
-  role: InterviewParticipantRole;
+  /** Backend: null for the candidate row (candidate_id is set instead). */
+  user_id?: string | null;
+  // ── Backend shape (GET /interviews/:id → participants[]) ──
+  participant_type?: InterviewParticipantType;
+  candidate_id?: string | null;
+  email?: string;
+  attended?: boolean | null;
+  attendance_logged_at?: string | null;
+  // ── Legacy/mock fields (kept for mockData compatibility) ──
+  user_name?: string;
+  user_email?: string;
+  role?: InterviewParticipantRole;
   /** Whether the participant has accepted (for ICS / calendar status). */
   rsvp?: "pending" | "accepted" | "declined" | null;
 }
@@ -64,49 +75,65 @@ export interface Interview {
   id: string;
   tenant_id: string;
   application_id: string;
-  candidate_id: string;
-  candidate_name: string;
-  job_id: string;
-  job_title: string;
+  /** Joined from candidates — may be null when the candidate was removed. */
+  candidate_name: string | null;
+  /** Joined from jobs — may be null. */
+  job_title: string | null;
   /** ISO datetime of the start. */
   scheduled_start: string;
   /** ISO datetime of the end. */
   scheduled_end: string;
   duration_minutes: number;
-  timezone: string;
   status: InterviewStatus;
-  location_type: InterviewLocationType;
-  /** Either the auto-generated meeting link or the manual URL/address. */
-  location_url: string | null;
-  location_address: string | null;
+  /** Computed by the backend (meeting_provider or "in_person"). */
+  location_type: InterviewLocationType | null;
   participants: InterviewParticipant[];
-  kit_id: string | null;
-  kit_name?: string | null;
   /** Free-form recruiter notes added during scheduling. */
   notes: string | null;
-  /** ID of the recording — populated after upload. */
-  has_recording: boolean;
-  /** Number of scorecards filled in by interviewers (0..participants.interviewers). */
-  scorecard_count: number;
-  created_by_id: string;
-  created_by_name: string;
   created_at: string;
   updated_at: string;
-}
 
-export interface ScheduleInterviewInput {
-  application_id: string;
-  candidate_id: string;
-  job_id: string;
-  scheduled_start: string;
-  duration_minutes: number;
-  timezone: string;
-  interviewer_ids: string[];
-  location_type: InterviewLocationType;
+  // ── Backend shape (GET /interviews/:id) ──
+  stage_id?: string | null;
+  meeting_provider?: InterviewLocationType | null;
+  /** Auto-generated or manually entered meeting link. */
+  meeting_url?: string | null;
+  /** Free-text location/address (in-person) or phone number. */
+  location?: string | null;
+  interview_kit_id?: string | null;
+  /** Nested kit summary returned by GET /interviews/:id. */
+  kit?: { id: string; name: string } | null;
+  created_by?: string | null;
+  cancelled_at?: string | null;
+  cancellation_reason?: string | null;
+
+  // ── Legacy/mock fields (kept for mockData compatibility) ──
+  candidate_id?: string;
+  job_id?: string;
+  timezone?: string;
   location_url?: string | null;
   location_address?: string | null;
   kit_id?: string | null;
-  notes?: string | null;
+  kit_name?: string | null;
+  has_recording?: boolean;
+  scorecard_count?: number;
+  created_by_id?: string;
+  created_by_name?: string;
+}
+
+/** Mirrors the backend `scheduleInterviewSchema` exactly (POST /interviews). */
+export interface ScheduleInterviewInput {
+  application_id: string;
+  scheduled_start: string;
+  scheduled_end: string;
+  interviewer_user_ids: string[];
+  observer_user_ids?: string[];
+  meeting_provider?: InterviewLocationType;
+  location?: string;
+  meeting_url?: string;
+  interview_kit_id?: string;
+  notes?: string;
+  stage_id?: string | null;
 }
 
 export interface InterviewFilters {
@@ -221,7 +248,12 @@ export interface CreateInterviewKitInput {
 
 // ─── Recordings & transcripts ───────────────────────────────────────────────
 
-export type TranscriptStatus = "queued" | "processing" | "done" | "failed";
+export type TranscriptStatus =
+  | "pending"
+  | "processing"
+  | "done"
+  | "failed"
+  | "skipped";
 
 export type AIRecommendation =
   | "strong_yes"
@@ -242,38 +274,54 @@ export interface TranscriptUtterance {
 }
 
 export interface InterviewTranscript {
-  recording_id: string;
+  /** Transcription status (audio → text). */
   status: TranscriptStatus;
-  /** Combined plain-text transcript when `status === "done"`. */
-  full_text: string | null;
-  utterances: TranscriptUtterance[];
-  /** AI-generated summary (1-2 paragraphs). */
-  ai_summary: string | null;
-  ai_strengths: string[];
-  ai_concerns: string[];
-  ai_recommendation: AIRecommendation | null;
   /** Detected language (ISO 639-1). */
-  language: string | null;
-  /** When the transcription pipeline finished. */
-  finished_at: string | null;
+  language?: string | null;
+  // ── Backend shape (GET /interviews/recordings/:id/transcript) ──
+  /** Combined plain-text transcript when `status === "done"`. */
+  text?: string | null;
+  /** AI-generated summary (1-2 paragraphs). */
+  summary?: string | null;
+  strengths?: string[] | null;
+  concerns?: string[] | null;
+  recommendation?: AIRecommendation | null;
+  /** AI-summary pipeline status (separate from transcription). */
+  ai_status?: TranscriptStatus | null;
+  // ── Legacy/mock fields (kept for mockData compatibility) ──
+  recording_id?: string;
+  full_text?: string | null;
+  utterances?: TranscriptUtterance[];
+  ai_summary?: string | null;
+  ai_strengths?: string[];
+  ai_concerns?: string[];
+  ai_recommendation?: AIRecommendation | null;
+  finished_at?: string | null;
 }
 
 export interface InterviewRecording {
   id: string;
   interview_id: string;
   filename: string;
-  size_bytes: number;
-  duration_seconds: number;
-  /** S3-style URL for playback. */
-  storage_url: string;
+  size_bytes: number | null;
+  duration_seconds: number | null;
   /** Always true — backend rejects uploads without this flag. */
   consent_given: boolean;
-  consent_given_at: string;
-  consent_given_by_id: string;
-  uploaded_by_id: string;
-  uploaded_by_name: string;
-  transcript_status: TranscriptStatus;
-  created_at: string;
+  // ── Backend shape (GET /interviews/:id/recordings) ──
+  mime_type?: string | null;
+  transcript_language?: string | null;
+  transcription_status?: TranscriptStatus;
+  consent_at?: string | null;
+  uploaded_by?: string | null;
+  uploaded_at?: string;
+  // ── Legacy/mock fields (kept for mockData compatibility) ──
+  storage_url?: string;
+  consent_given_at?: string;
+  consent_given_by_id?: string;
+  uploaded_by_id?: string;
+  uploaded_by_name?: string;
+  transcript_status?: TranscriptStatus;
+  created_at?: string;
 }
 
 export interface UploadRecordingInput {
