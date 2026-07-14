@@ -309,7 +309,7 @@ function ReportCard({ report }: { report: Report }) {
             onClick={() => router.push(`/reports/builder/${report.id}`)}
           >
             <div className="mb-2 flex items-start justify-between gap-2">
-              <p className="line-clamp-1 text-base font-semibold text-zinc-900 dark:text-zinc-100">
+              <p className="line-clamp-2 min-w-0 flex-1 text-base font-semibold text-zinc-900 dark:text-zinc-100">
                 {report.name}
               </p>
               {report.template_key && (
@@ -344,55 +344,56 @@ function ReportCard({ report }: { report: Report }) {
 
           {/* Actions */}
           <div className="flex items-center gap-1 border-t border-zinc-100 bg-zinc-50/40 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900/40">
-            <Button
-              asChild
-              variant="ghost"
-              size="sm"
-              className="h-8 text-xs"
-              title={t("card.viewTitle")}
-            >
-              <Link href={`/reports/builder/${report.id}?view=run`}>
-                <Eye className="mr-1 h-3.5 w-3.5" />
-                {t("card.view")}
-              </Link>
-            </Button>
-            <Button
-              asChild
-              variant="ghost"
-              size="sm"
-              className="h-8 text-xs"
-              title={t("card.editTitle")}
-            >
-              <Link href={`/reports/builder/${report.id}`}>
-                <Pencil className="mr-1 h-3.5 w-3.5" />
-                {t("card.edit")}
-              </Link>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 text-xs"
-              onClick={handleDuplicate}
-              title={t("card.duplicateTitle")}
-            >
-              <Copy className="mr-1 h-3.5 w-3.5" />
-              {t("card.duplicate")}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 text-xs"
-              onClick={handleEmbed}
-              title={t("card.embedTitle")}
-            >
-              <LinkIcon className="mr-1 h-3.5 w-3.5" />
-              {t("card.embed")}
-            </Button>
-            <span className="ml-auto" />
+            <div className="flex min-w-0 flex-wrap items-center gap-1">
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs"
+                title={t("card.viewTitle")}
+              >
+                <Link href={`/reports/builder/${report.id}?view=run`}>
+                  <Eye className="mr-1 h-3.5 w-3.5" />
+                  {t("card.view")}
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs"
+                title={t("card.editTitle")}
+              >
+                <Link href={`/reports/builder/${report.id}`}>
+                  <Pencil className="mr-1 h-3.5 w-3.5" />
+                  {t("card.edit")}
+                </Link>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={handleDuplicate}
+                title={t("card.duplicateTitle")}
+              >
+                <Copy className="mr-1 h-3.5 w-3.5" />
+                {t("card.duplicate")}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={handleEmbed}
+                title={t("card.embedTitle")}
+              >
+                <LinkIcon className="mr-1 h-3.5 w-3.5" />
+                {t("card.embed")}
+              </Button>
+            </div>
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-zinc-400 hover:bg-red-50 hover:text-red-600"
+              className="ml-auto h-8 w-8 shrink-0 text-zinc-400 hover:bg-red-50 hover:text-red-600"
               onClick={() => setConfirmDelete(true)}
               title={t("card.deleteTitle")}
             >

@@ -70,7 +70,7 @@ function StatCard({
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <p className="text-xs text-muted-foreground">{label}</p>
+            <p className="text-xs text-muted-foreground break-words">{label}</p>
             {tooltip && (
               <TooltipProvider delayDuration={200}>
                 <Tooltip>
@@ -85,7 +85,7 @@ function StatCard({
           <div className="text-xl font-bold leading-tight text-zinc-900 dark:text-zinc-100">
             {loading ? <Skeleton className="h-6 w-12" /> : value}
           </div>
-          {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
+          {hint && <p className="text-[10px] text-muted-foreground break-words">{hint}</p>}
         </div>
       </CardContent>
     </Card>
@@ -131,14 +131,14 @@ function ConsentGauge({
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-xs text-muted-foreground">Consent-dekking</p>
-          <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+          <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 break-words">
             {pct >= 80
               ? "Uitstekend"
               : pct >= 50
               ? "Voldoende"
               : "Aandacht vereist"}
           </p>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
+          <p className="text-[10px] text-muted-foreground mt-0.5 break-words">
             % kandidaten met geldige GDPR-toestemming
           </p>
         </div>
@@ -193,7 +193,7 @@ export default function GdprPage() {
       />
 
       {/* Stats cards */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard
           icon={<Users className="h-5 w-5" />}
           label="Kandidaten met consent"
