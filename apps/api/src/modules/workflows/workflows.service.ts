@@ -45,20 +45,15 @@ function evaluateConditions(
 // ── CRUD ──────────────────────────────────────────────────────────────────────
 
 export async function listWorkflows(tenantId: string) {
-  try {
-    return await withTenant(tenantId, async (client) => {
-      const { rows } = await client.query(
-        `SELECT * FROM workflows
-         WHERE tenant_id = $1 AND deleted_at IS NULL
-         ORDER BY created_at DESC`,
-        [tenantId]
-      );
-      return rows;
-    });
-  } catch (err) {
-    logger.error('[workflows] listWorkflows failed', { tenantId, error: (err as Error).message });
-    return [];
-  }
+  return withTenant(tenantId, async (client) => {
+    const { rows } = await client.query(
+      `SELECT * FROM workflows
+       WHERE tenant_id = $1 AND deleted_at IS NULL
+       ORDER BY created_at DESC`,
+      [tenantId]
+    );
+    return rows;
+  });
 }
 
 export async function getWorkflow(tenantId: string, workflowId: string) {
@@ -79,48 +74,29 @@ export async function createWorkflow(
   userId: string,
   data: CreateWorkflowData
 ) {
-  try {
-    return await withTenant(tenantId, async (client) => {
-      const { rows: [workflow] } = await client.query(
-        `INSERT INTO workflows (tenant_id, name, description, trigger, conditions, actions)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         RETURNING *`,
-        [
-          tenantId,
-          data.name,
-          data.description ?? null,
-          data.trigger,
-          JSON.stringify(data.conditions ?? []),
-          JSON.stringify(data.actions),
-        ]
-      );
+  return withTenant(tenantId, async (client) => {
+    const { rows: [workflow] } = await client.query(
+      `INSERT INTO workflows (tenant_id, name, description, trigger, conditions, actions)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [
+        tenantId,
+        data.name,
+        data.description ?? null,
+        data.trigger,
+        JSON.stringify(data.conditions ?? []),
+        JSON.stringify(data.actions),
+      ]
+    );
 
-      await client.query(
-        `INSERT INTO activities (tenant_id, entity_type, entity_id, user_id, action, payload)
-         VALUES ($1, 'workflow', $2, $3, 'created', $4)`,
-        [tenantId, workflow.id, userId, JSON.stringify({ name: data.name, trigger: data.trigger })]
-      );
+    await client.query(
+      `INSERT INTO activities (tenant_id, entity_type, entity_id, user_id, action, payload)
+       VALUES ($1, 'workflow', $2, $3, 'created', $4)`,
+      [tenantId, workflow.id, userId, JSON.stringify({ name: data.name, trigger: data.trigger })]
+    );
 
-      return workflow;
-    });
-  } catch (err) {
-    logger.error('[workflows] createWorkflow failed', { tenantId, error: (err as Error).message });
-    // Return a fake stub so callers don't crash
-    return {
-      id: '00000000-0000-0000-0000-000000000000',
-      tenant_id: tenantId,
-      name: data.name,
-      description: data.description ?? null,
-      trigger: data.trigger,
-      conditions: data.conditions ?? [],
-      actions: data.actions,
-      active: true,
-      run_count: 0,
-      last_run_at: null,
-      deleted_at: null,
-      created_at: new Date().toISOString(),
-    };
-  }
+    return workflow;
+  });
 }
 
 export async function updateWorkflow(
@@ -201,21 +177,16 @@ export async function toggleWorkflow(tenantId: string, workflowId: string) {
 }
 
 export async function getWorkflowRuns(tenantId: string, workflowId: string) {
-  try {
-    return await withTenant(tenantId, async (client) => {
-      const { rows } = await client.query(
-        `SELECT * FROM workflow_runs
-         WHERE workflow_id = $1 AND tenant_id = $2
-         ORDER BY ran_at DESC
-         LIMIT 20`,
-        [workflowId, tenantId]
-      );
-      return rows;
-    });
-  } catch (err) {
-    logger.error('[workflows] getWorkflowRuns failed', { tenantId, workflowId, error: (err as Error).message });
-    return [];
-  }
+  return withTenant(tenantId, async (client) => {
+    const { rows } = await client.query(
+      `SELECT * FROM workflow_runs
+       WHERE workflow_id = $1 AND tenant_id = $2
+       ORDER BY ran_at DESC
+       LIMIT 20`,
+      [workflowId, tenantId]
+    );
+    return rows;
+  });
 }
 
 // ── Event processing engine ───────────────────────────────────────────────────

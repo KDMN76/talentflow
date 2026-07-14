@@ -27,62 +27,45 @@ export async function getCandidateCommunications(
   tenantId: string,
   candidateId: string
 ): Promise<Communication[]> {
-  try {
-    return await withTenant(tenantId, async (client) => {
-      const { rows } = await client.query<Communication>(
-        `SELECT * FROM communications
-         WHERE tenant_id = $1 AND candidate_id = $2
-         ORDER BY sent_at DESC`,
-        [tenantId, candidateId]
-      );
-      return rows;
-    });
-  } catch (err) {
-    logger.warn('[communications] getCandidateCommunications failed — returning []', {
-      tenantId,
-      candidateId,
-      error: (err as Error).message,
-    });
-    return [];
-  }
+  return withTenant(tenantId, async (client) => {
+    const { rows } = await client.query<Communication>(
+      `SELECT * FROM communications
+       WHERE tenant_id = $1 AND candidate_id = $2
+       ORDER BY sent_at DESC`,
+      [tenantId, candidateId]
+    );
+    return rows;
+  });
 }
 
 export async function getInbox(
   tenantId: string,
   opts: { channel?: string; limit?: number } = {}
 ): Promise<Communication[]> {
-  try {
-    return await withTenant(tenantId, async (client) => {
-      const limit = opts.limit ?? 50;
-      const values: unknown[] = [tenantId];
-      let channelClause = '';
+  return withTenant(tenantId, async (client) => {
+    const limit = opts.limit ?? 50;
+    const values: unknown[] = [tenantId];
+    let channelClause = '';
 
-      if (opts.channel) {
-        channelClause = `AND c.channel = $2`;
-        values.push(opts.channel);
-      }
+    if (opts.channel) {
+      channelClause = `AND c.channel = $2`;
+      values.push(opts.channel);
+    }
 
-      values.push(limit);
-      const limitParam = `$${values.length}`;
+    values.push(limit);
+    const limitParam = `$${values.length}`;
 
-      const { rows } = await client.query<Communication>(
-        `SELECT c.*, cand.name as candidate_name
-         FROM communications c
-         JOIN candidates cand ON cand.id = c.candidate_id
-         WHERE c.tenant_id = $1 ${channelClause}
-         ORDER BY c.sent_at DESC
-         LIMIT ${limitParam}`,
-        values
-      );
-      return rows;
-    });
-  } catch (err) {
-    logger.warn('[communications] getInbox failed — returning []', {
-      tenantId,
-      error: (err as Error).message,
-    });
-    return [];
-  }
+    const { rows } = await client.query<Communication>(
+      `SELECT c.*, cand.name as candidate_name
+       FROM communications c
+       JOIN candidates cand ON cand.id = c.candidate_id
+       WHERE c.tenant_id = $1 ${channelClause}
+       ORDER BY c.sent_at DESC
+       LIMIT ${limitParam}`,
+      values
+    );
+    return rows;
+  });
 }
 
 /**
