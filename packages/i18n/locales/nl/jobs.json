@@ -8,6 +8,8 @@
     "results_one": "resultaat",
     "results_other": "resultaten",
     "ofTotal": "van {{total}} totaal",
+    "loadMore": "Meer laden",
+    "showingXofY": "{{shown}} van {{total}} geladen",
     "quickFilters": {
       "myOpen": "Mijn open jobs",
       "recent7d": "Recent geplaatst (laatste 7 dagen)",

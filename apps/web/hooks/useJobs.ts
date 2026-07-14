@@ -1,6 +1,11 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  useInfiniteQuery,
+} from "@tanstack/react-query";
 import { z } from "zod";
 import { api } from "@/lib/api";
 import {
@@ -63,6 +68,45 @@ export function useJobs(arg?: UseJobsOptions | JobStatus | "all") {
         params: Object.keys(params).length > 0 ? params : undefined,
       });
       return JobsListResponseSchema.parse(data).data;
+    },
+  });
+}
+
+/** Aantal vacatures per pagina bij de infinite-lijst (matcht server-default). */
+const JOBS_PAGE_SIZE = 20;
+
+export type JobsPage = z.infer<typeof JobsListResponseSchema>;
+
+/**
+ * Page-based infinite variant van {@link useJobs}. Elke pagina wordt met
+ * `JobsListResponseSchema` gevalideerd en levert `{ data, meta }`, zodat de UI
+ * de pagina's kan platslaan én `meta.total` als echte teller kan tonen i.p.v.
+ * de eerste 20 rijen.
+ *
+ * `getNextPageParam` stopt zodra `meta.page >= meta.pages`.
+ */
+export function useJobsInfinite(arg?: UseJobsOptions | JobStatus | "all") {
+  const opts: UseJobsOptions =
+    typeof arg === "string" || arg === undefined ? { status: arg } : arg;
+
+  const { status, recruiterId, limit } = opts;
+  const pageSize = limit ?? JOBS_PAGE_SIZE;
+
+  return useInfiniteQuery({
+    queryKey: ["jobs", "infinite", status ?? "all", recruiterId ?? "all", pageSize],
+    initialPageParam: 1,
+    getNextPageParam: (lastPage: JobsPage) =>
+      lastPage.meta.page < lastPage.meta.pages ? lastPage.meta.page + 1 : undefined,
+    queryFn: async ({ pageParam }): Promise<JobsPage> => {
+      const params: Record<string, string | number> = {
+        page: pageParam as number,
+        limit: pageSize,
+      };
+      if (status && status !== "all") params.status = status;
+      if (recruiterId && recruiterId !== "all") params.recruiter_id = recruiterId;
+
+      const { data } = await api.get<unknown>("/jobs", { params });
+      return JobsListResponseSchema.parse(data);
     },
   });
 }

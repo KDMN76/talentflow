@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, UserSquare2, LayoutGrid, List, Upload } from "lucide-react";
+import { Plus, UserSquare2, LayoutGrid, List, Upload, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { CandidateCard } from "@/components/candidates/CandidateCard";
 import { CandidateForm } from "@/components/candidates/CandidateForm";
@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useCandidates } from "@/hooks/useCandidates";
+import { useCandidatesInfinite, useCandidateCount } from "@/hooks/useCandidates";
 import { cn, getInitials, getScoreColor, formatRelativeDate } from "@/lib/utils";
 import Link from "next/link";
 
@@ -37,7 +37,23 @@ export default function CandidatesPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const { data: candidates, isLoading } = useCandidates(debouncedSearch || undefined);
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useCandidatesInfinite(debouncedSearch || undefined);
+
+  // Echte tenant-total (server-side meta.total), los van de gepagineerde set.
+  const { data: totalCount } = useCandidateCount();
+
+  // Alle geladen pagina's platgeslagen tot één lijst. De client-side
+  // bron-filter werkt over deze geladen set (bestaande beperking).
+  const candidates = useMemo(
+    () => data?.pages.flatMap((p) => p.data) ?? [],
+    [data]
+  );
 
   const filtered = candidates?.filter((c) => {
     if (sourceFilter === "Alle") return true;
@@ -85,7 +101,7 @@ export default function CandidatesPage() {
     <div className="space-y-6 animate-fade-in">
       <PageHeader
         title={t("list.title")}
-        description={t("list.totalCount", { count: candidates?.length ?? 0 })}
+        description={t("list.totalCount", { count: totalCount ?? 0 })}
         actions={
           <div className="flex items-center gap-2">
             <Button
@@ -296,6 +312,30 @@ export default function CandidatesPage() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Meer laden — page-based paginatie over de geladen kandidaten */}
+      {!isLoading && candidates.length > 0 && (
+        <div className="flex flex-col items-center gap-2 pt-2">
+          <p className="text-sm text-muted-foreground">
+            {t("list.showingXofY", {
+              shown: candidates.length,
+              total: totalCount ?? candidates.length,
+            })}
+          </p>
+          {hasNextPage && (
+            <Button
+              variant="outline"
+              onClick={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+            >
+              {isFetchingNextPage ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              {t("list.loadMore")}
+            </Button>
+          )}
         </div>
       )}
 

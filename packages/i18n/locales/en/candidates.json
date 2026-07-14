@@ -6,7 +6,9 @@
     "csvImport": "CSV import",
     "newCandidate": "New candidate",
     "emptyTitle": "No candidates found",
-    "emptyHint": "Adjust your search or add a new candidate."
+    "emptyHint": "Adjust your search or add a new candidate.",
+    "loadMore": "Load more",
+    "showingXofY": "{{shown}} of {{total}} loaded"
   },
   "filters": {
     "all": "All",

@@ -8,6 +8,8 @@
     "results_one": "result",
     "results_other": "results",
     "ofTotal": "of {{total}} total",
+    "loadMore": "Load more",
+    "showingXofY": "{{shown}} of {{total}} loaded",
     "quickFilters": {
       "myOpen": "My open jobs",
       "recent7d": "Recently posted (last 7 days)",

@@ -1,6 +1,11 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  useInfiniteQuery,
+} from "@tanstack/react-query";
 import type {
   Candidate,
   CandidateResume,
@@ -20,6 +25,50 @@ export function useCandidates(search?: string) {
     queryFn: async () => {
       const { data } = await api.get<{ data: Candidate[] }>("/candidates", { params: { search } });
       return data.data;
+    },
+  });
+}
+
+/** Aantal kandidaten per pagina bij de infinite-lijst (matcht server-default). */
+const CANDIDATES_PAGE_SIZE = 20;
+
+export interface CandidatesPage {
+  data: Candidate[];
+  meta: { total: number; page: number; limit: number; pages: number };
+}
+
+/**
+ * Page-based infinite lijst van kandidaten. Elke pagina levert `{ data, meta }`
+ * zodat de UI de pagina's kan platslaan én de echte `meta.total` kan tonen —
+ * i.p.v. de eerste 20 rijen met een teller die de paginagrootte laat zien.
+ *
+ * `getNextPageParam` stopt zodra `meta.page >= meta.pages`. De backend
+ * ondersteunt `page`/`limit` al (paginationSchema, limit max 100).
+ */
+export function useCandidatesInfinite(search?: string) {
+  return useInfiniteQuery({
+    queryKey: ["candidates", "infinite", search],
+    initialPageParam: 1,
+    getNextPageParam: (lastPage: CandidatesPage) =>
+      lastPage.meta.page < lastPage.meta.pages ? lastPage.meta.page + 1 : undefined,
+    queryFn: async ({ pageParam }): Promise<CandidatesPage> => {
+      const { data } = await api.get<{
+        data?: Candidate[];
+        meta?: Partial<CandidatesPage["meta"]>;
+      }>("/candidates", {
+        params: { search, page: pageParam, limit: CANDIDATES_PAGE_SIZE },
+      });
+      const items = data.data ?? [];
+      const meta = data.meta ?? {};
+      return {
+        data: items,
+        meta: {
+          total: meta.total ?? items.length,
+          page: meta.page ?? (pageParam as number),
+          limit: meta.limit ?? CANDIDATES_PAGE_SIZE,
+          pages: meta.pages ?? 1,
+        },
+      };
     },
   });
 }

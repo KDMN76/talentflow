@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
-import { Plus, Briefcase, Wand2, Download } from "lucide-react";
+import { Plus, Briefcase, Wand2, Download, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { JobCard } from "@/components/jobs/JobCard";
 import { JobRowBoundary } from "@/components/jobs/JobRowBoundary";
@@ -16,7 +16,7 @@ import type { MultiSelectOption } from "@/components/ui/multi-select";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
-import { useJobs } from "@/hooks/useJobs";
+import { useJobsInfinite } from "@/hooks/useJobs";
 import {
   useJobsFilters,
   type JobsFilters,
@@ -51,10 +51,23 @@ export default function JobsPage() {
 
   // Server-side filtering: status + recruiter_id (backend supports these
   // today). All overige filters worden client-side toegepast op `jobs`.
-  const { data: jobs, isLoading } = useJobs({
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useJobsInfinite({
     status: filters.status,
     recruiterId: filters.recruiter_id,
   });
+
+  // Alle geladen pagina's platgeslagen tot één lijst; de client-side filters
+  // (applyClientSideFilters) werken over deze geladen set (bestaande beperking).
+  const jobs = useMemo<Job[]>(
+    () => data?.pages.flatMap((p) => p.data) ?? [],
+    [data]
+  );
 
   // Build recruiter options from the loaded jobs (covers both mock and prod
   // until a dedicated `useUsers` hook bestaat).
@@ -126,7 +139,9 @@ export default function JobsPage() {
     ];
   }, [currentUserId, t]);
 
-  const totalCount = jobs?.length ?? 0;
+  // Echte tenant-total uit server-side meta (constant over alle pagina's),
+  // niet de lengte van de geladen set.
+  const totalCount = data?.pages[0]?.meta.total ?? 0;
 
   const filteredJobs = useMemo<Job[]>(() => {
     if (!jobs) return [];
@@ -297,6 +312,27 @@ export default function JobsPage() {
               <JobCard job={job} />
             </JobRowBoundary>
           ))}
+        </div>
+      )}
+
+      {/* Meer laden — page-based paginatie over de geladen vacatures */}
+      {!isLoading && jobs.length > 0 && (
+        <div className="flex flex-col items-center gap-2 pt-2">
+          <p className="text-sm text-muted-foreground">
+            {t("list.showingXofY", { shown: jobs.length, total: totalCount })}
+          </p>
+          {hasNextPage && (
+            <Button
+              variant="outline"
+              onClick={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+            >
+              {isFetchingNextPage ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              {t("list.loadMore")}
+            </Button>
+          )}
         </div>
       )}
     </div>

@@ -6,7 +6,9 @@
     "csvImport": "CSV-import",
     "newCandidate": "Nieuwe kandidaat",
     "emptyTitle": "Geen kandidaten gevonden",
-    "emptyHint": "Pas je zoekopdracht aan of voeg een nieuwe kandidaat toe."
+    "emptyHint": "Pas je zoekopdracht aan of voeg een nieuwe kandidaat toe.",
+    "loadMore": "Meer laden",
+    "showingXofY": "{{shown}} van {{total}} geladen"
   },
   "filters": {
     "all": "Alle",
