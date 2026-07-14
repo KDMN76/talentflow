@@ -65,6 +65,7 @@
     "roles": {
       "admin": "Beheerder",
       "recruiter": "Recruiter",
+      "hiring_manager": "Hiring manager",
       "viewer": "Lezer"
     },
     "permissions": {
@@ -99,6 +100,26 @@
       "inviteSent": {
         "title": "Uitnodiging verstuurd",
         "description": "Er is een uitnodiging gestuurd naar {{email}}."
+      },
+      "inviteError": {
+        "title": "Uitnodigen mislukt",
+        "description": "De uitnodiging kon niet worden verstuurd. Probeer het opnieuw."
+      },
+      "inviteExists": {
+        "title": "Al in gebruik",
+        "description": "Dit e-mailadres is al gekoppeld aan een teamlid."
+      },
+      "tenantError": {
+        "title": "Opslaan mislukt",
+        "description": "De organisatiegegevens konden niet worden opgeslagen. Probeer het opnieuw."
+      },
+      "passwordError": {
+        "title": "Wijzigen mislukt",
+        "description": "Het wachtwoord kon niet worden gewijzigd. Probeer het opnieuw."
+      },
+      "passwordCurrentInvalid": {
+        "title": "Huidig wachtwoord onjuist",
+        "description": "Controleer je huidige wachtwoord en probeer het opnieuw."
       },
       "keyCreateError": {
         "title": "Aanmaken mislukt",
@@ -145,6 +166,10 @@
     "users": {
       "inviteTitle": "Teamlid uitnodigen",
       "inviteDescription": "Nodig collega's uit om samen te werken in TalentFlow.",
+      "inviteNameLabel": "Naam",
+      "inviteNamePlaceholder": "Voor- en achternaam",
+      "inviteEmailLabel": "E-mailadres",
+      "inviteRoleLabel": "Rol",
       "invitePlaceholder": "naam@bedrijf.nl",
       "inviteButton": "Uitnodigen",
       "teamTitleCount": "Team ({{count}})",

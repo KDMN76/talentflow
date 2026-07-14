@@ -51,6 +51,13 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { getInitials } from "@/lib/utils";
 import { useApiKeys, useCreateApiKey, useRevokeApiKey, type CreatedApiKey } from "@/hooks/useApiKeys";
@@ -61,7 +68,14 @@ import {
   useToggleWebhook,
   WEBHOOK_EVENTS,
 } from "@/hooks/useWebhooks";
-import { useCurrentUser, useTenantUsers } from "@/hooks/useUsers";
+import {
+  useCurrentUser,
+  useTenantUsers,
+  useChangePassword,
+  useInviteUser,
+  useUpdateTenant,
+  type InviteRole,
+} from "@/hooks/useUsers";
 
 // V7: alle settings-subpagina's op één plek vindbaar.
 const SETTINGS_SUBPAGES = [
@@ -192,18 +206,38 @@ const makePasswordSchema = (t: SettingsTranslator) =>
     });
 
 type TenantSchema = ReturnType<typeof makeTenantSchema>;
+type PasswordSchema = ReturnType<typeof makePasswordSchema>;
 
 const roleLabelKeys: Record<string, string> = {
   admin: "index.roles.admin",
   recruiter: "index.roles.recruiter",
+  hiring_manager: "index.roles.hiring_manager",
   viewer: "index.roles.viewer",
 };
 
 const roleColors: Record<string, string> = {
   admin: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-400",
   recruiter: "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400",
+  hiring_manager: "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400",
   viewer: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
 };
+
+// Rollen die via het invite-formulier gekozen kunnen worden (spiegelt de
+// inviteSchema-enum in de API; `viewer` bewust weggelaten uit de standaardkeuze).
+const INVITE_ROLES: { value: InviteRole; labelKey: string }[] = [
+  { value: "recruiter", labelKey: "index.roles.recruiter" },
+  { value: "hiring_manager", labelKey: "index.roles.hiring_manager" },
+  { value: "admin", labelKey: "index.roles.admin" },
+];
+
+/** Leest de AppError-code uit een axios-fout ({ error: { code } }). */
+function apiErrorCode(err: unknown): string | undefined {
+  if (err && typeof err === "object" && "response" in err) {
+    const resp = (err as { response?: { data?: { error?: { code?: string } } } }).response;
+    return resp?.data?.error?.code;
+  }
+  return undefined;
+}
 
 const ALL_PERMISSIONS = [
   { value: "candidates:read", labelKey: "index.permissions.candidatesRead" },
@@ -233,8 +267,8 @@ export default function SettingsPage() {
   const { t } = useTranslation("settingsCore");
   const { toast } = useToast();
   const [inviteEmail, setInviteEmail] = useState("");
-  const [isSavingTenant, setIsSavingTenant] = useState(false);
-  const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [inviteName, setInviteName] = useState("");
+  const [inviteRole, setInviteRole] = useState<InviteRole>("recruiter");
 
   // Real-data hooks
   const { data: currentUser } = useCurrentUser();
@@ -243,6 +277,11 @@ export default function SettingsPage() {
     isLoading: teamLoading,
     isError: teamError,
   } = useTenantUsers();
+
+  // Mutations (echte API-calls i.p.v. nep-opslag)
+  const changePassword = useChangePassword();
+  const inviteUser = useInviteUser();
+  const updateTenant = useUpdateTenant();
 
   // API Keys state
   const [isCreateKeyOpen, setIsCreateKeyOpen] = useState(false);
@@ -257,21 +296,23 @@ export default function SettingsPage() {
   const [newWebhookUrl, setNewWebhookUrl] = useState("");
   const [newWebhookEvents, setNewWebhookEvents] = useState<string[]>([]);
 
+  const tenantTimezone = currentUser?.tenant?.settings?.timezone ?? "Europe/Amsterdam";
+
   const tenantForm = useForm({
     resolver: zodResolver(makeTenantSchema(t)),
     defaultValues: {
       company_name: currentUser?.tenant?.name ?? "",
-      timezone: "Europe/Amsterdam",
+      timezone: tenantTimezone,
     },
     values: currentUser?.tenant?.name
       ? {
           company_name: currentUser.tenant.name,
-          timezone: "Europe/Amsterdam",
+          timezone: tenantTimezone,
         }
       : undefined,
   });
 
-  const passwordForm = useForm({
+  const passwordForm = useForm<z.infer<PasswordSchema>>({
     resolver: zodResolver(makePasswordSchema(t)),
   });
 
@@ -287,33 +328,76 @@ export default function SettingsPage() {
   const toggleWebhook = useToggleWebhook();
 
   const handleSaveTenant = async (data: z.infer<TenantSchema>) => {
-    setIsSavingTenant(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setIsSavingTenant(false);
-    toast({
-      title: t("index.toasts.tenantSaved.title"),
-      description: t("index.toasts.tenantSaved.description"),
-    });
+    try {
+      await updateTenant.mutateAsync({
+        name: data.company_name,
+        settings: { timezone: data.timezone },
+      });
+      toast({
+        title: t("index.toasts.tenantSaved.title"),
+        description: t("index.toasts.tenantSaved.description"),
+      });
+    } catch {
+      toast({
+        title: t("index.toasts.tenantError.title"),
+        description: t("index.toasts.tenantError.description"),
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleSavePassword = async () => {
-    setIsSavingPassword(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setIsSavingPassword(false);
-    passwordForm.reset();
-    toast({
-      title: t("index.toasts.passwordChanged.title"),
-      description: t("index.toasts.passwordChanged.description"),
-    });
+  const handleSavePassword = async (data: z.infer<PasswordSchema>) => {
+    try {
+      await changePassword.mutateAsync({
+        current_password: data.current_password,
+        password: data.new_password,
+      });
+      passwordForm.reset();
+      toast({
+        title: t("index.toasts.passwordChanged.title"),
+        description: t("index.toasts.passwordChanged.description"),
+      });
+    } catch (err) {
+      const invalidCurrent = apiErrorCode(err) === "INVALID_CURRENT_PASSWORD";
+      toast({
+        title: invalidCurrent
+          ? t("index.toasts.passwordCurrentInvalid.title")
+          : t("index.toasts.passwordError.title"),
+        description: invalidCurrent
+          ? t("index.toasts.passwordCurrentInvalid.description")
+          : t("index.toasts.passwordError.description"),
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleInvite = () => {
-    if (!inviteEmail) return;
-    toast({
-      title: t("index.toasts.inviteSent.title"),
-      description: t("index.toasts.inviteSent.description", { email: inviteEmail }),
-    });
-    setInviteEmail("");
+  const handleInvite = async () => {
+    if (!inviteEmail || !inviteName) return;
+    try {
+      await inviteUser.mutateAsync({
+        email: inviteEmail,
+        name: inviteName,
+        role: inviteRole,
+      });
+      toast({
+        title: t("index.toasts.inviteSent.title"),
+        description: t("index.toasts.inviteSent.description", { email: inviteEmail }),
+      });
+      setInviteEmail("");
+      setInviteName("");
+      setInviteRole("recruiter");
+    } catch (err) {
+      const alreadyExists = apiErrorCode(err) === "USER_ALREADY_EXISTS";
+      toast({
+        title: alreadyExists
+          ? t("index.toasts.inviteExists.title")
+          : t("index.toasts.inviteError.title"),
+        description: alreadyExists
+          ? t("index.toasts.inviteExists.description")
+          : t("index.toasts.inviteError.description"),
+        variant: "destructive",
+      });
+    }
   };
 
   const handleCreateApiKey = async () => {
@@ -502,10 +586,10 @@ export default function SettingsPage() {
                 <div className="flex justify-end pt-2">
                   <Button
                     type="submit"
-                    disabled={isSavingTenant}
+                    disabled={updateTenant.isPending}
                     className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 border-0"
                   >
-                    {isSavingTenant ? (
+                    {updateTenant.isPending ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
                       <Check className="mr-2 h-4 w-4" />
@@ -529,23 +613,59 @@ export default function SettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-3">
-                <div className="relative flex-1">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <div className="space-y-1.5 sm:flex-1">
+                  <Label htmlFor="invite-name">{t("index.users.inviteNameLabel")}</Label>
                   <Input
-                    type="email"
-                    placeholder={t("index.users.invitePlaceholder")}
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    className="pl-9"
-                    onKeyDown={(e) => e.key === "Enter" && handleInvite()}
+                    id="invite-name"
+                    placeholder={t("index.users.inviteNamePlaceholder")}
+                    value={inviteName}
+                    onChange={(e) => setInviteName(e.target.value)}
                   />
+                </div>
+                <div className="space-y-1.5 sm:flex-1">
+                  <Label htmlFor="invite-email">{t("index.users.inviteEmailLabel")}</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="invite-email"
+                      type="email"
+                      placeholder={t("index.users.invitePlaceholder")}
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      className="pl-9"
+                      onKeyDown={(e) => e.key === "Enter" && handleInvite()}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5 sm:w-44">
+                  <Label htmlFor="invite-role">{t("index.users.inviteRoleLabel")}</Label>
+                  <Select
+                    value={inviteRole}
+                    onValueChange={(v) => setInviteRole(v as InviteRole)}
+                  >
+                    <SelectTrigger id="invite-role">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {INVITE_ROLES.map((r) => (
+                        <SelectItem key={r.value} value={r.value}>
+                          {t(r.labelKey)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <Button
                   onClick={handleInvite}
+                  disabled={!inviteEmail || !inviteName || inviteUser.isPending}
                   className="bg-indigo-600 hover:bg-indigo-700 border-0"
                 >
-                  <Plus className="mr-2 h-4 w-4" />
+                  {inviteUser.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="mr-2 h-4 w-4" />
+                  )}
                   {t("index.users.inviteButton")}
                 </Button>
               </div>
@@ -673,10 +793,10 @@ export default function SettingsPage() {
                 <div className="flex justify-end pt-2">
                   <Button
                     type="submit"
-                    disabled={isSavingPassword}
+                    disabled={changePassword.isPending}
                     className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 border-0"
                   >
-                    {isSavingPassword ? (
+                    {changePassword.isPending ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
                       <Shield className="mr-2 h-4 w-4" />

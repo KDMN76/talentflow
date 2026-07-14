@@ -211,7 +211,8 @@ export async function getMe(tenantId: string, userId: string) {
     const { rows: [user] } = await client.query(
       `SELECT u.id, u.email, u.name, u.role, u.avatar_url, u.is_active,
               u.created_at, u.language,
-              t.default_language AS tenant_default_language
+              t.default_language AS tenant_default_language,
+              t.name AS tenant_name, t.plan AS tenant_plan, t.settings AS tenant_settings
        FROM users u
        JOIN tenants t ON t.id = u.tenant_id
        WHERE u.id = $1 AND u.tenant_id = $2`,
@@ -222,14 +223,36 @@ export async function getMe(tenantId: string, userId: string) {
       throw new AppError(404, 'USER_NOT_FOUND', 'Gebruiker niet gevonden');
     }
 
-    return user;
+    // Genest tenant-object zodat de frontend org-naam, plan én settings
+    // (o.a. timezone) kan tonen/pre-fillen. tenant_* worden hier consolideerd.
+    const {
+      tenant_name,
+      tenant_plan,
+      tenant_settings,
+      ...rest
+    } = user as Record<string, unknown>;
+    return {
+      ...rest,
+      tenant: {
+        id: tenantId,
+        name: tenant_name ?? null,
+        plan: tenant_plan ?? null,
+        settings: (tenant_settings as Record<string, unknown> | null) ?? {},
+      },
+    };
   });
 }
 
 export async function updateMe(
   tenantId: string,
   userId: string,
-  data: { name?: string; avatar_url?: string | null; password?: string; language?: string | null }
+  data: {
+    name?: string;
+    avatar_url?: string | null;
+    password?: string;
+    current_password?: string;
+    language?: string | null;
+  }
 ): Promise<UserListItem> {
   return withTenant(tenantId, async (client) => {
     const fields: string[] = [];
@@ -241,6 +264,22 @@ export async function updateMe(
     // NULL is een geldige waarde: "geen eigen voorkeur, erf de tenant-default".
     if (data.language !== undefined) { fields.push(`language = $${idx++}`); values.push(data.language); }
     if (data.password !== undefined) {
+      // Wachtwoord wijzigen vereist bevestiging van het huidige wachtwoord.
+      // Zelfde bcrypt.compare-patroon als auth.service.login.
+      const { rows: [current] } = await client.query<{ password_hash: string }>(
+        `SELECT password_hash FROM users WHERE id = $1 AND tenant_id = $2`,
+        [userId, tenantId]
+      );
+      if (!current) {
+        throw new AppError(404, 'USER_NOT_FOUND', 'Gebruiker niet gevonden');
+      }
+      const currentValid = await bcrypt.compare(
+        data.current_password ?? '',
+        current.password_hash
+      );
+      if (!currentValid) {
+        throw new AppError(400, 'INVALID_CURRENT_PASSWORD', 'Huidig wachtwoord is onjuist');
+      }
       const hash = await bcrypt.hash(data.password, SALT_ROUNDS);
       fields.push(`password_hash = $${idx++}`);
       values.push(hash);

@@ -23,6 +23,10 @@ const updateMeSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   avatar_url: z.string().url().optional().nullable(),
   password: z.string().min(8).optional(),
+  // Alleen relevant wanneer `password` wordt gezet: het huidige wachtwoord wordt
+  // dan geverifieerd voor de wijziging (zie users.service.updateMe). Optioneel
+  // zodat andere self-updates (naam, taal, avatar) ongewijzigd blijven werken.
+  current_password: z.string().optional(),
   // UI-taalvoorkeur: BCP-47-achtig ('nl', 'en', 'en-GB'). Bewust geen enum van
   // ondersteunde talen — welke talen de UI aanbiedt is een frontend-concern
   // (@talentflow/i18n); de API slaat alleen een geldige locale-string op.

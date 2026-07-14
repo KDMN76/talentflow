@@ -65,6 +65,7 @@
     "roles": {
       "admin": "Admin",
       "recruiter": "Recruiter",
+      "hiring_manager": "Hiring manager",
       "viewer": "Viewer"
     },
     "permissions": {
@@ -99,6 +100,26 @@
       "inviteSent": {
         "title": "Invitation sent",
         "description": "An invitation has been sent to {{email}}."
+      },
+      "inviteError": {
+        "title": "Invite failed",
+        "description": "The invitation could not be sent. Please try again."
+      },
+      "inviteExists": {
+        "title": "Already in use",
+        "description": "This email address is already linked to a team member."
+      },
+      "tenantError": {
+        "title": "Save failed",
+        "description": "Your organization details could not be saved. Please try again."
+      },
+      "passwordError": {
+        "title": "Change failed",
+        "description": "The password could not be changed. Please try again."
+      },
+      "passwordCurrentInvalid": {
+        "title": "Current password incorrect",
+        "description": "Check your current password and try again."
       },
       "keyCreateError": {
         "title": "Creation failed",
@@ -145,6 +166,10 @@
     "users": {
       "inviteTitle": "Invite team member",
       "inviteDescription": "Invite colleagues to collaborate in TalentFlow.",
+      "inviteNameLabel": "Name",
+      "inviteNamePlaceholder": "First and last name",
+      "inviteEmailLabel": "Email address",
+      "inviteRoleLabel": "Role",
       "invitePlaceholder": "name@company.com",
       "inviteButton": "Invite",
       "teamTitleCount": "Team ({{count}})",
