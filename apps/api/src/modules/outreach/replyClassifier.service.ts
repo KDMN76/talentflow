@@ -446,16 +446,18 @@ async function createTaskScheduleCall(
 ): Promise<void> {
   await withTenant(tenantId, async (client) => {
     try {
+      // De tasks-tabel (migration 005) heeft candidate_id/job_id/due_date/status,
+      // GEEN entity_type/entity_id/due_at/metadata. Classificatie-referentie
+      // bewaren we in de omschrijving zodat de opvolgtaak traceerbaar blijft.
       await client.query(
         `INSERT INTO tasks
-           (tenant_id, entity_type, entity_id, title, description, status, due_at, metadata)
-         VALUES ($1, 'candidate', $2, $3, $4, 'open', now() + interval '1 day', $5::jsonb)`,
+           (tenant_id, candidate_id, title, description, status, due_date)
+         VALUES ($1, $2, $3, $4, 'open', now() + interval '1 day')`,
         [
           tenantId,
           candidateId,
           'Plan kennismakingsgesprek',
-          'AI heeft de reply geclassificeerd als "interested" — neem contact op om een gesprek te plannen.',
-          JSON.stringify({ source: 'reply_classifier', classification_id: classificationId }),
+          `AI heeft de reply geclassificeerd als "interested" — neem contact op om een gesprek te plannen. (classificatie-ID: ${classificationId})`,
         ]
       );
     } catch (err) {

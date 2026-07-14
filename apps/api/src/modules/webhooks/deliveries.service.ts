@@ -392,9 +392,13 @@ export async function deliverWebhook(deliveryId: string): Promise<void> {
       return;
     }
 
-    // Failure path.
+    // Failure path. De oorspronkelijke rij markeren we als 'failed' (niet
+    // 'pending'): scheduleRetryDelivery maakt een aparte pending-rij aan voor
+    // de volgende poging. Zou de origin op 'pending' blijven staan, dan bleef
+    // hij eeuwig hangen (nooit door de worker opgepakt) én was de retry-knop
+    // onbereikbaar (die toont alleen bij failed/dead).
     const isDead = attempt >= MAX_ATTEMPTS;
-    const newStatus: DeliveryStatus = isDead ? 'dead' : 'pending';
+    const newStatus: DeliveryStatus = isDead ? 'dead' : 'failed';
     const nextRetry = isDead ? null : new Date(Date.now() + backoffMs(attempt + 1));
 
     await client.query(

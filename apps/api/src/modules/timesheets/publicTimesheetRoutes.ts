@@ -16,6 +16,7 @@ import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { rateLimitStore } from '../../middleware/rateLimitStore';
 import { AppError } from '../../middleware/errorHandler';
+import { withTenant } from '../../db/pool';
 import * as service from './timesheets.service';
 
 const router = Router();
@@ -114,10 +115,12 @@ router.get('/:token', async (req, res, next) => {
       r.candidate_id
     );
     const full = await service.getTimesheet(r.tenant_id, ts.id);
+    const contract = await loadContractContext(r.tenant_id, r.contract_id);
     res.json({
       data: {
         contract_id: r.contract_id,
         candidate_id: r.candidate_id,
+        contract,
         timesheet: full,
         token_expires_at: r.expires_at,
       },
@@ -192,6 +195,60 @@ function mondayOf(date: Date): string {
 
 function mondayOfDate(iso: string): string {
   return mondayOf(new Date(`${iso}T00:00:00Z`));
+}
+
+interface PublicContractContext {
+  id: string;
+  candidate_name: string | null;
+  client_name: string | null;
+  weekly_hours: number | null;
+  hourly_rate_candidate: number | null;
+  currency: string;
+}
+
+/**
+ * Contract-context voor het kandidaat-portaal: naam kandidaat, klantnaam en
+ * verwachte weekuren. Tenant-veilig — de token levert tenant_id + contract_id
+ * en de query filtert expliciet op beide (bovenop RLS via withTenant).
+ */
+async function loadContractContext(
+  tenantId: string,
+  contractId: string
+): Promise<PublicContractContext | null> {
+  return withTenant(tenantId, async (client) => {
+    const { rows: [row] } = await client.query<{
+      id: string;
+      candidate_name: string | null;
+      client_name: string | null;
+      weekly_hours: string | number | null;
+      hourly_rate_candidate: string | number | null;
+      currency: string | null;
+    }>(
+      `SELECT c.id,
+              cand.name AS candidate_name,
+              org.name  AS client_name,
+              c.weekly_hours,
+              c.hourly_rate_candidate,
+              c.currency
+         FROM contracts c
+         JOIN candidates cand
+           ON cand.id = c.candidate_id AND cand.tenant_id = c.tenant_id
+         LEFT JOIN organizations org
+           ON org.id = c.client_organization_id AND org.tenant_id = c.tenant_id
+        WHERE c.id = $1 AND c.tenant_id = $2`,
+      [contractId, tenantId]
+    );
+    if (!row) return null;
+    return {
+      id: row.id,
+      candidate_name: row.candidate_name,
+      client_name: row.client_name,
+      weekly_hours: row.weekly_hours != null ? Number(row.weekly_hours) : null,
+      hourly_rate_candidate:
+        row.hourly_rate_candidate != null ? Number(row.hourly_rate_candidate) : null,
+      currency: row.currency ?? 'EUR',
+    };
+  });
 }
 
 export default router;

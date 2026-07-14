@@ -33,6 +33,8 @@ export interface MailboxIntegration {
   account_name: string | null;
   scope: string;
   last_sync_at: string | null;
+  /** Aantal inbound e-mails dat de afgelopen 24u via deze mailbox is gesynct. */
+  emails_synced_24h: number;
   active: boolean;
   created_at: string;
 }
@@ -107,6 +109,8 @@ function rowToPublic(row: MailboxIntegrationWithTokens | MailboxIntegration): Ma
     account_name: row.account_name,
     scope: row.scope,
     last_sync_at: row.last_sync_at,
+    // Net (her)verbonden via de OAuth-callback: er is nog niets gesynct.
+    emails_synced_24h: 0,
     active: row.active,
     created_at: row.created_at,
   };
@@ -253,7 +257,15 @@ export async function listIntegrations(
       userClause = `AND user_id = $${params.length}`;
     }
     const { rows } = await client.query<MailboxIntegration>(
-      `SELECT ${PUBLIC_COLUMNS}
+      `SELECT ${PUBLIC_COLUMNS},
+              COALESCE((
+                SELECT count(*)::int
+                FROM communications c
+                WHERE c.tenant_id = mailbox_integrations.tenant_id
+                  AND c.mailbox_integration_id = mailbox_integrations.id
+                  AND c.direction = 'inbound'
+                  AND c.created_at >= now() - interval '24 hours'
+              ), 0) AS emails_synced_24h
        FROM mailbox_integrations
        WHERE tenant_id = $1 ${userClause}
        ORDER BY created_at DESC`,

@@ -172,6 +172,21 @@ router.post('/:id/terminate', async (req, res, next) => {
   }
 });
 
+router.get('/:id/extensions', async (req, res, next) => {
+  try {
+    // Hergebruik getContract (tenant-gescoped, 404 als het contract niet
+    // bestaat); die haalt de extensions al embedded op. We geven alleen de
+    // verlengingshistorie terug, in de standaard { data }-envelope.
+    const contract = await service.getContract(
+      req.user!.tenantId,
+      req.params.id
+    );
+    res.json({ data: contract.extensions });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/:id/notifications', async (req, res, next) => {
   try {
     const data = await service.listNotifications(

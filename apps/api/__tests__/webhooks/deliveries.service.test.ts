@@ -280,7 +280,7 @@ describe('deliverWebhook', () => {
     expect(adds).toHaveLength(0);
   });
 
-  it('failure attempt 1 → status=pending + retry geënqueued', async () => {
+  it('failure attempt 1 → status=failed + retry geënqueued', async () => {
     let saw: { sql: string; params: unknown[] } | null = null;
     const { client } = makeClient({
       initialAttempt: 1,
@@ -301,8 +301,10 @@ describe('deliverWebhook', () => {
     await deliverWebhook(DELIVERY_ID);
 
     expect(saw).not.toBeNull();
-    // 2e param is de status string. Bij failure attempt 1 = 'pending'.
-    expect(saw!.params[1]).toBe('pending');
+    // 2e param is de status string. De oorspronkelijke rij gaat naar 'failed'
+    // (de aparte retry-rij houdt de volgende poging) — voorheen bleef hij stil
+    // op 'pending' hangen (stuck-pending-bug, nu gefixt).
+    expect(saw!.params[1]).toBe('failed');
     // Retry-job geënqueued.
     const adds = (webhookDeliveriesQueue.add as ReturnType<typeof vi.fn>).mock.calls;
     expect(adds.length).toBeGreaterThanOrEqual(1);

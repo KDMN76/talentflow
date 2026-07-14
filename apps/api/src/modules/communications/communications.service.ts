@@ -154,44 +154,55 @@ export async function sendMessage(
   userId: string,
   data: SendMessageData
 ): Promise<Communication> {
-  const mockRecord: Communication = {
-    id: `mock-${Date.now()}`,
-    tenant_id: tenantId,
-    candidate_id: data.candidate_id,
-    channel: data.channel,
-    direction: 'outbound',
-    subject: data.subject ?? null,
-    body: data.body,
-    status: 'sent',
-    sent_at: new Date().toISOString(),
-    created_at: new Date().toISOString(),
-  };
+  // E-mail loopt via de échte emailSender-queue — zelfde pad als
+  // enqueueOutboundEmail / POST /communications/send. We schrijven een
+  // `queued`-rij en de worker flipt 'm naar `sent`/`failed`. NOOIT een
+  // `sent`-status fabriceren zonder daadwerkelijke verzending.
+  if (data.channel === 'email') {
+    return withTenant(tenantId, async (client) => {
+      const { rows: [candidate] } = await client.query<{
+        id: string;
+        email: string | null;
+        name: string;
+      }>(
+        `SELECT id, email, name FROM candidates
+         WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL`,
+        [data.candidate_id, tenantId]
+      );
+      if (!candidate) {
+        throw new AppError(404, 'CANDIDATE_NOT_FOUND', 'Kandidaat niet gevonden');
+      }
+      if (!candidate.email) {
+        throw new AppError(400, 'CANDIDATE_NO_EMAIL', 'Kandidaat heeft geen e-mailadres');
+      }
 
-  try {
-    return await withTenant(tenantId, async (client) => {
       const { rows: [communication] } = await client.query<Communication>(
         `INSERT INTO communications
            (tenant_id, candidate_id, channel, direction, subject, body, status)
-         VALUES ($1, $2, $3, 'outbound', $4, $5, 'sent')
+         VALUES ($1, $2, 'email', 'outbound', $3, $4, 'queued')
          RETURNING *`,
-        [
-          tenantId,
-          data.candidate_id,
-          data.channel,
-          data.subject ?? null,
-          data.body,
-        ]
+        [tenantId, data.candidate_id, data.subject ?? null, data.body]
       );
 
-      // Log activity — fire and forget; don't let a missing activities table block the response
+      await emailSenderQueue.add('send-email', {
+        tenantId,
+        candidateId: data.candidate_id,
+        to: candidate.email,
+        subject: data.subject ?? '',
+        bodyHtml: data.body,
+        userId,
+        communicationId: communication.id,
+      });
+
+      // Activity log — fire and forget.
       client.query(
         `INSERT INTO activities (tenant_id, entity_type, entity_id, user_id, action, payload)
-         VALUES ($1, 'candidate', $2, $3, 'message_sent', $4)`,
+         VALUES ($1, 'candidate', $2, $3, 'email_queued', $4)`,
         [
           tenantId,
           data.candidate_id,
           userId,
-          JSON.stringify({ channel: data.channel, subject: data.subject }),
+          JSON.stringify({ channel: 'email', subject: data.subject ?? null }),
         ]
       ).catch((actErr: Error) => {
         logger.warn('[communications] activity log insert failed', { error: actErr.message });
@@ -199,13 +210,39 @@ export async function sendMessage(
 
       return communication;
     });
-  } catch (err) {
-    logger.warn('[communications] sendMessage DB insert failed — returning optimistic mock', {
-      tenantId,
-      candidateId: data.candidate_id,
-      channel: data.channel,
-      error: (err as Error).message,
-    });
-    return mockRecord;
   }
+
+  // WhatsApp/SMS blijven geparkeerd: er is (nog) geen provider-integratie voor
+  // deze kanalen in dit pad, dus we leggen de uitgaande boodschap enkel vast.
+  return withTenant(tenantId, async (client) => {
+    const { rows: [communication] } = await client.query<Communication>(
+      `INSERT INTO communications
+         (tenant_id, candidate_id, channel, direction, subject, body, status)
+       VALUES ($1, $2, $3, 'outbound', $4, $5, 'sent')
+       RETURNING *`,
+      [
+        tenantId,
+        data.candidate_id,
+        data.channel,
+        data.subject ?? null,
+        data.body,
+      ]
+    );
+
+    // Log activity — fire and forget; don't let a missing activities table block the response
+    client.query(
+      `INSERT INTO activities (tenant_id, entity_type, entity_id, user_id, action, payload)
+       VALUES ($1, 'candidate', $2, $3, 'message_sent', $4)`,
+      [
+        tenantId,
+        data.candidate_id,
+        userId,
+        JSON.stringify({ channel: data.channel, subject: data.subject }),
+      ]
+    ).catch((actErr: Error) => {
+      logger.warn('[communications] activity log insert failed', { error: actErr.message });
+    });
+
+    return communication;
+  });
 }

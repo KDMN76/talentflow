@@ -115,7 +115,9 @@ export const existingDbSource: SourcingSource = {
           `(name ILIKE $${idx} OR current_position ILIKE $${idx} OR current_company ILIKE $${idx} OR description ILIKE $${idx} OR skills::text ILIKE $${idx})`
         );
       }
-      const wheres: string[] = ['tenant_id = $1'];
+      // deleted_at IS NULL: soft-deleted kandidaten mogen NOOIT als sourcing-
+      // finding terugkomen (AVG — "recht op verwijdering").
+      const wheres: string[] = ['tenant_id = $1', 'deleted_at IS NULL'];
       if (orClauses.length > 0) wheres.push(`(${orClauses.join(' OR ')})`);
       if (locations.length > 0) {
         const locClauses: string[] = [];

@@ -110,13 +110,13 @@ export function useContractExtensions(contractId: string | undefined) {
     enabled: !!contractId,
     queryFn: async (): Promise<ContractExtension[]> => {
       if (!contractId) return [];
-      // TODO: de route GET /contracts/:id/extensions BESTAAT NIET (404) — wordt
-      // in een aparte backend-workstream toegevoegd. Bewust niet aangeraakt in
-      // de envelope-fix; envelope/unwrap volgt zodra de route er is.
-      const { data } = await api.get<ContractExtension[]>(
+      // Backend levert { data: [...] } (GET /contracts/:id/extensions) → uitpakken
+      // naar een array. unwrapList tolereert { data } / bare array en valt terug
+      // op [] zodat consumers nooit op een niet-array draaien.
+      const { data } = await api.get<unknown>(
         `/contracts/${contractId}/extensions`
       );
-      return data;
+      return unwrapList<ContractExtension>(data);
     },
   });
 }
@@ -471,13 +471,12 @@ export interface PublicTimesheetData {
   timesheet: Timesheet;
   token_expires_at: string;
   /**
-   * NB: GET /public/timesheets/:token levert (nog) GEEN contract-object — de
+   * GET /public/timesheets/:token levert de contract-context mee (join op
+   * contract/candidate/organization, tenant-veilig via de token). De
    * portaalpagina leest contract.candidate_name/client_name/weekly_hours.
-   * Optioneel gehouden zodat de page compileert én met optional-chaining niet
-   * crasht; het daadwerkelijk meesturen van deze velden hoort in een aparte
-   * backend/page-workstream, niet in deze envelope-fix.
+   * `null` alleen als het contract onverwacht niet gevonden wordt.
    */
-  contract?: Pick<
+  contract: Pick<
     Contract,
     | "id"
     | "candidate_name"
@@ -485,7 +484,7 @@ export interface PublicTimesheetData {
     | "weekly_hours"
     | "hourly_rate_candidate"
     | "currency"
-  >;
+  > | null;
 }
 
 export function usePublicTimesheet(token: string | undefined) {

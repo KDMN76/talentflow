@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { requireAuth } from '../../middleware/auth';
 import { tenantMiddleware } from '../../middleware/tenant';
 import { auditCtxFromReq } from '../../lib/audit';
+import { withTenant } from '../../db/pool';
 import * as outreach from './outreach.service';
 import * as classifier from './replyClassifier.service';
 import * as monitoring from '../monitoring/passiveMonitor.service';
@@ -271,9 +272,20 @@ router.post('/signals/:id/draft-reactivation', async (req, res, next) => {
   try {
     const body = draftReactivationBody.parse(req.body);
     const { enrollCandidate } = await import('../nurture/nurture.service');
-    // Look up the signal to get the candidate id.
-    const result = await monitoring.listSignals(req.user!.tenantId, { limit: 200 });
-    const signal = result.data.find((s) => s.id === req.params.id);
+    // Haal het specifieke signal direct op via id-lookup i.p.v. een lijst-find:
+    // een signal buiten de eerste pagina (>200) gaf anders ten onrechte 404.
+    const signal = await withTenant(req.user!.tenantId, async (client) => {
+      const { rows: [row] } = await client.query<{
+        candidate_id: string;
+        after_value: string | null;
+      }>(
+        `SELECT candidate_id, after_value
+         FROM candidate_signals
+         WHERE id = $1 AND tenant_id = $2`,
+        [req.params.id, req.user!.tenantId]
+      );
+      return row ?? null;
+    });
     if (!signal) {
       res.status(404).json({
         error: { code: 'SIGNAL_NOT_FOUND', message: 'Signal niet gevonden' },
