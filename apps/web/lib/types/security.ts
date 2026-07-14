@@ -6,7 +6,7 @@
 
 // ─── SSO / SAML ─────────────────────────────────────────────────────────────
 
-export type SsoProvider = "okta" | "azure_ad" | "google" | "generic";
+export type SsoProvider = "okta" | "azure_ad" | "google_workspace" | "generic_saml";
 
 export interface SamlAttributeMapping {
   email: string;
@@ -30,8 +30,8 @@ export interface SamlConfig {
   attribute_mapping: SamlAttributeMapping;
   /** Maak users automatisch aan bij eerste login. */
   auto_create_users: boolean;
-  /** Default-rol voor nieuwe users (alleen bij auto_create_users). */
-  default_role_id: string | null;
+  /** Default-rol (stable role key, bv. "recruiter") voor nieuwe users (alleen bij auto_create_users). */
+  default_role: string | null;
   /** SP entity-ID — door TalentFlow gegenereerd. */
   sp_entity_id: string;
   /** SP ACS URL (Assertion Consumer Service). */

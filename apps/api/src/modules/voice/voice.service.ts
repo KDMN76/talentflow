@@ -56,6 +56,7 @@ export interface VoiceCall {
   tenant_id: string;
   integration_id: string | null;
   candidate_id: string | null;
+  candidate_name: string | null;
   direction: CallDirection;
   status: VoiceCallStatus;
   from_number: string | null;
@@ -125,6 +126,7 @@ function rowToCall(row: Record<string, unknown>): VoiceCall {
     tenant_id: row.tenant_id as string,
     integration_id: (row.integration_id as string | null) ?? null,
     candidate_id: (row.candidate_id as string | null) ?? null,
+    candidate_name: (row.candidate_name as string | null) ?? null,
     direction: row.direction as CallDirection,
     status: row.status as VoiceCallStatus,
     from_number: (row.from_number as string | null) ?? null,
@@ -655,24 +657,24 @@ export async function listCalls(
   opts: ListCallsOptions = {}
 ): Promise<ListCallsResult> {
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
-  const filters: string[] = ['tenant_id = $1'];
+  const filters: string[] = ['vc.tenant_id = $1'];
   const params: unknown[] = [tenantId];
 
   if (opts.candidate_id) {
     params.push(opts.candidate_id);
-    filters.push(`candidate_id = $${params.length}`);
+    filters.push(`vc.candidate_id = $${params.length}`);
   }
   if (opts.direction) {
     params.push(opts.direction);
-    filters.push(`direction = $${params.length}`);
+    filters.push(`vc.direction = $${params.length}`);
   }
   if (opts.status) {
     params.push(opts.status);
-    filters.push(`status = $${params.length}`);
+    filters.push(`vc.status = $${params.length}`);
   }
   if (opts.cursor) {
     params.push(opts.cursor);
-    filters.push(`created_at < $${params.length}::timestamptz`);
+    filters.push(`vc.created_at < $${params.length}::timestamptz`);
   }
 
   params.push(limit + 1);
@@ -680,9 +682,11 @@ export async function listCalls(
 
   return withTenant(tenantId, async (client) => {
     const { rows } = await client.query<Record<string, unknown>>(
-      `SELECT * FROM voice_calls
+      `SELECT vc.*, c.name AS candidate_name
+         FROM voice_calls vc
+         LEFT JOIN candidates c ON c.id = vc.candidate_id AND c.tenant_id = vc.tenant_id
          WHERE ${filters.join(' AND ')}
-         ORDER BY created_at DESC
+         ORDER BY vc.created_at DESC
          LIMIT ${limitParam}`,
       params
     );
@@ -699,7 +703,10 @@ export async function listCalls(
 export async function getCall(tenantId: string, callId: string): Promise<VoiceCall> {
   return withTenant(tenantId, async (client) => {
     const { rows } = await client.query<Record<string, unknown>>(
-      `SELECT * FROM voice_calls WHERE id = $1 AND tenant_id = $2`,
+      `SELECT vc.*, c.name AS candidate_name
+         FROM voice_calls vc
+         LEFT JOIN candidates c ON c.id = vc.candidate_id AND c.tenant_id = vc.tenant_id
+         WHERE vc.id = $1 AND vc.tenant_id = $2`,
       [callId, tenantId]
     );
     if (rows.length === 0) {

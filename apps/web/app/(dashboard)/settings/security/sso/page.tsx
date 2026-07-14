@@ -54,8 +54,8 @@ import { cn } from "@/lib/utils";
 const PROVIDER_OPTIONS: Array<{ value: SsoProvider; label: string; hint: string }> = [
   { value: "okta", label: "Okta", hint: "Okta Identity Cloud" },
   { value: "azure_ad", label: "Azure AD / Entra ID", hint: "Microsoft Entra ID" },
-  { value: "google", label: "Google Workspace", hint: "Cloud Identity SAML" },
-  { value: "generic", label: "Generieke SAML 2.0-IdP", hint: "Custom IdP" },
+  { value: "google_workspace", label: "Google Workspace", hint: "Cloud Identity SAML" },
+  { value: "generic_saml", label: "Generieke SAML 2.0-IdP", hint: "Custom IdP" },
 ];
 
 function isValidPemCert(input: string): boolean {
@@ -82,7 +82,7 @@ export default function SsoPage() {
   const [issuer, setIssuer] = useState("");
   const [idpCert, setIdpCert] = useState("");
   const [autoCreate, setAutoCreate] = useState(false);
-  const [defaultRoleId, setDefaultRoleId] = useState<string | null>(null);
+  const [defaultRole, setDefaultRole] = useState<string | null>(null);
   const [mapping, setMapping] = useState<SamlAttributeMapping>({
     email: "user.email",
     first_name: "user.firstName",
@@ -104,7 +104,7 @@ export default function SsoPage() {
       setIssuer(config.issuer);
       setIdpCert(config.idp_cert ?? "");
       setAutoCreate(config.auto_create_users);
-      setDefaultRoleId(config.default_role_id);
+      setDefaultRole(config.default_role);
       setMapping(config.attribute_mapping);
     }
   }, [config]);
@@ -136,7 +136,7 @@ export default function SsoPage() {
         issuer,
         idp_cert: idpCert,
         auto_create_users: autoCreate,
-        default_role_id: defaultRoleId,
+        default_role: defaultRole ?? undefined,
         attribute_mapping: mapping,
       });
       toast({
@@ -517,8 +517,8 @@ export default function SsoPage() {
               <div className="space-y-2">
                 <Label>Standaard-rol voor nieuwe users</Label>
                 <Select
-                  value={defaultRoleId ?? ""}
-                  onValueChange={(v) => setDefaultRoleId(v || null)}
+                  value={defaultRole ?? ""}
+                  onValueChange={(v) => setDefaultRole(v || null)}
                   disabled={!autoCreate}
                 >
                   <SelectTrigger>
@@ -526,7 +526,7 @@ export default function SsoPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {(roles ?? []).map((r) => (
-                      <SelectItem key={r.id} value={r.id}>
+                      <SelectItem key={r.id} value={r.key}>
                         {r.label}
                       </SelectItem>
                     ))}

@@ -42,6 +42,11 @@ function buildAcsUrl(tenantId: string): string {
   return `${base}/api/sso/${tenantId}/acs`;
 }
 
+function buildMetadataUrl(tenantId: string): string {
+  const base = process.env.PUBLIC_API_URL ?? 'http://localhost:4000';
+  return `${base}/api/sso/${tenantId}/metadata.xml`;
+}
+
 function buildSamlClient(cfg: samlService.SamlConfig): InstanceType<typeof SAML> {
   return new SAML({
     entryPoint: cfg.entryPoint,
@@ -200,6 +205,12 @@ ssoAdminRouter.get(
         auto_create_users: raw.auto_create_users,
         default_role: raw.default_role,
         attribute_mapping: raw.attribute_mapping,
+        // SP-metadata: afgeleid van dezelfde bron als /api/sso/:tenantId/metadata.xml
+        // (SP entityID = issuer; ACS = /acs; metadata = /metadata.xml) zodat de
+        // admin-UI ze kan tonen/kopiëren + de download-knop kan renderen.
+        sp_entity_id: raw.issuer,
+        sp_acs_url: buildAcsUrl(tenantId),
+        sp_metadata_url: buildMetadataUrl(tenantId),
       });
     } catch (err) {
       next(err);
