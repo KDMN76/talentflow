@@ -519,7 +519,11 @@ function SchemesTab({ toast }: { toast: Toast }) {
       setPercent(String((s.config as { percent?: number }).percent ?? ""));
     if (s.type === "recurring_monthly")
       setMonthlyAmount(
-        String((s.config as { monthly_amount?: number }).monthly_amount ?? "")
+        String(
+          (s.config as { amount?: number; monthly_amount?: number }).amount ??
+            (s.config as { monthly_amount?: number }).monthly_amount ??
+            ""
+        )
       );
     if (s.type === "tiered") {
       const t = (s.config as { tiers?: { up_to: number | null; percent: number }[] })
@@ -542,7 +546,9 @@ function SchemesTab({ toast }: { toast: Toast }) {
       case "percent_of_margin":
         return { percent: parseFloat(percent) || 0 };
       case "recurring_monthly":
-        return { monthly_amount: parseFloat(monthlyAmount) || 0 };
+        // Canonieke sleutel is `amount` (gelijk aan de backend); de oude
+        // `monthly_amount` werd door de service genegeerd → commissie €0.
+        return { amount: parseFloat(monthlyAmount) || 0 };
       case "tiered":
         return {
           tiers: tiers.map((t) => ({
@@ -891,7 +897,11 @@ function describeConfig(
     }
     case "recurring_monthly":
       return t("commissions.schemes.describe.recurringMonthly", {
-        amount: formatMoney((cfg.monthly_amount as number) ?? 0),
+        amount: formatMoney(
+          ((cfg.amount as number | undefined) ??
+            (cfg.monthly_amount as number | undefined)) ??
+            0
+        ),
       });
   }
 }

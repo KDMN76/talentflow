@@ -134,6 +134,27 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
+/**
+ * Overtime-multiplier canoniek resolven — spiegelt
+ * timesheets.service.summarizeApprovedHoursForBilling: gebruik
+ * contract.metadata.overtime_multiplier zodra dat een positief getal is,
+ * anders de NL CAO-default van 1.5.
+ */
+function resolveOvertimeMultiplier(metadata: unknown): number {
+  let meta: Record<string, unknown> = {};
+  if (metadata && typeof metadata === 'object') {
+    meta = metadata as Record<string, unknown>;
+  } else if (typeof metadata === 'string') {
+    try {
+      meta = JSON.parse(metadata) as Record<string, unknown>;
+    } catch {
+      meta = {};
+    }
+  }
+  const m = meta.overtime_multiplier;
+  return typeof m === 'number' && m > 0 ? m : 1.5;
+}
+
 function addDays(iso: string, days: number): string {
   const d = new Date(`${iso}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + days);
@@ -282,8 +303,9 @@ export async function generateInvoiceFromContract(
       client_organization_id: string | null;
       currency: string;
       hourly_rate_client: string | null;
+      metadata: unknown;
     }>(
-      `SELECT id, client_organization_id, currency, hourly_rate_client
+      `SELECT id, client_organization_id, currency, hourly_rate_client, metadata
          FROM contracts
         WHERE id = $1 AND tenant_id = $2`,
       [contractId, tenantId]
@@ -296,6 +318,9 @@ export async function generateInvoiceFromContract(
         'Contract niet gevonden'
       );
     }
+    // Overtime-factor canoniek (zie timesheets.service): per-contract
+    // metadata-override of de NL CAO-default 1.5 (voorheen hardcoded 1.25).
+    const overtimeMult = resolveOvertimeMultiplier(contract.metadata);
 
     const year = new Date(periodEnd ?? new Date().toISOString()).getUTCFullYear();
     const invoiceNumber = await claimInvoiceNumber(client, tenantId, year);
@@ -347,7 +372,10 @@ export async function generateInvoiceFromContract(
         unit: 'hours',
         unit_price:
           summary.total_amount_client /
-          Math.max(summary.total_hours + summary.total_overtime_hours * 1.25, 1),
+          Math.max(
+            summary.total_hours + summary.total_overtime_hours * overtimeMult,
+            1
+          ),
         line_total: subtotal,
         metadata: { period_start: periodStart, period_end: periodEnd },
       });
@@ -366,7 +394,7 @@ export async function generateInvoiceFromContract(
         byMonth.set(ym, cur);
       }
       for (const [ym, agg] of byMonth) {
-        const billable = agg.hours + agg.overtime * 1.25;
+        const billable = agg.hours + agg.overtime * overtimeMult;
         const unitPrice = billable > 0 ? agg.amount / billable : 0;
         linesToInsert.push({
           description: `Detachering ${ym}`,
@@ -379,7 +407,7 @@ export async function generateInvoiceFromContract(
       }
     } else {
       for (const w of summary.by_week) {
-        const billable = w.hours + w.overtime_hours * 1.25;
+        const billable = w.hours + w.overtime_hours * overtimeMult;
         const unitPrice = billable > 0 ? w.amount_client / billable : 0;
         linesToInsert.push({
           description: `Week ${w.week_start} — ${round2(w.hours)}u + ${round2(

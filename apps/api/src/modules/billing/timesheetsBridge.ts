@@ -87,8 +87,9 @@ async function fallbackSummary(
     hourly_rate_candidate: string | null;
     hourly_rate_client: string | null;
     currency: string;
+    metadata: unknown;
   }>(
-    `SELECT hourly_rate_candidate, hourly_rate_client, currency
+    `SELECT hourly_rate_candidate, hourly_rate_client, currency, metadata
        FROM contracts
       WHERE id = $1 AND tenant_id = $2`,
     [contractId, tenantId]
@@ -101,6 +102,9 @@ async function fallbackSummary(
     ? Number(contract.hourly_rate_client)
     : 0;
   const currency = contract?.currency ?? 'EUR';
+  // Overtime-factor canoniek (zie timesheets.service): per-contract
+  // metadata-override of de NL CAO-default 1.5 (voorheen hardcoded 1.25).
+  const overtimeMult = resolveOvertimeMultiplier(contract?.metadata);
 
   // Approved timesheets within the period.
   const { rows: weekRows } = await client.query<{
@@ -128,8 +132,8 @@ async function fallbackSummary(
   const byWeek: TimesheetWeekSummary[] = weekRows.map((r) => {
     const hours = Number(r.total_hours ?? 0);
     const ot = Number(r.total_overtime_hours ?? 0);
-    const amountCand = (hours + ot * 1.25) * rateCand;
-    const amountClient = (hours + ot * 1.25) * rateClient;
+    const amountCand = (hours + ot * overtimeMult) * rateCand;
+    const amountClient = (hours + ot * overtimeMult) * rateClient;
     totalHours += hours;
     totalOvertime += ot;
     totalAmountCandidate += amountCand;
@@ -154,6 +158,27 @@ async function fallbackSummary(
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+/**
+ * Overtime-multiplier canoniek resolven — spiegelt
+ * timesheets.service.summarizeApprovedHoursForBilling: gebruik
+ * contract.metadata.overtime_multiplier zodra dat een positief getal is,
+ * anders de NL CAO-default van 1.5.
+ */
+function resolveOvertimeMultiplier(metadata: unknown): number {
+  let meta: Record<string, unknown> = {};
+  if (metadata && typeof metadata === 'object') {
+    meta = metadata as Record<string, unknown>;
+  } else if (typeof metadata === 'string') {
+    try {
+      meta = JSON.parse(metadata) as Record<string, unknown>;
+    } catch {
+      meta = {};
+    }
+  }
+  const m = meta.overtime_multiplier;
+  return typeof m === 'number' && m > 0 ? m : 1.5;
 }
 
 export async function summarizeApprovedHoursForBilling(

@@ -136,6 +136,27 @@ function round2(n: number): number {
 }
 
 /**
+ * Overtime-multiplier canoniek resolven — spiegelt
+ * timesheets.service.summarizeApprovedHoursForBilling: gebruik
+ * contract.metadata.overtime_multiplier zodra dat een positief getal is,
+ * anders de NL CAO-default van 1.5.
+ */
+function resolveOvertimeMultiplier(metadata: unknown): number {
+  let meta: Record<string, unknown> = {};
+  if (metadata && typeof metadata === 'object') {
+    meta = metadata as Record<string, unknown>;
+  } else if (typeof metadata === 'string') {
+    try {
+      meta = JSON.parse(metadata) as Record<string, unknown>;
+    } catch {
+      meta = {};
+    }
+  }
+  const m = meta.overtime_multiplier;
+  return typeof m === 'number' && m > 0 ? m : 1.5;
+}
+
+/**
  * Bereken commission_amount op een base + share, volgens scheme-type.
  *
  * - flat              : config.amount  (geen share-scaling — recruiter krijgt
@@ -190,7 +211,9 @@ export function computeCommissionAmount(
       return round2(total);
     }
     case 'recurring_monthly': {
-      const amount = Number(cfg.amount ?? 0);
+      // Canonieke sleutel is `amount`; `monthly_amount` blijft als
+      // backward-compat gelezen voor schemes die de oude UI opsloeg.
+      const amount = Number(cfg.amount ?? cfg.monthly_amount ?? 0);
       if (!periodStart || !periodEnd) return round2(amount);
       const start = new Date(`${periodStart}T00:00:00Z`);
       const end = new Date(`${periodEnd}T00:00:00Z`);
@@ -285,6 +308,7 @@ export async function updateScheme(
   schemeId: string,
   patch: {
     name?: string;
+    type?: CommissionSchemeType;
     config?: Record<string, unknown>;
     active?: boolean;
     is_default?: boolean;
@@ -309,6 +333,10 @@ export async function updateScheme(
     if (patch.name !== undefined) {
       params.push(patch.name);
       fields.push(`name = $${params.length}`);
+    }
+    if (patch.type !== undefined) {
+      params.push(patch.type);
+      fields.push(`type = $${params.length}`);
     }
     if (patch.config !== undefined) {
       params.push(JSON.stringify(patch.config));
@@ -519,20 +547,30 @@ export async function recordCommissionsForInvoice(
     // Margin: client - candidate, op basis van timesheet summary in periode.
     let candidateAmount = 0;
     if (inv.period_start && inv.period_end) {
+      // Overtime-factor canoniek: per-contract metadata.overtime_multiplier of
+      // de NL CAO-default 1.5 — gelijk aan timesheets.service (voorheen 1.25,
+      // wat structureel afweek van de facturatie).
+      const { rows: cRows } = await client.query<{ metadata: unknown }>(
+        `SELECT metadata FROM contracts WHERE id = $1 AND tenant_id = $2`,
+        [inv.contract_id, tenantId]
+      );
+      const overtimeMult = resolveOvertimeMultiplier(cRows[0]?.metadata);
       const { rows: tsRows } = await client.query<{
         candidate_total: string | null;
       }>(
         `SELECT COALESCE(SUM(t.total_hours * COALESCE(c.hourly_rate_candidate, 0)
-                            + t.total_overtime_hours * 1.25
+                            + t.total_overtime_hours * $4::numeric
                             * COALESCE(c.hourly_rate_candidate, 0)), 0)
                 AS candidate_total
            FROM timesheets t
-           JOIN contracts c ON c.id = t.contract_id
+           JOIN contracts c ON c.id = t.contract_id AND c.tenant_id = t.tenant_id
           WHERE t.contract_id = $1
+            AND t.tenant_id = $5
+            AND c.tenant_id = $5
             AND t.status = 'approved'
             AND t.week_start >= $2::date
             AND t.week_start <= $3::date`,
-        [inv.contract_id, inv.period_start, inv.period_end]
+        [inv.contract_id, inv.period_start, inv.period_end, overtimeMult, tenantId]
       );
       candidateAmount = Number(tsRows[0]?.candidate_total ?? 0);
     }

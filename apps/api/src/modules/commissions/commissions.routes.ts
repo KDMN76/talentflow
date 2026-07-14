@@ -66,6 +66,15 @@ router.post(
 
 const updateSchemeBody = z.object({
   name: z.string().min(1).max(120).optional(),
+  type: z
+    .enum([
+      'flat',
+      'percent_of_fee',
+      'percent_of_margin',
+      'tiered',
+      'recurring_monthly',
+    ])
+    .optional(),
   config: z.record(z.unknown()).optional(),
   active: z.boolean().optional(),
   is_default: z.boolean().optional(),

@@ -382,7 +382,7 @@ export async function getMarginReport(
         cost AS (
           SELECT inv.invoice_id,
                  COALESCE(SUM(
-                   (t.total_hours + t.total_overtime_hours * 1.25)
+                   (t.total_hours + t.total_overtime_hours * COALESCE((c.metadata->>'overtime_multiplier')::numeric, 1.5))
                    * COALESCE(c.hourly_rate_candidate, 0)
                  ), 0) AS candidate_cost
             FROM inv
@@ -424,7 +424,7 @@ export async function getMarginReport(
       cost AS (
         SELECT inv.invoice_id,
                COALESCE(SUM(
-                 (t.total_hours + t.total_overtime_hours * 1.25)
+                 (t.total_hours + t.total_overtime_hours * COALESCE((c.metadata->>'overtime_multiplier')::numeric, 1.5))
                  * COALESCE(c.hourly_rate_candidate, 0)
                ), 0) AS candidate_cost
           FROM inv
