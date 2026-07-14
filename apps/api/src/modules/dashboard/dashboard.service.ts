@@ -29,7 +29,7 @@ export async function getDashboardStats(tenantId: string) {
       `SELECT a.id, a.entity_type, a.entity_id, a.action, a.payload, a.created_at,
               u.name as user_name
        FROM activities a
-       LEFT JOIN users u ON u.id = a.user_id
+       LEFT JOIN users u ON u.id = a.user_id AND u.tenant_id = a.tenant_id
        WHERE a.tenant_id = $1
        ORDER BY a.created_at DESC
        LIMIT 20`,
@@ -40,7 +40,7 @@ export async function getDashboardStats(tenantId: string) {
     const { rows: topJobs } = await client.query(
       `SELECT j.id, j.title, j.status, COUNT(a.id) as application_count
        FROM jobs j
-       LEFT JOIN applications a ON a.job_id = j.id
+       LEFT JOIN applications a ON a.job_id = j.id AND a.tenant_id = j.tenant_id
        WHERE j.tenant_id = $1 AND j.deleted_at IS NULL
        GROUP BY j.id
        ORDER BY application_count DESC
@@ -90,7 +90,7 @@ export async function listActivities(
       `SELECT a.id, a.entity_type, a.entity_id, a.action, a.payload, a.created_at,
               u.name as user_name
        FROM activities a
-       LEFT JOIN users u ON u.id = a.user_id
+       LEFT JOIN users u ON u.id = a.user_id AND u.tenant_id = a.tenant_id
        WHERE a.tenant_id = $1
        ORDER BY a.created_at DESC
        LIMIT $2 OFFSET $3`,
@@ -114,7 +114,7 @@ export async function exportActivities(tenantId: string) {
       `SELECT a.id, a.entity_type, a.entity_id, a.action, a.payload, a.created_at,
               u.name as user_name
        FROM activities a
-       LEFT JOIN users u ON u.id = a.user_id
+       LEFT JOIN users u ON u.id = a.user_id AND u.tenant_id = a.tenant_id
        WHERE a.tenant_id = $1
        ORDER BY a.created_at DESC
        LIMIT 10000`,

@@ -13,6 +13,10 @@ const inviteSchema = z.object({
   role: z.enum(['admin', 'recruiter', 'hiring_manager', 'viewer']),
 });
 
+// Valideer het :id-pad-param expliciet vóór de query — een niet-UUID zou anders
+// als Postgres 22P02 doorslaan. ZodError → 400 via de centrale error-handler.
+const idSchema = z.string().uuid();
+
 const updateUserSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   role: z.enum(['admin', 'recruiter', 'hiring_manager', 'viewer']).optional(),
@@ -64,7 +68,7 @@ export async function inviteUser(req: Request, res: Response, next: NextFunction
 
 export async function updateUser(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { id } = req.params;
+    const id = idSchema.parse(req.params.id);
     const data = updateUserSchema.parse(req.body);
     const user = await usersService.updateUser(
       req.user!.tenantId,
@@ -81,7 +85,7 @@ export async function updateUser(req: Request, res: Response, next: NextFunction
 
 export async function deactivateUser(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { id } = req.params;
+    const id = idSchema.parse(req.params.id);
     await usersService.deactivateUser(req.user!.tenantId, id, req.user!.userId);
     res.json({ message: 'Gebruiker gedeactiveerd' });
   } catch (err) {

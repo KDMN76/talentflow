@@ -7,6 +7,10 @@ const reviewSchema = z.object({
   notes: z.string().max(5000).optional(),
 });
 
+// Valideer het :id-pad-param expliciet vóór de query — een niet-UUID zou anders
+// als Postgres 22P02 doorslaan. ZodError → 400 via de centrale error-handler.
+const idSchema = z.string().uuid();
+
 export async function getDashboard(
   req: Request,
   res: Response,
@@ -84,10 +88,11 @@ export async function getApplicationDetails(
   next: NextFunction
 ): Promise<void> {
   try {
+    const id = idSchema.parse(req.params.id);
     const details = await hmService.getApplicationDetails(
       req.user!.tenantId,
       req.user!.userId,
-      req.params.id
+      id
     );
     res.json(details);
   } catch (err) {
@@ -101,11 +106,12 @@ export async function review(
   next: NextFunction
 ): Promise<void> {
   try {
+    const id = idSchema.parse(req.params.id);
     const body = reviewSchema.parse(req.body);
     const updated = await hmService.reviewApplication(
       req.user!.tenantId,
       req.user!.userId,
-      req.params.id,
+      id,
       body.decision,
       body.notes
     );

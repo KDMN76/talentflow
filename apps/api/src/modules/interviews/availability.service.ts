@@ -300,8 +300,8 @@ export async function getConsolidatedAvailability(
 ): Promise<ConsolidatedAvailability> {
   return withTenant(tenantId, async (client) => {
     const { rows: userRows } = await client.query(
-      `SELECT name FROM users WHERE id = $1`,
-      [userId]
+      `SELECT name FROM users WHERE id = $1 AND tenant_id = $2`,
+      [userId, tenantId]
     );
     const { rows } = await client.query(
       `SELECT weekday,

@@ -57,7 +57,7 @@ const SELECT_DEAL_JOINS = `
   FROM crm_deals d
   LEFT JOIN organizations o ON o.id = d.organization_id AND o.tenant_id = d.tenant_id
   LEFT JOIN jobs j ON j.id = d.job_id AND j.tenant_id = d.tenant_id
-  LEFT JOIN users u ON u.id = d.recruiter_id
+  LEFT JOIN users u ON u.id = d.recruiter_id AND u.tenant_id = d.tenant_id
 `;
 
 export async function listDeals(tenantId: string, filter: DealListFilter = {}) {
