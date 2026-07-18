@@ -25,6 +25,7 @@ import { withTenant } from '../../db/pool';
 import { AppError, logger } from '../../middleware/errorHandler';
 import { logAudit, type AuditContext } from '../../lib/audit';
 import { eventBus } from '../../lib/eventBus';
+import { recordCommunication } from '../../lib/inboxProjector';
 import { whatsappOutQueue } from '../../queue/queues';
 import * as dialog360 from './connector/dialog360';
 import {
@@ -243,6 +244,19 @@ export async function sendMessage(
     );
     whatsappRow.communication_id = commRow.id;
 
+    // Project into unified_threads so the omni-channel inbox picks up
+    // WhatsApp threads (in-transaction, matching voice.service.ts pattern).
+    await recordCommunication({
+      tenantId,
+      candidateId,
+      communicationId: commRow.id,
+      channel: 'whatsapp',
+      direction: 'outbound',
+      preview: previewBody ?? '',
+      client,
+      suppressEvent: true,
+    });
+
     await logAudit(
       client,
       tenantId,
@@ -395,6 +409,20 @@ export async function recordIncomingMessage(
         [comm.id, row.id, tenantId]
       );
       row.communication_id = comm.id;
+
+      // Project into unified_threads so inbound WhatsApp shows up in the
+      // omni-channel inbox (in-transaction, matching voice.service.ts pattern).
+      await recordCommunication({
+        tenantId,
+        candidateId,
+        communicationId: comm.id,
+        channel: 'whatsapp',
+        direction: 'inbound',
+        preview: payload.body_text ?? '',
+        timestamp: payload.timestamp ?? undefined,
+        client,
+        suppressEvent: true,
+      });
     }
     return row;
   });
@@ -467,6 +495,28 @@ export async function dispatchOutboundSend(
       status: message.status,
     });
     return message;
+  }
+
+  // Consent kan zijn ingetrokken (bv. inbound STOP-keyword) nadat het bericht
+  // al enqueued werd maar vóórdat de worker het daadwerkelijk verstuurt.
+  // `sendMessage` checkte consent alleen bij enqueue-tijd — hier her-checken
+  // we vlak vóór de echte send, anders kan een net-ingetrokken toestemming
+  // alsnog een bericht laten uitgaan.
+  if (message.candidate_id) {
+    const consent = await getConsent(tenantId, message.candidate_id);
+    if (!consent || consent.status !== 'granted') {
+      logger.info('[whatsapp.messaging] blocking dispatch — consent withdrawn since enqueue', {
+        whatsappMessageId,
+        candidateId: message.candidate_id,
+      });
+      await markFailed(
+        tenantId,
+        whatsappMessageId,
+        'CONSENT_WITHDRAWN',
+        'Toestemming is ingetrokken (of ontbreekt) tussen het inplannen en verzenden van dit bericht'
+      );
+      return { ...message, status: 'failed', error_code: 'CONSENT_WITHDRAWN' };
+    }
   }
 
   const creds = await loadConnectorCreds(tenantId);

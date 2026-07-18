@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { type AxiosRequestConfig } from "axios";
 import { getToken, setToken, clearToken } from "./auth";
 
 export const api = axios.create({
@@ -77,6 +77,20 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    // Refresh call zelf faalde met 401: het refresh-token is écht verlopen.
+    // Deze request NOOIT via de queue/retry-logica laten lopen (zou anders
+    // deadlocken, want processQueue draait alleen als deze await ooit settlet).
+    // Direct naar reject/logout.
+    if (error.response?.status === 401 && originalRequest?._isRefreshCall) {
+      processQueue(error, null);
+      isRefreshing = false;
+      clearToken();
+      if (typeof window !== "undefined") {
+        window.location.href = "/login";
+      }
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
@@ -93,7 +107,14 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const response = await api.post("/auth/refresh");
+        const response = await api.post(
+          "/auth/refresh",
+          undefined,
+          // Marker zodat de interceptor deze request bij een 401 NIET opnieuw
+          // in de refresh/queue-logica duwt (zie check hierboven) — anders
+          // deadlockt de app zodra het refresh-token zelf verlopen is.
+          { _isRefreshCall: true } as unknown as AxiosRequestConfig
+        );
         const newToken = response.data.accessToken;
         setToken(newToken);
         processQueue(null, newToken);

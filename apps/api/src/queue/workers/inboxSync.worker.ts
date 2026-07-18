@@ -23,6 +23,7 @@ import { Worker, Job } from 'bullmq';
 import IORedis from 'ioredis';
 import { logger } from '../../middleware/errorHandler';
 import { withTenant } from '../../db/pool';
+import { recordCommunication } from '../../lib/inboxProjector';
 import { inboxSyncQueue } from '../queues';
 import { getMailProvider } from '../../lib/providers';
 import {
@@ -167,6 +168,20 @@ async function syncOneIntegration(
           msg.received_at.toISOString(),
         ]
       );
+
+      // Project into unified_threads so mailbox-synced inbound e-mail shows
+      // up in the omni-channel inbox (in-transaction, matching voice.service.ts).
+      await recordCommunication({
+        tenantId: live.tenant_id,
+        candidateId,
+        communicationId: inserted.id,
+        channel: 'email',
+        direction: 'inbound',
+        preview: body,
+        timestamp: msg.received_at.toISOString(),
+        client,
+        suppressEvent: true,
+      });
 
       outcome.newMessages++;
       outcome.matchedCandidates++;

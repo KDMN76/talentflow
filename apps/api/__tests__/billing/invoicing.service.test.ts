@@ -279,6 +279,78 @@ describe('billing.generateInvoiceFromContract', () => {
     ).rejects.toMatchObject({ code: 'NO_BILLABLE_HOURS' });
   });
 
+  it('rejects double-billing: an existing non-void invoice overlaps the requested period', async () => {
+    const client = mockClient({
+      __matcher: (sql) => {
+        if (/SELECT id, client_organization_id, currency, hourly_rate_client/i.test(sql)) {
+          return {
+            rows: [{ id: 'contract-1', client_organization_id: 'org-1', currency: 'EUR', hourly_rate_client: '75' }],
+            rowCount: 1,
+          };
+        }
+        if (/SELECT id, invoice_number\s+FROM invoices/i.test(sql)) {
+          return {
+            rows: [{ id: 'inv-existing', invoice_number: 'INV-2026-00001' }],
+            rowCount: 1,
+          };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    teardown = installPoolMock(client);
+
+    await expect(
+      service.generateInvoiceFromContract(
+        TENANT,
+        'contract-1',
+        '2026-04-15',
+        '2026-05-15'
+      )
+    ).rejects.toMatchObject({ code: 'INVOICE_PERIOD_OVERLAP' });
+  });
+
+  it('allows generating a new invoice when the only overlapping invoice is void', async () => {
+    const insertedLines: Array<Record<string, unknown>> = [];
+    const client = mockClient({
+      __matcher: (sql, params) => {
+        if (/SELECT id, client_organization_id, currency, hourly_rate_client/i.test(sql)) {
+          return {
+            rows: [{ id: 'contract-1', client_organization_id: 'org-1', currency: 'EUR', hourly_rate_client: '75' }],
+            rowCount: 1,
+          };
+        }
+        // status != 'void' predicate is baked into the query itself, so the
+        // mock just needs to behave as if the DB already filtered it out.
+        if (/SELECT id, invoice_number\s+FROM invoices/i.test(sql)) {
+          return { rows: [], rowCount: 0 };
+        }
+        if (/INSERT INTO tenant_invoice_sequences/i.test(sql)) {
+          return { rows: [{ current_value: '5' }], rowCount: 1 };
+        }
+        if (/INSERT INTO invoices/i.test(sql)) {
+          return { rows: [{ id: 'inv-new' }], rowCount: 1 };
+        }
+        if (/INSERT INTO invoice_lines/i.test(sql)) {
+          insertedLines.push({ description: params[2] });
+          return { rows: [{ id: 'l', tenant_id: TENANT, invoice_id: 'inv-new', description: params[2], quantity: 0, unit: 'hours', unit_price: 0, line_total: 0, vat_rate: 21, metadata: {}, created_at: new Date().toISOString() }], rowCount: 1 };
+        }
+        if (/SELECT \* FROM invoices/i.test(sql)) {
+          return { rows: [{ id: 'inv-new', tenant_id: TENANT, invoice_number: 'INV-2026-00005', status: 'draft', subtotal_amount: 0, vat_rate: 21, vat_amount: 0, total_amount: 0, currency: 'EUR', created_at: '', updated_at: '' }], rowCount: 1 };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    teardown = installPoolMock(client);
+
+    const result = await service.generateInvoiceFromContract(
+      TENANT,
+      'contract-1',
+      '2026-04-01',
+      '2026-04-30'
+    );
+    expect(result.invoice.id).toBe('inv-new');
+  });
+
   it('respects per-tenant SET LOCAL app.tenant_id (cross-tenant isolation)', async () => {
     const observed: string[] = [];
     const client = mockClient({
@@ -455,6 +527,119 @@ describe('billing.issueInvoice — state machine', () => {
     await expect(
       service.voidInvoice(TENANT, 'inv-1', 'mistake')
     ).rejects.toMatchObject({ code: 'CANNOT_VOID_PAID_INVOICE' });
+  });
+
+  it('void reverses pending/approved commission_records tied to the invoice', async () => {
+    const reversedIds: string[] = [];
+    let invoiceStatusUpdated = false;
+    const client = mockClient({
+      __matcher: (sql, params) => {
+        if (/SELECT \* FROM invoices WHERE id = \$1 AND tenant_id = \$2 FOR UPDATE/i.test(sql)) {
+          return {
+            rows: [
+              {
+                id: 'inv-1',
+                tenant_id: TENANT,
+                invoice_number: 'X',
+                status: 'sent',
+                subtotal_amount: 0,
+                vat_rate: 21,
+                vat_amount: 0,
+                total_amount: 0,
+                currency: 'EUR',
+                created_at: '',
+                updated_at: '',
+              },
+            ],
+            rowCount: 1,
+          };
+        }
+        if (/SELECT id, status FROM commission_records/i.test(sql)) {
+          return {
+            rows: [
+              { id: 'rec-1', status: 'pending' },
+              { id: 'rec-2', status: 'approved' },
+            ],
+            rowCount: 2,
+          };
+        }
+        if (/UPDATE commission_records/i.test(sql)) {
+          reversedIds.push(...(params[0] as string[]));
+          return { rows: [], rowCount: 2 };
+        }
+        if (/UPDATE invoices\s+SET status = 'void'/i.test(sql)) {
+          invoiceStatusUpdated = true;
+          return {
+            rows: [
+              {
+                id: 'inv-1',
+                tenant_id: TENANT,
+                invoice_number: 'X',
+                status: 'void',
+                subtotal_amount: 0,
+                vat_rate: 21,
+                vat_amount: 0,
+                total_amount: 0,
+                currency: 'EUR',
+                notes: '[VOID] mistake',
+                created_at: '',
+                updated_at: '',
+              },
+            ],
+            rowCount: 1,
+          };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    teardown = installPoolMock(client);
+
+    const result = await service.voidInvoice(TENANT, 'inv-1', 'mistake');
+    expect(result.status).toBe('void');
+    expect(reversedIds.sort()).toEqual(['rec-1', 'rec-2']);
+    expect(invoiceStatusUpdated).toBe(true);
+  });
+
+  it('refuses to void when a tied commission_record is already paid (and leaves the invoice untouched)', async () => {
+    let invoiceStatusUpdated = false;
+    const client = mockClient({
+      __matcher: (sql) => {
+        if (/SELECT \* FROM invoices WHERE id = \$1 AND tenant_id = \$2 FOR UPDATE/i.test(sql)) {
+          return {
+            rows: [
+              {
+                id: 'inv-1',
+                tenant_id: TENANT,
+                invoice_number: 'X',
+                status: 'sent',
+                subtotal_amount: 0,
+                vat_rate: 21,
+                vat_amount: 0,
+                total_amount: 0,
+                currency: 'EUR',
+                created_at: '',
+                updated_at: '',
+              },
+            ],
+            rowCount: 1,
+          };
+        }
+        if (/SELECT id, status FROM commission_records/i.test(sql)) {
+          return { rows: [{ id: 'rec-1', status: 'paid' }], rowCount: 1 };
+        }
+        if (/UPDATE invoices\s+SET status = 'void'/i.test(sql)) {
+          invoiceStatusUpdated = true;
+          return { rows: [], rowCount: 1 };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    teardown = installPoolMock(client);
+
+    await expect(
+      service.voidInvoice(TENANT, 'inv-1', 'mistake')
+    ).rejects.toMatchObject({ code: 'COMMISSION_ALREADY_PAID' });
+    expect(invoiceStatusUpdated).toBe(false);
   });
 
   it('markPaid transitions sent → paid', async () => {

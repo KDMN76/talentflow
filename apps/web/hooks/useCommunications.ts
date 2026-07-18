@@ -15,7 +15,7 @@ export interface Communication {
   subject?: string;
   body: string;
   sent_at: string;
-  status: "sent" | "delivered" | "read" | "failed";
+  status: "queued" | "sent" | "delivered" | "read" | "failed";
 }
 
 export function useCommunications(candidateId?: string) {

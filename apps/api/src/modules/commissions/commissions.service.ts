@@ -37,7 +37,8 @@ export type CommissionStatus =
   | 'pending'
   | 'approved'
   | 'paid'
-  | 'disputed';
+  | 'disputed'
+  | 'reversed';
 
 export interface CommissionSchemeRow {
   id: string;
@@ -439,6 +440,33 @@ export async function assignToContract(
     if (!schemes[0]) {
       throw new AppError(404, 'SCHEME_NOT_FOUND', 'Commissie-regeling niet gevonden');
     }
+
+    // Guard against over-allocating a contract: the sum of share_percent
+    // across all commission assignments on the same contract (including this
+    // new one) may not exceed 100%. Lock existing rows for this contract so
+    // concurrent assign calls can't both slip past the check.
+    const { rows: existingShares } = await client.query<{
+      share_percent: string;
+    }>(
+      `SELECT share_percent FROM commission_assignments
+        WHERE contract_id = $1 AND tenant_id = $2
+        FOR UPDATE`,
+      [data.contract_id, tenantId]
+    );
+    const existingTotal = existingShares.reduce(
+      (sum, r) => sum + Number(r.share_percent),
+      0
+    );
+    if (existingTotal + share > 100) {
+      throw new AppError(
+        409,
+        'SHARE_PERCENT_EXCEEDS_100',
+        `Totale share_percent voor dit contract zou ${(existingTotal + share).toFixed(
+          2
+        )}% worden (max 100%)`
+      );
+    }
+
     const { rows } = await client.query(
       `INSERT INTO commission_assignments
          (tenant_id, recruiter_id, contract_id, scheme_id, share_percent, notes)
@@ -613,6 +641,48 @@ export async function recordCommissionsForInvoice(
   });
 }
 
+/**
+ * Reverse commission_records tied to a voided invoice. Called by
+ * `invoicing.service.voidInvoice()` with its own transaction `client` so the
+ * invoice-status flip and the commission reversal commit atomically — a
+ * reader can never observe a voided invoice whose commissions are still
+ * 'pending'/'approved' with no trace.
+ *
+ * Records already 'paid' are a payout that already happened; there is no
+ * clawback subsystem here, so we refuse to void instead of silently
+ * reversing money that already left. The caller (voidInvoice) surfaces this
+ * as a 409 and the invoice stays untouched.
+ */
+export async function reverseCommissionsForInvoice(
+  client: PoolClient,
+  tenantId: string,
+  invoiceId: string
+): Promise<void> {
+  const { rows } = await client.query<{ id: string; status: CommissionStatus }>(
+    `SELECT id, status FROM commission_records
+      WHERE invoice_id = $1 AND tenant_id = $2
+      FOR UPDATE`,
+    [invoiceId, tenantId]
+  );
+  if (rows.some((r) => r.status === 'paid')) {
+    throw new AppError(
+      409,
+      'COMMISSION_ALREADY_PAID',
+      'Factuur kan niet ge-void worden: gekoppelde commissie is al uitbetaald'
+    );
+  }
+  const reversibleIds = rows
+    .filter((r) => r.status !== 'reversed')
+    .map((r) => r.id);
+  if (reversibleIds.length === 0) return;
+  await client.query(
+    `UPDATE commission_records
+        SET status = 'reversed'
+      WHERE id = ANY($1::uuid[]) AND tenant_id = $2`,
+    [reversibleIds, tenantId]
+  );
+}
+
 export interface ListRecordsOptions {
   recruiter_id?: string;
   status?: CommissionStatus;
@@ -686,6 +756,10 @@ async function transitionRecord(
       approved: ['paid', 'disputed'],
       paid: [],
       disputed: ['pending', 'approved'],
+      // Terminal: set only by invoicing.voidInvoice() when the underlying
+      // invoice is voided; not reachable via the normal approve/pay/dispute
+      // transitions.
+      reversed: [],
     };
     if (!allowed[before.status].includes(to)) {
       throw new AppError(

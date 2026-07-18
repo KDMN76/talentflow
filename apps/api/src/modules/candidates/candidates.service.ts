@@ -26,7 +26,7 @@ import {
  * INSERT/UPDATE statements without enumerating columns multiple times.
  * Order matches the migration for grep-ability.
  */
-const MUTABLE_CANDIDATE_COLUMNS = [
+export const MUTABLE_CANDIDATE_COLUMNS = [
   // Identity
   'name',
   'first_name',
@@ -1115,11 +1115,13 @@ export type BulkActionType =
   | 'archive'
   | 'add_tag'
   | 'remove_tag'
-  | 'change_source';
+  | 'change_source'
+  | 'move_to_stage';
 
 export interface BulkActionPayload {
   tag?: string;
   source?: string;
+  stage_id?: string;
 }
 
 export interface BulkActionResult {
@@ -1131,6 +1133,7 @@ const VALID_BULK_ACTIONS: BulkActionType[] = [
   'add_tag',
   'remove_tag',
   'change_source',
+  'move_to_stage',
 ];
 
 /**
@@ -1205,6 +1208,34 @@ export async function bulkAction(
           `UPDATE candidates SET source = $1, updated_at = now()
            WHERE id = ANY($2::uuid[]) AND tenant_id = $3 AND deleted_at IS NULL`,
           [payload.source, ids, tenantId]
+        );
+        affected = rowCount ?? 0;
+        break;
+      }
+      case 'move_to_stage': {
+        // `ids` zijn candidate-uuids (zie useBulkMoveToStage in de frontend —
+        // die stuurt de geselecteerde kandidaat-ids, geen application-ids).
+        // We zoeken per kandidaat de actieve sollicitatie op en verplaatsen
+        // die naar payload.stage_id, mits die fase bij dezelfde vacature
+        // hoort — zelfde validatie-regel als het single-move pad in
+        // pipeline.service.ts::updateApplication.
+        if (!payload.stage_id) {
+          throw new AppError(400, 'MISSING_STAGE', 'payload.stage_id is verplicht');
+        }
+        const { rows: [stage] } = await client.query(
+          `SELECT id, job_id FROM pipeline_stages WHERE id = $1 AND tenant_id = $2`,
+          [payload.stage_id, tenantId]
+        );
+        if (!stage) {
+          throw new AppError(400, 'INVALID_STAGE', 'Ongeldige pipelinefase');
+        }
+        const { rowCount } = await client.query(
+          `UPDATE applications SET stage_id = $1, updated_at = now()
+           WHERE candidate_id = ANY($2::uuid[])
+             AND tenant_id = $3
+             AND job_id = $4
+             AND status = 'active'`,
+          [payload.stage_id, ids, tenantId, stage.job_id]
         );
         affected = rowCount ?? 0;
         break;

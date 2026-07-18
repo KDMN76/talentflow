@@ -132,8 +132,13 @@ export async function updateUser(
   data: { name?: string; role?: string; avatar_url?: string | null }
 ): Promise<UserListItem> {
   return withTenant(tenantId, async (client) => {
-    // Only admin can change roles; users can only update themselves
-    if (requesterRole !== 'admin' && requesterRole !== 'super_admin') {
+    // Only admin/owner can change roles; users can only update themselves.
+    // 'owner' = de tenant-aanmaker (auth.service.ts register()).
+    if (
+      requesterRole !== 'admin' &&
+      requesterRole !== 'super_admin' &&
+      requesterRole !== 'owner'
+    ) {
       if (requesterId !== userId) {
         throw new AppError(403, 'FORBIDDEN', 'Onvoldoende rechten');
       }

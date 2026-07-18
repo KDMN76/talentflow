@@ -57,7 +57,12 @@ export async function updateStage(req: Request, res: Response, next: NextFunctio
 
 export async function deleteStage(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    await pipelineService.deleteStage(req.user!.tenantId, req.params.stageId);
+    await pipelineService.deleteStage(
+      req.user!.tenantId,
+      req.params.stageId,
+      req.user!.userId,
+      auditCtxFromReq(req)
+    );
     res.json({ message: 'Pipelinefase verwijderd' });
   } catch (err) {
     next(err);

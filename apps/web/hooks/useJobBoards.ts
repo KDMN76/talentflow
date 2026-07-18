@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { unwrapList } from "@/lib/apiEnvelope";
 import type {
   CostPerHireRow,
   JobBoardCatalogEntry,
@@ -118,11 +119,12 @@ export function useCostPerHire(jobId?: string) {
   return useQuery({
     queryKey: ["job-boards", "cost-per-hire", jobId ?? "all"],
     queryFn: async (): Promise<CostPerHireRow[]> => {
-      const { data } = await api.get<{ rows: CostPerHireRow[] }>(
+      // Backend wikkelt in { data: [...] }; geef de array terug.
+      const { data } = await api.get<{ data: CostPerHireRow[] }>(
         "/job-boards/cost-per-hire",
         { params: jobId ? { job_id: jobId } : {} }
       );
-      return data.rows;
+      return unwrapList<CostPerHireRow>(data);
     },
   });
 }

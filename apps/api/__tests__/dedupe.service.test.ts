@@ -199,6 +199,67 @@ describe('mergeCandidates', () => {
     expect(softDeleted).toBe(1);
   });
 
+  it('rejects a field_choices key that is not a whitelisted candidate column (SQL-injection guard)', async () => {
+    client = mockClient({
+      __matcher: (sql) => {
+        if (/FROM candidates\s+WHERE id = ANY/i.test(sql)) {
+          return {
+            rows: [
+              { id: PRIMARY_ID, name: 'Primary' },
+              { id: DUP_ID, name: 'Dup', 'tenant_id; DROP TABLE candidates; --': 'evil' },
+            ],
+            rowCount: 2,
+          };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    teardown = installPoolMock(client);
+    await expect(
+      mergeCandidates(TENANT_ID, USER_ID, {
+        primary_id: PRIMARY_ID,
+        duplicate_ids: [DUP_ID],
+        field_choices: { 'tenant_id; DROP TABLE candidates; --': 'duplicate' },
+      })
+    ).rejects.toMatchObject({ statusCode: 400, code: 'INVALID_FIELD' });
+  });
+
+  it('accepts a whitelisted mutable column in field_choices', async () => {
+    let updateSql = '';
+    client = mockClient({
+      __matcher: (sql) => {
+        if (/FROM candidates\s+WHERE id = ANY/i.test(sql)) {
+          return {
+            rows: [
+              { id: PRIMARY_ID, name: 'Primary', email: 'p@x.nl' },
+              { id: DUP_ID, name: 'Dup', email: 'd@x.nl' },
+            ],
+            rowCount: 2,
+          };
+        }
+        if (/FROM information_schema\.tables/i.test(sql)) {
+          return { rows: [{ '?column?': 1 }], rowCount: 1 };
+        }
+        if (/UPDATE candidates SET email/i.test(sql)) {
+          updateSql = sql;
+          return { rows: [], rowCount: 1 };
+        }
+        if (/UPDATE candidates SET deleted_at/i.test(sql)) {
+          return { rows: [], rowCount: 1 };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    teardown = installPoolMock(client);
+    const result = await mergeCandidates(TENANT_ID, USER_ID, {
+      primary_id: PRIMARY_ID,
+      duplicate_ids: [DUP_ID],
+      field_choices: { email: 'duplicate' },
+    });
+    expect(result.merged_into).toBe(PRIMARY_ID);
+    expect(updateSql).toMatch(/UPDATE candidates SET email/);
+  });
+
   it('handles UNIQUE-violation on application re-point by deleting duplicate row', async () => {
     let deletedFallback = 0;
     client = mockClient({
@@ -237,5 +298,52 @@ describe('mergeCandidates', () => {
       field_choices: {},
     });
     expect(deletedFallback).toBe(1);
+  });
+
+  it('re-points interview_participants.candidate_id to the primary and drops duplicate rows for shared interviews', async () => {
+    let dedupeDeleteCalled = false;
+    let repointUpdateCalled = false;
+    client = mockClient({
+      __matcher: (sql) => {
+        if (/FROM candidates\s+WHERE id = ANY/i.test(sql)) {
+          return {
+            rows: [
+              { id: PRIMARY_ID, name: 'Primary' },
+              { id: DUP_ID, name: 'Dup' },
+            ],
+            rowCount: 2,
+          };
+        }
+        if (/FROM information_schema\.tables/i.test(sql)) {
+          return { rows: [{ '?column?': 1 }], rowCount: 1 };
+        }
+        // Pre-cleanup: drop duplicate's participant rows for interviews the
+        // primary is already in (dedupe.service.ts has no unique constraint
+        // to rely on, so this delete-first step is what prevents duplicates).
+        if (
+          /DELETE FROM interview_participants/i.test(sql) &&
+          /interview_id IN/i.test(sql)
+        ) {
+          dedupeDeleteCalled = true;
+          return { rows: [], rowCount: 1 };
+        }
+        if (/UPDATE interview_participants/i.test(sql)) {
+          repointUpdateCalled = true;
+          return { rows: [], rowCount: 1 };
+        }
+        if (/UPDATE candidates SET deleted_at/i.test(sql)) {
+          return { rows: [], rowCount: 1 };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    teardown = installPoolMock(client);
+    await mergeCandidates(TENANT_ID, USER_ID, {
+      primary_id: PRIMARY_ID,
+      duplicate_ids: [DUP_ID],
+      field_choices: {},
+    });
+    expect(dedupeDeleteCalled).toBe(true);
+    expect(repointUpdateCalled).toBe(true);
   });
 });

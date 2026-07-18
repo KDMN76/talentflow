@@ -27,15 +27,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { api } from "@/lib/api";
+import { unwrapData } from "@/lib/apiEnvelope";
 import {
   useBulkCampaigns,
   useCreateBulkCampaign,
   type BulkCampaign,
-  type BulkCampaignInput,
 } from "@/hooks/useBulkCampaigns";
 import { useEmailTemplates } from "@/hooks/useEmailTemplates";
 import { useMailboxIntegrations } from "@/hooks/useMailboxIntegrations";
-import type { BulkCampaignAudience } from "@/lib/mockData";
+import type { BulkCampaignAudience, BulkCampaignProvider } from "@/lib/mockData";
+
+/** Server-side cap on `candidate_ids.length` (bulkCampaign.service.ts). */
+const MAX_CAMPAIGN_RECIPIENTS = 5000;
+const CANDIDATE_FETCH_PAGE_SIZE = 100;
 
 /**
  * Three-step wizard for creating a bulk-mail campaign.
@@ -67,7 +72,7 @@ export function CampaignBuilder({ onClose, onCreated }: CampaignBuilderProps) {
   const [templateId, setTemplateId] = useState<string | null>(null);
   const [statusSel, setStatusSel] = useState<string[]>(["active"]);
   const [tagsCsv, setTagsCsv] = useState("");
-  const [provider, setProvider] = useState<BulkCampaignInput["provider"]>("resend");
+  const [provider, setProvider] = useState<BulkCampaignProvider>("resend");
   const [mailboxId, setMailboxId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -83,15 +88,6 @@ export function CampaignBuilder({ onClose, onCreated }: CampaignBuilderProps) {
         .map((t) => t.trim())
         .filter(Boolean),
     [tagsCsv]
-  );
-
-  const audience: BulkCampaignAudience = useMemo(
-    () => ({
-      status: statusSel as NonNullable<BulkCampaignAudience["status"]>,
-      tags: tags.length ? tags : undefined,
-      has_email_consent: true,
-    }),
-    [statusSel, tags]
   );
 
   function applyTemplate(id: string) {
@@ -140,6 +136,38 @@ export function CampaignBuilder({ onClose, onCreated }: CampaignBuilderProps) {
     setStep((step - 1) as Step);
   }
 
+  /**
+   * Resolves the audience filter to an explicit candidate-ID list, since the
+   * backend (`bulkCampaignSchema`) expects `candidate_ids`, not a filter
+   * object. `/candidates` only supports a `tags` filter server-side (no
+   * `status` column exists on the candidates table), so the status
+   * checkboxes in step 2 narrow nothing yet — email-consent is always
+   * re-checked server-side regardless. Paginates up to the backend's
+   * 5000-recipient cap.
+   */
+  async function resolveAudienceCandidateIds(): Promise<string[]> {
+    const ids: string[] = [];
+    let page = 1;
+    while (ids.length < MAX_CAMPAIGN_RECIPIENTS) {
+      const { data } = await api.get<{
+        data?: { id: string }[];
+        meta?: { pages?: number };
+      }>("/candidates", {
+        params: {
+          tags: tags.length ? tags.join(",") : undefined,
+          page,
+          limit: CANDIDATE_FETCH_PAGE_SIZE,
+        },
+      });
+      const rows = data.data ?? [];
+      ids.push(...rows.map((c) => c.id));
+      const pages = data.meta?.pages ?? 1;
+      if (rows.length === 0 || page >= pages) break;
+      page++;
+    }
+    return ids.slice(0, MAX_CAMPAIGN_RECIPIENTS);
+  }
+
   async function submit() {
     const err = validateStep(3);
     if (err) {
@@ -147,16 +175,28 @@ export function CampaignBuilder({ onClose, onCreated }: CampaignBuilderProps) {
       return;
     }
     try {
-      const created = await create.mutateAsync({
-        name: name.trim(),
+      const candidateIds = await resolveAudienceCandidateIds();
+      if (candidateIds.length === 0) {
+        setError("Geen kandidaten gevonden die aan de doelgroep-filter voldoen.");
+        return;
+      }
+      const via = provider === "resend" ? "resend" : "mailbox_integration";
+      const result = await create.mutateAsync({
         subject: subject.trim(),
         body_html: bodyHtml,
-        template_id: templateId,
-        provider,
-        mailbox_integration_id: provider === "resend" ? null : mailboxId,
-        audience,
+        template_id: templateId ?? undefined,
+        via,
+        mailbox_integration_id: via === "mailbox_integration" ? mailboxId ?? undefined : undefined,
+        candidate_ids: candidateIds,
       });
-      onCreated(created);
+      // POST levert alleen het start-resultaat ({campaign_id, total_eligible,
+      // total_skipped_consent}), niet de volledige rij — haal die op zodat de
+      // detail-dialog (die zelf niet polt) meteen echte data toont i.p.v.
+      // undefined-velden.
+      const { data } = await api.get<unknown>(
+        `/communications/bulk-campaigns/${result.campaign_id}`
+      );
+      onCreated(unwrapData<BulkCampaign>(data));
     } catch (e) {
       setError((e as Error).message ?? "Aanmaken mislukt.");
     }

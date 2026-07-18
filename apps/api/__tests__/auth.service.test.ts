@@ -31,8 +31,11 @@ describe('auth.service — register', () => {
     teardown?.();
   });
 
-  it('creates tenant + admin user and returns access + refresh tokens', async () => {
-    let step = 0;
+  it('creates tenant + owner user and returns access + refresh tokens', async () => {
+    // De tenant-aanmaker moet 'owner' zijn, niet 'admin': de SYSTEM_ROLES
+    // 'admin'-matrix sluit bewust users:admin uit (zie lib/permissions.ts),
+    // dus alleen 'owner'/'super_admin' mogen custom-rollen/users beheren.
+    // Zonder deze fix kon niemand ooit die routes bereiken.
     client = mockClient({
       __matcher: (sql) => {
         // 1) check slug uniqueness
@@ -56,7 +59,7 @@ describe('auth.service — register', () => {
                 id: USER_ID,
                 email: 'admin@acme.nl',
                 name: 'Admin',
-                role: 'admin',
+                role: 'owner',
                 tenant_id: TENANT_ID,
               },
             ],
@@ -67,7 +70,6 @@ describe('auth.service — register', () => {
         if (/INSERT INTO refresh_tokens/i.test(sql)) {
           return { rows: [], rowCount: 1 };
         }
-        step++;
         return { rows: [], rowCount: 0 };
       },
     });
@@ -81,11 +83,19 @@ describe('auth.service — register', () => {
       name: 'Admin',
     });
 
+    // De hardcoded 'owner'-literal in de INSERT-query zelf (register() bevat
+    // geen $-param voor role, dus die zit vast in het SQL-statement — we
+    // verifiëren via de gemockte call dat de query 'owner' bevat, niet
+    // 'admin').
+    const insertUsersCall = (client.query as unknown as { mock: { calls: unknown[][] } }).mock
+      .calls.find((c) => /INSERT INTO users/i.test(c[0] as string));
+    expect(insertUsersCall?.[0]).toMatch(/'owner'/);
+
     expect(result.user).toEqual({
       id: USER_ID,
       email: 'admin@acme.nl',
       name: 'Admin',
-      role: 'admin',
+      role: 'owner',
       tenantId: TENANT_ID,
     });
     expect(result.accessToken).toBeTruthy();
@@ -98,7 +108,7 @@ describe('auth.service — register', () => {
     ) as Record<string, unknown>;
     expect(payload.userId).toBe(USER_ID);
     expect(payload.tenantId).toBe(TENANT_ID);
-    expect(payload.role).toBe('admin');
+    expect(payload.role).toBe('owner');
   });
 
   it('throws 409 when the slug is already taken', async () => {

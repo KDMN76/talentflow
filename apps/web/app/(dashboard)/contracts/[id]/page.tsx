@@ -140,6 +140,9 @@ const COMM_STATUS_PILL: Record<CommissionRecordStatus, { cls: string }> = {
   disputed: {
     cls: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-0",
   },
+  reversed: {
+    cls: "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400 border-0",
+  },
 };
 
 function formatDate(value: string | null): string {

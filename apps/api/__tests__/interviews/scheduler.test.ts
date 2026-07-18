@@ -16,14 +16,19 @@ import {
 } from '../../src/modules/interviews/interviews.service';
 
 // Spy de queue-add zodat we verifiëren dat reminders worden enqueueed.
+// getJob/remove worden gemockt omdat enqueueReminderJobs() vóór elke add()
+// eerst een eventueel nog openstaande job voor hetzelfde jobId opruimt (fix
+// voor de reschedule-bug waarbij BullMQ's add() met een bestaande jobId een
+// stille no-op is tegen de nog-actieve oude job).
 vi.mock('../../src/queue/queues', async () => {
   const actual = await vi.importActual<typeof import('../../src/queue/queues')>(
     '../../src/queue/queues'
   );
   const addMock = vi.fn(async () => ({ id: 'mock-job-id' }));
+  const getJobMock = vi.fn(async () => undefined);
   return {
     ...actual,
-    interviewRemindersQueue: { add: addMock },
+    interviewRemindersQueue: { add: addMock, getJob: getJobMock },
     workflowEventsQueue: { add: vi.fn(async () => ({ id: 'wf-1' })) },
   };
 });
@@ -303,6 +308,66 @@ describe('rescheduleInterview', () => {
     const iv = await rescheduleInterview(TENANT, IV_ID, isoFromNow(48), isoFromNow(49));
     expect(iv.id).toBe(IV_ID);
     expect(iv.status).toBe('scheduled');
+  });
+
+  it('removes the still-pending old reminder job before re-enqueueing at the new time', async () => {
+    // Simulate a still-pending delayed job for the 24h reminder from the
+    // ORIGINAL schedule — BullMQ's add() with the same static jobId is a
+    // silent no-op against it, so the fix must explicitly remove() it first.
+    const removeMock = vi.fn(async () => undefined);
+    const queues = await import('../../src/queue/queues');
+    (queues.interviewRemindersQueue.getJob as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      async (jobId: string) =>
+        jobId === `interview-${IV_ID}-24h` ? { remove: removeMock } : undefined
+    );
+    const addSpy = queues.interviewRemindersQueue.add as unknown as ReturnType<typeof vi.fn>;
+    addSpy.mockClear();
+
+    client = mockClient({
+      __matcher: (sql) => {
+        if (/^SELECT \* FROM interviews/i.test(sql)) {
+          return {
+            rows: [
+              {
+                id: IV_ID,
+                scheduled_start: isoFromNow(24),
+                scheduled_end: isoFromNow(25),
+                status: 'scheduled',
+              },
+            ],
+            rowCount: 1,
+          };
+        }
+        if (/SELECT user_id FROM interview_participants/i.test(sql)) {
+          return { rows: [{ user_id: INT_USER_A }], rowCount: 1 };
+        }
+        if (/FROM interviews i\s+JOIN interview_participants/i.test(sql)) {
+          return { rows: [], rowCount: 0 };
+        }
+        if (/UPDATE interviews/i.test(sql)) {
+          return {
+            rows: [
+              {
+                id: IV_ID,
+                scheduled_start: isoFromNow(72),
+                scheduled_end: isoFromNow(73),
+                status: 'scheduled',
+              },
+            ],
+            rowCount: 1,
+          };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    teardown = installPoolMock(client);
+    await rescheduleInterview(TENANT, IV_ID, isoFromNow(72), isoFromNow(73));
+
+    expect(removeMock).toHaveBeenCalledTimes(1);
+    // The 24h reminder must be re-added with the NEW jobId/delay, not skipped.
+    expect(
+      addSpy.mock.calls.some((c) => c[2]?.jobId === `interview-${IV_ID}-24h`)
+    ).toBe(true);
   });
 });
 

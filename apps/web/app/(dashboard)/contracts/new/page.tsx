@@ -26,7 +26,10 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { useCreateContract } from "@/hooks/useBackOffice";
+import { useCandidates } from "@/hooks/useCandidates";
+import { useOrganizations, type Organization } from "@/hooks/useCrm";
 import type { ContractType } from "@/lib/types/backOffice";
+import type { Candidate } from "@talentflow/shared";
 
 export default function NewContractPage() {
   const { t } = useTranslation("contracts");
@@ -36,8 +39,12 @@ export default function NewContractPage() {
 
   const [candidateName, setCandidateName] = useState("");
   const [candidateId, setCandidateId] = useState("");
+  const [candidateQuery, setCandidateQuery] = useState("");
+  const [candidateMenuOpen, setCandidateMenuOpen] = useState(false);
   const [clientName, setClientName] = useState("");
   const [clientOrgId, setClientOrgId] = useState("");
+  const [clientQuery, setClientQuery] = useState("");
+  const [clientMenuOpen, setClientMenuOpen] = useState(false);
   const [jobTitle, setJobTitle] = useState("");
   const [contractType, setContractType] = useState<ContractType>("contract");
   const [startDate, setStartDate] = useState("");
@@ -47,6 +54,17 @@ export default function NewContractPage() {
   const [rateClient, setRateClient] = useState("");
   const [cao, setCao] = useState("");
 
+  // Search-selects: candidates come from the API filtered by query; client
+  // organizations are filtered client-side from the (typically small) CRM list.
+  const candidatesQuery = useCandidates(candidateQuery || undefined);
+  const organizationsQuery = useOrganizations();
+  const filteredOrganizations = useMemo(() => {
+    const list = organizationsQuery.data ?? [];
+    const q = clientQuery.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter((org) => org.name.toLowerCase().includes(q));
+  }, [organizationsQuery.data, clientQuery]);
+
   const margin = useMemo(() => {
     const c = parseFloat(rateCandidate);
     const k = parseFloat(rateClient);
@@ -54,9 +72,11 @@ export default function NewContractPage() {
     return Math.round(((k - c) / k) * 1000) / 10;
   }, [rateCandidate, rateClient]);
 
+  // Backend requires real UUIDs for candidate_id/client_organization_id — both
+  // must come from an actual selection, never free-typed or defaulted.
   const canSubmit =
-    candidateName.trim() &&
-    clientName.trim() &&
+    !!candidateId &&
+    !!clientOrgId &&
     startDate &&
     weeklyHours &&
     rateCandidate &&
@@ -66,9 +86,9 @@ export default function NewContractPage() {
     if (!canSubmit) return;
     try {
       const created = await createContract.mutateAsync({
-        candidate_id: candidateId || `cand-new-${Date.now()}`,
+        candidate_id: candidateId,
         candidate_name: candidateName,
-        client_organization_id: clientOrgId || `org-new-${Date.now()}`,
+        client_organization_id: clientOrgId,
         client_name: clientName,
         job_id: null,
         contract_type: contractType,
@@ -116,31 +136,55 @@ export default function NewContractPage() {
             <Section title={t("new.sections.parties")}>
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label={t("new.fields.candidate")}>
-                  <Input
-                    value={candidateName}
-                    onChange={(e) => setCandidateName(e.target.value)}
+                  <SearchSelect<Candidate>
+                    query={candidateQuery}
+                    onQueryChange={(v) => {
+                      setCandidateQuery(v);
+                      setCandidateId("");
+                      setCandidateName(v);
+                    }}
+                    open={candidateMenuOpen}
+                    onOpenChange={setCandidateMenuOpen}
+                    options={candidatesQuery.data ?? []}
+                    isLoading={candidatesQuery.isLoading}
+                    getOptionId={(c) => c.id}
+                    getOptionLabel={(c) => c.name}
+                    getOptionSublabel={(c) => c.email}
+                    onSelect={(c) => {
+                      setCandidateId(c.id);
+                      setCandidateName(c.name);
+                      setCandidateQuery(c.name);
+                      setCandidateMenuOpen(false);
+                    }}
                     placeholder={t("new.fields.candidatePlaceholder")}
-                  />
-                </Field>
-                <Field label={t("new.fields.candidateId")}>
-                  <Input
-                    value={candidateId}
-                    onChange={(e) => setCandidateId(e.target.value)}
-                    placeholder={t("new.fields.candidateIdPlaceholder")}
+                    noResultsText={t("new.fields.candidateNoResults")}
+                    selected={!!candidateId}
                   />
                 </Field>
                 <Field label={t("new.fields.client")}>
-                  <Input
-                    value={clientName}
-                    onChange={(e) => setClientName(e.target.value)}
+                  <SearchSelect<Organization>
+                    query={clientQuery}
+                    onQueryChange={(v) => {
+                      setClientQuery(v);
+                      setClientOrgId("");
+                      setClientName(v);
+                    }}
+                    open={clientMenuOpen}
+                    onOpenChange={setClientMenuOpen}
+                    options={filteredOrganizations}
+                    isLoading={organizationsQuery.isLoading}
+                    getOptionId={(o) => o.id}
+                    getOptionLabel={(o) => o.name}
+                    getOptionSublabel={(o) => o.industry}
+                    onSelect={(o) => {
+                      setClientOrgId(o.id);
+                      setClientName(o.name);
+                      setClientQuery(o.name);
+                      setClientMenuOpen(false);
+                    }}
                     placeholder={t("new.fields.clientPlaceholder")}
-                  />
-                </Field>
-                <Field label={t("new.fields.clientOrgId")}>
-                  <Input
-                    value={clientOrgId}
-                    onChange={(e) => setClientOrgId(e.target.value)}
-                    placeholder={t("new.fields.clientOrgIdPlaceholder")}
+                    noResultsText={t("new.fields.clientNoResults")}
+                    selected={!!clientOrgId}
                   />
                 </Field>
                 <Field label={t("new.fields.jobTitle")}>
@@ -318,6 +362,101 @@ function Section({
         {title}
       </h3>
       {children}
+    </div>
+  );
+}
+
+/**
+ * Minimal search-select combobox: types into an Input, filters `options`
+ * (server- or client-filtered by the caller), and picks one via a dropdown
+ * list. Used to force candidate/client selection onto real UUIDs instead of
+ * free-typed IDs (see contracts/new bugfix — placeholder IDs broke
+ * `createContractSchema`'s `.uuid()` validation on the backend).
+ */
+function SearchSelect<T>({
+  query,
+  onQueryChange,
+  open,
+  onOpenChange,
+  options,
+  isLoading,
+  getOptionId,
+  getOptionLabel,
+  getOptionSublabel,
+  onSelect,
+  placeholder,
+  noResultsText,
+  selected,
+}: {
+  query: string;
+  onQueryChange: (value: string) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  options: T[];
+  isLoading?: boolean;
+  getOptionId: (option: T) => string;
+  getOptionLabel: (option: T) => string;
+  getOptionSublabel?: (option: T) => string | null | undefined;
+  onSelect: (option: T) => void;
+  placeholder?: string;
+  noResultsText?: string;
+  selected: boolean;
+}) {
+  return (
+    <div
+      className="relative"
+      onBlur={(e) => {
+        // Close only when focus leaves the whole combobox (not when it moves
+        // from the input to an item inside the list).
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+          onOpenChange(false);
+        }
+      }}
+    >
+      <Input
+        value={query}
+        onChange={(e) => onQueryChange(e.target.value)}
+        onFocus={() => onOpenChange(true)}
+        placeholder={placeholder}
+        className={selected ? "border-emerald-400 dark:border-emerald-600" : undefined}
+        autoComplete="off"
+      />
+      {open && (
+        <div className="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg">
+          {isLoading ? (
+            <div className="px-2 py-1.5 text-sm text-muted-foreground">
+              <Loader2 className="mr-1.5 inline h-3.5 w-3.5 animate-spin" />
+            </div>
+          ) : options.length === 0 ? (
+            <div className="px-2 py-1.5 text-sm text-muted-foreground">
+              {noResultsText}
+            </div>
+          ) : (
+            options.map((option) => {
+              const id = getOptionId(option);
+              const sublabel = getOptionSublabel?.(option);
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onMouseDown={(e) => {
+                    // mousedown fires before the input's blur, so selection
+                    // survives without a race against onBlur closing the menu.
+                    e.preventDefault();
+                    onSelect(option);
+                  }}
+                  className="flex w-full flex-col items-start rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent focus:bg-accent"
+                >
+                  <span className="font-medium">{getOptionLabel(option)}</span>
+                  {sublabel && (
+                    <span className="text-xs text-muted-foreground">{sublabel}</span>
+                  )}
+                </button>
+              );
+            })
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -53,13 +53,21 @@ import './passiveMonitor.worker';
 import './replyClassification.worker';
 // Toegevoegd 2026-07-01: in-scope workers die eerder ontbraken in deze lijst en
 // daardoor NIET draaiden in de api-worker-container (de api-container heeft
-// DISABLE_INLINE_WORKERS=true). Bevroren/buiten-scope workers (whatsappOut,
-// whatsappHealthCheck, voiceCallTranscribe, contractExpiry, skillsSnapshot) zijn
+// DISABLE_INLINE_WORKERS=true). Bevroren/buiten-scope workers
+// (whatsappHealthCheck, voiceCallTranscribe, contractExpiry, skillsSnapshot) zijn
 // bewust NIET toegevoegd — die horen bij niet-actieve/bevroren features.
 import './jobBoardPost.worker';
 import './jobBoardPoll.worker';
 import './inboxProjector.worker';
 import './retention.worker';
+// Toegevoegd (audit-fix): whatsappOut was hier eerder abusievelijk als
+// "bevroren feature" gelabeld — de WhatsApp-module is echter volledig live
+// (routes gemount op /api/whatsapp, module-gated maar niet uitgeschakeld;
+// zie apps/api/src/index.ts). Zonder deze import had de `whatsapp-out`
+// BullMQ-queue in productie GEEN consumer (de api-container draait met
+// DISABLE_INLINE_WORKERS=true), dus wachtten uitgaande WhatsApp-berichten
+// voor altijd op status 'queued'.
+import './whatsappOut.worker';
 import { logger } from '../../middleware/errorHandler';
 
 logger.info('All workers started', {
@@ -93,6 +101,7 @@ logger.info('All workers started', {
     'job-board-poll',
     'inbox-projector',
     'retention',
+    'whatsapp-out',
   ],
 });
 

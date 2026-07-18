@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { randomUUID } from 'crypto';
 import * as candidatesService from './candidates.service';
+import { MUTABLE_CANDIDATE_COLUMNS } from './candidates.service';
 import { findDuplicatesForCandidate, mergeCandidates } from './dedupe.service';
 import {
   previewCsv,
@@ -213,7 +214,11 @@ const mergeCandidatesSchema = z
     choices: z
       .array(
         z.object({
-          field: z.string().min(1).max(120),
+          // Whitelist tegen de kolommen die mergeCandidates() daadwerkelijk
+          // mag muteren — voorkomt SQL-injectie via een willekeurige
+          // kolomnaam (zie dedupe.service.ts MUTABLE_CANDIDATE_COLUMN_SET
+          // voor de defense-in-depth check in de service-laag zelf).
+          field: z.enum(MUTABLE_CANDIDATE_COLUMNS),
           source: z.enum(['primary', 'duplicate']),
         })
       )

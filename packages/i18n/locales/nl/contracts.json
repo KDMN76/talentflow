@@ -79,13 +79,9 @@
     },
     "fields": {
       "candidate": "Kandidaat",
-      "candidatePlaceholder": "Bv. Sophie de Vries",
-      "candidateId": "Kandidaat ID (optioneel)",
-      "candidateIdPlaceholder": "cand-...",
+      "candidatePlaceholder": "Zoek op naam of e-mail…",
       "client": "Klant",
-      "clientPlaceholder": "Bv. ING Bank N.V.",
-      "clientOrgId": "Klant org-ID (optioneel)",
-      "clientOrgIdPlaceholder": "org-...",
+      "clientPlaceholder": "Zoek klantorganisatie…",
       "jobTitle": "Vacaturetitel (optioneel)",
       "jobTitlePlaceholder": "Bv. Senior Frontend Engineer",
       "type": "Type",
@@ -95,7 +91,9 @@
       "rateCandidate": "Tarief kandidaat (€/u)",
       "rateClient": "Tarief klant (€/u)",
       "cao": "CAO (optioneel)",
-      "caoPlaceholder": "Bv. CAO Banken"
+      "caoPlaceholder": "Bv. CAO Banken",
+      "candidateNoResults": "Geen kandidaten gevonden",
+      "clientNoResults": "Geen organisaties gevonden"
     },
     "summary": {
       "title": "Samenvatting",

@@ -121,7 +121,10 @@ export interface ListContractsResult {
 
 export interface UpdateContractPatch {
   contract_type?: ContractType;
-  status?: ContractStatus;
+  // No `status` field: lifecycle transitions must go through the dedicated
+  // terminateContract()/renewContract()/extendContract() functions, which
+  // validate the state machine and its side effects. A generic PATCH must
+  // never be able to flip status directly.
   start_date?: string;
   end_date?: string | null;
   weekly_hours?: number | null;
@@ -416,7 +419,6 @@ export async function updateContract(
     };
 
     if (patch.contract_type !== undefined) assign('contract_type', patch.contract_type);
-    if (patch.status !== undefined) assign('status', patch.status);
     if (patch.start_date !== undefined) assign('start_date', patch.start_date);
     if (patch.end_date !== undefined) assign('end_date', patch.end_date);
     if (patch.weekly_hours !== undefined) assign('weekly_hours', patch.weekly_hours);

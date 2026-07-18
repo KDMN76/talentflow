@@ -76,7 +76,9 @@ export default function EmailSettingsPage() {
   }, [settings, form]);
 
   const isAdmin =
-    currentUser?.role === "admin" || currentUser?.role === "super_admin";
+    currentUser?.role === "admin" ||
+    currentUser?.role === "super_admin" ||
+    currentUser?.role === "owner";
 
   if (currentUser && !isAdmin) {
     return (

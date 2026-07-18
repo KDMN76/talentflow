@@ -32,6 +32,28 @@ function jwtToken(): string {
   );
 }
 
+function jwtTokenForRole(role: string): string {
+  return jwt.sign(
+    { userId: USER_ID, tenantId: TENANT_ID, email: 'u@x.nl', role },
+    process.env.JWT_SECRET!
+  );
+}
+
+/** requirePermission('communications', 'write') looks up the user's role
+ * (+ any custom-role assignments) before the route handler runs. */
+function withRoleMatcher(
+  role: string,
+  extra?: (sql: string) => { rows: unknown[]; rowCount: number } | undefined
+) {
+  return async (sql: string) => {
+    if (/FROM\s+users\b/i.test(sql)) return { rows: [{ role }], rowCount: 1 };
+    if (/FROM\s+user_role_assignments\b/i.test(sql)) return { rows: [], rowCount: 0 };
+    const extraResult = extra?.(sql);
+    if (extraResult) return extraResult;
+    return { rows: [], rowCount: 0 };
+  };
+}
+
 function buildApp(): express.Express {
   const app = express();
   app.use(express.json());
@@ -143,11 +165,11 @@ describe('consent routes', () => {
 
   it('POST /consents/invite returns token_url + expires_at', async () => {
     const client = mockClient({
-      __matcher: async (sql) => {
+      __matcher: withRoleMatcher('recruiter', (sql) => {
         if (/INSERT\s+INTO\s+whatsapp_consents/i.test(sql)) return { rows: [], rowCount: 1 };
         if (/INSERT\s+INTO\s+whatsapp_optin_tokens/i.test(sql)) return { rows: [], rowCount: 1 };
-        return { rows: [], rowCount: 0 };
-      },
+        return undefined;
+      }),
     });
     teardown = installPoolMock(client);
     const r = await request(buildApp())
@@ -166,10 +188,7 @@ describe('messages route — consent gate', () => {
 
   it('POST /messages without consent → 403', async () => {
     const client = mockClient({
-      __matcher: async (sql) => {
-        if (/whatsapp_consents/i.test(sql)) return { rows: [], rowCount: 0 };
-        return { rows: [], rowCount: 0 };
-      },
+      __matcher: withRoleMatcher('recruiter'),
     });
     teardown = installPoolMock(client);
     const r = await request(buildApp())
@@ -178,6 +197,53 @@ describe('messages route — consent gate', () => {
       .send({ candidate_id: CAND_ID, kind: 'text', body: 'hi' });
     expect(r.status).toBe(403);
     expect(r.body.error.code).toBe('WHATSAPP_CONSENT_MISSING');
+  });
+});
+
+describe('permission gating — write routes require communications:write', () => {
+  let teardown: () => void;
+  afterEach(() => teardown?.());
+
+  it('POST /messages as viewer → 403 INSUFFICIENT_PERMISSION (never reaches the consent check)', async () => {
+    const client = mockClient({ __matcher: withRoleMatcher('viewer') });
+    teardown = installPoolMock(client);
+    const r = await request(buildApp())
+      .post('/api/whatsapp/messages')
+      .set('Authorization', `Bearer ${jwtTokenForRole('viewer')}`)
+      .send({ candidate_id: CAND_ID, kind: 'text', body: 'hi' });
+    expect(r.status).toBe(403);
+    expect(r.body.error.code).toBe('INSUFFICIENT_PERMISSION');
+  });
+
+  it('POST /consents/invite as viewer → 403 INSUFFICIENT_PERMISSION', async () => {
+    const client = mockClient({ __matcher: withRoleMatcher('viewer') });
+    teardown = installPoolMock(client);
+    const r = await request(buildApp())
+      .post('/api/whatsapp/consents/invite')
+      .set('Authorization', `Bearer ${jwtTokenForRole('viewer')}`)
+      .send({ candidate_id: CAND_ID, phone_number: '+31612345678' });
+    expect(r.status).toBe(403);
+    expect(r.body.error.code).toBe('INSUFFICIENT_PERMISSION');
+  });
+
+  it('POST /integration/connect as viewer → 403 INSUFFICIENT_PERMISSION', async () => {
+    const client = mockClient({ __matcher: withRoleMatcher('viewer') });
+    teardown = installPoolMock(client);
+    const r = await request(buildApp())
+      .post('/api/whatsapp/integration/connect')
+      .set('Authorization', `Bearer ${jwtTokenForRole('viewer')}`)
+      .send({ phone_number: '+31612345678', api_key: 'aaaaaaaa' });
+    expect(r.status).toBe(403);
+    expect(r.body.error.code).toBe('INSUFFICIENT_PERMISSION');
+  });
+
+  it('GET /consents as viewer → still 200 (read routes stay open for viewer)', async () => {
+    const client = mockClient({ __matcher: withRoleMatcher('viewer') });
+    teardown = installPoolMock(client);
+    const r = await request(buildApp())
+      .get('/api/whatsapp/consents')
+      .set('Authorization', `Bearer ${jwtTokenForRole('viewer')}`);
+    expect(r.status).toBe(200);
   });
 });
 

@@ -242,11 +242,13 @@ export async function updateStage(
 
 export async function deleteStage(
   tenantId: string,
-  stageId: string
+  stageId: string,
+  userId?: string,
+  ctx: AuditContext = {}
 ): Promise<void> {
   return withTenant(tenantId, async (client) => {
     const { rows: [stage] } = await client.query(
-      `SELECT id, job_id, position FROM pipeline_stages WHERE id = $1 AND tenant_id = $2`,
+      `SELECT id, job_id, name, position FROM pipeline_stages WHERE id = $1 AND tenant_id = $2`,
       [stageId, tenantId]
     );
     if (!stage) throw new AppError(404, 'STAGE_NOT_FOUND', 'Pipelinefase niet gevonden');
@@ -259,16 +261,45 @@ export async function deleteStage(
       [stage.job_id, tenantId, stage.position]
     );
 
-    // Move applications to previous stage (or null if no previous)
-    await client.query(
+    // Only auto-reassign applications that are still "in progress" — an
+    // application with a terminal status (hired/rejected/withdrawn) was
+    // hired/rejected/withdrawn AT this stage, so silently moving it to the
+    // previous stage would rewrite its history. `applications.stage_id` has
+    // a plain FK (NO ACTION) to pipeline_stages, so we still have to clear
+    // it explicitly on the terminal rows before we can delete the stage.
+    const { rowCount: activeMoved } = await client.query(
       `UPDATE applications SET stage_id = $1, updated_at = now()
-       WHERE stage_id = $2 AND tenant_id = $3`,
+       WHERE stage_id = $2 AND tenant_id = $3 AND status = 'active'`,
       [prevStage?.id ?? null, stageId, tenantId]
+    );
+
+    const { rowCount: terminalCleared } = await client.query(
+      `UPDATE applications SET stage_id = NULL, updated_at = now()
+       WHERE stage_id = $1 AND tenant_id = $2 AND status <> 'active'`,
+      [stageId, tenantId]
     );
 
     await client.query(
       `DELETE FROM pipeline_stages WHERE id = $1 AND tenant_id = $2`,
       [stageId, tenantId]
+    );
+
+    await logAudit(
+      client,
+      tenantId,
+      {
+        action: AuditActions.PIPELINE_STAGE_DELETED,
+        entityType: 'pipeline_stage',
+        entityId: stageId,
+        before: { name: stage.name, job_id: stage.job_id, position: stage.position },
+        after: {
+          moved_to_stage: prevStage?.id ?? null,
+          active_applications_moved: activeMoved ?? 0,
+          terminal_applications_cleared: terminalCleared ?? 0,
+        },
+        userId: userId ?? null,
+      },
+      ctx
     );
   });
 }
@@ -399,7 +430,7 @@ export async function updateApplication(
       if (data.stage_id !== null) {
         const { rows: [stage] } = await client.query(
           `SELECT ps.id FROM pipeline_stages ps
-           JOIN applications a ON a.job_id = ps.job_id
+           JOIN applications a ON a.job_id = ps.job_id AND a.tenant_id = ps.tenant_id
            WHERE ps.id = $1 AND a.id = $2 AND ps.tenant_id = $3`,
           [data.stage_id, applicationId, tenantId]
         );

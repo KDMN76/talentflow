@@ -772,6 +772,46 @@ describe('pipeline.service — stages CRUD + applications', () => {
     expect(applicationsMoved).toBe(true);
   });
 
+  it('deleteStage only reassigns active applications to the previous stage; terminal-status applications are cleared, not moved', async () => {
+    let activeMoveSql = '';
+    let terminalClearSql = '';
+    client = mockClient({
+      __matcher: (sql) => {
+        if (/FROM pipeline_stages WHERE id/i.test(sql)) {
+          return {
+            rows: [{ id: 's2', job_id: 'j1', name: 'Interview', position: 2 }],
+            rowCount: 1,
+          };
+        }
+        if (/FROM pipeline_stages\s+WHERE job_id/i.test(sql)) {
+          return { rows: [{ id: 's1' }], rowCount: 1 };
+        }
+        if (/UPDATE applications SET stage_id = \$1.*status = 'active'/is.test(sql)) {
+          activeMoveSql = sql;
+          return { rows: [], rowCount: 1 };
+        }
+        if (/UPDATE applications SET stage_id = NULL.*status <> 'active'/is.test(sql)) {
+          terminalClearSql = sql;
+          return { rows: [], rowCount: 1 };
+        }
+        if (/DELETE FROM pipeline_stages/i.test(sql)) {
+          return { rows: [], rowCount: 1 };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    teardown = installPoolMock(client);
+
+    await deleteStage(TENANT_ID, 's2', USER_ID);
+
+    // Active applications get moved to the previous stage.
+    expect(activeMoveSql).toMatch(/status = 'active'/);
+    // Terminal-status applications (hired/rejected/withdrawn) are explicitly
+    // nulled out instead of silently rewritten to a stage they were never in.
+    expect(terminalClearSql).toMatch(/stage_id = NULL/);
+    expect(terminalClearSql).toMatch(/status <> 'active'/);
+  });
+
   it('addToPipeline creates an application in the first stage by default', async () => {
     client = mockClient({
       __matcher: (sql) => {

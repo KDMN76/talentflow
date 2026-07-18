@@ -318,6 +318,32 @@ export async function generateInvoiceFromContract(
         'Contract niet gevonden'
       );
     }
+
+    // Guard against double-billing: reject if an existing (non-void) invoice
+    // on this contract already covers an overlapping period.
+    const { rows: overlapping } = await client.query<{
+      id: string;
+      invoice_number: string;
+    }>(
+      `SELECT id, invoice_number
+         FROM invoices
+        WHERE contract_id = $1
+          AND tenant_id = $2
+          AND status != 'void'
+          AND period_start IS NOT NULL
+          AND period_end IS NOT NULL
+          AND period_start <= $4::date
+          AND period_end >= $3::date`,
+      [contractId, tenantId, periodStart, periodEnd]
+    );
+    if (overlapping[0]) {
+      throw new AppError(
+        409,
+        'INVOICE_PERIOD_OVERLAP',
+        `Periode overlapt met bestaande factuur ${overlapping[0].invoice_number}`
+      );
+    }
+
     // Overtime-factor canoniek (zie timesheets.service): per-contract
     // metadata-override of de NL CAO-default 1.5 (voorheen hardcoded 1.25).
     const overtimeMult = resolveOvertimeMultiplier(contract.metadata);
@@ -672,6 +698,16 @@ export async function voidInvoice(
         'Factuur is al ge-void'
       );
     }
+
+    // Reverse any commission_records tied to this invoice in the same
+    // transaction as the status flip, so a voided invoice never leaves
+    // pending/approved commissions with no trace. Throws (aborting the void)
+    // if a tied commission was already paid out.
+    const { reverseCommissionsForInvoice } = await import(
+      '../commissions/commissions.service'
+    );
+    await reverseCommissionsForInvoice(client, tenantId, invoiceId);
+
     const newNotes = before.notes
       ? `${before.notes}\n[VOID] ${reason}`
       : `[VOID] ${reason}`;

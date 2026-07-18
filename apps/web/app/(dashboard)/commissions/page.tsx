@@ -85,6 +85,8 @@ const RECORD_STATUS_PILL: Record<CommissionRecordStatus, string> = {
   paid: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-0",
   disputed:
     "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-0",
+  reversed:
+    "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400 border-0",
 };
 
 // Maps the API enum value to the i18n key under commissions.records.status.
@@ -93,6 +95,7 @@ const RECORD_STATUS_KEY: Record<CommissionRecordStatus, string> = {
   approved: "approved",
   paid: "paid",
   disputed: "disputed",
+  reversed: "reversed",
 };
 
 // Maps the API enum value to the i18n key under commissions.schemeType.

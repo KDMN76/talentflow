@@ -525,7 +525,7 @@ export default function ApiKeysPage() {
 
           <DialogFooter className="gap-2">
             <DialogClose asChild>
-              <Button variant="outline">Annuleren</Button>
+              <Button variant="outline">{t("createDialog.cancel")}</Button>
             </DialogClose>
             {createState.step > 1 && (
               <Button
@@ -663,17 +663,16 @@ export default function ApiKeysPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Sleutel roteren?</AlertDialogTitle>
+            <AlertDialogTitle>{t("confirmRotate.title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              De huidige sleutel wordt direct ongeldig. Integraties die de oude
-              sleutel gebruiken, krijgen 401-fouten totdat je ze updatet.
+              {t("confirmRotate.description")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogCancel>{t("confirmRotate.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={handleRotate}>
               {rotateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Roteer
+              {t("confirmRotate.confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -683,20 +682,19 @@ export default function ApiKeysPage() {
       <AlertDialog open={!!revokeId} onOpenChange={(open) => !open && setRevokeId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Sleutel intrekken?</AlertDialogTitle>
+            <AlertDialogTitle>{t("confirmRevoke.title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Deze actie is permanent — de sleutel werkt direct niet meer en kan
-              niet hersteld worden.
+              {t("confirmRevoke.description")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogCancel>{t("confirmRevoke.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleRevoke}
               className="bg-destructive hover:bg-destructive/90"
             >
               {revokeMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Intrekken
+              {t("confirmRevoke.confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

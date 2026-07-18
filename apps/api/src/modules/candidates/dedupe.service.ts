@@ -10,7 +10,7 @@
  *   - Re-points all references on the duplicate(s) to the primary:
  *       applications, activities, candidate_skills, candidate_resumes,
  *       custom_field_values, scorecards (none — applications already pointed),
- *       communications (best-effort table check).
+ *       communications, interview_participants (best-effort table check).
  *   - Soft-deletes the duplicate candidates (deleted_at = now()).
  *   - Optional `field_choices` merges chosen scalar values from duplicate
  *     into primary BEFORE soft-delete (e.g. keep the duplicate's email).
@@ -23,6 +23,13 @@ import { withTenant } from '../../db/pool';
 import { AppError } from '../../middleware/errorHandler';
 import { logAudit, type AuditContext } from '../../lib/audit';
 import { AuditActions } from '../../lib/auditActions';
+import { MUTABLE_CANDIDATE_COLUMNS } from './candidates.service';
+
+// Whitelist-set voor O(1) lookup — field_choices komt uit user input en wordt
+// via string-interpolatie in `UPDATE candidates SET ${field} = $n` gebruikt.
+// Zonder deze guard is dit een SQL-injectie: elke niet-gevalideerde string in
+// `field` (kolomnaam, geen waarde) zou letterlijk in de query terechtkomen.
+const MUTABLE_CANDIDATE_COLUMN_SET: ReadonlySet<string> = new Set(MUTABLE_CANDIDATE_COLUMNS);
 
 export type DedupeMatchReason = 'email' | 'phone' | 'name+company';
 
@@ -61,6 +68,7 @@ const REPOINT_TABLES: FkTable[] = [
   { table: 'communications', column: 'candidate_id', required: false },
   { table: 'notes', column: 'candidate_id', required: false },
   { table: 'tags_candidates', column: 'candidate_id', required: false },
+  { table: 'interview_participants', column: 'candidate_id', required: false },
 ];
 
 // Custom-field values are stored generically — re-point with extra entity_type guard.
@@ -216,6 +224,17 @@ export async function mergeCandidates(
 
       for (const [field, choice] of Object.entries(input.field_choices)) {
         if (choice !== 'duplicate') continue;
+        // Whitelist-check VOORDAT `field` ooit in SQL terechtkomt — zie
+        // MUTABLE_CANDIDATE_COLUMN_SET hierboven. De zod-schema in de
+        // controller valideert alleen lengte/type, geen kolomnamen, dus
+        // defense-in-depth hier is verplicht.
+        if (!MUTABLE_CANDIDATE_COLUMN_SET.has(field)) {
+          throw new AppError(
+            400,
+            'INVALID_FIELD',
+            `Veld "${field}" mag niet via merge gewijzigd worden`
+          );
+        }
         // Pak de eerste duplicate die het veld gevuld heeft.
         let chosenValue: unknown = null;
         for (const did of input.duplicate_ids) {
@@ -259,6 +278,25 @@ export async function mergeCandidates(
       const extraGuard = fk.table === 'activities' ? `AND entity_type = 'candidate'` : '';
 
       for (const did of input.duplicate_ids) {
+        // interview_participants heeft geen UNIQUE(interview_id, candidate_id)
+        // in het schema, dus een kale UPDATE zou zowel de primary als de
+        // duplicate als los participant-record in dezelfde interview kunnen
+        // laten staan. Verwijder eerst de duplicate's rijen voor interviews
+        // waar de primary al deelneemt, zodat er nooit dubbele participants
+        // ontstaan (en als er ooit alsnog een unique index bijkomt, blijft
+        // de 23505-catch hieronder als extra vangnet staan).
+        if (fk.table === 'interview_participants') {
+          await client.query(
+            `DELETE FROM interview_participants
+             WHERE candidate_id = $1 AND tenant_id = $2
+               AND interview_id IN (
+                 SELECT interview_id FROM interview_participants
+                 WHERE candidate_id = $3 AND tenant_id = $2
+               )`,
+            [did, tenantId, input.primary_id]
+          );
+        }
+
         // Best-effort: een column kan ontbreken. Laat de query falen-stil
         // zodat rare schemas dedupe niet blokkeren.
         try {

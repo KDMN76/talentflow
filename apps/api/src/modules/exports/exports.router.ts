@@ -19,16 +19,23 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/auth';
 import { tenantMiddleware } from '../../middleware/tenant';
+import { requirePermission } from '../../middleware/permissions';
 import * as exportsController from './exports.controller';
 
 const router = Router();
 
 router.use(requireAuth, tenantMiddleware);
 
-router.get('/candidates', exportsController.exportCandidatesHandler);
-router.get('/jobs', exportsController.exportJobsHandler);
-router.get('/applications', exportsController.exportApplicationsHandler);
-router.get('/communications', exportsController.exportCommunicationsHandler);
-router.get('/workflows', exportsController.exportWorkflowsHandler);
+// RBAC: bulk-export dumpt ruwe PII (kandidaten, contactgegevens, berichten)
+// als CSV — dat is een ander risiconiveau dan de gepagineerde list-endpoints
+// en mag niet aan read-only rollen (`viewer`) staan, ook al heeft viewer wél
+// algemene `read` op deze resources. `write` sluit viewer uit (viewer heeft
+// nergens write:true — zie readOnlyMatrix in lib/permissions.ts) en dekt
+// verder exact de rollen die de onderliggende resource al mogen muteren.
+router.get('/candidates', requirePermission('candidates', 'write'), exportsController.exportCandidatesHandler);
+router.get('/jobs', requirePermission('jobs', 'write'), exportsController.exportJobsHandler);
+router.get('/applications', requirePermission('applications', 'write'), exportsController.exportApplicationsHandler);
+router.get('/communications', requirePermission('communications', 'write'), exportsController.exportCommunicationsHandler);
+router.get('/workflows', requirePermission('workflows', 'write'), exportsController.exportWorkflowsHandler);
 
 export default router;

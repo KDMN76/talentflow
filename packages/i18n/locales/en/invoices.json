@@ -154,7 +154,8 @@
         "pending": "Pending",
         "approved": "Approved",
         "paid": "Paid",
-        "disputed": "Disputed"
+        "disputed": "Disputed",
+        "reversed": "Reversed"
       },
       "kpi": {
         "pending": "Pending",

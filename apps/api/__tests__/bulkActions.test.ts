@@ -25,6 +25,8 @@ const TENANT_ID = '11111111-1111-1111-1111-111111111111';
 const USER_ID = '22222222-2222-2222-2222-222222222222';
 const CAND_ID_1 = '33333333-3333-3333-3333-333333333333';
 const CAND_ID_2 = '44444444-4444-4444-4444-444444444444';
+const STAGE_ID = '55555555-5555-5555-5555-555555555555';
+const JOB_ID = '66666666-6666-6666-6666-666666666666';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Service-laag (Agent Y)
@@ -174,10 +176,70 @@ describe('candidatesService.bulkAction — service layer', () => {
         USER_ID,
         [CAND_ID_1],
         // Cast om de strict-typing te omzeilen — runtime moet het afvangen.
-        'move_to_stage' as never,
+        'delete_forever' as never,
         {}
       )
     ).rejects.toMatchObject({ statusCode: 400, code: 'INVALID_ACTION' });
+  });
+
+  it('move_to_stage: zonder payload.stage_id → 400 MISSING_STAGE', async () => {
+    client = mockClient({});
+    teardown = installPoolMock(client);
+    await expect(
+      bulkAction(TENANT_ID, USER_ID, [CAND_ID_1], 'move_to_stage', {})
+    ).rejects.toMatchObject({ statusCode: 400, code: 'MISSING_STAGE' });
+  });
+
+  it('move_to_stage: onbekende stage_id → 400 INVALID_STAGE', async () => {
+    client = mockClient({
+      __matcher: (sql) => {
+        if (/FROM pipeline_stages/i.test(sql)) {
+          return { rows: [], rowCount: 0 };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    teardown = installPoolMock(client);
+    await expect(
+      bulkAction(TENANT_ID, USER_ID, [CAND_ID_1], 'move_to_stage', {
+        stage_id: STAGE_ID,
+      })
+    ).rejects.toMatchObject({ statusCode: 400, code: 'INVALID_STAGE' });
+  });
+
+  it('move_to_stage: verplaatst actieve applications van de geselecteerde kandidaten naar de fase', async () => {
+    let updateSql = '';
+    let updateParams: unknown[] = [];
+    client = mockClient({
+      __matcher: (sql, params) => {
+        if (/FROM pipeline_stages/i.test(sql)) {
+          return { rows: [{ id: STAGE_ID, job_id: JOB_ID }], rowCount: 1 };
+        }
+        if (/UPDATE applications SET stage_id/i.test(sql)) {
+          updateSql = sql;
+          updateParams = params;
+          return { rows: [], rowCount: 2 };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    teardown = installPoolMock(client);
+
+    const result = await bulkAction(
+      TENANT_ID,
+      USER_ID,
+      [CAND_ID_1, CAND_ID_2],
+      'move_to_stage',
+      { stage_id: STAGE_ID }
+    );
+
+    expect(result.affected).toBe(2);
+    // Alleen actieve applications binnen dezelfde job als de fase.
+    expect(updateSql).toMatch(/status = 'active'/);
+    expect(updateSql).toMatch(/job_id = \$/);
+    expect(updateParams[0]).toBe(STAGE_ID);
+    expect(updateParams[1]).toEqual([CAND_ID_1, CAND_ID_2]);
+    expect(updateParams[3]).toBe(JOB_ID);
   });
 });
 

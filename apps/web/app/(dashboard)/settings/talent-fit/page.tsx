@@ -65,7 +65,9 @@ export default function TalentFitSettingsPage() {
   const { data: currentUser } = useCurrentUser();
 
   const isAdmin =
-    currentUser?.role === "admin" || currentUser?.role === "super_admin";
+    currentUser?.role === "admin" ||
+    currentUser?.role === "super_admin" ||
+    currentUser?.role === "owner";
 
   const handleTrain = async () => {
     try {

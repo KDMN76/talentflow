@@ -53,10 +53,18 @@ const createContractSchema = z.object({
   signed_at: z.string().datetime().nullable().optional(),
 });
 
-const updateContractSchema = createContractSchema.partial().extend({
-  candidate_id: z.string().uuid().optional(),
-  start_date: dateString.optional(),
-});
+// `status` is deliberately excluded: contract lifecycle transitions must go
+// through the dedicated endpoints (terminate/extend/renew) which validate
+// the state machine and side effects (termination_reason, terminated_at,
+// contract_notification_queue cleanup). A generic PATCH must never be able
+// to silently flip status and skip that.
+const updateContractSchema = createContractSchema
+  .omit({ status: true })
+  .partial()
+  .extend({
+    candidate_id: z.string().uuid().optional(),
+    start_date: dateString.optional(),
+  });
 
 const listQuerySchema = z.object({
   status: contractStatusEnum.optional(),

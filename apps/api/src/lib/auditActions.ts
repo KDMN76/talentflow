@@ -33,6 +33,9 @@ export const AuditActions = {
   APPLICATION_REJECTED: 'application.rejected',
   APPLICATION_HIRED: 'application.hired',
 
+  // ─── Pipeline stages ────────────────────────────────────────────────────
+  PIPELINE_STAGE_DELETED: 'pipeline_stage.deleted',
+
   // ─── Auth ───────────────────────────────────────────────────────────────
   USER_LOGGED_IN: 'user.logged_in',
   USER_LOGGED_OUT: 'user.logged_out',

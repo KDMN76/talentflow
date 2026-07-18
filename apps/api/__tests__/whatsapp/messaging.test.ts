@@ -17,6 +17,7 @@ import {
   recordIncomingMessage,
   markStatusUpdate,
   listMessages,
+  dispatchOutboundSend,
   WhatsAppConsentMissingError,
   WhatsAppOutsideWindowError,
 } from '../../src/modules/whatsapp/messaging.service';
@@ -508,6 +509,97 @@ describe('recordIncomingMessage', () => {
       body_text: 'STOP',
     });
     expect(withdrawCalled).toBe(true);
+  });
+});
+
+describe('dispatchOutboundSend — consent re-check at send time', () => {
+  let teardown: () => void;
+  afterEach(() => teardown?.());
+
+  function queuedRow() {
+    return {
+      id: 'msg-dispatch-1',
+      tenant_id: TENANT_ID,
+      candidate_id: CAND_ID,
+      integration_id: INTEGRATION_ID,
+      direction: 'outbound',
+      message_type: 'text',
+      template_id: null,
+      template_variables: [],
+      body_text: 'hi',
+      media_url: null,
+      status: 'queued',
+      external_id: null,
+      reply_to_id: null,
+      communication_id: null,
+      metadata: {},
+      created_at: new Date().toISOString(),
+    };
+  }
+
+  it('blocks the send and marks the message failed when consent was withdrawn after enqueue', async () => {
+    let markedFailedWithReason: string | null = null;
+    const client = mockClient({
+      __matcher: async (sql, params) => {
+        if (/SELECT\s+\*\s+FROM\s+whatsapp_messages\s+WHERE\s+id\s*=\s*\$1/i.test(sql)) {
+          return { rows: [queuedRow()], rowCount: 1 };
+        }
+        // No consent row at all → treated the same as withdrawn.
+        if (/FROM\s+whatsapp_consents/i.test(sql)) {
+          return { rows: [], rowCount: 0 };
+        }
+        if (/UPDATE\s+whatsapp_messages[\s\S]*status\s*=\s*'failed'/i.test(sql)) {
+          markedFailedWithReason = params[0] as string;
+          return { rows: [], rowCount: 1 };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    teardown = installPoolMock(client);
+
+    const row = await dispatchOutboundSend(TENANT_ID, 'msg-dispatch-1');
+
+    expect(row.status).toBe('failed');
+    expect(row.error_code).toBe('CONSENT_WITHDRAWN');
+    expect(markedFailedWithReason).toBe('CONSENT_WITHDRAWN');
+  });
+
+  it('proceeds to send when consent is still granted', async () => {
+    const consent = {
+      id: 'c-1',
+      tenant_id: TENANT_ID,
+      candidate_id: CAND_ID,
+      phone_number: '+31612345678',
+      status: 'granted',
+    };
+    let sentUpdateRan = false;
+    const client = mockClient({
+      __matcher: async (sql) => {
+        if (/SELECT\s+\*\s+FROM\s+whatsapp_messages\s+WHERE\s+id\s*=\s*\$1/i.test(sql)) {
+          return { rows: [queuedRow()], rowCount: 1 };
+        }
+        if (/FROM\s+whatsapp_consents/i.test(sql)) {
+          return { rows: [consent], rowCount: 1 };
+        }
+        if (/SELECT\s+\*\s+FROM\s+whatsapp_integrations/i.test(sql)) {
+          return { rows: [integrationRow()], rowCount: 1 };
+        }
+        if (/SELECT\s+phone\s+FROM\s+candidates/i.test(sql)) {
+          return { rows: [{ phone: '+31612345678' }], rowCount: 1 };
+        }
+        if (/UPDATE\s+whatsapp_messages[\s\S]*status\s*=\s*'sent'/i.test(sql)) {
+          sentUpdateRan = true;
+          return { rows: [{ ...queuedRow(), status: 'sent', external_id: 'wa-out-x' }], rowCount: 1 };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    teardown = installPoolMock(client);
+
+    const row = await dispatchOutboundSend(TENANT_ID, 'msg-dispatch-1');
+
+    expect(sentUpdateRan).toBe(true);
+    expect(row.status).toBe('sent');
   });
 });
 

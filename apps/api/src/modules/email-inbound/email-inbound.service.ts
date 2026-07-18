@@ -1,5 +1,6 @@
 import { withTenant } from '../../db/pool';
 import { logger } from '../../middleware/errorHandler';
+import { recordCommunication } from '../../lib/inboxProjector';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -169,11 +170,12 @@ export async function handleInboundEmail(
 
       const body = pickBody(parsed);
 
-      await client.query(
+      const { rows: [communication] } = await client.query<{ id: string }>(
         `INSERT INTO communications
            (tenant_id, candidate_id, channel, direction, subject, body, status,
             message_id, in_reply_to, thread_id)
-         VALUES ($1, $2, 'email', 'inbound', $3, $4, 'delivered', $5, $6, $7)`,
+         VALUES ($1, $2, 'email', 'inbound', $3, $4, 'delivered', $5, $6, $7)
+         RETURNING id`,
         [
           match.tenantId,
           thread.candidate_id,
@@ -189,6 +191,19 @@ export async function handleInboundEmail(
         `UPDATE email_threads SET last_message_at = now() WHERE id = $1 AND tenant_id = $2`,
         [thread.id, match.tenantId]
       );
+
+      // Project into unified_threads so inbound e-mail replies show up in
+      // the omni-channel inbox (in-transaction, matching voice.service.ts).
+      await recordCommunication({
+        tenantId: match.tenantId,
+        candidateId: thread.candidate_id,
+        communicationId: communication.id,
+        channel: 'email',
+        direction: 'inbound',
+        preview: body,
+        client,
+        suppressEvent: true,
+      });
 
       // Activity log — fire-and-forget.
       client.query(

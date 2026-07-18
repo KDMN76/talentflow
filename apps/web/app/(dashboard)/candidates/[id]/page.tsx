@@ -588,7 +588,9 @@ export default function CandidateProfilePage() {
                     Kanaal
                   </label>
                   <div className="flex gap-2">
-                    {(["email", "whatsapp", "sms"] as CommunicationChannel[]).map((ch) => {
+                    {/* SMS is uitgeschakeld — er is geen SMS-provider gekoppeld
+                        (backend geeft 501 NOT_IMPLEMENTED voor dit kanaal). */}
+                    {(["email", "whatsapp"] as CommunicationChannel[]).map((ch) => {
                       const labels: Record<CommunicationChannel, string> = {
                         email: "E-mail",
                         whatsapp: "WhatsApp",

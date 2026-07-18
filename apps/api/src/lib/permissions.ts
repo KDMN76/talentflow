@@ -48,6 +48,8 @@ export const PERMISSION_RESOURCES = [
   'webhooks',
   'audit',
   'compliance',
+  'custom_fields',
+  'saved_searches',
 ] as const;
 
 export type PermissionResource = (typeof PERMISSION_RESOURCES)[number];
@@ -113,6 +115,21 @@ export interface SystemRoleDefinition {
  * controller-niveau.
  */
 export const SYSTEM_ROLES: Record<string, SystemRoleDefinition> = {
+  // 'owner' is de rol van de tenant-aanmaker (zie auth.service.ts register()).
+  // Overal in de codebase staat al `requireRole('admin', 'owner')` als de
+  // bedoelde "boven admin"-rol voor security-settings en custom-role-beheer,
+  // maar er bestond tot nu toe geen SYSTEM_ROLES-entry voor 'owner' — dat
+  // maakte requirePermission(...)-checks (o.a. 'users','admin' voor
+  // custom-role CRUD) onbereikbaar voor ELKE user, want
+  // buildPermissionMatrixForUser() valt terug op SYSTEM_ROLES[users.role] en
+  // vond daar niets voor 'owner'. Volledige toegang, inclusief users:admin —
+  // in tegenstelling tot 'admin' (zie adminMatrix hieronder).
+  owner: {
+    key: 'owner',
+    label: 'Owner',
+    description: 'Tenant-eigenaar (aanmaker). Volledige toegang inclusief user-/rolbeheer.',
+    permissions: fullAccessMatrix(),
+  },
   super_admin: {
     key: 'super_admin',
     label: 'Super Admin',
@@ -141,6 +158,9 @@ export const SYSTEM_ROLES: Record<string, SystemRoleDefinition> = {
       hiring_managers: { read: true, write: true },
       career_pages: { read: true },
       job_boards: { read: true, write: true },
+      // Eigen opgeslagen zoekopdrachten zijn een persoonlijk gemak-feature,
+      // geen tenant-brede config — elke rol die mag zoeken mag ook bewaren.
+      saved_searches: { read: true, write: true },
     },
   },
   hiring_manager: {
@@ -152,6 +172,7 @@ export const SYSTEM_ROLES: Record<string, SystemRoleDefinition> = {
       applications: { read: true, write: true },
       jobs: { read: true },
       interviews: { read: true, write: true },
+      saved_searches: { read: true, write: true },
     },
   },
   viewer: {

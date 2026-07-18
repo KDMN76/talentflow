@@ -1,6 +1,7 @@
 import { withTenant } from '../../db/pool';
 import { AppError, logger } from '../../middleware/errorHandler';
 import { emailSenderQueue } from '../../queue/queues';
+import { sendMessage as sendWhatsAppMessage } from '../whatsapp/messaging.service';
 
 export interface SendMessageData {
   candidate_id: string;
@@ -17,7 +18,7 @@ export interface Communication {
   direction: 'inbound' | 'outbound';
   subject: string | null;
   body: string;
-  status: 'sent' | 'delivered' | 'read' | 'failed';
+  status: 'queued' | 'sent' | 'delivered' | 'read' | 'failed';
   sent_at: string;
   created_at: string;
   candidate_name?: string;
@@ -212,37 +213,57 @@ export async function sendMessage(
     });
   }
 
-  // WhatsApp/SMS blijven geparkeerd: er is (nog) geen provider-integratie voor
-  // deze kanalen in dit pad, dus we leggen de uitgaande boodschap enkel vast.
-  return withTenant(tenantId, async (client) => {
-    const { rows: [communication] } = await client.query<Communication>(
-      `INSERT INTO communications
-         (tenant_id, candidate_id, channel, direction, subject, body, status)
-       VALUES ($1, $2, $3, 'outbound', $4, $5, 'sent')
-       RETURNING *`,
-      [
-        tenantId,
-        data.candidate_id,
-        data.channel,
-        data.subject ?? null,
-        data.body,
-      ]
+  // WhatsApp: delegeer naar de échte messaging-service — die doet de
+  // consent-check (whatsapp_consents), het 24h-vensterbeleid en de
+  // daadwerkelijke send via de whatsapp-out queue. NOOIT hier zelf een
+  // `sent`-rij fabriceren zonder consent-check of provider-call.
+  if (data.channel === 'whatsapp') {
+    const waRow = await sendWhatsAppMessage(
+      tenantId,
+      data.candidate_id,
+      { kind: 'text', body: data.body },
+      { userId }
     );
 
     // Log activity — fire and forget; don't let a missing activities table block the response
-    client.query(
-      `INSERT INTO activities (tenant_id, entity_type, entity_id, user_id, action, payload)
-       VALUES ($1, 'candidate', $2, $3, 'message_sent', $4)`,
-      [
-        tenantId,
-        data.candidate_id,
-        userId,
-        JSON.stringify({ channel: data.channel, subject: data.subject }),
-      ]
+    withTenant(tenantId, (client) =>
+      client.query(
+        `INSERT INTO activities (tenant_id, entity_type, entity_id, user_id, action, payload)
+         VALUES ($1, 'candidate', $2, $3, 'message_queued', $4)`,
+        [
+          tenantId,
+          data.candidate_id,
+          userId,
+          JSON.stringify({ channel: data.channel, subject: data.subject }),
+        ]
+      )
     ).catch((actErr: Error) => {
       logger.warn('[communications] activity log insert failed', { error: actErr.message });
     });
 
-    return communication;
-  });
+    return {
+      id: waRow.communication_id ?? waRow.id,
+      tenant_id: tenantId,
+      candidate_id: data.candidate_id,
+      channel: 'whatsapp',
+      direction: 'outbound',
+      subject: data.subject ?? null,
+      body: waRow.body_text ?? data.body,
+      // waRow.status includes 'received' for inbound rows, but this send path
+      // only ever produces outbound rows — narrow to Communication['status'].
+      status: waRow.status as Exclude<typeof waRow.status, 'received'>,
+      sent_at: waRow.sent_at ?? waRow.created_at,
+      created_at: waRow.created_at,
+    };
+  }
+
+  // SMS: er is (nog) geen SMS-provider geïntegreerd (grep bevestigt: geen
+  // Twilio/MessageBird/Vonage-koppeling in deze codebase — alleen een stub in
+  // communications.worker.ts). Eerlijke 501 in plaats van een gefabriceerde
+  // 'sent'-status. Frontend verbergt de SMS-optie in de verzend-dialoog.
+  throw new AppError(
+    501,
+    'SMS_NOT_IMPLEMENTED',
+    'SMS verzenden is nog niet beschikbaar — er is geen SMS-provider gekoppeld'
+  );
 }

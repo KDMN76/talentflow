@@ -170,4 +170,18 @@ describe('SYSTEM_ROLES sanity', () => {
     expect(m.applications?.write).toBe(true);
     expect(m.billing?.read).toBeFalsy();
   });
+
+  // Regressietest voor de audit-fix: register() maakt de tenant-aanmaker nu
+  // 'owner' i.p.v. 'admin' (zie auth.service.test.ts). Zonder een SYSTEM_ROLES
+  // entry voor 'owner' viel buildPermissionMatrixForUser() terug op een lege
+  // matrix — dan kon GEEN enkele user requirePermission('users','admin')
+  // (custom-role CRUD, roles.router.ts) ooit halen, want 'admin' sluit dat
+  // bewust uit en 'owner'/'super_admin' werden nooit toegekend.
+  it('owner heeft volledige toegang inclusief users:admin (in tegenstelling tot admin)', () => {
+    const m = SYSTEM_ROLES.owner.permissions;
+    for (const r of PERMISSION_RESOURCES) {
+      expect(m[r]?.admin).toBe(true);
+    }
+    expect(userHasPermission([m], 'users', 'admin')).toBe(true);
+  });
 });

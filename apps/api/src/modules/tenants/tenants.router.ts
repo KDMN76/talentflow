@@ -43,14 +43,14 @@ const router = Router();
 router.use(requireAuth, tenantMiddleware);
 
 router.get('/current', tenantsController.getCurrentTenant);
-router.patch('/current', requireRole('admin', 'super_admin'), tenantsController.updateCurrentTenant);
+router.patch('/current', requireRole('admin', 'super_admin', 'owner'), tenantsController.updateCurrentTenant);
 
 // ── Module-zichtbaarheid (migration 050) ─────────────────────────────────────
 // GET voor elke user (sidebar-filtering); PUT admin-only met audit-event.
 router.get('/modules', moduleFlagsController.getModules);
 router.put(
   '/modules',
-  requireRole('admin', 'super_admin'),
+  requireRole('admin', 'super_admin', 'owner'),
   moduleFlagsController.putModules
 );
 
@@ -58,7 +58,7 @@ router.put(
 router.get('/branding', brandingController.getBranding);
 router.put(
   '/branding',
-  requireRole('admin', 'super_admin'),
+  requireRole('admin', 'super_admin', 'owner'),
   brandingController.putBranding
 );
 
@@ -67,13 +67,13 @@ router.put(
 // (brandingPublic.router.ts, gemount in index.ts).
 router.post(
   '/branding/logo',
-  requireRole('admin', 'super_admin'),
+  requireRole('admin', 'super_admin', 'owner'),
   handleLogoUpload,
   brandingController.postBrandingLogo
 );
 router.delete(
   '/branding/logo',
-  requireRole('admin', 'super_admin'),
+  requireRole('admin', 'super_admin', 'owner'),
   brandingController.deleteBrandingLogo
 );
 
@@ -81,17 +81,17 @@ router.delete(
 // Admin-only, ook de GET: de instellingen bevatten SMTP-host/user-details.
 router.get(
   '/email-settings',
-  requireRole('admin', 'super_admin'),
+  requireRole('admin', 'super_admin', 'owner'),
   emailSettingsController.getEmailSettings
 );
 router.put(
   '/email-settings',
-  requireRole('admin', 'super_admin'),
+  requireRole('admin', 'super_admin', 'owner'),
   emailSettingsController.putEmailSettings
 );
 router.post(
   '/email-settings/test',
-  requireRole('admin', 'super_admin'),
+  requireRole('admin', 'super_admin', 'owner'),
   emailTestRateLimit,
   emailSettingsController.sendTestEmail
 );

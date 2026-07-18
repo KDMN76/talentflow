@@ -26,7 +26,7 @@ export const createEmailTemplateSchema = z.object({
   name: z.string().min(1).max(200),
   subject: z.string().min(1).max(998), // RFC 5322 line-length safety net.
   body_html: z.string().min(1),
-  body_text: z.string().optional(),
+  body_text: z.string().nullable().optional(),
   category: z.string().max(50).optional(),
 });
 

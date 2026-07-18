@@ -386,9 +386,10 @@ export async function getMarginReport(
                    * COALESCE(c.hourly_rate_candidate, 0)
                  ), 0) AS candidate_cost
             FROM inv
-            JOIN contracts c ON c.id = inv.contract_id
+            JOIN contracts c ON c.id = inv.contract_id AND c.tenant_id = $1
             LEFT JOIN timesheets t
               ON t.contract_id = inv.contract_id
+             AND t.tenant_id = $1
              AND t.status = 'approved'
              AND (inv.period_start IS NULL OR t.week_start >= inv.period_start::date)
              AND (inv.period_end   IS NULL OR t.week_start <= inv.period_end::date)
@@ -428,9 +429,10 @@ export async function getMarginReport(
                  * COALESCE(c.hourly_rate_candidate, 0)
                ), 0) AS candidate_cost
           FROM inv
-          JOIN contracts c ON c.id = inv.contract_id
+          JOIN contracts c ON c.id = inv.contract_id AND c.tenant_id = $1
           LEFT JOIN timesheets t
             ON t.contract_id = inv.contract_id
+           AND t.tenant_id = $1
            AND t.status = 'approved'
            AND (inv.period_start IS NULL OR t.week_start >= inv.period_start::date)
            AND (inv.period_end   IS NULL OR t.week_start <= inv.period_end::date)

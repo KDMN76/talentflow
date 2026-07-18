@@ -38,6 +38,16 @@ export interface PortalBranding {
 
 export type NotificationFrequency = 'realtime' | 'daily' | 'weekly' | 'off';
 
+/**
+ * Hash een raw guest-portal-token met sha256 (hex). Zelfde conventie als
+ * candidate_self_tokens (migratie 055), password_reset_tokens (041) en
+ * data_export_tokens (046): at rest bewaren we alléén de hash, de raw token
+ * zit enkel in de eenmalig gedeelde portal-URL.
+ */
+function hashToken(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
 export interface PortalLink {
   id: string;
   tenant_id: string;
@@ -523,6 +533,10 @@ export async function createPortalLink(
 ): Promise<PortalLink> {
   // Crypto.randomBytes returns a Buffer; base64url is URL-safe (no +, /, =)
   const token = crypto.randomBytes(24).toString('base64url');
+  // At rest bewaren we alléén de hash (zelfde conventie als
+  // candidate_self_tokens, migratie 055) — de raw token wordt alleen
+  // eenmalig teruggegeven aan de caller hieronder.
+  const tokenHash = hashToken(token);
   const permissions = normalizePermissions(data.permissions ?? {});
   const branding = data.branding ?? {};
   const frequency: NotificationFrequency = data.notification_frequency ?? 'realtime';
@@ -531,7 +545,7 @@ export async function createPortalLink(
     return await withTenant(tenantId, async (client) => {
       const { rows: [link] } = await client.query(
         `INSERT INTO guest_portal_links
-           (tenant_id, job_id, token, client_name, permissions, expires_at, created_by,
+           (tenant_id, job_id, token_hash, client_name, permissions, expires_at, created_by,
             custom_domain, branding, notify_email, notification_frequency)
          VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7,
                  $8, $9::jsonb, $10, $11)
@@ -539,7 +553,7 @@ export async function createPortalLink(
         [
           tenantId,
           data.job_id,
-          token,
+          tokenHash,
           data.client_name ?? null,
           JSON.stringify(permissions),
           data.expires_at ?? null,
@@ -571,7 +585,11 @@ export async function createPortalLink(
         auditCtx
       );
 
-      return rowToLink(link);
+      // `link.token` komt uit de DB en is voortaan altijd NULL (we schrijven
+      // alleen token_hash weg) — de raw token wordt hier eenmalig
+      // teruggegeven zodat de link bruikbaar is; daarna is hij nergens meer
+      // op te vragen (alleen te roteren).
+      return { ...rowToLink(link), token };
     });
   } catch (err) {
     logger.warn('[portal] createPortalLink DB insert failed — using mock', {
@@ -681,13 +699,14 @@ export async function rotatePortalToken(
   auditCtx: AuditContext = {}
 ): Promise<{ token: string }> {
   const newToken = crypto.randomBytes(24).toString('base64url');
+  const newTokenHash = hashToken(newToken);
   return withTenant(tenantId, async (client) => {
     const { rows: [row] } = await client.query(
       `UPDATE guest_portal_links
-       SET token = $1
+       SET token = NULL, token_hash = $1
        WHERE id = $2 AND tenant_id = $3 AND deleted_at IS NULL
        RETURNING id`,
-      [newToken, portalId, tenantId]
+      [newTokenHash, portalId, tenantId]
     );
     if (!row) {
       throw new AppError(404, 'PORTAL_LINK_NOT_FOUND', 'Portal-link niet gevonden');
@@ -949,8 +968,8 @@ export async function resolvePortalToken(token: string): Promise<{
     const { rows: [row] } = await client.query(
       `SELECT id, tenant_id, job_id, client_name, permissions, expires_at
        FROM guest_portal_links
-       WHERE token = $1 AND deleted_at IS NULL`,
-      [token]
+       WHERE token_hash = $1 AND deleted_at IS NULL`,
+      [hashToken(token)]
     );
     return row ?? null;
   });
@@ -992,9 +1011,9 @@ export async function getPortalAccess(
          FROM guest_portal_links pl
          JOIN jobs j ON j.id = pl.job_id
          LEFT JOIN users u ON u.id = j.recruiter_id
-         WHERE pl.token = $1
+         WHERE pl.token_hash = $1
            AND pl.deleted_at IS NULL`,
-        [token]
+        [hashToken(token)]
       );
 
       if (!link) {
@@ -1143,10 +1162,10 @@ export async function getBrandingForToken(
       const { rows: [link] } = await client.query(
         `SELECT pl.id, pl.tenant_id, pl.client_name, pl.branding
          FROM guest_portal_links pl
-         WHERE pl.token = $1
+         WHERE pl.token_hash = $1
            AND pl.deleted_at IS NULL
            AND (pl.expires_at IS NULL OR pl.expires_at > now())`,
-        [token]
+        [hashToken(token)]
       );
       if (!link) return null;
       const linkBranding = parseBranding(link.branding);

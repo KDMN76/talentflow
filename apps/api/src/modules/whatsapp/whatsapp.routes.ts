@@ -9,6 +9,7 @@ import { Router, type Request, type Response, type NextFunction } from 'express'
 import { z } from 'zod';
 import { requireAuth } from '../../middleware/auth';
 import { tenantMiddleware } from '../../middleware/tenant';
+import { requirePermission } from '../../middleware/permissions';
 import { auditCtxFromReq } from '../../lib/audit';
 import * as wa from './whatsapp.service';
 import * as templates from './templates.service';
@@ -18,6 +19,12 @@ import * as dialog360 from './connector/dialog360';
 
 const router = Router();
 router.use(requireAuth, tenantMiddleware);
+
+// Verzenden/wijzigen vereist `communications:write` — read-only rollen
+// (viewer) konden eerst zonder check integraties (her)koppelen, templates
+// beheren, berichten versturen en consent intrekken (viewer-gap, zelfde
+// patroon als communications.router.ts). Read-routes blijven ongeguard zodat
+// viewer-rollen WhatsApp-data nog kunnen inzien.
 
 // ───────────────────────────────────────────────────────────────────────────
 // Schemas
@@ -126,7 +133,7 @@ router.get('/integration', async (req: Request, res: Response, next: NextFunctio
   }
 });
 
-router.post('/integration/connect', async (req, res, next) => {
+router.post('/integration/connect', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const body = integrationConnectBody.parse(req.body);
     const integration = await wa.connectIntegration(
@@ -146,7 +153,7 @@ router.post('/integration/connect', async (req, res, next) => {
   }
 });
 
-router.delete('/integration', async (req, res, next) => {
+router.delete('/integration', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     await wa.disconnectIntegration(req.user!.tenantId, {
       userId: req.user!.userId,
@@ -158,7 +165,7 @@ router.delete('/integration', async (req, res, next) => {
   }
 });
 
-router.post('/integration/health-check', async (req, res, next) => {
+router.post('/integration/health-check', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const integration = await wa.healthCheck(req.user!.tenantId, {
       userId: req.user!.userId,
@@ -184,7 +191,7 @@ router.get('/templates', async (req, res, next) => {
   }
 });
 
-router.post('/templates', async (req, res, next) => {
+router.post('/templates', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const body = createTemplateBody.parse(req.body);
     const row = await templates.createTemplate(req.user!.tenantId, body, {
@@ -197,7 +204,7 @@ router.post('/templates', async (req, res, next) => {
   }
 });
 
-router.patch('/templates/:id', async (req, res, next) => {
+router.patch('/templates/:id', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const id = z.string().uuid().parse(req.params.id);
     const body = updateTemplateBody.parse(req.body);
@@ -211,7 +218,7 @@ router.patch('/templates/:id', async (req, res, next) => {
   }
 });
 
-router.delete('/templates/:id', async (req, res, next) => {
+router.delete('/templates/:id', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const id = z.string().uuid().parse(req.params.id);
     await templates.deleteTemplate(req.user!.tenantId, id, {
@@ -224,7 +231,7 @@ router.delete('/templates/:id', async (req, res, next) => {
   }
 });
 
-router.post('/templates/:id/submit', async (req, res, next) => {
+router.post('/templates/:id/submit', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const id = z.string().uuid().parse(req.params.id);
     const row = await templates.submitTemplate(req.user!.tenantId, id, {
@@ -237,7 +244,7 @@ router.post('/templates/:id/submit', async (req, res, next) => {
   }
 });
 
-router.post('/templates/:id/sync', async (req, res, next) => {
+router.post('/templates/:id/sync', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const id = z.string().uuid().parse(req.params.id);
     const row = await templates.syncTemplateStatus(req.user!.tenantId, id, {
@@ -274,7 +281,7 @@ router.get('/messages/:id', async (req, res, next) => {
   }
 });
 
-router.post('/messages', async (req, res, next) => {
+router.post('/messages', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const body = sendMessageBody.parse(req.body);
     const row = await messaging.sendMessage(
@@ -336,7 +343,7 @@ router.get('/consents/:candidate_id', async (req, res, next) => {
   }
 });
 
-router.post('/consents/invite', async (req, res, next) => {
+router.post('/consents/invite', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const body = consentInviteBody.parse(req.body);
     const result = await consent.issueOptInInvite(
@@ -353,7 +360,7 @@ router.post('/consents/invite', async (req, res, next) => {
   }
 });
 
-router.post('/consents/:candidate_id/withdraw', async (req, res, next) => {
+router.post('/consents/:candidate_id/withdraw', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const candidateId = z.string().uuid().parse(req.params.candidate_id);
     const body = consentWithdrawBody.parse(req.body);

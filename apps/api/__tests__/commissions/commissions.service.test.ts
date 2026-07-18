@@ -304,6 +304,65 @@ describe('commissions.assignToContract — validation', () => {
     ).rejects.toMatchObject({ code: 'INVALID_SHARE_PERCENT' });
   });
 
+  it('rejects a new assignment that would push the contract total share_percent over 100', async () => {
+    teardown = installPoolMock(
+      mockClient({
+        __matcher: (sql) => {
+          if (/FROM commission_schemes/i.test(sql))
+            return { rows: [{ id: 'scheme-1', active: true }], rowCount: 1 };
+          if (/SELECT share_percent FROM commission_assignments/i.test(sql))
+            return { rows: [{ share_percent: '60' }], rowCount: 1 };
+          return { rows: [], rowCount: 0 };
+        },
+      })
+    );
+    await expect(
+      service.assignToContract(TENANT, {
+        contract_id: '00000000-0000-0000-0000-000000000001',
+        recruiter_id: '00000000-0000-0000-0000-000000000002',
+        scheme_id: '00000000-0000-0000-0000-000000000003',
+        share_percent: 50,
+      })
+    ).rejects.toMatchObject({ code: 'SHARE_PERCENT_EXCEEDS_100' });
+  });
+
+  it('allows a new assignment that keeps the contract total share_percent at or under 100', async () => {
+    teardown = installPoolMock(
+      mockClient({
+        __matcher: (sql) => {
+          if (/FROM commission_schemes/i.test(sql))
+            return { rows: [{ id: 'scheme-1', active: true }], rowCount: 1 };
+          if (/SELECT share_percent FROM commission_assignments/i.test(sql))
+            return { rows: [{ share_percent: '60' }], rowCount: 1 };
+          if (/INSERT INTO commission_assignments/i.test(sql))
+            return {
+              rows: [
+                {
+                  id: 'a-2',
+                  tenant_id: TENANT,
+                  recruiter_id: '00000000-0000-0000-0000-000000000002',
+                  contract_id: '00000000-0000-0000-0000-000000000001',
+                  scheme_id: '00000000-0000-0000-0000-000000000003',
+                  share_percent: '40',
+                  notes: null,
+                  created_at: new Date().toISOString(),
+                },
+              ],
+              rowCount: 1,
+            };
+          return { rows: [], rowCount: 0 };
+        },
+      })
+    );
+    const assignment = await service.assignToContract(TENANT, {
+      contract_id: '00000000-0000-0000-0000-000000000001',
+      recruiter_id: '00000000-0000-0000-0000-000000000002',
+      scheme_id: '00000000-0000-0000-0000-000000000003',
+      share_percent: 40,
+    });
+    expect(assignment.share_percent).toBe(40);
+  });
+
   it('rejects unknown scheme_id', async () => {
     teardown = installPoolMock(
       mockClient({
@@ -321,6 +380,75 @@ describe('commissions.assignToContract — validation', () => {
         scheme_id: '00000000-0000-0000-0000-000000000099',
       })
     ).rejects.toMatchObject({ code: 'SCHEME_NOT_FOUND' });
+  });
+});
+
+describe('commissions.reverseCommissionsForInvoice — void-invoice reversal', () => {
+  function makeRecord(id: string, status: string) {
+    return {
+      id,
+      tenant_id: TENANT,
+      assignment_id: 'a-1',
+      recruiter_id: 'rec-1',
+      contract_id: 'c-1',
+      invoice_id: 'inv-1',
+      base_amount: '1000',
+      commission_amount: '100',
+      period_start: null,
+      period_end: null,
+      status,
+      paid_at: null,
+      created_at: new Date().toISOString(),
+    };
+  }
+
+  it('marks pending/approved commission_records for the invoice as reversed', async () => {
+    const updated: string[] = [];
+    const client = mockClient({
+      __matcher: (sql, params) => {
+        if (/SELECT id, status FROM commission_records/i.test(sql)) {
+          return {
+            rows: [makeRecord('r-1', 'pending'), makeRecord('r-2', 'approved')],
+            rowCount: 2,
+          };
+        }
+        if (/UPDATE commission_records/i.test(sql)) {
+          updated.push(...(params[0] as string[]));
+          return { rows: [], rowCount: 2 };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    await service.reverseCommissionsForInvoice(client, TENANT, 'inv-1');
+    expect(updated.sort()).toEqual(['r-1', 'r-2']);
+  });
+
+  it('refuses to reverse (and throws) when a tied commission is already paid', async () => {
+    const client = mockClient({
+      __matcher: (sql) => {
+        if (/SELECT id, status FROM commission_records/i.test(sql)) {
+          return { rows: [makeRecord('r-1', 'paid')], rowCount: 1 };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    await expect(
+      service.reverseCommissionsForInvoice(client, TENANT, 'inv-1')
+    ).rejects.toMatchObject({ code: 'COMMISSION_ALREADY_PAID' });
+  });
+
+  it('no-ops when the invoice has no commission_records', async () => {
+    const client = mockClient({
+      __matcher: (sql) => {
+        if (/SELECT id, status FROM commission_records/i.test(sql)) {
+          return { rows: [], rowCount: 0 };
+        }
+        return { rows: [], rowCount: 0 };
+      },
+    });
+    await expect(
+      service.reverseCommissionsForInvoice(client, TENANT, 'inv-1')
+    ).resolves.toBeUndefined();
   });
 });
 

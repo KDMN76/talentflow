@@ -180,7 +180,8 @@ export type CommissionRecordStatus =
   | "pending"
   | "approved"
   | "paid"
-  | "disputed";
+  | "disputed"
+  | "reversed";
 
 export interface CommissionScheme {
   id: string;

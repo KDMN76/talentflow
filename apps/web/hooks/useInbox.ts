@@ -19,7 +19,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { unwrapList } from "@/lib/apiEnvelope";
+import { unwrapData, unwrapList } from "@/lib/apiEnvelope";
 import type {
   ChannelType,
   UnifiedThread,
@@ -63,10 +63,10 @@ export function useInboxThread(threadId: string | undefined) {
     enabled: !!threadId,
     queryFn: async (): Promise<UnifiedThread> => {
       if (!threadId) throw new Error("Geen thread-ID");
-      const { data } = await api.get<UnifiedThread>(
-        `/inbox/threads/${threadId}`
-      );
-      return data;
+      // Backend wikkelt in { data: thread } — anders krijgt de UI het
+      // wrapper-object i.p.v. de thread zelf (envelope-drift).
+      const { data } = await api.get<unknown>(`/inbox/threads/${threadId}`);
+      return unwrapData<UnifiedThread>(data);
     },
   });
 }

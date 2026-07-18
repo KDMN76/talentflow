@@ -162,8 +162,9 @@ export function useUpdateContract() {
       id: string;
       patch: Partial<Contract>;
     }): Promise<Contract> => {
-      const { data } = await api.patch<Contract>(`/contracts/${id}`, patch);
-      return data;
+      // Backend levert { data: contract } → uitpakken.
+      const { data } = await api.patch<unknown>(`/contracts/${id}`, patch);
+      return unwrapData<Contract>(data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["contracts"] });
@@ -185,11 +186,15 @@ export function useExtendContract() {
       new_end_date,
       reason,
     }: ExtendContractInput): Promise<Contract> => {
-      const { data } = await api.post<Contract>(`/contracts/${id}/extend`, {
+      // Backend levert { data: { contract, extension } } → uitpakken naar het
+      // contract (consumenten verwachten een Contract, geen envelope).
+      const { data } = await api.post<unknown>(`/contracts/${id}/extend`, {
         new_end_date,
         reason,
       });
-      return data;
+      return unwrapData<{ contract: Contract; extension: ContractExtension }>(
+        data
+      ).contract;
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ["contracts"] });
@@ -214,11 +219,12 @@ export function useTerminateContract() {
       reason,
       effective_date,
     }: TerminateContractInput): Promise<Contract> => {
-      const { data } = await api.post<Contract>(
+      // Backend levert { data: contract } → uitpakken.
+      const { data } = await api.post<unknown>(
         `/contracts/${id}/terminate`,
         { reason, effective_date }
       );
-      return data;
+      return unwrapData<Contract>(data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["contracts"] });
@@ -270,11 +276,12 @@ export function useCreateTimesheet() {
       contract_id: string;
       week_start: string;
     }): Promise<Timesheet> => {
-      const { data } = await api.post<Timesheet>("/timesheets", {
+      // Backend levert { data: timesheet } → uitpakken.
+      const { data } = await api.post<unknown>("/timesheets", {
         contract_id,
         week_start,
       });
-      return data;
+      return unwrapData<Timesheet>(data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["timesheets"] });
@@ -299,7 +306,9 @@ export function useAddEntry() {
     mutationFn: async (
       input: Omit<UpsertEntryInput, "entryId">
     ): Promise<TimesheetEntry> => {
-      const { data } = await api.post<TimesheetEntry>(
+      // Backend levert { data: { entry, totals } } → uitpakken naar de entry
+      // (consumenten verwachten een TimesheetEntry, geen envelope/totals).
+      const { data } = await api.post<unknown>(
         `/timesheets/${input.timesheetId}/entries`,
         {
           date: input.date,
@@ -310,7 +319,7 @@ export function useAddEntry() {
           project_code: input.project_code ?? null,
         }
       );
-      return data;
+      return unwrapData<{ entry: TimesheetEntry }>(data).entry;
     },
     onSuccess: (_, v) => {
       qc.invalidateQueries({ queryKey: ["timesheets"] });
@@ -325,7 +334,8 @@ export function useUpdateEntry() {
     mutationFn: async (
       input: UpsertEntryInput & { entryId: string }
     ): Promise<TimesheetEntry> => {
-      const { data } = await api.patch<TimesheetEntry>(
+      // Backend levert { data: { entry, totals } } → uitpakken naar de entry.
+      const { data } = await api.patch<unknown>(
         `/timesheets/${input.timesheetId}/entries/${input.entryId}`,
         {
           date: input.date,
@@ -336,7 +346,7 @@ export function useUpdateEntry() {
           project_code: input.project_code ?? null,
         }
       );
-      return data;
+      return unwrapData<{ entry: TimesheetEntry }>(data).entry;
     },
     onSuccess: (_, v) => {
       qc.invalidateQueries({ queryKey: ["timesheets"] });
@@ -368,8 +378,9 @@ export function useSubmitTimesheet() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string): Promise<Timesheet> => {
-      const { data } = await api.post<Timesheet>(`/timesheets/${id}/submit`);
-      return data;
+      // Backend levert { data: timesheet } → uitpakken.
+      const { data } = await api.post<unknown>(`/timesheets/${id}/submit`);
+      return unwrapData<Timesheet>(data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["timesheets"] });
@@ -381,8 +392,9 @@ export function useApproveTimesheet() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string): Promise<Timesheet> => {
-      const { data } = await api.post<Timesheet>(`/timesheets/${id}/approve`);
-      return data;
+      // Backend levert { data: timesheet } → uitpakken.
+      const { data } = await api.post<unknown>(`/timesheets/${id}/approve`);
+      return unwrapData<Timesheet>(data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["timesheets"] });
@@ -400,11 +412,12 @@ export function useRejectTimesheet() {
       id: string;
       reason: string;
     }): Promise<Timesheet> => {
-      const { data } = await api.post<Timesheet>(
+      // Backend levert { data: timesheet } → uitpakken.
+      const { data } = await api.post<unknown>(
         `/timesheets/${id}/reject`,
         { reason }
       );
-      return data;
+      return unwrapData<Timesheet>(data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["timesheets"] });
@@ -422,11 +435,12 @@ export function useDisputeTimesheet() {
       id: string;
       reason: string;
     }): Promise<Timesheet> => {
-      const { data } = await api.post<Timesheet>(
+      // Backend levert { data: timesheet } → uitpakken.
+      const { data } = await api.post<unknown>(
         `/timesheets/${id}/dispute`,
         { reason }
       );
-      return data;
+      return unwrapData<Timesheet>(data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["timesheets"] });
@@ -623,8 +637,9 @@ export function useIssueInvoice() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string): Promise<Invoice> => {
-      const { data } = await api.post<Invoice>(`/invoices/${id}/issue`);
-      return data;
+      // Backend levert { data: invoice } → uitpakken.
+      const { data } = await api.post<unknown>(`/invoices/${id}/issue`);
+      return unwrapData<Invoice>(data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["invoices"] });
@@ -642,10 +657,11 @@ export function useMarkInvoicePaid() {
       id: string;
       paid_date: string;
     }): Promise<Invoice> => {
-      const { data } = await api.post<Invoice>(`/invoices/${id}/mark-paid`, {
+      // Backend levert { data: invoice } → uitpakken.
+      const { data } = await api.post<unknown>(`/invoices/${id}/mark-paid`, {
         paid_date,
       });
-      return data;
+      return unwrapData<Invoice>(data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["invoices"] });
@@ -663,10 +679,11 @@ export function useVoidInvoice() {
       id: string;
       reason: string;
     }): Promise<Invoice> => {
-      const { data } = await api.post<Invoice>(`/invoices/${id}/void`, {
+      // Backend levert { data: invoice } → uitpakken.
+      const { data } = await api.post<unknown>(`/invoices/${id}/void`, {
         reason,
       });
-      return data;
+      return unwrapData<Invoice>(data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["invoices"] });
@@ -678,10 +695,16 @@ export function useSyncInvoiceAccounting() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string): Promise<Invoice> => {
-      const { data } = await api.post<Invoice>(
+      // Backend levert { data: ... } → uitpakken.
+      // NB: de sync-accounting-route levert een SyncInvoiceResult
+      // ({external_id, provider, already_synced}), geen volledig Invoice —
+      // dat is een apart, niet in deze fix meegenomen mismatch (zie
+      // invoices/[id]/page.tsx handleSync, dat `.external_accounting_*`
+      // velden leest die hier niet bestaan).
+      const { data } = await api.post<unknown>(
         `/invoices/${id}/sync-accounting`
       );
-      return data;
+      return unwrapData<Invoice>(data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["invoices"] });
@@ -780,11 +803,12 @@ export function useCreateCommissionScheme() {
     mutationFn: async (
       input: Omit<CommissionScheme, "id">
     ): Promise<CommissionScheme> => {
-      const { data } = await api.post<CommissionScheme>(
+      // Backend levert { data: scheme } → uitpakken.
+      const { data } = await api.post<unknown>(
         "/commissions/schemes",
         input
       );
-      return data;
+      return unwrapData<CommissionScheme>(data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["commissions", "schemes"] });
@@ -802,11 +826,12 @@ export function useUpdateCommissionScheme() {
       id: string;
       patch: Partial<CommissionScheme>;
     }): Promise<CommissionScheme> => {
-      const { data } = await api.patch<CommissionScheme>(
+      // Backend levert { data: scheme } → uitpakken.
+      const { data } = await api.patch<unknown>(
         `/commissions/schemes/${id}`,
         patch
       );
-      return data;
+      return unwrapData<CommissionScheme>(data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["commissions", "schemes"] });
@@ -840,11 +865,12 @@ export function useCreateCommissionAssignment() {
     mutationFn: async (
       input: Omit<CommissionAssignment, "id">
     ): Promise<CommissionAssignment> => {
-      const { data } = await api.post<CommissionAssignment>(
+      // Backend levert { data: assignment } → uitpakken.
+      const { data } = await api.post<unknown>(
         "/commissions/assignments",
         input
       );
-      return data;
+      return unwrapData<CommissionAssignment>(data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["commissions", "assignments"] });
@@ -876,10 +902,11 @@ export function useApproveCommission() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string): Promise<CommissionRecord> => {
-      const { data } = await api.post<CommissionRecord>(
+      // Backend levert { data: record } → uitpakken.
+      const { data } = await api.post<unknown>(
         `/commissions/records/${id}/approve`
       );
-      return data;
+      return unwrapData<CommissionRecord>(data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["commissions", "records"] });
@@ -891,10 +918,11 @@ export function usePayCommission() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string): Promise<CommissionRecord> => {
-      const { data } = await api.post<CommissionRecord>(
+      // Backend levert { data: record } → uitpakken.
+      const { data } = await api.post<unknown>(
         `/commissions/records/${id}/pay`
       );
-      return data;
+      return unwrapData<CommissionRecord>(data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["commissions", "records"] });
@@ -912,11 +940,12 @@ export function useDisputeCommission() {
       id: string;
       reason: string;
     }): Promise<CommissionRecord> => {
-      const { data } = await api.post<CommissionRecord>(
+      // Backend levert { data: record } → uitpakken.
+      const { data } = await api.post<unknown>(
         `/commissions/records/${id}/dispute`,
         { reason }
       );
-      return data;
+      return unwrapData<CommissionRecord>(data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["commissions", "records"] });

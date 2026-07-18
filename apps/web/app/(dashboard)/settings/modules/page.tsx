@@ -72,7 +72,9 @@ export default function ModulesSettingsPage() {
   const updateModules = useUpdateTenantModules();
 
   const isAdmin =
-    currentUser?.role === "admin" || currentUser?.role === "super_admin";
+    currentUser?.role === "admin" ||
+    currentUser?.role === "super_admin" ||
+    currentUser?.role === "owner";
 
   const handleToggle = async (key: ModuleKey, enabled: boolean) => {
     try {

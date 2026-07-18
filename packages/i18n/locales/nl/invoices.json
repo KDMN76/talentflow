@@ -154,7 +154,8 @@
         "pending": "Wachtend",
         "approved": "Goedgekeurd",
         "paid": "Uitbetaald",
-        "disputed": "Bezwaar"
+        "disputed": "Bezwaar",
+        "reversed": "Teruggeboekt"
       },
       "kpi": {
         "pending": "Wachtend",

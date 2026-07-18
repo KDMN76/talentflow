@@ -569,6 +569,19 @@ async function enqueueReminderJobs(
     { kind: '1h', delay: startMs - minutes1 - now },
   ];
   for (const j of jobs) {
+    const jobId = `interview-${interview.id}-${j.kind}`;
+
+    // The jobId is static per interview+kind, so BullMQ's add() is a silent
+    // no-op if a job with that id is still pending (e.g. delayed) — this is
+    // what makes reschedule silently keep firing the OLD reminder time.
+    // Always remove any previously-queued job for this id first so re-adding
+    // below actually applies the new delay. No-op on first schedule (there's
+    // nothing to remove yet).
+    const existing = await interviewRemindersQueue.getJob(jobId);
+    if (existing) {
+      await existing.remove();
+    }
+
     if (j.delay <= 0) continue; // te laat voor deze reminder, skip
     await interviewRemindersQueue.add(
       'send-interview-reminder',
@@ -577,7 +590,7 @@ async function enqueueReminderJobs(
         interviewId: interview.id,
         kind: j.kind,
       },
-      { delay: j.delay, jobId: `interview-${interview.id}-${j.kind}` }
+      { delay: j.delay, jobId }
     );
   }
 }
