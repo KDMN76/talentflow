@@ -8,6 +8,7 @@ import { Router, type Request, type Response, type NextFunction } from 'express'
 import { z } from 'zod';
 import { requireAuth } from '../../middleware/auth';
 import { tenantMiddleware } from '../../middleware/tenant';
+import { requirePermission } from '../../middleware/permissions';
 import { auditCtxFromReq } from '../../lib/audit';
 import * as service from './accounting.service';
 
@@ -45,6 +46,7 @@ const connectBody = z.object({
 
 router.post(
   '/integrations/:provider/connect',
+  requirePermission('billing', 'write'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const body = connectBody.parse(req.body);
@@ -70,6 +72,7 @@ router.post(
 
 router.delete(
   '/integrations/:provider',
+  requirePermission('billing', 'write'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       await service.disconnectIntegration(

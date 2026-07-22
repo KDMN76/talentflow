@@ -86,7 +86,7 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-router.post('/', async (req, res, next) => {
+router.post('/', requirePermission('billing', 'write'), async (req, res, next) => {
   try {
     const body = createBody.parse(req.body);
     const ts = await service.getOrCreateTimesheet(
@@ -153,7 +153,7 @@ router.get('/:id/audit', async (req, res, next) => {
   }
 });
 
-router.post('/:id/entries', async (req, res, next) => {
+router.post('/:id/entries', requirePermission('billing', 'write'), async (req, res, next) => {
   try {
     const body = entryBody.parse(req.body);
     const result = await service.addOrUpdateEntry(
@@ -168,7 +168,7 @@ router.post('/:id/entries', async (req, res, next) => {
   }
 });
 
-router.patch('/:id/entries/:entryId', async (req, res, next) => {
+router.patch('/:id/entries/:entryId', requirePermission('billing', 'write'), async (req, res, next) => {
   try {
     const body = entryBody.parse(req.body);
     const result = await service.addOrUpdateEntry(
@@ -183,7 +183,7 @@ router.patch('/:id/entries/:entryId', async (req, res, next) => {
   }
 });
 
-router.delete('/:id/entries/:entryId', async (req, res, next) => {
+router.delete('/:id/entries/:entryId', requirePermission('billing', 'write'), async (req, res, next) => {
   try {
     const result = await service.deleteEntry(
       req.user!.tenantId,
@@ -197,7 +197,7 @@ router.delete('/:id/entries/:entryId', async (req, res, next) => {
   }
 });
 
-router.post('/:id/submit', async (req, res, next) => {
+router.post('/:id/submit', requirePermission('billing', 'write'), async (req, res, next) => {
   try {
     const ts = await service.submitTimesheet(
       req.user!.tenantId,
@@ -254,7 +254,7 @@ router.post('/:id/reject', requirePermission('billing', 'write'), async (req, re
   }
 });
 
-router.post('/:id/dispute', async (req, res, next) => {
+router.post('/:id/dispute', requirePermission('billing', 'write'), async (req, res, next) => {
   try {
     const body = reasonBody.parse(req.body);
     const ts = await service.disputeTimesheet(
@@ -280,7 +280,7 @@ const issueTokenBody = z.object({
   ttl_days: z.number().int().min(1).max(365).optional(),
 });
 
-router.post('/portal-tokens', async (req, res, next) => {
+router.post('/portal-tokens', requirePermission('billing', 'write'), async (req, res, next) => {
   try {
     const role = req.user!.role;
     if (role === 'candidate') {
@@ -299,7 +299,7 @@ router.post('/portal-tokens', async (req, res, next) => {
   }
 });
 
-router.delete('/portal-tokens/:id', async (req, res, next) => {
+router.delete('/portal-tokens/:id', requirePermission('billing', 'write'), async (req, res, next) => {
   try {
     await service.revokePortalToken(req.user!.tenantId, req.params.id);
     res.status(204).end();

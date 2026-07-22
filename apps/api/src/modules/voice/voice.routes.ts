@@ -8,6 +8,7 @@ import { Router, type Request, type Response, type NextFunction } from 'express'
 import { z } from 'zod';
 import { requireAuth } from '../../middleware/auth';
 import { tenantMiddleware } from '../../middleware/tenant';
+import { requirePermission } from '../../middleware/permissions';
 import { auditCtxFromReq, logAudit } from '../../lib/audit';
 import { withTenant } from '../../db/pool';
 import * as voice from './voice.service';
@@ -66,7 +67,9 @@ router.get('/integration', async (req, res, next) => {
   }
 });
 
-router.post('/integration/connect', async (req, res, next) => {
+// RBAC: mutaties vereisen communications:write; GET-routes blijven open voor
+// elke authenticated tenant-rol.
+router.post('/integration/connect', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const body = connectBody.parse(req.body);
     const result = await voice.connectIntegration(
@@ -94,7 +97,7 @@ router.post('/integration/connect', async (req, res, next) => {
   }
 });
 
-router.delete('/integration', async (req, res, next) => {
+router.delete('/integration', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const result = await voice.disconnectIntegration(req.user!.tenantId);
     await withTenant(req.user!.tenantId, async (client) => {
@@ -135,7 +138,7 @@ router.get('/calls/:id', async (req, res, next) => {
   }
 });
 
-router.post('/calls', async (req, res, next) => {
+router.post('/calls', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const body = initiateBody.parse(req.body);
     const call = await voice.initiateOutboundCall(req.user!.tenantId, {
@@ -163,7 +166,7 @@ router.post('/calls', async (req, res, next) => {
   }
 });
 
-router.post('/calls/:id/end', async (req, res, next) => {
+router.post('/calls/:id/end', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const call = await voice.endCall(req.user!.tenantId, req.params.id);
     res.json({ data: call });
@@ -172,7 +175,7 @@ router.post('/calls/:id/end', async (req, res, next) => {
   }
 });
 
-router.post('/calls/:id/notes', async (req, res, next) => {
+router.post('/calls/:id/notes', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const body = notesBody.parse(req.body);
     const call = await voice.recordCallNotes(
@@ -187,7 +190,7 @@ router.post('/calls/:id/notes', async (req, res, next) => {
   }
 });
 
-router.post('/calls/:id/transcribe', async (req, res, next) => {
+router.post('/calls/:id/transcribe', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const call = await voice.requestTranscription(req.user!.tenantId, req.params.id);
     res.json({ data: call });

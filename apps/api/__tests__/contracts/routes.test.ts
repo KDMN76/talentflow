@@ -20,6 +20,26 @@ function token(tenantId: string): string {
   );
 }
 
+/** requirePermission('billing', 'write') on the mutating routes looks up the
+ * user's role (+ any custom-role assignments) in the DB before the route
+ * handler runs. Mirror of withRoleMatcher in __tests__/whatsapp/routes.test.ts.
+ * 'billing:write' is granted to admin/owner/super_admin — tests use 'admin'. */
+function withRoleMatcher(
+  role: string,
+  extra?: (
+    sql: string,
+    params: unknown[]
+  ) => { rows: unknown[]; rowCount: number } | undefined
+) {
+  return async (sql: string, params: unknown[]) => {
+    if (/FROM\s+users\b/i.test(sql)) return { rows: [{ role }], rowCount: 1 };
+    if (/FROM\s+user_role_assignments\b/i.test(sql)) return { rows: [], rowCount: 0 };
+    const extraResult = extra?.(sql, params);
+    if (extraResult) return extraResult;
+    return { rows: [], rowCount: 0 };
+  };
+}
+
 function buildApp() {
   const app = express();
   app.use(express.json());
@@ -64,12 +84,12 @@ describe('POST /api/contracts', () => {
 
   it('creates a contract', async () => {
     const client: MockClient = mockClient({
-      __matcher: (sql) => {
+      __matcher: withRoleMatcher('admin', (sql) => {
         if (/INSERT INTO contracts/i.test(sql)) {
           return { rows: [contractRow()], rowCount: 1 };
         }
-        return { rows: [], rowCount: 0 };
-      },
+        return undefined;
+      }),
     });
     teardown = installPoolMock(client);
     const res = await request(buildApp())
@@ -88,7 +108,7 @@ describe('POST /api/contracts', () => {
   });
 
   it('400 when candidate_id missing', async () => {
-    teardown = installPoolMock(mockClient());
+    teardown = installPoolMock(mockClient({ __matcher: withRoleMatcher('admin') }));
     const res = await request(buildApp())
       .post('/api/contracts')
       .set('Authorization', `Bearer ${token(TENANT_A)}`)
@@ -159,7 +179,7 @@ describe('POST /api/contracts/:id/extend', () => {
   it('extends a contract', async () => {
     teardown = installPoolMock(
       mockClient({
-        __matcher: (sql) => {
+        __matcher: withRoleMatcher('admin', (sql) => {
           if (/SELECT \* FROM contracts/i.test(sql)) {
             return { rows: [contractRow()], rowCount: 1 };
           }
@@ -187,8 +207,8 @@ describe('POST /api/contracts/:id/extend', () => {
               rowCount: 1,
             };
           }
-          return { rows: [], rowCount: 0 };
-        },
+          return undefined;
+        }),
       })
     );
     const res = await request(buildApp())
@@ -208,7 +228,7 @@ describe('POST /api/contracts/:id/terminate', () => {
     let pendingDeleted = false;
     teardown = installPoolMock(
       mockClient({
-        __matcher: (sql, params) => {
+        __matcher: withRoleMatcher('admin', (sql, params) => {
           if (/SELECT \* FROM contracts/i.test(sql)) {
             return { rows: [contractRow()], rowCount: 1 };
           }
@@ -227,8 +247,8 @@ describe('POST /api/contracts/:id/terminate', () => {
             pendingDeleted = true;
             return { rows: [], rowCount: 4 };
           }
-          return { rows: [], rowCount: 0 };
-        },
+          return undefined;
+        }),
       })
     );
     const res = await request(buildApp())
@@ -241,7 +261,7 @@ describe('POST /api/contracts/:id/terminate', () => {
   });
 
   it('400 when reason missing', async () => {
-    teardown = installPoolMock(mockClient());
+    teardown = installPoolMock(mockClient({ __matcher: withRoleMatcher('admin') }));
     const res = await request(buildApp())
       .post(`/api/contracts/${CONTRACT_ID}/terminate`)
       .set('Authorization', `Bearer ${token(TENANT_A)}`)

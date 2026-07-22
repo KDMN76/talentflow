@@ -43,7 +43,11 @@ router.delete(
 
 // ─── DSAR ───────────────────────────────────────────────────────────────────
 router.get('/dsar-requests', complianceController.listDsarRequestsHandler);
-router.post('/dsar-requests', complianceController.createDsarRequestHandler);
+router.post(
+  '/dsar-requests',
+  requirePermission('compliance', 'write'),
+  complianceController.createDsarRequestHandler
+);
 router.patch(
   '/dsar-requests/:id',
   requireRole('admin', 'owner'),

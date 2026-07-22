@@ -32,6 +32,26 @@ function token(tenantId: string): string {
   );
 }
 
+/** requirePermission('job_boards', 'write') looks up the user's role
+ * (+ any custom-role assignments) before the route handler runs. This
+ * matcher answers that lookup with the given role and delegates any
+ * other query to `extra`. Pattern mirrors __tests__/whatsapp/routes.test.ts. */
+function withRoleMatcher(
+  role: string,
+  extra?: (
+    sql: string,
+    params: unknown[]
+  ) => { rows: unknown[]; rowCount: number } | undefined
+) {
+  return async (sql: string, params: unknown[]) => {
+    if (/FROM\s+users\b/i.test(sql)) return { rows: [{ role }], rowCount: 1 };
+    if (/FROM\s+user_role_assignments\b/i.test(sql)) return { rows: [], rowCount: 0 };
+    const extraResult = extra?.(sql, params);
+    if (extraResult) return extraResult;
+    return { rows: [], rowCount: 0 };
+  };
+}
+
 function buildApp() {
   const app = express();
   app.use(express.json());
@@ -72,7 +92,7 @@ describe('POST /api/job-boards/integrations/:boardId/connect', () => {
   it('connects + records audit event', async () => {
     let auditAction: string | null = null;
     const client: MockClient = mockClient({
-      __matcher: (sql, params) => {
+      __matcher: withRoleMatcher('recruiter', (sql, params) => {
         if (/INSERT INTO job_board_integrations/i.test(sql)) {
           return {
             rows: [
@@ -97,8 +117,8 @@ describe('POST /api/job-boards/integrations/:boardId/connect', () => {
           auditAction = params[2] as string;
           return { rows: [], rowCount: 1 };
         }
-        return { rows: [], rowCount: 0 };
-      },
+        return undefined;
+      }),
     });
     teardown = installPoolMock(client);
 
@@ -115,7 +135,9 @@ describe('POST /api/job-boards/integrations/:boardId/connect', () => {
   });
 
   it('returns 400 for unknown board', async () => {
-    teardown = installPoolMock(mockClient());
+    teardown = installPoolMock(
+      mockClient({ __matcher: withRoleMatcher('recruiter') })
+    );
     const res = await request(buildApp())
       .post('/api/job-boards/integrations/no-such-board/connect')
       .set('Authorization', `Bearer ${token(TENANT_A)}`)
@@ -134,7 +156,7 @@ describe('POST /api/job-boards/postings', () => {
     let postingsCreated = 0;
     teardown = installPoolMock(
       mockClient({
-        __matcher: (sql) => {
+        __matcher: withRoleMatcher('recruiter', (sql) => {
           if (/SELECT id FROM job_board_integrations/i.test(sql)) {
             return { rows: [{ id: 'integ-1' }], rowCount: 1 };
           }
@@ -161,8 +183,8 @@ describe('POST /api/job-boards/postings', () => {
               rowCount: 1,
             };
           }
-          return { rows: [], rowCount: 0 };
-        },
+          return undefined;
+        }),
       })
     );
 
@@ -177,7 +199,9 @@ describe('POST /api/job-boards/postings', () => {
   });
 
   it('400 on invalid body (missing job_id)', async () => {
-    teardown = installPoolMock(mockClient());
+    teardown = installPoolMock(
+      mockClient({ __matcher: withRoleMatcher('recruiter') })
+    );
     const res = await request(buildApp())
       .post('/api/job-boards/postings')
       .set('Authorization', `Bearer ${token(TENANT_A)}`)
@@ -194,7 +218,7 @@ describe('DELETE /api/job-boards/postings/:id (retract)', () => {
     const events: string[] = [];
     teardown = installPoolMock(
       mockClient({
-        __matcher: (sql) => {
+        __matcher: withRoleMatcher('recruiter', (sql) => {
           if (/SELECT \* FROM job_postings/i.test(sql)) {
             return {
               rows: [
@@ -240,8 +264,8 @@ describe('DELETE /api/job-boards/postings/:id (retract)', () => {
             events.push('audit');
             return { rows: [], rowCount: 1 };
           }
-          return { rows: [], rowCount: 0 };
-        },
+          return undefined;
+        }),
       })
     );
 

@@ -2,6 +2,7 @@ import { Router } from 'express';
 
 import { requireAuth, requireRole } from '../../middleware/auth';
 import { tenantMiddleware } from '../../middleware/tenant';
+import { requirePermission } from '../../middleware/permissions';
 import * as matchingController from './matching.controller';
 import * as reactivationController from './reactivation.controller';
 import * as talentFitController from './talentFit.controller';
@@ -60,10 +61,12 @@ router.get('/reactivation-alerts/stats', reactivationController.getStats);
 router.get('/reactivation-alerts', reactivationController.listAlerts);
 router.post(
   '/reactivation-alerts/:id/acknowledge',
+  requirePermission('candidates', 'write'),
   reactivationController.acknowledgeAlert
 );
 router.post(
   '/reactivation-alerts/:id/dismiss',
+  requirePermission('candidates', 'write'),
   reactivationController.dismissAlert
 );
 

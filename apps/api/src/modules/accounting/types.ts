@@ -12,6 +12,8 @@
  * én accounting-providers.
  */
 
+import { mocksAllowed } from '../../lib/env';
+
 export type AccountingProviderId = 'exact_online' | 'twinfield' | 'snelstart';
 
 export type AccountingIntegrationStatus =
@@ -106,12 +108,26 @@ export interface AccountingConnector {
 }
 
 /**
+ * Mag een connector synthetische (mock) resultaten teruggeven? Zelfde patroon
+ * als job-boards (`mockPostingsAllowed`): mock alleen buiten productie, of met
+ * expliciete opt-in via MOCK_ACCOUNTING_ALLOWED=true. In productie zonder
+ * echte credentials moet een sync eerlijk falen — nooit een verzonnen
+ * external_id of gefabriceerde betaalstatus.
+ */
+export function mockAccountingAllowed(): boolean {
+  return mocksAllowed() || process.env.MOCK_ACCOUNTING_ALLOWED === 'true';
+}
+
+/**
  * Helper: detecteer of we in mock-mode draaien. Dev/demo werkt zonder echte
  * accounting-API-keys. Mirror van `isMockMode` in modules/job-boards/types.ts.
+ * In productie is mock-mode UIT (tenzij MOCK_ACCOUNTING_ALLOWED=true): dan
+ * gaat het echte pad in en faalt een niet-geconfigureerde integratie hard.
  */
 export function isAccountingMockMode(
   integration: AccountingIntegrationCreds | null
 ): boolean {
+  if (!mockAccountingAllowed()) return false;
   if (process.env.ACCOUNTING_MOCK === 'true') return true;
   if (!integration) return true;
   const creds = integration.credentials ?? {};

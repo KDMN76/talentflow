@@ -24,6 +24,7 @@ import { Router } from 'express';
 import * as controller from './skills.controller';
 import { requireAuth } from '../../middleware/auth';
 import { tenantMiddleware } from '../../middleware/tenant';
+import { requirePermission } from '../../middleware/permissions';
 
 // ─── /api/skills ──────────────────────────────────────────────────────────
 export const skillsRouter = Router();
@@ -38,15 +39,15 @@ export const candidatesSkillsRouter = Router({ mergeParams: true });
 candidatesSkillsRouter.use(requireAuth, tenantMiddleware);
 
 candidatesSkillsRouter.get('/:id/skill-profile', controller.getCandidateProfile);
-candidatesSkillsRouter.patch('/:id/skill-profile', controller.updateCandidateProfile);
-candidatesSkillsRouter.post('/:id/sync-esco', controller.syncCandidateEsco);
+candidatesSkillsRouter.patch('/:id/skill-profile', requirePermission('candidates', 'write'), controller.updateCandidateProfile);
+candidatesSkillsRouter.post('/:id/sync-esco', requirePermission('candidates', 'write'), controller.syncCandidateEsco);
 
 // ─── /api/jobs/:id/skill-profile + /sync-esco + skills-gap ────────────────
 export const jobsSkillsRouter = Router({ mergeParams: true });
 jobsSkillsRouter.use(requireAuth, tenantMiddleware);
 
 jobsSkillsRouter.get('/:id/skill-profile', controller.getJobProfile);
-jobsSkillsRouter.post('/:id/sync-esco', controller.syncJobEsco);
+jobsSkillsRouter.post('/:id/sync-esco', requirePermission('jobs', 'write'), controller.syncJobEsco);
 jobsSkillsRouter.get(
   '/:id/candidates/:cid/skills-gap',
   controller.getSkillsGap

@@ -92,6 +92,11 @@ describe('POST /api/timesheets', () => {
     teardown = installPoolMock(
       mockClient({
         __matcher: (sql) => {
+          // requirePermission('billing','write') bouwt de matrix uit
+          // users.role — de mock moet die rij leveren, net als de echte DB.
+          if (/SELECT role FROM users/i.test(sql)) {
+            return { rows: [{ role: 'admin' }], rowCount: 1 };
+          }
           if (/SELECT \* FROM timesheets/i.test(sql)) {
             return { rows: [], rowCount: 0 };
           }
@@ -111,7 +116,18 @@ describe('POST /api/timesheets', () => {
   });
 
   it('400 when week_start missing', async () => {
-    teardown = installPoolMock(mockClient());
+    // requirePermission('billing','write') draait vóór de zod-validatie;
+    // zonder rol-rij zou de 403 de verwachte 400 maskeren.
+    teardown = installPoolMock(
+      mockClient({
+        __matcher: (sql) => {
+          if (/SELECT role FROM users/i.test(sql)) {
+            return { rows: [{ role: 'admin' }], rowCount: 1 };
+          }
+          return { rows: [], rowCount: 0 };
+        },
+      })
+    );
     const res = await request(buildApp())
       .post('/api/timesheets')
       .set('Authorization', `Bearer ${token(TENANT_A)}`)
@@ -284,6 +300,11 @@ describe('POST /api/timesheets/portal-tokens', () => {
     teardown = installPoolMock(
       mockClient({
         __matcher: (sql) => {
+          // requirePermission('billing','write') bouwt de matrix uit
+          // users.role — de mock moet die rij leveren, net als de echte DB.
+          if (/SELECT role FROM users/i.test(sql)) {
+            return { rows: [{ role: 'admin' }], rowCount: 1 };
+          }
           if (/INSERT INTO timesheet_portal_tokens/i.test(sql)) {
             return {
               rows: [

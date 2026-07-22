@@ -43,9 +43,32 @@ fi
 
 if [[ $# -eq 0 ]]; then
   echo "Gebruik: $0 <docker-compose-subcommando> [args...]" >&2
-  echo "Bijv.:  $0 up -d   |   $0 build web   |   $0 logs -f api" >&2
+  echo "Bijv.:  $0 release   |   $0 up -d   |   $0 build web   |   $0 logs -f api" >&2
   exit 64
 fi
+
+compose() {
+  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" "$@"
+}
+
+# Migraties zijn onderdeel van élke release. Op 2026-07-22 bleken 055/056
+# ongedraaid op prod (schema-drift met de code) doordat de korte deploy-vorm
+# de migrate-stap oversloeg. Daarom bestaat `release`: build+up+migrate+ps in
+# één commando — migreren kan niet meer vergeten worden.
+case "${1:-}" in
+  migrate)
+    echo "[deploy.sh] Migraties draaien in talentflow-api..."
+    compose exec -T api npm run migrate:prod
+    exit $?
+    ;;
+  release)
+    set -x
+    compose up -d --build
+    compose exec -T api npm run migrate:prod
+    compose ps
+    exit $?
+    ;;
+esac
 
 # Toon wat we draaien (handig in deploy-logs), voer dan exact dát uit.
 set -x

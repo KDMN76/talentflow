@@ -3,12 +3,19 @@
  *
  * Job-types: `send-linkedin`, `send-other`. Payload: `{ tenantId, messageId }`.
  *
- * Mock-mode (default): generates a synthetic external_id and a 95% success
- * rate so end-to-end tests stay green. Live-mode (gated on
+ * Mock-mode (default buiten productie): generates a synthetic external_id
+ * and a 95% success rate so end-to-end tests stay green. Live-mode (gated on
  * `process.env.LINKEDIN_OUTREACH_LIVE === 'true'`) is a TODO(real-api) marker
  * — LinkedIn's official API for InMail / Connection requests requires
  * Sales Navigator + a partner program enrollment. Real integration lives
  * outside this sprint.
+ *
+ * Eerlijkheids-guard (zelfde patroon als jobBoardPost.worker.ts): in
+ * productie mag de mock nooit een synthetisch 'sent' faken. Zonder
+ * live-integratie en zonder expliciete opt-in
+ * (`MOCK_OUTREACH_ALLOWED === 'true'`) gooit `attemptSendLinkedIn` een
+ * LINKEDIN_NOT_CONFIGURED-error; `sendMessage` vangt die en markeert het
+ * bericht als 'failed' met die melding — géén nep-succes.
  *
  * The actual status update + audit + quota-decrement happens inside
  * `outreach.service.sendMessage` so this worker stays thin.
@@ -16,7 +23,7 @@
 
 import { Worker, Job } from 'bullmq';
 import IORedis from 'ioredis';
-import { logger } from '../../middleware/errorHandler';
+import { AppError, logger } from '../../middleware/errorHandler';
 import { sendMessage, type OutreachMessageRow } from '../../modules/outreach/outreach.service';
 
 interface JobData {
@@ -35,6 +42,22 @@ async function attemptSendLinkedIn(
     // For now we throw so live mode doesn't silently emit fake successes.
     throw new Error(
       'LINKEDIN_OUTREACH_LIVE=true but real API integration is not implemented'
+    );
+  }
+
+  // Eerlijkheids-guard: in productie mag de mock nooit een synthetisch
+  // 'sent' faken. Zonder live-integratie en zonder expliciete mock-vlag
+  // gooien we hier — sendMessage vangt dit, zet status='failed' met deze
+  // melding als error_message, en re-throwt (bestaand failure-mechanisme).
+  const mockAllowed = process.env.MOCK_OUTREACH_ALLOWED === 'true';
+  if (process.env.NODE_ENV === 'production' && !mockAllowed) {
+    logger.warn('[outreachLinkedIn] LinkedIn-outreach niet geconfigureerd — bericht gemarkeerd als failed', {
+      messageId: msg.id,
+    });
+    throw new AppError(
+      400,
+      'LINKEDIN_NOT_CONFIGURED',
+      'LinkedIn-outreach is niet gekoppeld — bericht niet verzonden'
     );
   }
 

@@ -15,6 +15,7 @@ import { Router } from 'express';
 import * as integrationsController from './integrations.controller';
 import { requireAuth } from '../../middleware/auth';
 import { tenantMiddleware } from '../../middleware/tenant';
+import { requirePermission } from '../../middleware/permissions';
 
 const router = Router();
 
@@ -31,6 +32,10 @@ router.get(
   '/mailbox/oauth/:provider/start',
   integrationsController.startOAuthHandler
 );
-router.delete('/mailbox/:id', integrationsController.disconnectIntegrationHandler);
+router.delete(
+  '/mailbox/:id',
+  requirePermission('integrations', 'write'),
+  integrationsController.disconnectIntegrationHandler
+);
 
 export default router;

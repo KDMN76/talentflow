@@ -10,6 +10,7 @@ import { Router, type Request, type Response, type NextFunction } from 'express'
 import { z } from 'zod';
 import { requireAuth } from '../../middleware/auth';
 import { tenantMiddleware } from '../../middleware/tenant';
+import { requirePermission } from '../../middleware/permissions';
 import { auditCtxFromReq, logAudit } from '../../lib/audit';
 import { withTenant } from '../../db/pool';
 import * as inbox from './inbox.service';
@@ -89,6 +90,8 @@ router.get('/threads/:id/timeline', async (req, res, next) => {
 // ───────────────────────────────────────────────────────────────────────────
 // POST /threads/:id/read
 // ───────────────────────────────────────────────────────────────────────────
+// Bewust GEEN requirePermission: dit is een per-user read-marker
+// (self-service), geen thread-mutatie.
 
 router.post('/threads/:id/read', async (req, res, next) => {
   try {
@@ -119,8 +122,9 @@ router.post('/threads/:id/read', async (req, res, next) => {
 // ───────────────────────────────────────────────────────────────────────────
 // POST /threads/:id/assign
 // ───────────────────────────────────────────────────────────────────────────
+// RBAC: alle thread-mutaties hieronder vereisen communications:write.
 
-router.post('/threads/:id/assign', async (req, res, next) => {
+router.post('/threads/:id/assign', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const body = assignBody.parse(req.body);
     const row = await inbox.assignThread(
@@ -152,7 +156,7 @@ router.post('/threads/:id/assign', async (req, res, next) => {
 // pin / unpin
 // ───────────────────────────────────────────────────────────────────────────
 
-router.post('/threads/:id/pin', async (req, res, next) => {
+router.post('/threads/:id/pin', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const row = await inbox.setPinned(req.user!.tenantId, req.params.id, true);
     res.json({ data: row });
@@ -161,7 +165,7 @@ router.post('/threads/:id/pin', async (req, res, next) => {
   }
 });
 
-router.post('/threads/:id/unpin', async (req, res, next) => {
+router.post('/threads/:id/unpin', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const row = await inbox.setPinned(req.user!.tenantId, req.params.id, false);
     res.json({ data: row });
@@ -174,7 +178,7 @@ router.post('/threads/:id/unpin', async (req, res, next) => {
 // archive / unarchive
 // ───────────────────────────────────────────────────────────────────────────
 
-router.post('/threads/:id/archive', async (req, res, next) => {
+router.post('/threads/:id/archive', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const row = await inbox.setArchived(req.user!.tenantId, req.params.id, true);
     res.json({ data: row });
@@ -183,7 +187,7 @@ router.post('/threads/:id/archive', async (req, res, next) => {
   }
 });
 
-router.post('/threads/:id/unarchive', async (req, res, next) => {
+router.post('/threads/:id/unarchive', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const row = await inbox.setArchived(req.user!.tenantId, req.params.id, false);
     res.json({ data: row });
@@ -196,7 +200,7 @@ router.post('/threads/:id/unarchive', async (req, res, next) => {
 // DELETE /threads/:id — soft-delete (verdwijnt uit de lijst, blijft in de DB)
 // ───────────────────────────────────────────────────────────────────────────
 
-router.delete('/threads/:id', async (req, res, next) => {
+router.delete('/threads/:id', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const row = await inbox.deleteThread(req.user!.tenantId, req.params.id);
     await withTenant(req.user!.tenantId, async (client) => {
@@ -222,7 +226,7 @@ router.delete('/threads/:id', async (req, res, next) => {
 // labels
 // ───────────────────────────────────────────────────────────────────────────
 
-router.post('/threads/:id/labels', async (req, res, next) => {
+router.post('/threads/:id/labels', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const body = labelBody.parse(req.body);
     const row = await inbox.addLabel(req.user!.tenantId, req.params.id, body.label);
@@ -232,7 +236,7 @@ router.post('/threads/:id/labels', async (req, res, next) => {
   }
 });
 
-router.delete('/threads/:id/labels/:label', async (req, res, next) => {
+router.delete('/threads/:id/labels/:label', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const row = await inbox.removeLabel(
       req.user!.tenantId,

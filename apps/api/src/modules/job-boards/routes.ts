@@ -11,6 +11,7 @@ import { Router, type Request, type Response, type NextFunction } from 'express'
 import { z } from 'zod';
 import { requireAuth } from '../../middleware/auth';
 import { tenantMiddleware } from '../../middleware/tenant';
+import { requirePermission } from '../../middleware/permissions';
 import { auditCtxFromReq } from '../../lib/audit';
 import * as service from './service';
 import {
@@ -43,6 +44,7 @@ const autoPostSettingsSchema = z.object({
 
 router.put(
   '/auto-post-settings',
+  requirePermission('job_boards', 'write'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const body = autoPostSettingsSchema.parse(req.body);
@@ -88,6 +90,7 @@ const connectBodySchema = z.object({
 
 router.post(
   '/integrations/:boardId/connect',
+  requirePermission('job_boards', 'write'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const body = connectBodySchema.parse(req.body);
@@ -111,6 +114,7 @@ router.post(
 
 router.delete(
   '/integrations/:boardId',
+  requirePermission('job_boards', 'write'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       await service.disconnectIntegration(
@@ -188,6 +192,7 @@ const createPostingsSchema = z.object({
 
 router.post(
   '/postings',
+  requirePermission('job_boards', 'write'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const body = createPostingsSchema.parse(req.body);
@@ -211,6 +216,7 @@ router.post(
 
 router.delete(
   '/postings/:id',
+  requirePermission('job_boards', 'write'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       await service.retractPosting(req.user!.tenantId, req.params.id, {

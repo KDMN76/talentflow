@@ -43,6 +43,21 @@ function jwtToken(): string {
   );
 }
 
+/** requirePermission('communications', 'write') looks up the user's role
+ * (+ any custom-role assignments) before the route handler runs. */
+function withRoleMatcher(
+  role: string,
+  extra?: (sql: string) => { rows: unknown[]; rowCount: number } | undefined
+) {
+  return async (sql: string) => {
+    if (/FROM\s+users\b/i.test(sql)) return { rows: [{ role }], rowCount: 1 };
+    if (/FROM\s+user_role_assignments\b/i.test(sql)) return { rows: [], rowCount: 0 };
+    const extraResult = extra?.(sql);
+    if (extraResult) return extraResult;
+    return { rows: [], rowCount: 0 };
+  };
+}
+
 function buildApp(): express.Express {
   const app = express();
   app.use(express.json());
@@ -106,7 +121,7 @@ describe('outreach happy paths', () => {
 
   it('POST /api/outreach/messages/draft returns 201 with mocked draft', async () => {
     const client = mockClient({
-      __matcher: async (sql) => {
+      __matcher: withRoleMatcher('recruiter', (sql) => {
         if (/FROM\s+candidates/i.test(sql)) {
           return {
             rows: [
@@ -137,8 +152,8 @@ describe('outreach happy paths', () => {
             rowCount: 1,
           };
         }
-        return { rows: [], rowCount: 0 };
-      },
+        return undefined;
+      }),
     });
     teardown = installPoolMock(client);
     const app = buildApp();
@@ -155,7 +170,7 @@ describe('outreach happy paths', () => {
   });
 
   it('POST /api/outreach/messages/draft validates body via zod (400)', async () => {
-    const client = mockClient({});
+    const client = mockClient({ __matcher: withRoleMatcher('recruiter') });
     teardown = installPoolMock(client);
     const app = buildApp();
     const r = await request(app)
@@ -172,7 +187,7 @@ describe('nurture happy paths', () => {
 
   it('POST /api/nurture/sequences creates a sequence', async () => {
     const client = mockClient({
-      __matcher: async (sql) => {
+      __matcher: withRoleMatcher('recruiter', (sql) => {
         if (/INSERT\s+INTO\s+nurture_sequences/i.test(sql)) {
           return {
             rows: [
@@ -192,8 +207,8 @@ describe('nurture happy paths', () => {
             rowCount: 1,
           };
         }
-        return { rows: [], rowCount: 0 };
-      },
+        return undefined;
+      }),
     });
     teardown = installPoolMock(client);
     const app = buildApp();
@@ -206,7 +221,7 @@ describe('nurture happy paths', () => {
   });
 
   it('POST /api/nurture/sequences with bad body → 400', async () => {
-    const client = mockClient({});
+    const client = mockClient({ __matcher: withRoleMatcher('recruiter') });
     teardown = installPoolMock(client);
     const app = buildApp();
     const r = await request(app)
@@ -218,7 +233,7 @@ describe('nurture happy paths', () => {
 
   it('POST /api/nurture/sequences/:id/steps adds a step', async () => {
     const client = mockClient({
-      __matcher: async (sql) => {
+      __matcher: withRoleMatcher('recruiter', (sql) => {
         if (/SELECT\s+id\s+FROM\s+nurture_sequences/i.test(sql)) {
           return { rows: [{ id: SEQ_ID }], rowCount: 1 };
         }
@@ -246,8 +261,8 @@ describe('nurture happy paths', () => {
             rowCount: 1,
           };
         }
-        return { rows: [], rowCount: 0 };
-      },
+        return undefined;
+      }),
     });
     teardown = installPoolMock(client);
     const app = buildApp();

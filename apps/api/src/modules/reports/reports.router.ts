@@ -11,8 +11,9 @@
 import { Router } from 'express';
 import * as ctrl from './reports.controller';
 import * as exportCtrl from './reports.exports.controller';
-import { requireAuth } from '../../middleware/auth';
+import { requireAuth, requireRole } from '../../middleware/auth';
 import { tenantMiddleware } from '../../middleware/tenant';
+import { requirePermission } from '../../middleware/permissions';
 
 // ── Public — geen auth, alleen /embed/:token/run + /embed/:token (Agent GGG)
 export const reportsPublicRouter = Router();
@@ -29,24 +30,26 @@ router.get('/dimensions', ctrl.listDimensions);
 router.get('/metrics', ctrl.listMetrics);
 
 router.get('/', ctrl.listReports);
-router.post('/', ctrl.createReport);
+router.post('/', requirePermission('reports', 'write'), ctrl.createReport);
 
 router.get('/:id', ctrl.getReport);
-router.patch('/:id', ctrl.patchReport);
-router.delete('/:id', ctrl.deleteReport);
+router.patch('/:id', requirePermission('reports', 'write'), ctrl.patchReport);
+router.delete('/:id', requirePermission('reports', 'write'), ctrl.deleteReport);
 
-router.post('/:id/duplicate', ctrl.duplicateReport);
-router.post('/:id/run', ctrl.runReport);
+router.post('/:id/duplicate', requirePermission('reports', 'write'), ctrl.duplicateReport);
+// Uitvoeren van een bestaand rapport is een leesactie — geen write vereist.
+router.post('/:id/run', requirePermission('reports', 'read'), ctrl.runReport);
 router.get('/:id/runs', ctrl.listRuns);
 
-router.post('/:id/embed', ctrl.enableEmbed);
-router.delete('/:id/embed', ctrl.disableEmbed);
+// Embed aan/uit zet rapportdata publiek achter een token — admin-only.
+router.post('/:id/embed', requireRole('admin', 'owner'), ctrl.enableEmbed);
+router.delete('/:id/embed', requireRole('admin', 'owner'), ctrl.disableEmbed);
 
 // ── Sprint Q3.5 (Agent GGG) — exporters + scheduling ────────────────────────
 router.get('/:id/export/pdf', exportCtrl.exportReportPdfHandler);
 router.get('/:id/export/excel', exportCtrl.exportReportExcelHandler);
 router.get('/:id/export/csv', exportCtrl.exportReportCsvHandler);
-router.post('/:id/schedule', exportCtrl.setReportScheduleHandler);
-router.delete('/:id/schedule', exportCtrl.clearReportScheduleHandler);
+router.post('/:id/schedule', requirePermission('reports', 'write'), exportCtrl.setReportScheduleHandler);
+router.delete('/:id/schedule', requirePermission('reports', 'write'), exportCtrl.clearReportScheduleHandler);
 
 export default router;

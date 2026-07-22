@@ -53,6 +53,22 @@ function buildApp() {
   return app;
 }
 
+/** requirePermission('candidates', 'write') looks up the user's role
+ * (+ any custom-role assignments) before the route handler runs.
+ * Same pattern as __tests__/whatsapp/routes.test.ts. */
+function withRoleMatcher(
+  role: string,
+  extra?: (sql: string) => { rows: unknown[]; rowCount: number } | undefined
+) {
+  return async (sql: string) => {
+    if (/FROM\s+users\b/i.test(sql)) return { rows: [{ role }], rowCount: 1 };
+    if (/FROM\s+user_role_assignments\b/i.test(sql)) return { rows: [], rowCount: 0 };
+    const extraResult = extra?.(sql);
+    if (extraResult) return extraResult;
+    return { rows: [], rowCount: 0 };
+  };
+}
+
 function briefRow(overrides: Record<string, unknown> = {}) {
   return {
     id: BRIEF_ID,
@@ -133,12 +149,12 @@ describe('POST /api/sourcing/briefs', () => {
 
   it('201 creates a brief in mock-mode parser', async () => {
     teardown = installPoolMock(mockClient({
-      __matcher: (sql) => {
+      __matcher: withRoleMatcher('recruiter', (sql) => {
         if (/INSERT INTO agent_briefs/i.test(sql)) {
           return { rows: [briefRow()], rowCount: 1 };
         }
-        return { rows: [], rowCount: 0 };
-      },
+        return undefined;
+      }),
     }));
     const res = await request(buildApp())
       .post('/api/sourcing/briefs')
@@ -151,7 +167,7 @@ describe('POST /api/sourcing/briefs', () => {
   });
 
   it('400 when brief_text too short', async () => {
-    teardown = installPoolMock(mockClient());
+    teardown = installPoolMock(mockClient({ __matcher: withRoleMatcher('recruiter') }));
     const res = await request(buildApp())
       .post('/api/sourcing/briefs')
       .set('Authorization', `Bearer ${token(TENANT_A)}`)
@@ -223,15 +239,15 @@ describe('POST /api/sourcing/briefs/:id/runs', () => {
 
   it('202 enqueues run', async () => {
     teardown = installPoolMock(mockClient({
-      __matcher: (sql) => {
+      __matcher: withRoleMatcher('recruiter', (sql) => {
         if (/SELECT id, active FROM agent_briefs/i.test(sql)) {
           return { rows: [{ id: BRIEF_ID, active: true }], rowCount: 1 };
         }
         if (/INSERT INTO agent_runs/i.test(sql)) {
           return { rows: [runRow()], rowCount: 1 };
         }
-        return { rows: [], rowCount: 0 };
-      },
+        return undefined;
+      }),
     }));
     const res = await request(buildApp())
       .post(`/api/sourcing/briefs/${BRIEF_ID}/runs`)
@@ -263,15 +279,15 @@ describe('Findings routes', () => {
 
   it('POST /findings/:id/approve → 200', async () => {
     teardown = installPoolMock(mockClient({
-      __matcher: (sql) => {
+      __matcher: withRoleMatcher('recruiter', (sql) => {
         if (/^\s*SELECT \* FROM agent_findings/i.test(sql)) {
           return { rows: [findingRow()], rowCount: 1 };
         }
         if (/UPDATE agent_findings/i.test(sql)) {
           return { rows: [findingRow({ status: 'approved', candidate_id: 'created-cand-id' })], rowCount: 1 };
         }
-        return { rows: [], rowCount: 0 };
-      },
+        return undefined;
+      }),
     }));
     const res = await request(buildApp())
       .post(`/api/sourcing/findings/${FINDING_ID}/approve`)
@@ -282,7 +298,7 @@ describe('Findings routes', () => {
   });
 
   it('POST /findings/:id/reject — 400 missing reason', async () => {
-    teardown = installPoolMock(mockClient());
+    teardown = installPoolMock(mockClient({ __matcher: withRoleMatcher('recruiter') }));
     const res = await request(buildApp())
       .post(`/api/sourcing/findings/${FINDING_ID}/reject`)
       .set('Authorization', `Bearer ${token(TENANT_A)}`)
@@ -292,15 +308,15 @@ describe('Findings routes', () => {
 
   it('POST /findings/:id/reject — 200 with reason', async () => {
     teardown = installPoolMock(mockClient({
-      __matcher: (sql) => {
+      __matcher: withRoleMatcher('recruiter', (sql) => {
         if (/^\s*SELECT \* FROM agent_findings/i.test(sql)) {
           return { rows: [findingRow()], rowCount: 1 };
         }
         if (/UPDATE agent_findings/i.test(sql)) {
           return { rows: [findingRow({ status: 'rejected', review_note: 'no fit' })], rowCount: 1 };
         }
-        return { rows: [], rowCount: 0 };
-      },
+        return undefined;
+      }),
     }));
     const res = await request(buildApp())
       .post(`/api/sourcing/findings/${FINDING_ID}/reject`)
@@ -311,15 +327,15 @@ describe('Findings routes', () => {
 
   it('POST /findings/bulk-approve — 200 with finding_ids', async () => {
     teardown = installPoolMock(mockClient({
-      __matcher: (sql) => {
+      __matcher: withRoleMatcher('recruiter', (sql) => {
         if (/^\s*SELECT \* FROM agent_findings/i.test(sql)) {
           return { rows: [findingRow()], rowCount: 1 };
         }
         if (/UPDATE agent_findings/i.test(sql)) {
           return { rows: [findingRow({ status: 'approved', candidate_id: 'c' })], rowCount: 1 };
         }
-        return { rows: [], rowCount: 0 };
-      },
+        return undefined;
+      }),
     }));
     const res = await request(buildApp())
       .post('/api/sourcing/findings/bulk-approve')
@@ -330,7 +346,7 @@ describe('Findings routes', () => {
   });
 
   it('POST /findings/bulk-approve — 400 empty array', async () => {
-    teardown = installPoolMock(mockClient());
+    teardown = installPoolMock(mockClient({ __matcher: withRoleMatcher('recruiter') }));
     const res = await request(buildApp())
       .post('/api/sourcing/findings/bulk-approve')
       .set('Authorization', `Bearer ${token(TENANT_A)}`)
@@ -379,15 +395,15 @@ describe('POST /api/sourcing/runs/:id/cancel', () => {
 
   it('200 cancels a running run', async () => {
     teardown = installPoolMock(mockClient({
-      __matcher: (sql) => {
+      __matcher: withRoleMatcher('recruiter', (sql) => {
         if (/^\s*SELECT \* FROM agent_runs/i.test(sql)) {
           return { rows: [runRow({ status: 'running' })], rowCount: 1 };
         }
         if (/UPDATE agent_runs/i.test(sql)) {
           return { rows: [runRow({ status: 'cancelled' })], rowCount: 1 };
         }
-        return { rows: [], rowCount: 0 };
-      },
+        return undefined;
+      }),
     }));
     const res = await request(buildApp())
       .post(`/api/sourcing/runs/${RUN_ID}/cancel`)
@@ -404,7 +420,7 @@ describe('Memory routes', () => {
   it('PUT /memory upserts', async () => {
     const memId = '77777777-7777-7777-7777-777777777777';
     teardown = installPoolMock(mockClient({
-      __matcher: (sql) => {
+      __matcher: withRoleMatcher('recruiter', (sql) => {
         if (/INSERT INTO agent_memory/i.test(sql)) {
           return {
             rows: [{
@@ -415,8 +431,8 @@ describe('Memory routes', () => {
             rowCount: 1,
           };
         }
-        return { rows: [], rowCount: 0 };
-      },
+        return undefined;
+      }),
     }));
     const res = await request(buildApp())
       .put('/api/sourcing/memory')

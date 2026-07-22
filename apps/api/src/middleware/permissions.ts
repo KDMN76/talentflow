@@ -62,7 +62,7 @@ export function requirePermission(
   resource: PermissionResource | string,
   action: PermissionAction | string
 ) {
-  return async (
+  const middleware = async (
     req: Request,
     res: Response,
     next: NextFunction
@@ -101,6 +101,13 @@ export function requirePermission(
       next(err);
     }
   };
+  // Introspecteerbare naam voor de route-conventietest
+  // (__tests__/conventions/route-permissions.test.ts): die walkt de
+  // router-stacks en herkent guards aan fn.name.
+  Object.defineProperty(middleware, 'name', {
+    value: `requirePermission(${resource}:${action})`,
+  });
+  return middleware;
 }
 
 /**
@@ -119,7 +126,7 @@ export function requireWriteOnMutation(
   resource: PermissionResource | string
 ) {
   const guard = requirePermission(resource, 'write');
-  return (req: Request, res: Response, next: NextFunction): void => {
+  const middleware = (req: Request, res: Response, next: NextFunction): void => {
     const method = req.method;
     if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') {
       next();
@@ -127,6 +134,10 @@ export function requireWriteOnMutation(
     }
     guard(req, res, next);
   };
+  Object.defineProperty(middleware, 'name', {
+    value: `requireWriteOnMutation(${resource})`,
+  });
+  return middleware;
 }
 
 /**
@@ -136,7 +147,7 @@ export function requireWriteOnMutation(
 export function requireAnyPermission(
   ...checks: Array<[string, string]>
 ) {
-  return async (
+  const middleware = async (
     req: Request,
     res: Response,
     next: NextFunction
@@ -176,6 +187,10 @@ export function requireAnyPermission(
       next(err);
     }
   };
+  Object.defineProperty(middleware, 'name', {
+    value: `requireAnyPermission(${checks.map(([r, a]) => `${r}:${a}`).join('|')})`,
+  });
+  return middleware;
 }
 
 /**

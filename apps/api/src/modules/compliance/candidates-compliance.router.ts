@@ -29,6 +29,7 @@ router.post(
 
 router.post(
   '/:id/self-service-token',
+  requireRole('admin', 'owner'),
   complianceController.generateSelfServiceTokenHandler
 );
 

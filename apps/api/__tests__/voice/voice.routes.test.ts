@@ -41,6 +41,21 @@ function buildApp(): express.Express {
   return app;
 }
 
+/** requirePermission('communications', 'write') looks up the user's role
+ * (+ any custom-role assignments) before the route handler runs. */
+function withRoleMatcher(
+  role: string,
+  extra?: (sql: string) => { rows: unknown[]; rowCount: number } | undefined
+) {
+  return async (sql: string) => {
+    if (/FROM\s+users\b/i.test(sql)) return { rows: [{ role }], rowCount: 1 };
+    if (/FROM\s+user_role_assignments\b/i.test(sql)) return { rows: [], rowCount: 0 };
+    const extraResult = extra?.(sql);
+    if (extraResult) return extraResult;
+    return { rows: [], rowCount: 0 };
+  };
+}
+
 beforeEach(() => vi.clearAllMocks());
 
 function integrationRow(): Record<string, unknown> {
@@ -144,12 +159,12 @@ describe('POST /api/voice/integration/connect', () => {
 
   it('returns 201 on success (mock-mode)', async () => {
     const client = mockClient({
-      __matcher: async (sql) => {
+      __matcher: withRoleMatcher('recruiter', (sql) => {
         if (/INSERT\s+INTO\s+voice_integrations/i.test(sql)) {
           return { rows: [integrationRow()], rowCount: 1 };
         }
-        return { rows: [], rowCount: 0 };
-      },
+        return undefined;
+      }),
     });
     teardown = installPoolMock(client);
     const app = buildApp();
@@ -166,7 +181,9 @@ describe('POST /api/voice/integration/connect', () => {
   });
 
   it('returns 400 on invalid body', async () => {
-    const client = mockClient({});
+    // Rol-lookup moet slagen zodat we voorbij de permission-guard komen en
+    // de zod-validatie (400) bereiken.
+    const client = mockClient({ __matcher: withRoleMatcher('recruiter') });
     teardown = installPoolMock(client);
     const app = buildApp();
     const r = await request(app)
@@ -224,7 +241,7 @@ describe('POST /api/voice/calls (initiate)', () => {
 
   it('returns 201 with mock call', async () => {
     const client = mockClient({
-      __matcher: async (sql) => {
+      __matcher: withRoleMatcher('recruiter', (sql) => {
         if (/FROM\s+voice_integrations/i.test(sql)) {
           return { rows: [integrationRow()], rowCount: 1 };
         }
@@ -240,8 +257,8 @@ describe('POST /api/voice/calls (initiate)', () => {
         if (/INSERT\s+INTO\s+unified_threads/i.test(sql)) {
           return { rows: [{ id: 'thread-uuid' }], rowCount: 1 };
         }
-        return { rows: [], rowCount: 0 };
-      },
+        return undefined;
+      }),
     });
     teardown = installPoolMock(client);
     const app = buildApp();
@@ -260,15 +277,15 @@ describe('POST /api/voice/calls/:id/notes', () => {
 
   it('appends notes', async () => {
     const client = mockClient({
-      __matcher: async (sql) => {
+      __matcher: withRoleMatcher('recruiter', (sql) => {
         if (/UPDATE\s+voice_calls/i.test(sql)) {
           return {
             rows: [{ ...callRow(), notes: 'Recruiter says go ahead' }],
             rowCount: 1,
           };
         }
-        return { rows: [], rowCount: 0 };
-      },
+        return undefined;
+      }),
     });
     teardown = installPoolMock(client);
     const app = buildApp();

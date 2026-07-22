@@ -241,14 +241,14 @@ wilt doen.)
 ```bash
 cd /opt/talentflow
 git pull
-docker compose --env-file infra/.env.prod \
-  -f infra/docker-compose.prod.yml up -d --build
-
-# Indien nieuwe migraties:
-docker compose --env-file infra/.env.prod \
-  -f infra/docker-compose.prod.yml \
-  exec api npm run migrate:prod
+./infra/deploy.sh release   # build + up + migraties + ps, in één commando
 ```
+
+`release` draait de migraties ALTIJD mee (idempotent — overslaan kan niet meer).
+Op 2026-07-22 bleken migraties 055/056 ongedraaid op prod doordat de oude
+flow migreren als optionele losse stap had ("indien nieuwe migraties") — die
+conditie is precies waarom de stap werd overgeslagen. Gebruik dus `release`,
+niet losse `up -d --build`-aanroepen.
 
 Of automatisch via GitHub Actions — zie `.github/workflows/deploy.yml`
 (later configureren met SSH deploy-key + secrets).

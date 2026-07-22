@@ -8,6 +8,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../../middleware/auth';
 import { tenantMiddleware } from '../../middleware/tenant';
+import { requirePermission } from '../../middleware/permissions';
 import { auditCtxFromReq } from '../../lib/audit';
 import * as nurture from './nurture.service';
 
@@ -83,6 +84,8 @@ const stopEnrollmentBody = z.object({
 // ───────────────────────────────────────────────────────────────────────────
 // Sequences
 // ───────────────────────────────────────────────────────────────────────────
+// RBAC: alle mutaties vereisen communications:write; GET-routes blijven open
+// voor elke authenticated tenant-rol.
 
 router.get('/sequences', async (req, res, next) => {
   try {
@@ -94,7 +97,7 @@ router.get('/sequences', async (req, res, next) => {
   }
 });
 
-router.post('/sequences', async (req, res, next) => {
+router.post('/sequences', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const body = createSequenceBody.parse(req.body);
     const row = await nurture.createSequence(req.user!.tenantId, body, {
@@ -119,7 +122,7 @@ router.get('/sequences/:id', async (req, res, next) => {
   }
 });
 
-router.patch('/sequences/:id', async (req, res, next) => {
+router.patch('/sequences/:id', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const body = updateSequenceBody.parse(req.body);
     const row = await nurture.updateSequence(
@@ -134,7 +137,7 @@ router.patch('/sequences/:id', async (req, res, next) => {
   }
 });
 
-router.post('/sequences/:id/archive', async (req, res, next) => {
+router.post('/sequences/:id/archive', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const row = await nurture.archiveSequence(req.user!.tenantId, req.params.id, {
       userId: req.user!.userId,
@@ -150,7 +153,7 @@ router.post('/sequences/:id/archive', async (req, res, next) => {
 // Steps
 // ───────────────────────────────────────────────────────────────────────────
 
-router.post('/sequences/:id/steps', async (req, res, next) => {
+router.post('/sequences/:id/steps', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const body = addStepBody.parse(req.body);
     const row = await nurture.addStep(req.user!.tenantId, req.params.id, body, {
@@ -163,7 +166,7 @@ router.post('/sequences/:id/steps', async (req, res, next) => {
   }
 });
 
-router.patch('/sequences/:id/steps/:stepId', async (req, res, next) => {
+router.patch('/sequences/:id/steps/:stepId', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const body = addStepBody.partial().parse(req.body);
     const row = await nurture.updateStep(
@@ -179,7 +182,7 @@ router.patch('/sequences/:id/steps/:stepId', async (req, res, next) => {
   }
 });
 
-router.post('/sequences/:id/steps/reorder', async (req, res, next) => {
+router.post('/sequences/:id/steps/reorder', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const body = reorderBody.parse(req.body);
     const rows = await nurture.reorderSteps(
@@ -194,7 +197,7 @@ router.post('/sequences/:id/steps/reorder', async (req, res, next) => {
   }
 });
 
-router.delete('/sequences/:id/steps/:stepId', async (req, res, next) => {
+router.delete('/sequences/:id/steps/:stepId', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     await nurture.removeStep(
       req.user!.tenantId,
@@ -222,7 +225,7 @@ router.get('/enrollments', async (req, res, next) => {
   }
 });
 
-router.post('/enrollments', async (req, res, next) => {
+router.post('/enrollments', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const body = enrollBody.parse(req.body);
     const row = await nurture.enrollCandidate(req.user!.tenantId, {
@@ -249,7 +252,7 @@ router.get('/enrollments/:id', async (req, res, next) => {
   }
 });
 
-router.post('/enrollments/:id/pause', async (req, res, next) => {
+router.post('/enrollments/:id/pause', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const row = await nurture.pauseEnrollment(req.user!.tenantId, req.params.id, {
       userId: req.user!.userId,
@@ -261,7 +264,7 @@ router.post('/enrollments/:id/pause', async (req, res, next) => {
   }
 });
 
-router.post('/enrollments/:id/resume', async (req, res, next) => {
+router.post('/enrollments/:id/resume', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const row = await nurture.resumeEnrollment(req.user!.tenantId, req.params.id, {
       userId: req.user!.userId,
@@ -273,7 +276,7 @@ router.post('/enrollments/:id/resume', async (req, res, next) => {
   }
 });
 
-router.post('/enrollments/:id/stop', async (req, res, next) => {
+router.post('/enrollments/:id/stop', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const body = stopEnrollmentBody.parse(req.body);
     const row = await nurture.stopEnrollment(

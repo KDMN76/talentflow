@@ -11,6 +11,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../../middleware/auth';
 import { tenantMiddleware } from '../../middleware/tenant';
+import { requirePermission } from '../../middleware/permissions';
 import { auditCtxFromReq } from '../../lib/audit';
 import {
   createBriefSchema,
@@ -149,7 +150,7 @@ router.get('/briefs', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post('/briefs', async (req, res, next) => {
+router.post('/briefs', requirePermission('candidates', 'write'), async (req, res, next) => {
   try {
     const body = createBriefSchema.parse(req.body);
     const brief = await createBrief(
@@ -170,7 +171,7 @@ router.get('/briefs/:id', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.patch('/briefs/:id', async (req, res, next) => {
+router.patch('/briefs/:id', requirePermission('candidates', 'write'), async (req, res, next) => {
   try {
     const { id } = briefIdParam.parse(req.params);
     const body = updateBriefSchema.parse(req.body);
@@ -185,7 +186,7 @@ router.patch('/briefs/:id', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post('/briefs/:id/archive', async (req, res, next) => {
+router.post('/briefs/:id/archive', requirePermission('candidates', 'write'), async (req, res, next) => {
   try {
     const { id } = briefIdParam.parse(req.params);
     const brief = await archiveBrief(
@@ -202,7 +203,7 @@ router.post('/briefs/:id/archive', async (req, res, next) => {
 // Runs
 // ─────────────────────────────────────────────────────────────────────────────
 
-router.post('/briefs/:id/runs', async (req, res, next) => {
+router.post('/briefs/:id/runs', requirePermission('candidates', 'write'), async (req, res, next) => {
   try {
     const { id } = briefIdParam.parse(req.params);
     const body = triggerRunBody.parse(req.body ?? {});
@@ -239,7 +240,7 @@ router.get('/runs/:runId', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post('/runs/:runId/cancel', async (req, res, next) => {
+router.post('/runs/:runId/cancel', requirePermission('candidates', 'write'), async (req, res, next) => {
   try {
     const { runId } = runIdParam.parse(req.params);
     const run = await cancelRun(
@@ -287,7 +288,7 @@ router.get('/findings', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post('/findings/:id/approve', async (req, res, next) => {
+router.post('/findings/:id/approve', requirePermission('candidates', 'write'), async (req, res, next) => {
   try {
     const { id } = findingIdParam.parse(req.params);
     const body = approveBody.parse(req.body ?? {});
@@ -302,7 +303,7 @@ router.post('/findings/:id/approve', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post('/findings/:id/reject', async (req, res, next) => {
+router.post('/findings/:id/reject', requirePermission('candidates', 'write'), async (req, res, next) => {
   try {
     const { id } = findingIdParam.parse(req.params);
     const body = rejectBody.parse(req.body);
@@ -317,7 +318,7 @@ router.post('/findings/:id/reject', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post('/findings/bulk-approve', async (req, res, next) => {
+router.post('/findings/bulk-approve', requirePermission('candidates', 'write'), async (req, res, next) => {
   try {
     const body = bulkApproveBody.parse(req.body);
     const result = await bulkApprove(
@@ -330,7 +331,7 @@ router.post('/findings/bulk-approve', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post('/findings/bulk-reject', async (req, res, next) => {
+router.post('/findings/bulk-reject', requirePermission('candidates', 'write'), async (req, res, next) => {
   try {
     const body = bulkRejectBody.parse(req.body);
     const result = await bulkReject(
@@ -356,7 +357,7 @@ router.get('/memory', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.put('/memory', async (req, res, next) => {
+router.put('/memory', requirePermission('candidates', 'write'), async (req, res, next) => {
   try {
     const body = memoryUpsertBody.parse(req.body);
     const data = await upsertMemory(
@@ -370,7 +371,7 @@ router.put('/memory', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.delete('/memory/:id', async (req, res, next) => {
+router.delete('/memory/:id', requirePermission('candidates', 'write'), async (req, res, next) => {
   try {
     const { id } = memoryIdParam.parse(req.params);
     await deleteMemory(req.user!.tenantId, id);

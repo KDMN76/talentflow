@@ -160,7 +160,7 @@ export async function enforce2faPolicy(
 }
 
 export function requireRole(...roles: string[]) {
-  return (req: Request, _res: Response, next: NextFunction): void => {
+  const middleware = (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.user) {
       throw new AppError(401, 'UNAUTHORIZED', 'Authenticatie vereist');
     }
@@ -169,6 +169,12 @@ export function requireRole(...roles: string[]) {
     }
     next();
   };
+  // Introspecteerbare naam voor de route-conventietest — die herkent guards
+  // in de router-stack aan fn.name.
+  Object.defineProperty(middleware, 'name', {
+    value: `requireRole(${roles.join(',')})`,
+  });
+  return middleware;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -299,7 +305,7 @@ export async function requireApiKey(
  * Speciale scope `*` betekent volledige toegang.
  */
 export function requireApiScope(scope: string) {
-  return (req: Request, _res: Response, next: NextFunction): void => {
+  const middleware = (req: Request, _res: Response, next: NextFunction): void => {
     const apiKey = req.apiKey;
     if (!apiKey) {
       throw new AppError(401, 'API_KEY_REQUIRED', 'API-sleutel vereist');
@@ -313,6 +319,10 @@ export function requireApiScope(scope: string) {
     }
     next();
   };
+  Object.defineProperty(middleware, 'name', {
+    value: `requireApiScope(${scope})`,
+  });
+  return middleware;
 }
 
 /**
@@ -320,7 +330,7 @@ export function requireApiScope(scope: string) {
  * zowel via UI (JWT) als via integratie (API-key) bereikbaar moeten zijn.
  */
 export function requireAuthOrApiKey(scope?: string) {
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const middleware = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const hasApiKey =
       !!req.headers['x-api-key'] ||
       (typeof req.headers.authorization === 'string' &&
@@ -338,6 +348,10 @@ export function requireAuthOrApiKey(scope?: string) {
     // Fallback naar JWT
     requireAuth(req, res, next);
   };
+  Object.defineProperty(middleware, 'name', {
+    value: `requireAuthOrApiKey(${scope ?? ''})`,
+  });
+  return middleware;
 }
 
 /**

@@ -7,8 +7,9 @@
 
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import { z } from 'zod';
-import { requireAuth } from '../../middleware/auth';
+import { requireAuth, requireRole } from '../../middleware/auth';
 import { tenantMiddleware } from '../../middleware/tenant';
+import { requirePermission } from '../../middleware/permissions';
 import { auditCtxFromReq } from '../../lib/audit';
 import { withTenant } from '../../db/pool';
 import * as outreach from './outreach.service';
@@ -131,7 +132,9 @@ router.get('/messages/:id', async (req, res, next) => {
   }
 });
 
-router.post('/messages/draft', async (req, res, next) => {
+// RBAC: mutaties vereisen communications:write; GET-routes blijven open voor
+// elke authenticated tenant-rol.
+router.post('/messages/draft', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const body = draftBody.parse(req.body);
     const result = await outreach.draftOutreachMessage(
@@ -158,7 +161,7 @@ router.post('/messages/draft', async (req, res, next) => {
   }
 });
 
-router.post('/messages/:id/approve', async (req, res, next) => {
+router.post('/messages/:id/approve', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const row = await outreach.approveMessage(req.user!.tenantId, req.params.id, {
       userId: req.user!.userId,
@@ -170,7 +173,7 @@ router.post('/messages/:id/approve', async (req, res, next) => {
   }
 });
 
-router.post('/messages/:id/reject', async (req, res, next) => {
+router.post('/messages/:id/reject', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const body = rejectBody.parse(req.body);
     const row = await outreach.rejectMessage(req.user!.tenantId, req.params.id, {
@@ -185,7 +188,7 @@ router.post('/messages/:id/reject', async (req, res, next) => {
   }
 });
 
-router.post('/messages/:id/regenerate', async (req, res, next) => {
+router.post('/messages/:id/regenerate', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const result = await outreach.regenerateMessage(req.user!.tenantId, req.params.id, {
       userId: req.user!.userId,
@@ -210,7 +213,8 @@ router.get('/quotas', async (req, res, next) => {
   }
 });
 
-router.patch('/quotas/:recruiterId/:channel', async (req, res, next) => {
+// Andermans quota aanpassen is een beheeractie — alleen admin/owner.
+router.patch('/quotas/:recruiterId/:channel', requireRole('admin', 'owner'), async (req, res, next) => {
   try {
     const recruiterId = z.string().uuid().parse(req.params.recruiterId);
     const channel = channelEnum.parse(req.params.channel);
@@ -255,7 +259,7 @@ router.get('/signals', async (req, res, next) => {
   }
 });
 
-router.post('/signals/:id/dismiss', async (req, res, next) => {
+router.post('/signals/:id/dismiss', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const row = await monitoring.dismissSignal(
       req.user!.tenantId,
@@ -268,7 +272,7 @@ router.post('/signals/:id/dismiss', async (req, res, next) => {
   }
 });
 
-router.post('/signals/:id/draft-reactivation', async (req, res, next) => {
+router.post('/signals/:id/draft-reactivation', requirePermission('communications', 'write'), async (req, res, next) => {
   try {
     const body = draftReactivationBody.parse(req.body);
     const { enrollCandidate } = await import('../nurture/nurture.service');

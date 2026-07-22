@@ -3,6 +3,7 @@ import * as portalController from './portal.controller';
 import * as portalAdminController from './portal-admin.controller';
 import { requireAuth } from '../../middleware/auth';
 import { tenantMiddleware } from '../../middleware/tenant';
+import { requirePermission } from '../../middleware/permissions';
 import { portalPublicRateLimit } from '../../middleware/rateLimit';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -29,16 +30,16 @@ const adminRouter = Router();
 adminRouter.use(requireAuth, tenantMiddleware);
 
 adminRouter.get('/', portalController.listForTenant);
-adminRouter.post('/', portalController.create);
+adminRouter.post('/', requirePermission('portal', 'write'), portalController.create);
 adminRouter.get('/by-job/:jobId', portalController.listForJob);
 // Specifieke sub-routes vóór de generieke /:id-routes registreren.
 adminRouter.get('/:id/feedback', portalController.listFeedback);
 adminRouter.get('/:id/activity', portalAdminController.getActivity);
-adminRouter.post('/:id/rotate-token', portalAdminController.rotateToken);
-adminRouter.post('/:id/verify-domain', portalAdminController.verifyDomain);
+adminRouter.post('/:id/rotate-token', requirePermission('portal', 'write'), portalAdminController.rotateToken);
+adminRouter.post('/:id/verify-domain', requirePermission('portal', 'write'), portalAdminController.verifyDomain);
 adminRouter.get('/:id', portalController.getOne);
-adminRouter.patch('/:id', portalAdminController.patchPortalLink);
-adminRouter.delete('/:id', portalController.remove);
+adminRouter.patch('/:id', requirePermission('portal', 'write'), portalAdminController.patchPortalLink);
+adminRouter.delete('/:id', requirePermission('portal', 'write'), portalController.remove);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Combined router — public routes registered first, then admin routes.

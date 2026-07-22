@@ -41,6 +41,22 @@ function buildApp(): express.Express {
 
 beforeEach(() => vi.clearAllMocks());
 
+/** requirePermission('communications', 'write') looks up the user's role
+ * (+ any custom-role assignments) before the route handler runs.
+ * Mirrors withRoleMatcher in __tests__/whatsapp/routes.test.ts. */
+function withRoleMatcher(
+  role: string,
+  extra?: (sql: string) => { rows: unknown[]; rowCount: number } | undefined
+) {
+  return async (sql: string) => {
+    if (/FROM\s+users\b/i.test(sql)) return { rows: [{ role }], rowCount: 1 };
+    if (/FROM\s+user_role_assignments\b/i.test(sql)) return { rows: [], rowCount: 0 };
+    const extraResult = extra?.(sql);
+    if (extraResult) return extraResult;
+    return { rows: [], rowCount: 0 };
+  };
+}
+
 function buildThread(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     id: THREAD_ID,
@@ -158,10 +174,10 @@ describe('mutation routes', () => {
 
   it('POST /threads/:id/pin returns pinned=true', async () => {
     const client = mockClient({
-      __matcher: async () => ({
+      __matcher: withRoleMatcher('recruiter', () => ({
         rows: [buildThread({ pinned: true })],
         rowCount: 1,
-      }),
+      })),
     });
     teardown = installPoolMock(client);
     const app = buildApp();
@@ -174,10 +190,10 @@ describe('mutation routes', () => {
 
   it('POST /threads/:id/archive returns archived_at', async () => {
     const client = mockClient({
-      __matcher: async () => ({
+      __matcher: withRoleMatcher('recruiter', () => ({
         rows: [buildThread({ archived_at: '2026-05-01T12:00:00Z' })],
         rowCount: 1,
-      }),
+      })),
     });
     teardown = installPoolMock(client);
     const app = buildApp();
@@ -190,10 +206,10 @@ describe('mutation routes', () => {
 
   it('POST /threads/:id/assign updates assignee', async () => {
     const client = mockClient({
-      __matcher: async () => ({
+      __matcher: withRoleMatcher('recruiter', () => ({
         rows: [buildThread({ assignee_user_id: USER_ID })],
         rowCount: 1,
-      }),
+      })),
     });
     teardown = installPoolMock(client);
     const app = buildApp();
@@ -209,7 +225,7 @@ describe('mutation routes', () => {
     const base = buildThread({ labels: [] });
     let phase = 0;
     const client = mockClient({
-      __matcher: async (sql) => {
+      __matcher: withRoleMatcher('recruiter', (sql) => {
         if (/^SELECT\s+\*\s+FROM\s+unified_threads/i.test(sql)) {
           return { rows: [base], rowCount: 1 };
         }
@@ -220,8 +236,8 @@ describe('mutation routes', () => {
             rowCount: 1,
           };
         }
-        return { rows: [], rowCount: 0 };
-      },
+        return undefined;
+      }),
     });
     teardown = installPoolMock(client);
     const app = buildApp();

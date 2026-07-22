@@ -21,6 +21,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { requireAuth } from '../../middleware/auth';
 import { tenantMiddleware } from '../../middleware/tenant';
+import { requirePermission } from '../../middleware/permissions';
 import * as ctrl from './recordings.controller';
 
 // In-memory upload — file.buffer wordt direct doorgegeven aan storage abstractie
@@ -38,21 +39,35 @@ interviewRecordingsRouter.use(requireAuth, tenantMiddleware);
 // SUB-routes vóór `/:id/...` zodat ze niet conflicteren met interview-id's.
 interviewRecordingsRouter.get('/recordings/:recId/transcript', ctrl.getTranscriptHandler);
 interviewRecordingsRouter.get('/recordings/:recId', ctrl.getRecordingHandler);
-interviewRecordingsRouter.delete('/recordings/:recId', ctrl.deleteRecordingHandler);
+interviewRecordingsRouter.delete(
+  '/recordings/:recId',
+  requirePermission('interviews', 'write'),
+  ctrl.deleteRecordingHandler
+);
 
 interviewRecordingsRouter.post(
   '/:id/recordings',
+  requirePermission('interviews', 'write'),
   upload.single('audio'),
   ctrl.uploadRecordingHandler
 );
 interviewRecordingsRouter.get('/:id/recordings', ctrl.listRecordingsHandler);
 
 // ── Calendar sync ──────────────────────────────────────────────────────────
-interviewRecordingsRouter.post('/:id/calendar-sync', ctrl.syncCalendarHandler);
+interviewRecordingsRouter.post(
+  '/:id/calendar-sync',
+  requirePermission('interviews', 'write'),
+  ctrl.syncCalendarHandler
+);
 interviewRecordingsRouter.post(
   '/:id/calendar-events/:userId',
+  requirePermission('interviews', 'write'),
   ctrl.syncCalendarSingleUserHandler
 );
-interviewRecordingsRouter.delete('/:id/calendar-events', ctrl.deleteCalendarHandler);
+interviewRecordingsRouter.delete(
+  '/:id/calendar-events',
+  requirePermission('interviews', 'write'),
+  ctrl.deleteCalendarHandler
+);
 
 export default interviewRecordingsRouter;

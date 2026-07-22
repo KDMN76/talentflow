@@ -10,9 +10,9 @@
  *   - `TWILIO_LIVE !== 'true'` OR no `auth_token` provided → synthetic
  *     AccountInfo for `connectIntegration`, synthetic call SIDs for
  *     `initiateOutboundCall`, deterministic transcripts for transcription.
- *   - In production with `TWILIO_LIVE=true` the integration would issue a
- *     real Twilio REST call — currently stubbed with a clear `// TODO(real)`
- *     marker so the contract stays explicit.
+ *   - With `TWILIO_LIVE=true` the real Twilio REST integration is not wired
+ *     up yet: call placement throws 501 NOT_IMPLEMENTED (marked with
+ *     `// TODO(real-api)`) instead of returning a fabricated success.
  */
 
 import { randomUUID } from 'crypto';
@@ -359,10 +359,11 @@ interface TwilioCallResponse {
 }
 
 async function placeTwilioCall(
-  secrets: IntegrationSecrets,
-  toNumber: string
+  _secrets: IntegrationSecrets,
+  _toNumber: string
 ): Promise<TwilioCallResponse> {
-  if (!isLive() || !secrets.auth_token) {
+  if (!isLive()) {
+    // Mock-tak (niet-productie): synthetische SID, geen echte call.
     return {
       sid: `twilio-mock-${randomUUID().replace(/-/g, '').slice(0, 24)}`,
       status: 'queued',
@@ -371,10 +372,13 @@ async function placeTwilioCall(
   // TODO(real-api): POST to
   //   https://api.twilio.com/2010-04-01/Accounts/{Sid}/Calls.json
   // with body { From: secrets.phone_number, To: toNumber, Url: ... }
-  return {
-    sid: `twilio-real-${randomUUID().replace(/-/g, '').slice(0, 24)}`,
-    status: 'queued',
-  };
+  // Tot die koppeling er is weigeren we expliciet in plaats van een verzonnen
+  // 'twilio-real-...'-SID terug te geven alsof er echt gebeld is.
+  throw new AppError(
+    501,
+    'NOT_IMPLEMENTED',
+    'Twilio-integratie is nog niet gekoppeld — er is geen echte call geplaatst'
+  );
 }
 
 async function fetchCandidatePhone(
@@ -443,15 +447,17 @@ export async function initiateOutboundCall(
     );
     const call = rowToCall(callRows[0]);
 
-    // 2) Mirror to `communications` so the inbox sees it.
+    // 2) Mirror to `communications` so the inbox sees it. Status volgt de
+    // echte Twilio-status ('queued') — de webhook werkt hem later bij; 'sent'
+    // zou een nog niet plaatsgevonden gesprek als afgerond presenteren.
     const preview = `Outbound call → ${toNumber}`;
     const { rows: commRows } = await client.query<{ id: string }>(
       `INSERT INTO communications
          (tenant_id, candidate_id, channel, direction, subject, body, status,
           preview)
-       VALUES ($1, $2, 'voice', 'outbound', $3, $4, 'sent', $5)
+       VALUES ($1, $2, 'voice', 'outbound', $3, $4, $5, $6)
        RETURNING id`,
-      [tenantId, input.candidateId, `Call ${twilio.sid}`, preview, preview]
+      [tenantId, input.candidateId, `Call ${twilio.sid}`, preview, twilio.status, preview]
     );
     const communicationId = commRows[0].id;
 
@@ -574,7 +580,17 @@ export async function requestTranscription(
   });
 
   if (!call.recording_url) {
-    // Without a recording the only option is the mock fallback.
+    if (isLive() || !mocksAllowed()) {
+      // Productie/live-mode: zonder opname valt er niets te transcriberen.
+      // Markeer als 'failed' met reden in plaats van een mock-transcript op
+      // te slaan alsof er echt getranscribeerd is.
+      return failTranscription(
+        tenantId,
+        callId,
+        'Geen opname beschikbaar (recording_url ontbreekt) — transcriptie niet uitgevoerd'
+      );
+    }
+    // Mock-fallback, alleen buiten productie (dev/test).
     return finalizeTranscription(tenantId, callId, 'Mock transcript — no recording.');
   }
 
@@ -606,6 +622,29 @@ export async function requestTranscription(
       return rowToCall(rows[0]);
     });
   }
+}
+
+/**
+ * Markeer een transcriptie-aanvraag als mislukt, met de reden in metadata
+ * zodat de UI/API kan tonen waarom er geen transcript is.
+ */
+async function failTranscription(
+  tenantId: string,
+  callId: string,
+  reason: string
+): Promise<VoiceCall> {
+  return withTenant(tenantId, async (client) => {
+    const { rows } = await client.query<Record<string, unknown>>(
+      `UPDATE voice_calls
+          SET transcription_status = 'failed',
+              metadata = COALESCE(metadata, '{}'::jsonb)
+                       || jsonb_build_object('transcription_error', $1::text)
+        WHERE id = $2 AND tenant_id = $3
+        RETURNING *`,
+      [reason, callId, tenantId]
+    );
+    return rowToCall(rows[0]);
+  });
 }
 
 async function finalizeTranscription(

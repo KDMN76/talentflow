@@ -11,6 +11,7 @@ import { Router, type Request, type Response, type NextFunction } from 'express'
 import { z } from 'zod';
 import { requireAuth } from '../../middleware/auth';
 import { tenantMiddleware } from '../../middleware/tenant';
+import { requirePermission } from '../../middleware/permissions';
 import { auditCtxFromReq } from '../../lib/audit';
 import * as service from './contracts.service';
 
@@ -104,7 +105,7 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-router.post('/', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/', requirePermission('billing', 'write'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const body = createContractSchema.parse(req.body);
     const contract = await service.createContract(
@@ -130,7 +131,7 @@ router.get('/:id', async (req, res, next) => {
   }
 });
 
-router.patch('/:id', async (req, res, next) => {
+router.patch('/:id', requirePermission('billing', 'write'), async (req, res, next) => {
   try {
     const body = updateContractSchema.parse(req.body);
     const contract = await service.updateContract(
@@ -145,7 +146,7 @@ router.patch('/:id', async (req, res, next) => {
   }
 });
 
-router.post('/:id/extend', async (req, res, next) => {
+router.post('/:id/extend', requirePermission('billing', 'write'), async (req, res, next) => {
   try {
     const body = extendBodySchema.parse(req.body);
     const result = await service.extendContract(
@@ -161,7 +162,7 @@ router.post('/:id/extend', async (req, res, next) => {
   }
 });
 
-router.post('/:id/terminate', async (req, res, next) => {
+router.post('/:id/terminate', requirePermission('billing', 'write'), async (req, res, next) => {
   try {
     const body = terminateBodySchema.parse(req.body);
     const contract = await service.terminateContract(
@@ -207,7 +208,7 @@ router.get('/:id/notifications', async (req, res, next) => {
   }
 });
 
-router.post('/:id/notifications/schedule', async (req, res, next) => {
+router.post('/:id/notifications/schedule', requirePermission('billing', 'write'), async (req, res, next) => {
   try {
     await service.scheduleExpiryNotifications(
       req.user!.tenantId,
