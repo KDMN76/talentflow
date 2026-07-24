@@ -227,10 +227,53 @@ describe('exportData', () => {
     expect(csvText).not.toContain('+31123');
   });
 
-  it('returns 501 for xlsx format (MVP)', async () => {
+  it('exports xlsx as a real spreadsheet buffer', async () => {
+    (candidatesService.listCandidates as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: [{ id: 'cand-1', name: 'Sofia', email: 'sofia@example.nl' }],
+      meta: { total: 1, page: 1, limit: 1, pages: 1 },
+    });
+    client = mockClient({});
+    teardown = installPoolMock(client);
+
+    const result = await exportData(TENANT_ID, {
+      entity: 'candidates',
+      format: 'xlsx',
+      userId: USER_ID,
+    });
+
+    expect(result.content_type).toContain('spreadsheetml');
+    expect(result.filename).toMatch(/\.xlsx$/);
+    expect(result.row_count).toBe(1);
+    // XLSX (OOXML) is een ZIP — begint met de "PK"-magic bytes.
+    expect(result.buffer.subarray(0, 2).toString('latin1')).toBe('PK');
+  });
+
+  it('exports pdf as a real PDF buffer', async () => {
+    (candidatesService.listCandidates as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: [{ id: 'cand-1', name: 'Sofia', email: 'sofia@example.nl', phone: '+31123' }],
+      meta: { total: 1, page: 1, limit: 1, pages: 1 },
+    });
+    client = mockClient({});
+    teardown = installPoolMock(client);
+
+    const result = await exportData(TENANT_ID, {
+      entity: 'candidates',
+      format: 'pdf',
+      userId: USER_ID,
+    });
+
+    expect(result.content_type).toBe('application/pdf');
+    expect(result.filename).toMatch(/\.pdf$/);
+    expect(result.buffer.subarray(0, 5).toString('latin1')).toBe('%PDF-');
+  });
+
+  it('rejects an unknown format with 400', async () => {
     await expect(
-      exportData(TENANT_ID, { entity: 'candidates', format: 'xlsx' })
-    ).rejects.toMatchObject({ statusCode: 501, code: 'EXPORT_FORMAT_UNSUPPORTED' });
+      exportData(TENANT_ID, {
+        entity: 'candidates',
+        format: 'docx' as unknown as 'csv',
+      })
+    ).rejects.toMatchObject({ statusCode: 400, code: 'EXPORT_FORMAT_INVALID' });
   });
 
   it('exports jobs through jobsService.listJobs', async () => {

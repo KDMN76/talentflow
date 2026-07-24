@@ -33,6 +33,8 @@
  *     eerst in de UI.
  */
 
+import ExcelJS from 'exceljs';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { withTenant } from '../../db/pool';
 import { AppError } from '../../middleware/errorHandler';
 import { logAudit, type AuditContext } from '../../lib/audit';
@@ -54,7 +56,7 @@ export type ExportEntity =
   | 'communications'
   | 'workflows';
 
-export type ExportFormat = 'csv' | 'xlsx';
+export type ExportFormat = 'csv' | 'xlsx' | 'pdf';
 
 export interface ExportOptions {
   entity: ExportEntity;
@@ -360,9 +362,162 @@ function selectColumns<T>(
 // Filename helper — `<entity>-YYYY-MM-DD.csv`
 // ─────────────────────────────────────────────────────────────────────────────
 
-function buildFilename(entity: ExportEntity, ext: 'csv' | 'xlsx'): string {
+function buildFilename(entity: ExportEntity, ext: ExportFormat): string {
   const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
   return `${entity}-${today}.${ext}`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Renderers per formaat. CSV/XLSX bevatten alle kolommen; PDF is een nette
+// printbare lijst met een gecureerde kolom-subset (een 22-koloms tabel past
+// niet leesbaar op papier).
+// ─────────────────────────────────────────────────────────────────────────────
+
+const CONTENT_TYPE: Record<ExportFormat, string> = {
+  csv: 'text/csv; charset=utf-8',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  pdf: 'application/pdf',
+};
+
+/** Kolom-subset per entity voor de PDF (max ~7 om leesbaar te blijven). */
+const PDF_COLUMN_LABELS: Record<ExportEntity, string[]> = {
+  candidates: ['name', 'email', 'phone', 'source', 'current_position', 'city'],
+  jobs: ['title', 'status', 'location', 'department', 'recruiter_name', 'application_count'],
+  applications: ['candidate_name', 'candidate_email', 'stage_name', 'status', 'ai_score'],
+  communications: ['candidate_name', 'channel', 'direction', 'status', 'sent_at'],
+  workflows: ['name', 'trigger', 'active', 'run_count', 'last_run_at'],
+};
+
+async function renderXlsx<T extends Record<string, unknown>>(
+  entity: ExportEntity,
+  columns: ReadonlyArray<ColumnDef<T>>,
+  rows: T[]
+): Promise<Buffer> {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'TalentFlow';
+  wb.created = new Date();
+  const sheet = wb.addWorksheet(entity.charAt(0).toUpperCase() + entity.slice(1));
+
+  sheet.columns = columns.map((c) => ({
+    header: c.label,
+    key: c.label,
+    width: Math.min(Math.max(c.label.length + 4, 12), 50),
+  }));
+
+  for (const row of rows) {
+    const record: Record<string, unknown> = {};
+    for (const c of columns) {
+      const v = c.get(row);
+      // Excel-vriendelijk: arrays/objecten platslaan naar leesbare tekst.
+      record[c.label] = Array.isArray(v)
+        ? v.join('; ')
+        : v && typeof v === 'object' && !(v instanceof Date)
+          ? JSON.stringify(v)
+          : (v as ExcelJS.CellValue);
+    }
+    sheet.addRow(record);
+  }
+
+  // Kop-rij accentueren.
+  const header = sheet.getRow(1);
+  header.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  header.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FF4F46E5' },
+  };
+  header.alignment = { vertical: 'middle' };
+  sheet.views = [{ state: 'frozen', ySplit: 1 }];
+
+  const buf = await wb.xlsx.writeBuffer();
+  return Buffer.from(buf);
+}
+
+async function renderPdf<T extends Record<string, unknown>>(
+  entity: ExportEntity,
+  allColumns: ReadonlyArray<ColumnDef<T>>,
+  rows: T[]
+): Promise<Buffer> {
+  // Gecureerde kolommen die passen op landscape A4.
+  const wanted = new Set(PDF_COLUMN_LABELS[entity]);
+  const columns = allColumns.filter((c) => wanted.has(c.label));
+  const cols = columns.length > 0 ? columns : allColumns.slice(0, 6);
+
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+
+  const pageW = 842; // A4 landscape
+  const pageH = 595;
+  const margin = 36;
+  const rowH = 20;
+  const fontSize = 9;
+  const headerColor = rgb(0.31, 0.275, 0.898);
+  const zebra = rgb(0.96, 0.96, 0.98);
+  const ink = rgb(0.1, 0.11, 0.12);
+  const usableW = pageW - margin * 2;
+  const colW = usableW / cols.length;
+
+  const cell = (raw: unknown): string => {
+    if (raw === null || raw === undefined) return '';
+    let s: string;
+    if (raw instanceof Date) s = Number.isNaN(raw.getTime()) ? '' : raw.toISOString().slice(0, 10);
+    else if (Array.isArray(raw)) s = raw.join('; ');
+    else if (typeof raw === 'object') s = JSON.stringify(raw);
+    else s = String(raw);
+    const max = Math.floor(colW / (fontSize * 0.5));
+    return s.length > max ? s.slice(0, max - 1) + '…' : s;
+  };
+
+  let page = doc.addPage([pageW, pageH]);
+  let y = pageH - margin;
+
+  const drawTitle = () => {
+    page.drawText(`TalentFlow — ${entity} export`, {
+      x: margin, y, size: 14, font: bold, color: ink,
+    });
+    page.drawText(new Date().toISOString().slice(0, 10), {
+      x: pageW - margin - 60, y, size: 9, font, color: rgb(0.5, 0.5, 0.55),
+    });
+    y -= 24;
+  };
+  const drawHeader = () => {
+    page.drawRectangle({ x: margin, y: y - rowH + 5, width: usableW, height: rowH, color: headerColor });
+    cols.forEach((c, i) => {
+      page.drawText(cell(c.label), {
+        x: margin + i * colW + 4, y: y - rowH + 11, size: fontSize, font: bold, color: rgb(1, 1, 1),
+      });
+    });
+    y -= rowH;
+  };
+
+  drawTitle();
+  drawHeader();
+
+  rows.forEach((row, r) => {
+    if (y < margin + rowH) {
+      page = doc.addPage([pageW, pageH]);
+      y = pageH - margin;
+      drawHeader();
+    }
+    if (r % 2 === 1) {
+      page.drawRectangle({ x: margin, y: y - rowH + 5, width: usableW, height: rowH, color: zebra });
+    }
+    cols.forEach((c, i) => {
+      page.drawText(cell(c.get(row)), {
+        x: margin + i * colW + 4, y: y - rowH + 11, size: fontSize, font, color: ink,
+      });
+    });
+    y -= rowH;
+  });
+
+  // Voettekst met totaal.
+  page.drawText(`${rows.length} rijen`, {
+    x: margin, y: margin - 12, size: 8, font, color: rgb(0.5, 0.5, 0.55),
+  });
+
+  const bytes = await doc.save();
+  return Buffer.from(bytes);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -398,14 +553,29 @@ async function loadJobs(
   tenantId: string,
   filters: Record<string, unknown>
 ): Promise<JobRow[]> {
+  const str = (v: unknown) => (typeof v === 'string' && v ? v : undefined);
+  const validSort = new Set([
+    'newest',
+    'oldest',
+    'most_applicants',
+    'fewest_applicants',
+    'title_az',
+  ]);
+  const sortRaw = str(filters.sort);
   const result = await jobsService.listJobs(tenantId, {
     page: 1,
     limit: MAX_EXPORT_ROWS,
-    status: typeof filters.status === 'string' ? filters.status : undefined,
-    recruiterId: typeof filters.recruiter_id === 'string'
-      ? filters.recruiter_id
-      : typeof filters.recruiterId === 'string'
-        ? filters.recruiterId
+    status: str(filters.status),
+    recruiterId: str(filters.recruiter_id) ?? str(filters.recruiterId),
+    // Zelfde filters als de lijst-UI, zodat de export exact de gefilterde set
+    // dekt (fix: voorheen exporteerde de UI alleen de geladen ~20 rijen).
+    search: str(filters.search),
+    location: str(filters.location),
+    dateFrom: str(filters.date_from) ?? str(filters.dateFrom),
+    dateTo: str(filters.date_to) ?? str(filters.dateTo),
+    sort:
+      sortRaw && validSort.has(sortRaw)
+        ? (sortRaw as jobsService.JobListSort)
         : undefined,
   });
   return (result.data ?? []) as JobRow[];
@@ -520,17 +690,7 @@ export async function exportData(
 ): Promise<ExportResult> {
   const format: ExportFormat = opts.format ?? 'csv';
 
-  if (format === 'xlsx') {
-    // MVP: niet ondersteund. We geven een nette 501 zodat de UI het kan
-    // uitleggen i.p.v. een lege response te tonen. Q2 kan exceljs toevoegen.
-    throw new AppError(
-      501,
-      'EXPORT_FORMAT_UNSUPPORTED',
-      'XLSX-export is nog niet beschikbaar — gebruik CSV'
-    );
-  }
-
-  if (format !== 'csv') {
+  if (format !== 'csv' && format !== 'xlsx' && format !== 'pdf') {
     throw new AppError(
       400,
       'EXPORT_FORMAT_INVALID',
@@ -538,55 +698,34 @@ export async function exportData(
     );
   }
 
-  // Load rijen per entity. Ieder pad delegeert naar de list-service zodat
-  // we automatisch de RLS-isolatie + filters erven.
-  let csv: string;
-  let rowCount: number;
-  let usedColumns: ReadonlyArray<{ label: string }>;
+  // Load rijen + geselecteerde kolommen per entity. Ieder pad delegeert naar
+  // de list-service zodat we automatisch de tenant-isolatie + filters erven.
+  type Row = Record<string, unknown>;
+  let rows: Row[];
+  let cols: ReadonlyArray<ColumnDef<Row>>;
 
   switch (opts.entity) {
-    case 'candidates': {
-      const rows = await loadCandidates(tenantId, opts.filters ?? {});
-      const cols = selectColumns(CANDIDATE_COLUMNS, opts.columns);
-      csv = buildCsv(cols, rows);
-      rowCount = rows.length;
-      usedColumns = cols;
+    case 'candidates':
+      rows = await loadCandidates(tenantId, opts.filters ?? {});
+      cols = selectColumns(CANDIDATE_COLUMNS, opts.columns) as ReadonlyArray<ColumnDef<Row>>;
       break;
-    }
-    case 'jobs': {
-      const rows = await loadJobs(tenantId, opts.filters ?? {});
-      const cols = selectColumns(JOB_COLUMNS, opts.columns);
-      csv = buildCsv(cols, rows);
-      rowCount = rows.length;
-      usedColumns = cols;
+    case 'jobs':
+      rows = await loadJobs(tenantId, opts.filters ?? {});
+      cols = selectColumns(JOB_COLUMNS, opts.columns) as ReadonlyArray<ColumnDef<Row>>;
       break;
-    }
-    case 'applications': {
-      const rows = await loadApplications(tenantId, opts.filters ?? {});
-      const cols = selectColumns(APPLICATION_COLUMNS, opts.columns);
-      csv = buildCsv(cols, rows);
-      rowCount = rows.length;
-      usedColumns = cols;
+    case 'applications':
+      rows = await loadApplications(tenantId, opts.filters ?? {});
+      cols = selectColumns(APPLICATION_COLUMNS, opts.columns) as ReadonlyArray<ColumnDef<Row>>;
       break;
-    }
-    case 'communications': {
-      const rows = await loadCommunications(tenantId, opts.filters ?? {});
-      const cols = selectColumns(COMMUNICATION_COLUMNS, opts.columns);
-      csv = buildCsv(cols, rows);
-      rowCount = rows.length;
-      usedColumns = cols;
+    case 'communications':
+      rows = await loadCommunications(tenantId, opts.filters ?? {});
+      cols = selectColumns(COMMUNICATION_COLUMNS, opts.columns) as ReadonlyArray<ColumnDef<Row>>;
       break;
-    }
-    case 'workflows': {
-      const rows = await loadWorkflows(tenantId);
-      const cols = selectColumns(WORKFLOW_COLUMNS, opts.columns);
-      csv = buildCsv(cols, rows);
-      rowCount = rows.length;
-      usedColumns = cols;
+    case 'workflows':
+      rows = await loadWorkflows(tenantId);
+      cols = selectColumns(WORKFLOW_COLUMNS, opts.columns) as ReadonlyArray<ColumnDef<Row>>;
       break;
-    }
     default: {
-      // Compile-time exhaustive check.
       const exhaustive: never = opts.entity;
       throw new AppError(
         400,
@@ -596,12 +735,23 @@ export async function exportData(
     }
   }
 
+  const rowCount = rows.length;
   if (rowCount > MAX_EXPORT_ROWS) {
     throw new AppError(
       413,
       'EXPORT_TOO_LARGE',
       `Export bevat ${rowCount} rijen, max ${MAX_EXPORT_ROWS}. Filter eerst.`
     );
+  }
+
+  // Render naar het gevraagde formaat.
+  let buffer: Buffer;
+  if (format === 'csv') {
+    buffer = Buffer.from(buildCsv(cols, rows), 'utf8');
+  } else if (format === 'xlsx') {
+    buffer = await renderXlsx(opts.entity, cols, rows);
+  } else {
+    buffer = await renderPdf(opts.entity, cols, rows);
   }
 
   // Audit-log via een eigen withTenant-tx. Failures binnen logAudit zelf
@@ -618,7 +768,7 @@ export async function exportData(
           entity: opts.entity,
           format,
           row_count: rowCount,
-          columns: usedColumns.map((c) => c.label),
+          columns: cols.map((c) => c.label),
           filters: opts.filters ?? {},
         },
         userId: opts.userId ?? null,
@@ -628,9 +778,9 @@ export async function exportData(
   });
 
   return {
-    filename: buildFilename(opts.entity, 'csv'),
-    buffer: Buffer.from(csv, 'utf8'),
-    content_type: 'text/csv; charset=utf-8',
+    filename: buildFilename(opts.entity, format),
+    buffer,
+    content_type: CONTENT_TYPE[format],
     row_count: rowCount,
   };
 }

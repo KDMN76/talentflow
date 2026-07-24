@@ -21,6 +21,14 @@ const paginationSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
   status: z.enum(JOB_STATUS_VALUES).optional(),
   recruiter_id: z.string().uuid().optional(),
+  // Server-side filters (voorheen client-side → telling + export klopten niet).
+  search: z.string().trim().max(200).optional(),
+  location: z.string().trim().max(200).optional(),
+  date_from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  date_to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  sort: z
+    .enum(['newest', 'oldest', 'most_applicants', 'fewest_applicants', 'title_az'])
+    .optional(),
 });
 
 const applyPipelineTemplateSchema = z.object({
@@ -29,8 +37,19 @@ const applyPipelineTemplateSchema = z.object({
 
 export async function listJobs(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { page, limit, status, recruiter_id } = paginationSchema.parse(req.query);
-    const result = await jobsService.listJobs(req.user!.tenantId, { page, limit, status, recruiterId: recruiter_id });
+    const { page, limit, status, recruiter_id, search, location, date_from, date_to, sort } =
+      paginationSchema.parse(req.query);
+    const result = await jobsService.listJobs(req.user!.tenantId, {
+      page,
+      limit,
+      status,
+      recruiterId: recruiter_id,
+      search,
+      location,
+      dateFrom: date_from,
+      dateTo: date_to,
+      sort,
+    });
     // Sub-fase 2B: dev/test response-validatie tegen het shared schema.
     // Productie skipt de parse (assertResponse is no-op bij NODE_ENV=production).
     const validated = assertResponse(z.array(JobListItemSchema), result.data);

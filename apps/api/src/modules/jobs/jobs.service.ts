@@ -135,12 +135,41 @@ function buildInsertColumns(
 // List
 // ─────────────────────────────────────────────────────────────────────────────
 
+export type JobListSort =
+  | 'newest'
+  | 'oldest'
+  | 'most_applicants'
+  | 'fewest_applicants'
+  | 'title_az';
+
 export interface JobListOptions {
   page: number;
   limit: number;
   status?: string;
   recruiterId?: string;
+  /** Vrije tekst — ILIKE over titel, referentie, locatie en omschrijving. */
+  search?: string;
+  /** ILIKE op locatie. */
+  location?: string;
+  /** created_at >= dateFrom (YYYY-MM-DD). */
+  dateFrom?: string;
+  /** created_at <= dateTo (YYYY-MM-DD, inclusief hele dag). */
+  dateTo?: string;
+  sort?: JobListSort;
 }
+
+/**
+ * ORDER BY-clausules per sorteeroptie. Server-side sorteren is nodig zodat
+ * "meeste sollicitanten" over de HELE gefilterde set klopt en niet alleen
+ * over de geladen pagina's (voorheen client-side — zie jobs/page.tsx).
+ */
+const JOB_SORT_SQL: Record<JobListSort, string> = {
+  newest: 'j.created_at DESC',
+  oldest: 'j.created_at ASC',
+  most_applicants: 'COUNT(DISTINCT a.id) DESC, j.created_at DESC',
+  fewest_applicants: 'COUNT(DISTINCT a.id) ASC, j.created_at DESC',
+  title_az: 'j.title ASC',
+};
 
 export async function listJobs(tenantId: string, opts: JobListOptions) {
   return withTenant(tenantId, async (client) => {
@@ -158,8 +187,36 @@ export async function listJobs(tenantId: string, opts: JobListOptions) {
       values.push(opts.recruiterId);
     }
 
+    // Vrije-tekst zoeken over titel/referentie/locatie/omschrijving. ILIKE met
+    // %..% is voor de load-test-tenant (301 jobs) ruim snel genoeg; bij zeer
+    // grote tenants zou een trigram-index (pg_trgm) helpen — zie ROADMAP.
+    if (opts.search && opts.search.trim()) {
+      const p = `$${idx++}`;
+      conditions.push(
+        `(j.title ILIKE ${p} OR j.job_reference ILIKE ${p} OR j.location ILIKE ${p} OR j.description ILIKE ${p})`
+      );
+      values.push(`%${opts.search.trim()}%`);
+    }
+
+    if (opts.location && opts.location.trim()) {
+      conditions.push(`j.location ILIKE $${idx++}`);
+      values.push(`%${opts.location.trim()}%`);
+    }
+
+    if (opts.dateFrom) {
+      conditions.push(`j.created_at >= $${idx++}`);
+      values.push(opts.dateFrom);
+    }
+
+    if (opts.dateTo) {
+      // Inclusief de hele einddag: < dateTo + 1 dag.
+      conditions.push(`j.created_at < ($${idx++}::date + interval '1 day')`);
+      values.push(opts.dateTo);
+    }
+
     const where = conditions.join(' AND ');
     const offset = (opts.page - 1) * opts.limit;
+    const orderBy = JOB_SORT_SQL[opts.sort ?? 'newest'];
 
     const { rows: countRows } = await client.query(
       `SELECT COUNT(*) as total FROM jobs j WHERE ${where}`,
@@ -184,7 +241,7 @@ export async function listJobs(tenantId: string, opts: JobListOptions) {
        LEFT JOIN applications a ON a.job_id = j.id AND a.status = 'active'
        WHERE ${where}
        GROUP BY j.id, u.name, o.name
-       ORDER BY j.created_at DESC
+       ORDER BY ${orderBy}
        LIMIT $${idx} OFFSET $${idx + 1}`,
       [...values, opts.limit, offset]
     );

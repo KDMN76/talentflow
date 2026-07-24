@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
-import { Plus, Briefcase, Wand2, Download, Loader2 } from "lucide-react";
+import { Plus, Briefcase, Wand2, Download, Loader2, ChevronDown } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { JobCard } from "@/components/jobs/JobCard";
 import { JobRowBoundary } from "@/components/jobs/JobRowBoundary";
@@ -15,20 +15,25 @@ import {
 import type { MultiSelectOption } from "@/components/ui/multi-select";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/components/ui/use-toast";
 import { useJobsInfinite } from "@/hooks/useJobs";
-import {
-  useJobsFilters,
-  type JobsFilters,
-} from "@/hooks/useJobsFilters";
+import { useJobsFilters } from "@/hooks/useJobsFilters";
 import { getCurrentUserId } from "@/lib/auth";
-import { downloadCsv } from "@/lib/downloadHelper";
+import {
+  downloadServerExport,
+  EXPORT_FORMAT_LABELS,
+  type ExportFormat,
+} from "@/lib/exportClient";
 import type { JobListItem as Job } from "@talentflow/contracts";
 
-// `tags` is not yet a first-class field on `Job`, but the filter UI exposes
-// it for forward-compat with backend full-text search. TODO(Agent S): zodra
-// backend `tags`, full-text-search en datum-filtering ondersteunt, kunnen de
-// onderstaande client-side filters server-side worden afgehandeld.
+// `tags` is nog geen first-class veld op `Job`; de filter-UI leidt tag-opties
+// af van geladen jobs (in de praktijk leeg — jobs hebben geen tags-kolom).
 type JobWithOptionalTags = Job & { tags?: string[] | null };
 
 export default function JobsPage() {
@@ -49,8 +54,9 @@ export default function JobsPage() {
     activeCount,
   } = useJobsFilters();
 
-  // Server-side filtering: status + recruiter_id (backend supports these
-  // today). All overige filters worden client-side toegepast op `jobs`.
+  // Server-side filtering: zoek/status/recruiter/locatie/datum/sortering gaan
+  // nu allemaal naar de backend, zodat de teller (meta.total) én de export de
+  // hele gefilterde set dekken — niet alleen de geladen pagina's.
   const {
     data,
     isLoading,
@@ -60,10 +66,15 @@ export default function JobsPage() {
   } = useJobsInfinite({
     status: filters.status,
     recruiterId: filters.recruiter_id,
+    search: filters.search,
+    location: filters.location,
+    dateFrom: filters.date_from,
+    dateTo: filters.date_to,
+    sort: filters.sort,
   });
 
-  // Alle geladen pagina's platgeslagen tot één lijst; de client-side filters
-  // (applyClientSideFilters) werken over deze geladen set (bestaande beperking).
+  // Alle geladen pagina's platgeslagen tot één lijst. Filteren + sorteren doet
+  // de server al, dus we tonen de rijen ongewijzigd.
   const jobs = useMemo<Job[]>(
     () => data?.pages.flatMap((p) => p.data) ?? [],
     [data]
@@ -139,60 +150,38 @@ export default function JobsPage() {
     ];
   }, [currentUserId, t]);
 
-  // Echte tenant-total uit server-side meta (constant over alle pagina's),
-  // niet de lengte van de geladen set.
+  // Echte gefilterde totaal uit server-side meta — nu filter-bewust (fix voor
+  // de "210 terwijl echt ~50"-telling).
   const totalCount = data?.pages[0]?.meta.total ?? 0;
 
-  const filteredJobs = useMemo<Job[]>(() => {
-    if (!jobs) return [];
-    return applyClientSideFilters(jobs, filters);
-  }, [jobs, filters]);
+  // Server filtert + sorteert al; toon de rijen ongewijzigd.
+  const filteredJobs = jobs;
+  const visibleCount = jobs.length;
 
-  const visibleCount = filteredJobs.length;
-
-  // Client-side CSV export of the currently loaded + filtered/sorted jobs.
-  // Mirrors the dashboard export pattern (downloadCsv + toast). Note: this only
-  // covers the set already in memory — the tooltip on the button says so.
-  const handleExportCsv = () => {
-    const headers = [
-      t("list.export.columns.title"),
-      t("list.export.columns.jobReference"),
-      t("list.export.columns.status"),
-      t("list.export.columns.department"),
-      t("list.export.columns.location"),
-      t("list.export.columns.employmentType"),
-      t("list.export.columns.salaryMin"),
-      t("list.export.columns.salaryMax"),
-      t("list.export.columns.salaryCurrency"),
-      t("list.export.columns.recruiterName"),
-      t("list.export.columns.applicationCount"),
-      t("list.export.columns.createdAt"),
-    ];
-    const rows: Array<Array<string | number>> = filteredJobs.map((job) => [
-      job.title,
-      job.job_reference ?? "",
-      job.status,
-      job.department ?? "",
-      job.location ?? "",
-      job.employment_type ?? "",
-      job.salary_min ?? "",
-      job.salary_max ?? "",
-      job.currency ?? "",
-      job.recruiter_name ?? "",
-      job.application_count,
-      job.created_at,
-    ]);
+  // Server-side export van de VOLLEDIGE gefilterde set (tot 50k), in het
+  // gekozen formaat. Stuurt exact dezelfde filters mee als de lijst.
+  const [exporting, setExporting] = useState(false);
+  const handleExport = async (format: ExportFormat) => {
+    setExporting(true);
     try {
-      downloadCsv(
-        `${t("list.export.filenamePrefix")}-${new Date()
-          .toISOString()
-          .slice(0, 10)}.csv`,
-        headers,
-        rows
-      );
-      toast({ title: t("list.export.success") });
+      const count = await downloadServerExport("/exports/jobs", format, {
+        status: filters.status !== "all" ? filters.status : undefined,
+        recruiter_id:
+          filters.recruiter_id !== "all" ? filters.recruiter_id : undefined,
+        search: filters.search || undefined,
+        location: filters.location || undefined,
+        date_from: filters.date_from ?? undefined,
+        date_to: filters.date_to ?? undefined,
+        sort: filters.sort !== "newest" ? filters.sort : undefined,
+      });
+      toast({
+        title: t("list.export.success"),
+        description: `${count} vacatures geëxporteerd (${format.toUpperCase()}).`,
+      });
     } catch {
       toast({ title: t("list.export.error"), variant: "destructive" });
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -203,16 +192,31 @@ export default function JobsPage() {
         description={t("list.description")}
         actions={
           <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleExportCsv}
-              disabled={visibleCount === 0}
-              title={t("list.export.tooltip")}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              {t("list.export.button")}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={totalCount === 0 || exporting}
+                  title={t("list.export.tooltip")}
+                >
+                  {exporting ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="mr-2 h-4 w-4" />
+                  )}
+                  {t("list.export.button")}
+                  <ChevronDown className="ml-1.5 h-3.5 w-3.5 opacity-70" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {(["csv", "xlsx", "pdf"] as ExportFormat[]).map((fmt) => (
+                  <DropdownMenuItem key={fmt} onClick={() => handleExport(fmt)}>
+                    {EXPORT_FORMAT_LABELS[fmt]}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               asChild
               variant="outline"
@@ -256,11 +260,10 @@ export default function JobsPage() {
             <span className="opacity-60">{t("list.loading")}</span>
           ) : (
             <>
-              <span className="font-medium text-foreground">{visibleCount}</span>{" "}
-              {t("list.results", { count: visibleCount })}
-              {totalCount !== visibleCount && (
-                <> {t("list.ofTotal", { total: totalCount })}</>
-              )}
+              {/* Toon het ECHTE gefilterde totaal (server-side meta.total),
+                  niet de geladen ~20 rijen — dit was de foute "210"-telling. */}
+              <span className="font-medium text-foreground">{totalCount}</span>{" "}
+              {t("list.results", { count: totalCount })}
             </>
           )}
         </span>
@@ -339,76 +342,3 @@ export default function JobsPage() {
   );
 }
 
-// ─── Client-side filtering & sorting ─────────────────────────────────────────
-// TODO(Agent S): vervangen door server-side query-params (`q`, `location`,
-// `created_from`, `created_to`, `tags`) zodra de backend dit ondersteunt.
-
-function applyClientSideFilters(jobs: Job[], filters: JobsFilters): Job[] {
-  const search = filters.search.trim().toLowerCase();
-  const location = filters.location.trim().toLowerCase();
-  const fromMs = filters.date_from
-    ? new Date(filters.date_from + "T00:00:00").getTime()
-    : null;
-  const toMs = filters.date_to
-    ? new Date(filters.date_to + "T23:59:59").getTime()
-    : null;
-  const tagsLower = filters.tags.map((t) => t.toLowerCase());
-
-  const matches = jobs.filter((rawJob) => {
-    const job = rawJob as JobWithOptionalTags;
-
-    // Search across title + reference (id) + location.
-    if (search) {
-      const haystack = [
-        job.title,
-        job.id, // job_reference fallback (mock data heeft geen aparte ref)
-        job.location,
-      ]
-        .join(" ")
-        .toLowerCase();
-      if (!haystack.includes(search)) return false;
-    }
-
-    // Location contains. `location` is nullable in JobListItem; jobs zonder
-    // locatie matchen geen location-filter.
-    if (location) {
-      if (!job.location?.toLowerCase().includes(location)) return false;
-    }
-
-    // Date range against `created_at`.
-    if (fromMs !== null || toMs !== null) {
-      const createdMs = new Date(job.created_at).getTime();
-      if (fromMs !== null && createdMs < fromMs) return false;
-      if (toMs !== null && createdMs > toMs) return false;
-    }
-
-    // Tag intersection (job must contain at least one selected tag).
-    if (tagsLower.length > 0) {
-      const jobTags = (job.tags ?? []).map((t) => t.toLowerCase());
-      const intersects = tagsLower.some((t) => jobTags.includes(t));
-      if (!intersects) return false;
-    }
-
-    return true;
-  });
-
-  return [...matches].sort(getComparator(filters.sort));
-}
-
-function getComparator(sort: JobsFilters["sort"]): (a: Job, b: Job) => number {
-  switch (sort) {
-    case "oldest":
-      return (a, b) =>
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-    case "most_applicants":
-      return (a, b) => (b.application_count ?? 0) - (a.application_count ?? 0);
-    case "fewest_applicants":
-      return (a, b) => (a.application_count ?? 0) - (b.application_count ?? 0);
-    case "title_az":
-      return (a, b) => a.title.localeCompare(b.title, "nl");
-    case "newest":
-    default:
-      return (a, b) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-  }
-}

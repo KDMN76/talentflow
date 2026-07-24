@@ -17,7 +17,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { auditCtxFromReq } from '../../lib/audit';
-import { exportData, type ExportEntity } from './exports.service';
+import { exportData, type ExportEntity, type ExportFormat } from './exports.service';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Query schemas — defensief; onbekende keys worden door passthrough doorgelaten
@@ -25,7 +25,7 @@ import { exportData, type ExportEntity } from './exports.service';
 // expliciet kennen.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const formatSchema = z.enum(['csv', 'xlsx']).default('csv');
+const formatSchema = z.enum(['csv', 'xlsx', 'pdf']).default('csv');
 const columnsSchema = z
   .string()
   .optional()
@@ -85,7 +85,7 @@ async function handleExport(
   res: Response,
   entity: ExportEntity,
   filters: Record<string, unknown>,
-  format: 'csv' | 'xlsx',
+  format: ExportFormat,
   columns: string[] | undefined
 ): Promise<void> {
   const result = await exportData(

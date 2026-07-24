@@ -18,11 +18,38 @@ import {
   type JobStatus,
 } from "@talentflow/contracts";
 
+export type JobsSort =
+  | "newest"
+  | "oldest"
+  | "most_applicants"
+  | "fewest_applicants"
+  | "title_az";
+
 export interface UseJobsOptions {
   status?: JobStatus | "all";
   recruiterId?: string | "all";
   page?: number;
   limit?: number;
+  /** Server-side filters (voorheen client-side → telling/export klopten niet). */
+  search?: string;
+  location?: string;
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  sort?: JobsSort;
+}
+
+/** Bouwt de gedeelde query-params voor de server-side vacature-filters. */
+function buildJobFilterParams(opts: UseJobsOptions): Record<string, string> {
+  const params: Record<string, string> = {};
+  if (opts.status && opts.status !== "all") params.status = opts.status;
+  if (opts.recruiterId && opts.recruiterId !== "all")
+    params.recruiter_id = opts.recruiterId;
+  if (opts.search && opts.search.trim()) params.search = opts.search.trim();
+  if (opts.location && opts.location.trim()) params.location = opts.location.trim();
+  if (opts.dateFrom) params.date_from = opts.dateFrom;
+  if (opts.dateTo) params.date_to = opts.dateTo;
+  if (opts.sort && opts.sort !== "newest") params.sort = opts.sort;
+  return params;
 }
 
 // Backend response-envelope. We valideren `data` met het schema; `meta` is
@@ -89,22 +116,22 @@ export function useJobsInfinite(arg?: UseJobsOptions | JobStatus | "all") {
   const opts: UseJobsOptions =
     typeof arg === "string" || arg === undefined ? { status: arg } : arg;
 
-  const { status, recruiterId, limit } = opts;
-  const pageSize = limit ?? JOBS_PAGE_SIZE;
+  const pageSize = opts.limit ?? JOBS_PAGE_SIZE;
+  const filterParams = buildJobFilterParams(opts);
 
   return useInfiniteQuery({
-    queryKey: ["jobs", "infinite", status ?? "all", recruiterId ?? "all", pageSize],
+    // Alle filters in de queryKey zodat React Query ververs­t bij elke
+    // filterwijziging (en de teller/meta.total meebeweegt).
+    queryKey: ["jobs", "infinite", filterParams, pageSize],
     initialPageParam: 1,
     getNextPageParam: (lastPage: JobsPage) =>
       lastPage.meta.page < lastPage.meta.pages ? lastPage.meta.page + 1 : undefined,
     queryFn: async ({ pageParam }): Promise<JobsPage> => {
       const params: Record<string, string | number> = {
+        ...filterParams,
         page: pageParam as number,
         limit: pageSize,
       };
-      if (status && status !== "all") params.status = status;
-      if (recruiterId && recruiterId !== "all") params.recruiter_id = recruiterId;
-
       const { data } = await api.get<unknown>("/jobs", { params });
       return JobsListResponseSchema.parse(data);
     },
