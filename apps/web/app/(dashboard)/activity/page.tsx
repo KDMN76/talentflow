@@ -1,42 +1,41 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Activity, Briefcase, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { Activity, Briefcase, ChevronLeft, ChevronRight, Download, X } from "lucide-react";
+import Link from "next/link";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { useActivityLog, type ActivityItem } from "@/hooks/useActivity";
+import {
+  useActivityLog,
+  activityHref,
+  activityLine,
+  activityExportParams,
+  type ActivityItem,
+  type ActivityFilters,
+} from "@/hooks/useActivity";
 import { api } from "@/lib/api";
 import { downloadCsv } from "@/lib/downloadHelper";
 import { formatRelativeDate, formatDate, formatDateTime, getInitials } from "@/lib/utils";
 
-/**
- * Bouwt een leesbare feed-regel: "{werkwoord}: {objectnaam}" i.p.v. het kale
- * verb (bv. 'created'). De objectnaam komt uit de activity-payload (name/title
- * — die de writers al meesturen). Onbekende acties vallen terug op het ruwe
- * verb, zodat er nooit een lege regel is.
- */
-function activityLine(
-  item: ActivityItem,
-  t: (key: string, opts?: Record<string, unknown>) => string
-): string {
-  const p = (item.payload ?? {}) as Record<string, unknown>;
-  const pick = (k: string) =>
-    typeof p[k] === "string" && p[k] ? (p[k] as string) : undefined;
-  const objectName =
-    pick("name") ??
-    pick("title") ??
-    pick("candidate_name") ??
-    pick("job_title") ??
-    null;
-  const verb = t(`activityLog.action.${item.action}`, {
-    defaultValue: item.action,
-  });
-  return objectName ? `${verb}: ${objectName}` : verb;
-}
+// Entiteit-typen die in de activiteitenfeed voorkomen, met NL-labels.
+const ENTITY_TYPE_LABELS: Record<string, string> = {
+  candidate: "Kandidaat",
+  job: "Vacature",
+  application: "Sollicitatie",
+  career_page: "Career page",
+};
 
 function activityColor(type: string): string {
   switch (type) {
@@ -58,15 +57,61 @@ export default function ActivityLogPage() {
   const { t } = useTranslation("dashboard");
   const { toast } = useToast();
   const [page, setPage] = useState(1);
-  const { data, isLoading } = useActivityLog(page, 25);
+
+  // Filters: pagina/entiteit, persoon, datumbereik.
+  const [entityType, setEntityType] = useState("all");
+  const [userId, setUserId] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+  const filters: ActivityFilters = {
+    entityType: entityType !== "all" ? entityType : undefined,
+    userId: userId !== "all" ? userId : undefined,
+    dateFrom: dateFrom || undefined,
+    dateTo: dateTo || undefined,
+  };
+  const hasActiveFilters =
+    entityType !== "all" || userId !== "all" || !!dateFrom || !!dateTo;
+
+  // Reset naar pagina 1 zodra een filter wijzigt.
+  useEffect(() => {
+    setPage(1);
+  }, [entityType, userId, dateFrom, dateTo]);
+
+  const { data, isLoading } = useActivityLog(page, 25, filters);
 
   const items = data?.data ?? [];
   const meta = data?.meta;
 
+  // Persoon-opties: accumuleer {id → naam} uit geladen activiteiten. Rol-veilig
+  // (geen admin-only /users-call) en blijft staan bij een actieve filter.
+  const [people, setPeople] = useState<Record<string, string>>({});
+  useEffect(() => {
+    setPeople((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const it of items) {
+        if (it.user_id && it.user_name && !next[it.user_id]) {
+          next[it.user_id] = it.user_name;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [items]);
+
+  const resetFilters = () => {
+    setEntityType("all");
+    setUserId("all");
+    setDateFrom("");
+    setDateTo("");
+  };
+
   const handleExport = async () => {
     try {
       const { data: exportData } = await api.get<{ data: ActivityItem[] }>(
-        "/dashboard/activity/export"
+        "/dashboard/activity/export",
+        { params: activityExportParams(filters) }
       );
       const rows = (exportData.data ?? []).map((a) => [
         formatDate(a.created_at),
@@ -103,6 +148,68 @@ export default function ActivityLogPage() {
         }
       />
 
+      {/* Filters: type / persoon / datumbereik */}
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-muted-foreground">Type</label>
+          <Select value={entityType} onValueChange={setEntityType}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle types</SelectItem>
+              {Object.entries(ENTITY_TYPE_LABELS).map(([v, l]) => (
+                <SelectItem key={v} value={v}>
+                  {l}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-muted-foreground">Persoon</label>
+          <Select value={userId} onValueChange={setUserId}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle personen</SelectItem>
+              {Object.entries(people)
+                .sort((a, b) => a[1].localeCompare(b[1], "nl"))
+                .map(([id, name]) => (
+                  <SelectItem key={id} value={id}>
+                    {name}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-muted-foreground">Van</label>
+          <Input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="w-[150px]"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-muted-foreground">Tot</label>
+          <Input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="w-[150px]"
+          />
+        </div>
+        {hasActiveFilters && (
+          <Button variant="ghost" size="sm" onClick={resetFilters}>
+            <X className="mr-1 h-3.5 w-3.5" />
+            Wissen
+          </Button>
+        )}
+      </div>
+
       <Card className="border-0 shadow-sm">
         <CardContent className="p-0">
           {isLoading ? (
@@ -128,38 +235,50 @@ export default function ActivityLogPage() {
             </div>
           ) : (
             <div className="divide-y divide-border">
-              {items.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-start gap-4 px-5 py-4 transition-colors hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30"
-                >
-                  <div
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${activityColor(item.entity_type)}`}
-                  >
-                    {item.user_name ? (
-                      getInitials(item.user_name)
-                    ) : (
-                      <Briefcase className="h-4 w-4" />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                      {activityLine(item, t)}
-                    </p>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
-                      {item.user_name && <span>{item.user_name}</span>}
-                      {item.user_name && <span className="text-zinc-300 dark:text-zinc-600">·</span>}
-                      <span className="capitalize">{item.entity_type.replace("_", " ")}</span>
+              {items.map((item) => {
+                const href = activityHref(item);
+                const rowClass =
+                  "flex items-start gap-4 px-5 py-4 transition-colors hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30";
+                const inner = (
+                  <>
+                    <div
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${activityColor(item.entity_type)}`}
+                    >
+                      {item.user_name ? (
+                        getInitials(item.user_name)
+                      ) : (
+                        <Briefcase className="h-4 w-4" />
+                      )}
                     </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                        {activityLine(item, t)}
+                      </p>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+                        {item.user_name && <span>{item.user_name}</span>}
+                        {item.user_name && <span className="text-zinc-300 dark:text-zinc-600">·</span>}
+                        <span>{ENTITY_TYPE_LABELS[item.entity_type] ?? item.entity_type.replace("_", " ")}</span>
+                      </div>
+                    </div>
+                    <span
+                      className="shrink-0 whitespace-nowrap text-xs text-muted-foreground"
+                      title={formatRelativeDate(item.created_at)}
+                    >
+                      {formatDateTime(item.created_at)}
+                    </span>
+                  </>
+                );
+                // Klikbaar wanneer we een doel hebben (kandidaat/vacature).
+                return href ? (
+                  <Link key={item.id} href={href} className={`${rowClass} group cursor-pointer`}>
+                    {inner}
+                  </Link>
+                ) : (
+                  <div key={item.id} className={rowClass}>
+                    {inner}
                   </div>
-                  <span
-                    className="shrink-0 whitespace-nowrap text-xs text-muted-foreground"
-                    title={formatRelativeDate(item.created_at)}
-                  >
-                    {formatDateTime(item.created_at)}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>

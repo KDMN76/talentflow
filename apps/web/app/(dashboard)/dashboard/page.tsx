@@ -16,6 +16,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { formatRelativeDate, getInitials } from "@/lib/utils";
 import { downloadCsv } from "@/lib/downloadHelper";
 import { api } from "@/lib/api";
+import { activityHref, activityLine } from "@/hooks/useActivity";
 
 function getActivityIcon(type: string) {
   switch (type) {
@@ -45,6 +46,8 @@ interface ApiDashboardStats {
     payload: Record<string, unknown>;
     created_at: string;
     user_name: string | null;
+    app_candidate_id?: string | null;
+    app_job_id?: string | null;
   }>;
   topJobs: Array<{
     id: string;
@@ -216,35 +219,47 @@ export default function DashboardPage() {
                 {t("recentActivity.empty")}
               </p>
             )}
-            {stats.recentActivity.slice(0, 6).map((item) => (
-              <div
-                key={item.id}
-                className="flex items-start gap-4 py-4 first:pt-0 last:pb-0"
-              >
-                <div
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${getActivityIcon(item.entity_type)}`}
-                >
-                  {item.user_name ? (
-                    getInitials(item.user_name)
-                  ) : (
-                    <Briefcase className="h-3.5 w-3.5" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                    {item.action}
-                  </p>
-                  {item.user_name && (
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {item.user_name}
+            {stats.recentActivity.slice(0, 6).map((item) => {
+              const href = activityHref(item);
+              const rowClass =
+                "flex items-start gap-4 py-4 first:pt-0 last:pb-0";
+              const inner = (
+                <>
+                  <div
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${getActivityIcon(item.entity_type)}`}
+                  >
+                    {item.user_name ? (
+                      getInitials(item.user_name)
+                    ) : (
+                      <Briefcase className="h-3.5 w-3.5" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    {/* Leesbare zin i.p.v. de ruwe actie-code (bv. 'resume_parsed'). */}
+                    <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                      {activityLine(item, t)}
                     </p>
-                  )}
+                    {item.user_name && (
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {item.user_name}
+                      </p>
+                    )}
+                  </div>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {formatRelativeDate(item.created_at)}
+                  </span>
+                </>
+              );
+              return href ? (
+                <Link key={item.id} href={href} className={`${rowClass} group cursor-pointer`}>
+                  {inner}
+                </Link>
+              ) : (
+                <div key={item.id} className={rowClass}>
+                  {inner}
                 </div>
-                <span className="text-xs text-muted-foreground whitespace-nowrap">
-                  {formatRelativeDate(item.created_at)}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </CardContent>
         </Card>
 
