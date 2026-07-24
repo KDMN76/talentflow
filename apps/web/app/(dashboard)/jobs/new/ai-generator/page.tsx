@@ -689,18 +689,30 @@ function VariantColumn({
               {t("variant.attentionPoints", { count: variant.bias_flags.length })}
             </p>
             <div className="flex flex-wrap gap-1">
-              {variant.bias_flags.map((flag, i) => (
-                <span
-                  key={i}
-                  className={cn(
-                    "inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold",
-                    SEVERITY_COPY[flag.severity].cls
-                  )}
-                  title={flag.suggestion}
-                >
-                  {flag.label} · {t(SEVERITY_COPY[flag.severity].labelKey)}
-                </span>
-              ))}
+              {variant.bias_flags.map((flag, i) => {
+                // De backend levert flags als {type, text, suggestion} — zonder
+                // `severity`/`label`. Val veilig terug zodat de weergave nooit
+                // crasht (eerder: "Cannot read properties of undefined (cls)").
+                const sevKey = (["low", "medium", "high"] as const).includes(
+                  flag.severity as "low" | "medium" | "high"
+                )
+                  ? flag.severity
+                  : "medium";
+                const sev = SEVERITY_COPY[sevKey];
+                const label = flag.label || flag.type || "Aandachtspunt";
+                return (
+                  <span
+                    key={i}
+                    className={cn(
+                      "inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold",
+                      sev.cls
+                    )}
+                    title={flag.suggestion}
+                  >
+                    {label} · {t(sev.labelKey)}
+                  </span>
+                );
+              })}
             </div>
           </div>
         ) : (
