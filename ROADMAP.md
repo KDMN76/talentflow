@@ -389,6 +389,22 @@ groen), en een volledige `next build`.
   frontend-normalizer (`useCompliance.ts`) gebruikt dan de echte waarde i.p.v.
   de proxy.
 
+### Dashboard "Top vacatures": `topJobs.applicants` toont ruwe i18n-sleutel i.p.v. aantal
+- **Priority**: P2
+- **Status**: Open
+- **Source**: Claude Code (opgemerkt tijdens activiteitenlog-werk, 2026-07-24)
+- **Context**: In het dashboard-widget "Top vacatures" rendert elke rij de letterlijke
+  string `topJobs.applicants` i.p.v. "N sollicitaties". De component roept
+  `t("topJobs.applicants", { count: job.application_count })` aan, maar in
+  `dashboard.json` bestaan alleen de plural-varianten `applicants_one` /
+  `applicants_other` (geen basis-key). i18next lost de plural niet op en valt terug
+  op de kale sleutel. Pre-existing (al aanwezig vóór commit 77878ee/852a5b2), los van
+  het activiteitenlog. **Niet door mij aangeraakt.**
+- **Fix-richting**: verifieer dat i18next-pluralisatie correct is geconfigureerd voor
+  `nl`/`en` (plural-suffix-resolutie), of `application_count` daadwerkelijk als getal
+  wordt meegegeven; controleer of andere `_one`/`_other`-keys in de app hetzelfde
+  euvel hebben (klasse-sweep).
+
 ---
 
 ## Sectie 2: Features Backlog
