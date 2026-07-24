@@ -2,7 +2,16 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, UserSquare2, LayoutGrid, List, Upload, Loader2 } from "lucide-react";
+import {
+  Plus,
+  UserSquare2,
+  LayoutGrid,
+  List,
+  Upload,
+  Loader2,
+  Download,
+  ChevronDown,
+} from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { CandidateCard } from "@/components/candidates/CandidateCard";
 import { CandidateForm } from "@/components/candidates/CandidateForm";
@@ -14,8 +23,20 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useToast } from "@/components/ui/use-toast";
 import { useCandidatesInfinite, useCandidateCount } from "@/hooks/useCandidates";
+import {
+  downloadServerExport,
+  EXPORT_FORMAT_LABELS,
+  type ExportFormat,
+} from "@/lib/exportClient";
 import { cn, getInitials, getScoreColor, formatRelativeDate } from "@/lib/utils";
 import Link from "next/link";
 
@@ -37,42 +58,86 @@ export default function CandidatesPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
+  // Bron-chip → server-side `source`-param. "Alle" = geen filter; "Handmatig"
+  // dekt beide DB-waarden (Manual + manual_import) via de comma-lijst.
+  const sourceParam =
+    sourceFilter === "Alle"
+      ? undefined
+      : sourceFilter === "Handmatig"
+        ? MANUAL_SOURCES.join(",")
+        : sourceFilter;
+
   const {
     data,
     isLoading,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useCandidatesInfinite(debouncedSearch || undefined);
+  } = useCandidatesInfinite(debouncedSearch || undefined, sourceParam);
 
-  // Echte tenant-total (server-side meta.total), los van de gepagineerde set.
-  const { data: totalCount } = useCandidateCount();
+  // Gefilterde total (server-side meta.total) — nu zoek- én bron-bewust, dus
+  // de teller klopt met wat je filtert (voorheen altijd het tenant-brede totaal).
+  const { data: totalCount } = useCandidateCount(
+    debouncedSearch || undefined,
+    sourceParam
+  );
 
-  // Alle geladen pagina's platgeslagen tot één lijst. De client-side
-  // bron-filter werkt over deze geladen set (bestaande beperking).
   const candidates = useMemo(
     () => data?.pages.flatMap((p) => p.data) ?? [],
     [data]
   );
 
-  const filtered = candidates?.filter((c) => {
-    if (sourceFilter === "Alle") return true;
-    if (sourceFilter === "Handmatig") return MANUAL_SOURCES.includes(c.source ?? "");
-    return (c.source ?? "").toLowerCase() === sourceFilter.toLowerCase();
-  });
+  // Server filtert nu op bron; toon de geladen rijen ongewijzigd.
+  const filtered = candidates;
 
-  // Bron-filterchips dynamisch uit de echte data — zo matchen ze altijd de
-  // werkelijke `source`-waarden. Voorkomt dode chips (bv. "Behance" → 0
-  // resultaten) én ontbrekende bronnen (bv. "Career Fair"/"Website").
-  const availableSources = Array.from(
-    new Set((candidates ?? []).map((c) => c.source).filter(Boolean) as string[])
-  );
+  // Bron-chips: accumuleer ontdekte bronnen. Nodig omdat de geladen set bij een
+  // actieve bron-filter alleen die ene bron bevat — zonder accumulatie zouden
+  // de andere chips verdwijnen zodra je filtert.
+  const [knownSources, setKnownSources] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    setKnownSources((prev) => {
+      let changed = false;
+      const next = new Set(prev);
+      for (const c of candidates) {
+        const s = c.source ?? undefined;
+        if (s && !next.has(s)) {
+          next.add(s);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [candidates]);
+
+  const availableSources = Array.from(knownSources);
   const hasManual = availableSources.some((s) => MANUAL_SOURCES.includes(s));
   const sourceChips = [
     "Alle",
     ...availableSources.filter((s) => !MANUAL_SOURCES.includes(s)).sort(),
     ...(hasManual ? ["Handmatig"] : []),
   ];
+
+  // Server-side export van de VOLLEDIGE gefilterde set (tot 50k) in het
+  // gekozen formaat, met exact dezelfde zoek/bron-filters als de lijst.
+  const { toast } = useToast();
+  const [exporting, setExporting] = useState(false);
+  const handleExport = async (format: ExportFormat) => {
+    setExporting(true);
+    try {
+      const count = await downloadServerExport("/exports/candidates", format, {
+        search: debouncedSearch || undefined,
+        source: sourceParam,
+      });
+      toast({
+        title: "Export gereed",
+        description: `${count} kandidaten geëxporteerd (${format.toUpperCase()}).`,
+      });
+    } catch {
+      toast({ title: "Export mislukt", variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const allSelected = !!filtered && filtered.length > 0 && filtered.every((c) => selectedIds.includes(c.id));
 
@@ -104,6 +169,29 @@ export default function CandidatesPage() {
         description={t("list.totalCount", { count: totalCount ?? 0 })}
         actions={
           <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  disabled={(totalCount ?? 0) === 0 || exporting}
+                >
+                  {exporting ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="mr-2 h-4 w-4" />
+                  )}
+                  Exporteren
+                  <ChevronDown className="ml-1.5 h-3.5 w-3.5 opacity-70" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {(["csv", "xlsx", "pdf"] as ExportFormat[]).map((fmt) => (
+                  <DropdownMenuItem key={fmt} onClick={() => handleExport(fmt)}>
+                    {EXPORT_FORMAT_LABELS[fmt]}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               variant="outline"
               onClick={() => setImportOpen(true)}

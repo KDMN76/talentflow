@@ -45,9 +45,9 @@ export interface CandidatesPage {
  * `getNextPageParam` stopt zodra `meta.page >= meta.pages`. De backend
  * ondersteunt `page`/`limit` al (paginationSchema, limit max 100).
  */
-export function useCandidatesInfinite(search?: string) {
+export function useCandidatesInfinite(search?: string, source?: string) {
   return useInfiniteQuery({
-    queryKey: ["candidates", "infinite", search],
+    queryKey: ["candidates", "infinite", search, source],
     initialPageParam: 1,
     getNextPageParam: (lastPage: CandidatesPage) =>
       lastPage.meta.page < lastPage.meta.pages ? lastPage.meta.page + 1 : undefined,
@@ -56,7 +56,7 @@ export function useCandidatesInfinite(search?: string) {
         data?: Candidate[];
         meta?: Partial<CandidatesPage["meta"]>;
       }>("/candidates", {
-        params: { search, page: pageParam, limit: CANDIDATES_PAGE_SIZE },
+        params: { search, source, page: pageParam, limit: CANDIDATES_PAGE_SIZE },
       });
       const items = data.data ?? [];
       const meta = data.meta ?? {};
@@ -78,14 +78,17 @@ export function useCandidatesInfinite(search?: string) {
  * de gepagineerde lijst. Nodig omdat compliance-KPI's anders het paginagrootte
  * (bv. 20) als "totaal" tonen i.p.v. het echte aantal.
  */
-export function useCandidateCount() {
+export function useCandidateCount(search?: string, source?: string) {
   return useQuery({
-    queryKey: ["candidates", "count"],
+    // Search/source in de key zodat de teller meebeweegt met de actieve
+    // filters (voorheen altijd het tenant-brede totaal → telling klopte niet
+    // zodra je zocht of op bron filterde).
+    queryKey: ["candidates", "count", search, source],
     queryFn: async (): Promise<number> => {
       const { data } = await api.get<{
         data?: Candidate[];
         meta?: { total?: number };
-      }>("/candidates", { params: { limit: 1 } });
+      }>("/candidates", { params: { search, source, limit: 1 } });
       return data.meta?.total ?? data.data?.length ?? 0;
     },
   });

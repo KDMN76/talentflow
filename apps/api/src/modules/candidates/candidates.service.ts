@@ -246,9 +246,18 @@ export async function listCandidates(tenantId: string, opts: CandidateListOption
     }
 
     if (opts.source) {
-      conditions.push(`source = $${idx}`);
-      values.push(opts.source);
-      idx++;
+      // Comma-gescheiden toegestaan zodat de "Handmatig"-chip meerdere
+      // bron-waarden kan dekken (bv. "Manual,manual_import"). Bij één waarde
+      // gedraagt dit zich als een gewone gelijkheidsfilter.
+      const sourceList = opts.source
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (sourceList.length > 0) {
+        conditions.push(`source = ANY($${idx}::text[])`);
+        values.push(sourceList);
+        idx++;
+      }
     }
 
     const where = conditions.join(' AND ');
