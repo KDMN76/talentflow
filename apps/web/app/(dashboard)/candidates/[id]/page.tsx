@@ -31,6 +31,7 @@ import { useJobs } from "@/hooks/useJobs";
 import { useDuplicatesForCandidate } from "@/hooks/useDedupe";
 import { MultiCVUpload } from "@/components/candidates/MultiCVUpload";
 import { MergeCandidatesDialog } from "@/components/candidates/MergeCandidatesDialog";
+import { CandidateDetailsCard } from "@/components/candidates/CandidateDetailsCard";
 import { CandidateCommunicationTab } from "@/components/candidates/CandidateCommunicationTab";
 import { useCommunications, useSendMessage } from "@/hooks/useCommunications";
 import type { CommunicationChannel } from "@/hooks/useCommunications";
@@ -441,6 +442,9 @@ export default function CandidateProfilePage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Kandidaatgegevens (rijke velden + bewerken) */}
+          <CandidateDetailsCard candidate={candidate} />
 
           {/* Skill profiel (ESCO) */}
           <SkillProfileEditor candidateId={candidate.id} />

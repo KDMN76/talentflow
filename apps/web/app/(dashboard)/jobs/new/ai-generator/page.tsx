@@ -85,10 +85,10 @@ const LENGTH_OPTIONS: Array<{ value: JdGeneratorLength; labelKey: string }> = [
 ];
 
 const LANGUAGE_OPTIONS: Array<{ value: JdGeneratorLanguage; labelKey: string }> = [
-  { value: "NL", labelKey: "options.language.NL" },
-  { value: "EN", labelKey: "options.language.EN" },
-  { value: "DE", labelKey: "options.language.DE" },
-  { value: "FR", labelKey: "options.language.FR" },
+  { value: "nl", labelKey: "options.language.NL" },
+  { value: "en", labelKey: "options.language.EN" },
+  { value: "de", labelKey: "options.language.DE" },
+  { value: "fr", labelKey: "options.language.FR" },
 ];
 
 const SEVERITY_COPY: Record<BiasFlag["severity"], { labelKey: string; cls: string }> = {
@@ -116,7 +116,7 @@ const DEFAULT_INPUT: JdGeneratorInput = {
   nice_to_haves: [],
   tone: "direct",
   length: "medium",
-  language: "NL",
+  language: "nl",
   company_context: "",
 };
 

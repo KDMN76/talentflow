@@ -3585,7 +3585,7 @@ const JD_DRAFT_INPUT_FE: JdGeneratorInput = {
   ],
   tone: "direct",
   length: "medium",
-  language: "NL",
+  language: "nl",
   company_context:
     "TalentFlow is een EU-native recruitment SaaS met focus op compliance " +
     "en AI-transparantie. Klein product-team van 12, hybride vanuit Amsterdam.",
@@ -3715,7 +3715,7 @@ const JD_DRAFT_INPUT_PM: JdGeneratorInput = {
   nice_to_haves: ["Recruitment-domein", "Data-gedreven besluitvorming"],
   tone: "casual",
   length: "medium",
-  language: "NL",
+  language: "nl",
   company_context: "TalentFlow — EU-native recruitment SaaS, 12-mens product-team.",
 };
 

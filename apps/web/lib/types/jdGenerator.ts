@@ -31,7 +31,11 @@ export type JdGeneratorTone =
 
 export type JdGeneratorLength = "short" | "medium" | "long";
 
-export type JdGeneratorLanguage = "NL" | "EN" | "DE" | "FR";
+// Lowercase — moet exact matchen met de backend-zod-enum
+// (jdGenerator.service.ts: z.enum(['nl','en','de','fr'])). Stond eerder
+// uppercase ("NL"), waardoor élke generatie-poging op een 400
+// VALIDATION_ERROR strandde nog vóór de AI-call ("Genereren mislukte").
+export type JdGeneratorLanguage = "nl" | "en" | "de" | "fr";
 
 export interface JdGeneratorInput {
   role: string;

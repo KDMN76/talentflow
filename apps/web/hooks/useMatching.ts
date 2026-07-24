@@ -70,10 +70,15 @@ export function useGenerateMatchExplanation() {
   const queryClient = useQueryClient();
   return useMutation<MatchExplanationResponse, Error, ExplanationVars>({
     mutationFn: async ({ jobId, candidateId }) => {
-      const { data } = await api.post<{ data: MatchExplanationResponse }>(
+      // Deze endpoint geeft de uitleg PLAT terug ({ explanation, strengths,
+      // gaps, ... }) — geen { data: ... }-envelope (geverifieerd tegen
+      // matching.controller.ts + het gedeelde MatchExplanationResponse-type).
+      // Eerder stond hier `data.data`, wat undefined opleverde → het
+      // "Waarom?"-paneel bleef leeg zonder foutmelding.
+      const { data } = await api.post<MatchExplanationResponse>(
         `/matching/jobs/${jobId}/candidates/${candidateId}/explanation`
       );
-      return data.data;
+      return data;
     },
     onSuccess: (_data, vars) => {
       // No list-level invalidation needed: explanation is per-pair and the
