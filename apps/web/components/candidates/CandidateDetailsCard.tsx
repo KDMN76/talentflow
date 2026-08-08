@@ -6,6 +6,11 @@
  * talen, nationaliteiten, adres, AVG-consent) maar tot nu toe niet op het
  * profiel werden gerenderd. Bevat de "Bewerken"-knop die de bewerk-dialoog
  * opent.
+ *
+ * Lege velden worden verborgen; een groep zonder gevulde rijen valt volledig
+ * weg, zodat de kaart compact blijft. Onderaan tonen we — mits gevuld — twee
+ * samenvattingen: de handmatige notitie (`description`, het veld dat de
+ * bewerk-dialoog beheert) en de AI-gegenereerde CV-samenvatting (`ai_summary`).
  */
 
 import { useState } from "react";
@@ -58,6 +63,13 @@ export function CandidateDetailsCard({ candidate: c }: { candidate: Candidate })
   const birthAge = age(c.birthdate);
   const birth = fmtDate(c.birthdate);
 
+  const address =
+    [c.address_line1, c.address_postal_code, c.address_city, c.address_country]
+      .filter(Boolean)
+      .join(", ") || null;
+
+  // Lege velden worden verborgen (filterRows); groepen zonder gevulde rijen
+  // vallen daardoor volledig weg — geen lange lijst met lege waardes.
   const groups: { title: string; rows: Row[] }[] = [
     {
       title: "Contact",
@@ -65,13 +77,7 @@ export function CandidateDetailsCard({ candidate: c }: { candidate: Candidate })
         { label: "E-mail", value: c.email },
         { label: "Telefoon", value: c.phone },
         { label: "Skype / overig", value: c.skype || c.other_contact },
-        {
-          label: "Adres",
-          value:
-            [c.address_line1, c.address_postal_code, c.address_city, c.address_country]
-              .filter(Boolean)
-              .join(", ") || null,
-        },
+        { label: "Adres", value: address },
       ]),
     },
     {
@@ -125,7 +131,20 @@ export function CandidateDetailsCard({ candidate: c }: { candidate: Candidate })
     },
   ].filter((g) => g.rows.length > 0);
 
-  const isEmpty = groups.every((g) => g.rows.length === 0);
+  // De AI-samenvatting staat per cv (candidate_resumes.ai_summary). De backend
+  // levert resumes gesorteerd primary-first / meest-recent-eerst; we tonen de
+  // eerste die daadwerkelijk een samenvatting heeft.
+  const aiSummary =
+    (c.resumes ?? []).find((r) => r.ai_summary && r.ai_summary.trim())?.ai_summary ?? null;
+
+  // Alleen samenvatting-blokken met inhoud tonen; is alles leeg, dan valt de
+  // hele sectie weg.
+  const summaries: { label: string; value: string }[] = [
+    { label: "Samenvatting (handmatig)", value: c.description },
+    { label: "AI-samenvatting (uit cv)", value: aiSummary },
+  ].filter((s): s is { label: string; value: string } => !!s.value && s.value.trim() !== "");
+
+  const isEmpty = groups.length === 0 && summaries.length === 0;
 
   return (
     <>
@@ -162,6 +181,24 @@ export function CandidateDetailsCard({ candidate: c }: { candidate: Candidate })
                   </dl>
                 </div>
               ))}
+
+              {summaries.length > 0 && (
+                <div>
+                  <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Samenvatting
+                  </h4>
+                  <div className="space-y-3">
+                    {summaries.map((s) => (
+                      <div key={s.label} className="flex flex-col">
+                        <dt className="text-xs text-muted-foreground">{s.label}</dt>
+                        <dd className="mt-0.5 text-sm text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap break-words leading-relaxed">
+                          {s.value}
+                        </dd>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
